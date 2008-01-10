@@ -32,6 +32,7 @@ public:
 	double tEnd;
 	double mu; // viscosity
 	double lambda; // thermal conductivity
+	double cp; // specific heat capacity
 	double rhoLeft;
 	void setup();
 
@@ -42,6 +43,7 @@ public:
 	void rollYdot(sdVector& yDot);
 	void rollResiduals(sdVector& res);
 	
+	void printForMatlab(ofstream& file, vector<double>& v, int index, char* name);
 
 	// these should be read-only:
 	int N; // total problem size;

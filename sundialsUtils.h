@@ -149,6 +149,7 @@ public:
 	sdVector ydot0;
 	sdVector y;
 	sdVector ydot;
+	sdVector componentId; // elements are 1.0 for differential variables, 0.0 for algebraic
 	std::vector<int> rootsFound;
 	unsigned int nRoots;
 private:

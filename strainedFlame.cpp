@@ -32,23 +32,24 @@ void strainedFlame() {
     cout << "**** strainedFlame (1dflame Version 2.0) ****" << std::endl;
 
 	// output file:
-	//ofstream outFile;
-	//outFile.open("out.m");
+	ofstream outFile;
+	outFile.open("out.m");
 	clock_t t1, t2;
 	t1 = clock();
 
     strainedFlameSys theSys;
-	theSys.nPoints = 20;
+	theSys.nPoints = 40;
 	theSys.xLeft = -0.05;
 	theSys.xRight = 0.05;
 	theSys.Tleft = 300;
-	theSys.Tright = 300;
+	theSys.Tright = 600;
 	theSys.strainRate = 100;
 	theSys.mu = 1.8e-5;
 	theSys.lambda = 0.0243;
+	theSys.cp = 1.005;
 	theSys.rhoLeft = 1.20;
 	theSys.tStart = 0;
-	theSys.tEnd = 10;
+	theSys.tEnd = 0.2;
 	// Initial Conditions for ODE
 	theSys.setup();
 
@@ -64,7 +65,12 @@ void strainedFlame() {
 		theSolver.abstol(3*i) = 1e-6;
 		theSolver.abstol(3*i+1) = 1e-6;
 		theSolver.abstol(3*i+2) = 1e-6;
+		theSolver.componentId(3*i) = 0.0;
+		theSolver.componentId(3*i+1) = 1.0;
+		theSolver.componentId(3*i+2) = 1.0;
 	}
+	theSolver.componentId(0) = 1;
+
 	for (int i=0; i<theSys.N; i++) {
 		theSolver.ydot(i) = 0;
 	}
@@ -78,21 +84,34 @@ void strainedFlame() {
 	//   Break out of loop when NOUT preset output times have been reached.
 
 	int iout = 0;  
-	double dt = theSys.tEnd/500;
+	double dt = theSys.tEnd/100;
 	double t = dt;
-	int i=0;
+	int i=1;
 	
 	int flag;
 	double R = Cantera::GasConstant;
-	
+	theSys.printForMatlab(outFile, theSys.x, 1, "x");
+	theSys.unrollY(theSolver.y);
+	theSys.printForMatlab(outFile, theSys.rhov, i, "rhov");
+	theSys.printForMatlab(outFile, theSys.T, i, "T");
+	theSys.printForMatlab(outFile, theSys.U, i, "U");
+	outFile << "t(" << i << ") = " << 0 << ";" << endl;
 	while(t <= theSys.tEnd) {
 		
 		flag = theSolver.integrateToTime(t);
 		//cout << theSolver.tInt << ": " << theSolver.y << endl;
+		
 
 
 		if (flag == CV_SUCCESS) {
 			i++;
+			
+			theSys.unrollY(theSolver.y);
+			theSys.printForMatlab(outFile, theSys.rhov, i, "rhov");
+			theSys.printForMatlab(outFile, theSys.T, i, "T");
+			theSys.printForMatlab(outFile, theSys.U, i, "U");
+			outFile << "t(" << i << ") = " << t << ";" << endl;
+
 			t += dt;
 		}
 	}
@@ -100,7 +119,7 @@ void strainedFlame() {
 	t2 = clock();
 	cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
 	
-	//outFile.close();
+	outFile.close();
 	int blargh = 0;
 }
 
@@ -130,8 +149,8 @@ void strainedFlameSys::setup(void)
 	for (int i=0; i<nPoints; i++) {
 		x[i] = xLeft + (xRight-xLeft)*((double) i)/((double) nPoints);
 		T[i] = Tleft + (Tright-Tleft)*(x[i]-xLeft)/(xRight-xLeft);
-		rho[i] = Tleft/T[i];
-		U[i] = T[i]/Tleft;
+		rho[i] = rhoLeft*Tleft/T[i];
+		U[i] = sqrt(rho[0]/rho[i]);
 	}
 	rhov[0] = -strainRate*rho[0]*x[0];
 	for (int i=1; i<nPoints; i++) {
@@ -162,14 +181,14 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	// Intermediate points (energy & momentum equations)
 	for (int i=1; i<jj; i++) {
 		resEnergy[i] = rhov[i]*(T[i+1]-T[i-1])/(dx[i-1]+dx[i])
-			- lambda*(T[i+1]-2*T[i]+T[i-1])/(dx[i-1]*dx[i])
+			- lambda/cp*(T[i+1]-2*T[i]+T[i-1])/(dx[i-1]*dx[i])
 			+ rho[i]*dTdt[i];
 
 		resMomentum[i] = rhov[i]*(U[i+1]-U[i-1])/(dx[i-1]+dx[i])
 			- mu*(U[i+1]-2*U[i]+U[i-1])/(dx[i-1]*dx[i])
 			+ rho[i]*dUdt[i]
 			+ rho[i]*U[i]*U[i]*strainRate
-			- rho[1]*strainRate;
+			- rho[0]*strainRate;
 	}
 
 	// Intermediate points (continuity equation)
@@ -186,57 +205,67 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	return 0;
 }
 
-// A general, numerical method for finding the jacobian
+
 int strainedFlameSys::Jac(realtype t, sdVector& y, sdVector& ydot,
 						  sdVector& res, realtype c_j, sdMatrix& J)
 {
-	double eps = sqrt(DBL_EPSILON);
-//		sdVector ydot(N);
-		sdVector yTemp(N);
-		sdVector ydotTemp(N);
-		sdVector resTemp(N);
+	bool numJac = false;
+	if (numJac) {
 
-		// dF/dy
-		for (int j=0; j<N; j++) {
+		// A general, numerical method for finding the jacobian
+		
+		double eps = sqrt(DBL_EPSILON);
+	//		sdVector ydot(N);
+			sdVector yTemp(N);
+			sdVector ydotTemp(N);
+			sdVector resTemp(N);
 
-			for (int i=0; i<N; i++) {
-				yTemp(i) = y(i);
-			}
-			double dy;
-			if (yTemp(j) != 0) {
-				dy = y(j)*(eps);
-			} else {
-				dy = eps;
-			}
-			yTemp(j) += dy;
-			f(t,yTemp,ydot,resTemp);
+			// dF/dy
+			for (int j=0; j<N; j++) {
 
-			for (int i=0; i<N; i++) {
-				J(i,j) = (resTemp(i)-res(i))/dy;
-			}
-		}
+				for (int i=0; i<N; i++) {
+					yTemp(i) = y(i);
+				}
+				double dy;
+				if (yTemp(j) != 0) {
+					dy = y(j)*(eps);
+				} else {
+					dy = eps;
+				}
+				yTemp(j) += dy;
+				f(t,yTemp,ydot,resTemp);
 
-		// cj*dF/dydot
-		for (int j=0; j<N; j++) {
+				for (int i=0; i<N; i++) {
+					J(i,j) = (resTemp(i)-res(i))/dy;
+				}
+			}
 
-			for (int i=0; i<N; i++) {
-				ydotTemp(i) = ydot(i);
-			}
-			double dy;
-			if (ydotTemp(j) != 0) {
-				dy = ydot(j)*(eps);
-			} else {
-				dy = eps;
-			}
-			ydotTemp(j) += dy;
-			f(t,y,ydotTemp,resTemp);
+			// cj*dF/dydot
+			for (int j=0; j<N; j++) {
 
-			for (int i=0; i<N; i++) {
-				J(i,j) += c_j*(resTemp(i)-res(i))/dy;
+				for (int i=0; i<N; i++) {
+					ydotTemp(i) = ydot(i);
+				}
+				double dy;
+				if (ydotTemp(j) != 0) {
+					dy = ydot(j)*(eps);
+				} else {
+					dy = eps;
+				}
+				ydotTemp(j) += dy;
+				f(t,y,ydotTemp,resTemp);
+
+				for (int i=0; i<N; i++) {
+					J(i,j) += c_j*(resTemp(i)-res(i))/dy;
+				}
 			}
-		}
-	return 0;
+		return 0;
+	} else {
+		// The problem specific Jacobian formulation
+	}
 }
+
+
 
 strainedFlameSys::strainedFlameSys(void) 
 {
@@ -284,4 +313,14 @@ void strainedFlameSys::rollResiduals(sdVector& res)
 		res(3*i+1) = resMomentum[i];
 		res(3*i+2) = resEnergy[i];
 	}
+}
+
+void strainedFlameSys::printForMatlab(ofstream& file, vector<double>& v, int index, char* name)
+{
+	file << name << "(:," << index << ") = [";
+	for (unsigned int i=0; i<v.size()-1; i++)
+	{
+		file << v[i] << ", ";
+	}
+	file << v[v.size()-1] << "];" << endl;
 }
