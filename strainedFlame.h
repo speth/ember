@@ -10,14 +10,15 @@
 
 void strainedFlame(void);
 
-class strainedFlameODE : public sdODE 
+class strainedFlameSys : public sdDAE 
 {
 public:
-	strainedFlameODE(void);
+	strainedFlameSys(void);
 	
 	// the functions for solving the ODE
-	int f(realtype t, sdVector& y, sdVector& ydot);
-	int Jac(realtype t, sdVector& y, sdVector& fy, sdMatrix& J);
+	int f(realtype t, sdVector& y, sdVector& ydot, sdVector& res);
+	int Jac(realtype t, sdVector& y, sdVector& ydot, sdVector& res,
+		    realtype c_j, sdMatrix& J);
 	
 	// Chemistry:
 	//Cantera::IdealGasMix gas;
@@ -36,31 +37,37 @@ public:
 
 	// Utility functions
 	void unrollY(const sdVector& y);
-	void rollYdot(sdVector& yDot);
+	void unrollYdot(const sdVector& yDot);
 	void rollY(sdVector& y);
+	void rollYdot(sdVector& yDot);
+	void rollResiduals(sdVector& res);
+	
 
 	// these should be read-only:
 	int N; // total problem size;
 
 	// State variables:
-	vector<double> U;
 	vector<double> rhov;
+	vector<double> U;
 	vector<double> T;
 
-	// Derivatives of state variables:
-	vector<double> dUdt;
-	vector<double> drhovdt;
-	vector<double> dTdt;
-
-	// extra variables:
+	// Auxillary variables:
 	vector<double> rho;
+	vector<double> drhodt;
 
 	// the grid:
 	vector<double> x;
 	vector<double> dx;
 
 private:
+	// Derivatives of state variables:
+	vector<double> drhovdt;
+	vector<double> dUdt;
+	vector<double> dTdt;
 
-
+	// Residuals of governing equations:
+	vector<double> resContinuity;
+	vector<double> resMomentum;
+	vector<double> resEnergy;
 };
 

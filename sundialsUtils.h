@@ -1,10 +1,14 @@
 #pragma once
 
-#include <cvode/cvode.h>
 #include <nvector/nvector_serial.h>
-#include <cvode/cvode_dense.h>
 #include <sundials/sundials_dense.h>
 #include <sundials/sundials_types.h>
+
+#include <cvode/cvode.h>
+#include <cvode/cvode_dense.h>
+#include <ida/ida.h>
+#include <ida/ida_dense.h>
+
 #include <iostream>
 #include <vector>
 
@@ -51,11 +55,11 @@ public:
 };
 
 // wrapper class for the Sundials CVODE solver
-class sundialsSolver
+class sundialsCVODE
 {
 public:
-	sundialsSolver(unsigned int n);
-	~sundialsSolver(void);
+	sundialsCVODE(unsigned int n);
+	~sundialsCVODE(void);
 
 	void initialize(void);
 	int integrateToTime(realtype t);
@@ -94,7 +98,69 @@ private:
 	               N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 	
 	sdODE* theODE;
-	void *cvode_mem;
+	void *sundialsMem;
+	int flag;
+	int flagr;
+	int nEq;
+};
+
+
+class sdDAE {
+public:
+	virtual int f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)=0;
+	virtual int g(realtype t, sdVector& y, sdVector& ydot, realtype* gOut) {return 0;}
+	virtual int Jac(realtype t, sdVector& y, sdVector& ydot, sdVector& res,
+		            realtype c_j, sdMatrix& J)=0;
+	virtual ~sdDAE(void) {}
+};
+
+
+// wrapper class for the Sundials IDA solver
+// for Differential-Algebraic Equations
+class sundialsIDA
+{
+public:
+	sundialsIDA(unsigned int n);
+	~sundialsIDA(void);
+
+	void initialize(void);
+	int integrateToTime(realtype t);
+	void setDAE(sdDAE* newDAE);
+	int getRootInfo(); 
+	void printStats();
+	
+	// Check function return value...
+	//   opt == 0 means SUNDIALS function allocates memory so check if
+	//            returned NULL pointer
+	//   opt == 1 means SUNDIALS function returns a flag so check if
+	//            flag >= 0
+	//   opt == 2 means function allocates memory so check if returned
+	//            NULL pointer 
+	static int check_flag(void *flagvalue, char *funcname, int opt);
+	
+	realtype reltol;
+	sdVector abstol;
+	
+	bool findRoots; // Specify whether or not to use the function g for rootfinding
+	
+	realtype t0; // initial time
+	realtype tInt; // time reached by integrator
+	sdVector y0; // initial condition
+	sdVector ydot0;
+	sdVector y;
+	sdVector ydot;
+	std::vector<int> rootsFound;
+	unsigned int nRoots;
+private:
+
+	static int f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void *f_data); // f(y) = res
+	static int g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, void *g_data);
+	static int Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn, 
+		           N_Vector res, realtype c_j, void *jac_data, DenseMat Jin, 
+				   N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+	
+	sdDAE* theDAE;
+	void *sundialsMem;
 	int flag;
 	int flagr;
 	int nEq;

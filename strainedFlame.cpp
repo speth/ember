@@ -37,56 +37,58 @@ void strainedFlame() {
 	clock_t t1, t2;
 	t1 = clock();
 
-    strainedFlameODE theODE;
-	theODE.nPoints = 20;
-	theODE.xLeft = -0.05;
-	theODE.xRight = 0.05;
-	theODE.Tleft = 300;
-	theODE.Tright = 400;
-	theODE.strainRate = 100;
-	theODE.mu = 1.8e-5;
-	theODE.lambda = 0.0243;
-	theODE.rhoLeft = 1.20;
-	theODE.tStart = 0;
-	theODE.tEnd = 10;
+    strainedFlameSys theSys;
+	theSys.nPoints = 20;
+	theSys.xLeft = -0.05;
+	theSys.xRight = 0.05;
+	theSys.Tleft = 300;
+	theSys.Tright = 300;
+	theSys.strainRate = 100;
+	theSys.mu = 1.8e-5;
+	theSys.lambda = 0.0243;
+	theSys.rhoLeft = 1.20;
+	theSys.tStart = 0;
+	theSys.tEnd = 10;
 	// Initial Conditions for ODE
-	theODE.setup();
+	theSys.setup();
 
-	// Sundials CVODE Solver:
-	sundialsSolver theSolver(3*theODE.N);
+	// Sundials IDA Solver:
+	sundialsIDA theSolver(theSys.N);
 	theSolver.reltol = 1e-5;
 	theSolver.nRoots = 0;
 	theSolver.findRoots = false;
-	theSolver.linearMultistepMethod = CV_BDF;
-	theSolver.nonlinearSolverMethod = CV_NEWTON;
 
 	// Initial condition:
-	theODE.rollY(theSolver.y0);
-	for (int i=0; i<theODE.nPoints; i++) {
+	theSys.rollY(theSolver.y);
+	for (int i=0; i<theSys.nPoints; i++) {
 		theSolver.abstol(3*i) = 1e-6;
 		theSolver.abstol(3*i+1) = 1e-6;
 		theSolver.abstol(3*i+2) = 1e-6;
 	}
-	theSolver.t0 = theODE.tStart;
+	for (int i=0; i<theSys.N; i++) {
+		theSolver.ydot(i) = 0;
+	}
+	theSolver.t0 = theSys.tStart;
 
-	theSolver.setODE(&theODE);
+	theSolver.setDAE(&theSys);
 	theSolver.initialize();
+	
 
 	// In loop, call CVode and print results
 	//   Break out of loop when NOUT preset output times have been reached.
 
 	int iout = 0;  
-	double dt = theODE.tEnd/500;
+	double dt = theSys.tEnd/500;
 	double t = dt;
 	int i=0;
 	
 	int flag;
 	double R = Cantera::GasConstant;
 	
-	while(t <= theODE.tEnd) {
+	while(t <= theSys.tEnd) {
 		
 		flag = theSolver.integrateToTime(t);
-		//std::cout << theSolver.tInt << ": " << theSolver.y << std::endl;
+		//cout << theSolver.tInt << ": " << theSolver.y << endl;
 
 
 		if (flag == CV_SUCCESS) {
@@ -96,22 +98,30 @@ void strainedFlame() {
 	}
 	theSolver.printStats();
 	t2 = clock();
-	std::cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << std::endl;
+	cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
 	
 	//outFile.close();
 	int blargh = 0;
 }
 
-void strainedFlameODE::setup(void)
+void strainedFlameSys::setup(void)
 {
 	N = 3*nPoints;
+
 	T.resize(nPoints);
 	U.resize(nPoints);
 	rhov.resize(nPoints);
-	
+
 	dTdt.resize(nPoints,0);
 	dUdt.resize(nPoints,0);
 	drhovdt.resize(nPoints,0);
+
+	resContinuity.resize(nPoints);
+	resMomentum.resize(nPoints);
+	resEnergy.resize(nPoints);
+
+	rho.resize(nPoints);
+	drhodt.resize(nPoints);
 
 	x.resize(nPoints);
 	dx.resize(nPoints);
@@ -131,53 +141,62 @@ void strainedFlameODE::setup(void)
 
 }
 
-int strainedFlameODE::f(realtype t, sdVector& y, sdVector& ydot)
+int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 {
 	unrollY(y);
+	unrollYdot(ydot);
 
 	// Update auxillary data:
 	for (int i=0; i<nPoints; i++) {
 		rho[i] = rho[0]*T[0]/T[i];
+		drhodt[i] = rho[i]/T[i]*dTdt[i];
 	}
-	int jj = N-1;
+
+	int jj = nPoints-1;
 
 	// Left boundary:
-	drhovdt[0] = 0;
-	dTdt[0] = 0;
-	dUdt[0] = 0;
+	resContinuity[0] = drhovdt[0];
+	resEnergy[0] = dTdt[0];
+	resMomentum[0] = dUdt[0];
 
 	// Intermediate points (energy & momentum equations)
 	for (int i=1; i<jj; i++) {
-		dTdt[i] = -rhov[i]*(T[i+1]-T[i-1])/(dx[i-1]+dx[i])
-			+ lambda*(T[i+1]-2*T[i]+T[i-1])/(dx[i-1]*dx[i]);
+		resEnergy[i] = rhov[i]*(T[i+1]-T[i-1])/(dx[i-1]+dx[i])
+			- lambda*(T[i+1]-2*T[i]+T[i-1])/(dx[i-1]*dx[i])
+			+ rho[i]*dTdt[i];
 
-		dUdt[i] = -rhov[i]*(U[i+1]-U[i-1])/(dx[i-1]+dx[i])
-			+ mu*(U[i+1]-2*U[i]+U[i-1])/(dx[i-1]*dx[i]);
+		resMomentum[i] = rhov[i]*(U[i+1]-U[i-1])/(dx[i-1]+dx[i])
+			- mu*(U[i+1]-2*U[i]+U[i-1])/(dx[i-1]*dx[i])
+			+ rho[i]*dUdt[i]
+			+ rho[i]*U[i]*U[i]*strainRate
+			- rho[1]*strainRate;
 	}
 
 	// Intermediate points (continuity equation)
 	for (int i=1; i<nPoints; i++) {
-
+		resContinuity[i] = drhodt[i] + rho[i]*U[i]*strainRate
+			+ (rhov[i]-rhov[i-1])/dx[i-1];
 	}
 
+	// Right Boundary: fixed values
+	resEnergy[jj] = dTdt[jj];
+	resMomentum[jj] = dUdt[jj];
 
-	// Right Boundary:
-	dTdt[jj] = 0;
-	dUdt[jj] = (U[jj]-U[jj-1])/dx[jj-1];
-	
-	rollYdot(ydot);
+	rollResiduals(res);
 	return 0;
 }
 
-int strainedFlameODE::Jac(realtype t, sdVector& y, sdVector& fy, sdMatrix& J)
+// A general, numerical method for finding the jacobian
+int strainedFlameSys::Jac(realtype t, sdVector& y, sdVector& ydot,
+						  sdVector& res, realtype c_j, sdMatrix& J)
 {
-	double eps = 10*DBL_EPSILON;
-		sdVector ydot(N);
+	double eps = sqrt(DBL_EPSILON);
+//		sdVector ydot(N);
 		sdVector yTemp(N);
 		sdVector ydotTemp(N);
-		ydot(0) = 2;
-		int foo = f(t,y,ydot);
+		sdVector resTemp(N);
 
+		// dF/dy
 		for (int j=0; j<N; j++) {
 
 			for (int i=0; i<N; i++) {
@@ -187,23 +206,51 @@ int strainedFlameODE::Jac(realtype t, sdVector& y, sdVector& fy, sdMatrix& J)
 			if (yTemp(j) != 0) {
 				dy = y(j)*(eps);
 			} else {
-				dy = eps*eps;
+				dy = eps;
 			}
 			yTemp(j) += dy;
-			f(t,yTemp,ydotTemp);
+			f(t,yTemp,ydot,resTemp);
 
 			for (int i=0; i<N; i++) {
-				J(i,j) = (ydotTemp(i)-ydot(i))/dy;
+				J(i,j) = (resTemp(i)-res(i))/dy;
+			}
+		}
+
+		// cj*dF/dydot
+		for (int j=0; j<N; j++) {
+
+			for (int i=0; i<N; i++) {
+				ydotTemp(i) = ydot(i);
+			}
+			double dy;
+			if (ydotTemp(j) != 0) {
+				dy = ydot(j)*(eps);
+			} else {
+				dy = eps;
+			}
+			ydotTemp(j) += dy;
+			f(t,y,ydotTemp,resTemp);
+
+			for (int i=0; i<N; i++) {
+				J(i,j) += c_j*(resTemp(i)-res(i))/dy;
 			}
 		}
 	return 0;
 }
 
-strainedFlameODE::strainedFlameODE(void) 
+strainedFlameSys::strainedFlameSys(void) 
 {
 }
+void strainedFlameSys::unrollYdot(const sdVector& yDot)
+{
+	for (int i=0; i<nPoints; i++) {
+		drhovdt[i] = yDot(3*i);
+		dUdt[i] = yDot(3*i+1);
+		dTdt[i] = yDot(3*i+2);
+	}
+}
 
-void strainedFlameODE::rollYdot(sdVector& yDot)
+void strainedFlameSys::rollYdot(sdVector& yDot)
 {
 	for (int i=0; i<nPoints; i++) {
 		yDot(3*i) = drhovdt[i];
@@ -212,7 +259,7 @@ void strainedFlameODE::rollYdot(sdVector& yDot)
 	}
 }
 
-void strainedFlameODE::unrollY(const sdVector& y)
+void strainedFlameSys::unrollY(const sdVector& y)
 {
 	for (int i=0; i<nPoints; i++) {
 		rhov[i] = y(3*i);
@@ -221,11 +268,20 @@ void strainedFlameODE::unrollY(const sdVector& y)
 	}
 }
 
-void strainedFlameODE::rollY(sdVector& y)
+void strainedFlameSys::rollY(sdVector& y)
 {
 	for (int i=0; i<nPoints; i++) {
 		y(3*i) = rhov[i];
 		y(3*i+1) = U[i];
 		y(3*i+2) = T[i];
+	}
+}
+
+void strainedFlameSys::rollResiduals(sdVector& res)
+{
+	for (int i=0; i<nPoints; i++) {
+		res(3*i) = resContinuity[i];
+		res(3*i+1) = resMomentum[i];
+		res(3*i+2) = resEnergy[i];
 	}
 }

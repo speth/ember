@@ -140,7 +140,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib"
+				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;"
 				GenerateDebugInformation="true"
