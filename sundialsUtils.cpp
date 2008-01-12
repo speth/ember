@@ -221,6 +221,12 @@ sdMatrix::sdMatrix(DenseMat other)
 	M = other;
 }
 
+sdMatrix::sdMatrix(void)
+{
+	alloc = false;
+	M = NULL;
+}
+
 sdMatrix::~sdMatrix(void) {
 	if (alloc) {
 		DenseFreeMat(M);
@@ -268,12 +274,17 @@ void sundialsIDA::initialize(void)
 		throw;
 	}
 
+	IDASetRdata(sundialsMem, theDAE);
+
+	
+	// Pick an appropriate initial condition for ydot
+	flag = IDASetId(sundialsMem, componentId.forSundials());
+
 	flag = IDAMalloc(sundialsMem, f, t0, y.forSundials(), ydot.forSundials(),
 		IDA_SV, reltol, abstol.forSundials());
 	if (check_flag(&flag, "IDAMalloc", 1)) {
 		throw;
 	}
-	IDASetRdata(sundialsMem, theDAE);
 
 	if (findRoots) {
 		rootsFound.resize(nRoots);
@@ -281,32 +292,40 @@ void sundialsIDA::initialize(void)
 		flag = IDARootInit(sundialsMem, nRoots, g, theDAE);
 		if (check_flag(&flag, "IDARootInit", 1)) {
 			throw;
+			std::cout << "IDARootInit Error" << std::endl;
 		}
 	}
 
 	// Call IDADense to specify the IDADENSE dense linear solver
-	flag = IDADense(sundialsMem, nEq);
-	if (check_flag(&flag, "IDADense", 1)) {
+	flag = IDASpgmr(sundialsMem, 0);
+	if (check_flag(&flag, "IDASpbcg", 1)) {
 		throw;
+		std::cout << "IDASpbcg Error" << std::endl;
 	}
 
-	// Set the Jacobian routine to Jac (user-supplied)
-	flag = IDADenseSetJacFn(sundialsMem, Jac, theDAE);
-	if (check_flag(&flag, "IDADenseSetJacFn", 1)) {
+	// this seems to work better using the default J-v function rather than specifying our own...
+	//flag = IDASpilsSetJacTimesVecFn(sundialsMem, JvProd, theDAE);
+	//if (check_flag(&flag, "IDASpilsSetJacTimesVecFn", 1)) {
+	//	throw;
+	//}
+
+	flag = IDASpilsSetPreconditioner(sundialsMem, preconditionerSetup, preconditionerSolve, theDAE);
+	if (check_flag(&flag, "IDASpilsSetPreconditioner", 1)) {
 		throw;
 	}
-
-	// Pick an appropriate initial condition for ydot
-	flag = IDASetId(sundialsMem, componentId.forSundials());
 
 	flag = IDACalcIC(sundialsMem, IDA_YA_YDP_INIT, t0+1e-4);
 	if (check_flag(&flag, "IDACalcIC", 1)) {
+		std::cout << "IDACalcIC Error" << std::endl;
 		throw;
+
 	}
 
 	flag = IDAGetConsistentIC(sundialsMem, y0.forSundials(), ydot0.forSundials());
 	if (check_flag(&flag, "IDAGetConsistentIC", 1)) {
+		std::cout << "IDAGetConsistentIC Error" << std::endl;
 		throw;
+
 	}
 
 }
@@ -327,34 +346,43 @@ int sundialsIDA::getRootInfo(void)
 
 void sundialsIDA::printStats(void)
 {
-  long int nst, nni, nje, nre, nreLS, netf, ncfn, nge;
+  long int nst, nni, nje, nre, nreLS, netf, ncfn, nge, nli, npe, nps;
   int retval;
 
   retval = IDAGetNumSteps(sundialsMem, &nst);
   check_flag(&retval, "IDAGetNumSteps", 1);
   retval = IDAGetNumResEvals(sundialsMem, &nre);
   check_flag(&retval, "IDAGetNumResEvals", 1);
-  retval = IDADenseGetNumJacEvals(sundialsMem, &nje);
-  check_flag(&retval, "IDADenseGetNumJacEvals", 1);
   retval = IDAGetNumNonlinSolvIters(sundialsMem, &nni);
   check_flag(&retval, "IDAGetNumNonlinSolvIters", 1);
   retval = IDAGetNumErrTestFails(sundialsMem, &netf);
   check_flag(&retval, "IDAGetNumErrTestFails", 1);
   retval = IDAGetNumNonlinSolvConvFails(sundialsMem, &ncfn);
   check_flag(&retval, "IDAGetNumNonlinSolvConvFails", 1);
-  retval = IDADenseGetNumResEvals(sundialsMem, &nreLS);
-  check_flag(&retval, "IDADenseGetNumResEvals", 1);
   retval = IDAGetNumGEvals(sundialsMem, &nge);
   check_flag(&retval, "IDAGetNumGEvals", 1);
+  retval = IDASpilsGetNumJtimesEvals(sundialsMem, &nje);
+  check_flag(&retval, "IDASpilsGetNumJtimesEvals", 1);
+  retval = IDASpilsGetNumLinIters(sundialsMem, &nli);
+  check_flag(&retval, "IDASpilsGetNumLinIters", 1);
+  retval = IDASpilsGetNumResEvals(sundialsMem, &nreLS);
+  check_flag(&retval, "IDASpilsGetNumResEvals", 1);
+  retval = IDASpilsGetNumPrecEvals(sundialsMem, &npe);
+  check_flag(&retval, "IDASpilsGetPrecEvals", 1);
+  retval = IDASpilsGetNumPrecSolves(sundialsMem, &nps);
+  check_flag(&retval, "IDASpilsGetNumPrecSolves", 1);
 
   printf("\nFinal Run Statistics: \n\n");
   printf("Number of steps                    = %ld\n", nst);
-  printf("Number of residual evaluations     = %ld\n", nre+nreLS);
-  printf("Number of Jacobian evaluations     = %ld\n", nje);
+  printf("Number of residual evaluations     = %ld\n", nre);
   printf("Number of nonlinear iterations     = %ld\n", nni);
   printf("Number of error test failures      = %ld\n", netf);
   printf("Number of nonlinear conv. failures = %ld\n", ncfn);
   printf("Number of root fn. evaluations     = %ld\n", nge);
+  printf("Number of J-v Evaluations          = %ld\n", nje);
+  printf("Number of linear iterations        = %ld\n", nli);
+  printf("Number of preconditioner evals.    = %ld\n", npe);
+  printf("Number of preconditioner solves    = %ld\n", nps);
 }
 
 int sundialsIDA::check_flag(void *flagvalue, char *funcname, int opt)
@@ -408,6 +436,32 @@ int sundialsIDA::Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn,
 	// jac_data contains a pointer to the "theODE" object
 	return ((sdDAE*) jac_data)->Jac(t, sdVector(yIn), sdVector(ydotIn),
 						        sdVector(res), c_j, sdMatrix(Jin));
+}
+
+int sundialsIDA::JvProd(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn,
+					    N_Vector vIn, N_Vector JvIn, realtype c_j, void* jac_data,
+					    N_Vector tmp1, N_Vector tmp2)
+{
+	return ((sdDAE*) jac_data)->JvProd(t, sdVector(yIn), sdVector(ydotIn),
+								       sdVector(resIn), sdVector(vIn), sdVector(JvIn), c_j);
+}
+
+int sundialsIDA::preconditionerSetup(realtype t, N_Vector yIn, N_Vector ydotIn,
+									 N_Vector resIn, realtype c_j, void* p_data, 
+									 N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+{
+	return ((sdDAE*) p_data)->preconditionerSetup(t, sdVector(yIn), sdVector(ydotIn),
+												  sdVector(resIn), c_j);
+}
+
+int sundialsIDA::preconditionerSolve(realtype t, N_Vector yIn, N_Vector ydotIn,
+								     N_Vector resIn, N_Vector rhs, N_Vector outVec,
+								     realtype c_j, realtype delta, void* p_data,
+								     N_Vector tmp)
+{
+	return ((sdDAE*) p_data)->preconditionerSolve(t, sdVector(yIn), sdVector(ydotIn),
+											     sdVector(resIn), sdVector(rhs),
+												 sdVector(outVec), c_j, delta);
 }
 
 void sundialsIDA::setDAE(sdDAE* newDAE)

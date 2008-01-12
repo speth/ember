@@ -38,7 +38,8 @@ void strainedFlame() {
 	t1 = clock();
 
     strainedFlameSys theSys;
-	theSys.nPoints = 40;
+	theSys.nPoints = 200;
+	//theSys.nPoints = 10;
 	theSys.xLeft = -0.05;
 	theSys.xRight = 0.05;
 	theSys.Tleft = 300;
@@ -111,7 +112,7 @@ void strainedFlame() {
 			theSys.printForMatlab(outFile, theSys.T, i, "T");
 			theSys.printForMatlab(outFile, theSys.U, i, "U");
 			outFile << "t(" << i << ") = " << t << ";" << endl;
-
+			cout << "t(" << i << ") = " << t << ";" << endl;
 			t += dt;
 		}
 	}
@@ -120,12 +121,15 @@ void strainedFlame() {
 	cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
 	
 	outFile.close();
-	int blargh = 0;
+ 	int blargh = 0;
 }
 
 void strainedFlameSys::setup(void)
 {
 	N = 3*nPoints;
+	jacBW = 3;
+	jacBWdot = 1;
+	nVars = 3;
 
 	T.resize(nPoints);
 	U.resize(nPoints);
@@ -144,6 +148,18 @@ void strainedFlameSys::setup(void)
 
 	x.resize(nPoints);
 	dx.resize(nPoints);
+
+	dFdy.resize(N, vector<double> (N));
+	dFdydot.resize(N, vector<double> (N));
+
+	jacMatrix = new sdMatrix(N,N);
+	jacMatrix2 = new sdMatrix(N,N);
+	jacMatrixErr = new sdMatrix(N,N);
+
+	denzero(jacMatrix2->forSundials()->data,N,N);
+	denzero(jacMatrix->forSundials()->data,N,N);
+
+	pMat.resize(N);
 
 	// Grid and initial profiles of T, U and rhov
 	for (int i=0; i<nPoints; i++) {
@@ -167,7 +183,7 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 
 	// Update auxillary data:
 	for (int i=0; i<nPoints; i++) {
-		rho[i] = rho[0]*T[0]/T[i];
+		rho[i] = rhoLeft*Tleft/T[i];
 		drhodt[i] = rho[i]/T[i]*dTdt[i];
 	}
 
@@ -188,7 +204,7 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 			- mu*(U[i+1]-2*U[i]+U[i-1])/(dx[i-1]*dx[i])
 			+ rho[i]*dUdt[i]
 			+ rho[i]*U[i]*U[i]*strainRate
-			- rho[0]*strainRate;
+			- rhoLeft*strainRate;
 	}
 
 	// Intermediate points (continuity equation)
@@ -202,74 +218,256 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	resMomentum[jj] = dUdt[jj];
 
 	rollResiduals(res);
+	double resNorm = 0;
+	double resC = 0;
+	double resE = 0;
+	double resM = 0;
+	for (int i=0; i<N; i++) {
+		resNorm += res(i)*res(i);
+	}
+	for (int i=0; i<nPoints; i++) {
+		resC += resContinuity[i]*resContinuity[i];
+		resE += resEnergy[i]*resEnergy[i];
+		resM += resMomentum[i]*resMomentum[i];
+	}
+	resNorm = sqrt(resNorm);
+	resC = sqrt(resC);
+	resE = sqrt(resE);
+	resM = sqrt(resM);
+	//cout << "resNorm = " << resNorm << endl;
+	//cout << "resC = " << resC << endl;
+	//cout << "resE = " << resE << endl;
+	//cout << "resM = " << resM << endl;
+
 	return 0;
 }
 
-
-int strainedFlameSys::Jac(realtype t, sdVector& y, sdVector& ydot,
-						  sdVector& res, realtype c_j, sdMatrix& J)
+int strainedFlameSys::JvProd(realtype t, sdVector& y, sdVector& ydot,
+			                 sdVector& res, sdVector& v, sdVector& Jv, realtype c_j)
 {
-	bool numJac = false;
-	if (numJac) {
-
-		// A general, numerical method for finding the jacobian
-		
-		double eps = sqrt(DBL_EPSILON);
-	//		sdVector ydot(N);
-			sdVector yTemp(N);
-			sdVector ydotTemp(N);
-			sdVector resTemp(N);
-
-			// dF/dy
-			for (int j=0; j<N; j++) {
-
-				for (int i=0; i<N; i++) {
-					yTemp(i) = y(i);
-				}
-				double dy;
-				if (yTemp(j) != 0) {
-					dy = y(j)*(eps);
-				} else {
-					dy = eps;
-				}
-				yTemp(j) += dy;
-				f(t,yTemp,ydot,resTemp);
-
-				for (int i=0; i<N; i++) {
-					J(i,j) = (resTemp(i)-res(i))/dy;
-				}
-			}
-
-			// cj*dF/dydot
-			for (int j=0; j<N; j++) {
-
-				for (int i=0; i<N; i++) {
-					ydotTemp(i) = ydot(i);
-				}
-				double dy;
-				if (ydotTemp(j) != 0) {
-					dy = ydot(j)*(eps);
-				} else {
-					dy = eps;
-				}
-				ydotTemp(j) += dy;
-				f(t,y,ydotTemp,resTemp);
-
-				for (int i=0; i<N; i++) {
-					J(i,j) += c_j*(resTemp(i)-res(i))/dy;
-				}
-			}
-		return 0;
-	} else {
-		// The problem specific Jacobian formulation
+	sdVector resTemp(N);
+	sdVector yTemp(N);
+	double yNorm = 0;
+	double vNorm = 0;
+	double errNorm = 0;
+	for (int i=0; i<N; i++) {
+		yNorm += y(i)*y(i);
+		vNorm += v(i)*v(i);
 	}
+	yNorm = sqrt(yNorm);
+	vNorm = sqrt(vNorm);
+	double eps = pow((1+yNorm)*(DBL_EPSILON),0.3333)/vNorm;
+	for (int i=0; i<N; i++) {
+		yTemp(i) = y(i) + v(i)*eps;
+	}
+	f(t, yTemp, ydot, resTemp);
+	sdVector JvAlt(N);
+	for (int i=0; i<N; i++) {
+		JvAlt(i) = (resTemp(i) - res(i))/eps;
+		Jv(i) = 0;
+		for (int j=0; j<N; j++)
+			Jv(i) += dFdy[i][j]*v(j) + dFdydot[i][j]*c_j*v(j);
+	}
+
+	//for (int i=0; i<N; i++) {
+	//	errNorm += pow(JvAlt(i) - Jv(i),2);
+	//}
+	//errNorm = sqrt(errNorm);
+	//cout << "errNorm = " << errNorm << endl;
+	return 0;
 }
 
+int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot, 
+										  sdVector& res, realtype c_j)
+{
+	double eps = sqrt(DBL_EPSILON);
+	sdVector yTemp(N);
+	sdVector ydotTemp(N);
+	sdVector resTemp(N);
+
+	// J = dF/dy
+	// Block tridiagonal
+		
+	denzero(jacMatrix->forSundials()->data,N,N);
+	int bw = nVars*3;
+	for (int s=0; s<bw; s++)
+	{
+		for (int i=0; i<N; i++) {
+			yTemp(i) = y(i);
+		}
+		for (int i=s; i<N; i+=bw) {
+			// Form the perturbed y vector
+			if (y(i) != 0) {
+				yTemp(i) += yTemp(i)*eps;
+			} else {
+				yTemp(i) = eps;
+			}
+		}
+		f(t, yTemp, ydot, resTemp);
+			if (s<nVars) {
+			int counter = nVars;
+			int col = 0;
+			for (int i=0; i<N; i++) {
+				if (counter++ % bw == 0) {
+					col += bw;
+				}
+				if (col+s>=N) {
+					continue;
+				}
+				(*jacMatrix)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
+			}
+		} else if (s<2*nVars) {
+			int counter = 0;
+			int col = -bw;
+			for (int i=0; i<N; i++) {
+				if (counter++ % bw == 0) {
+					col += bw;
+				}
+				if (col+s>=N) {
+					continue;
+				}
+				(*jacMatrix)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
+			}
+		} else {
+			int counter = 0;
+			int col = -bw;
+			for (int i=nVars; i<N; i++) {
+				if (counter++ % bw == 0) {
+					col += bw;
+				}
+				if (col+s>=N) {
+					continue;
+				}
+				(*jacMatrix)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
+			}
+		}
+	}
+
+	// J += c_j*dF/dydot
+	// Block diagonal
+	bw = nVars;
+	for (int s=0; s<bw; s++)
+	{
+		for (int i=0; i<N; i++) {
+			ydotTemp(i) = ydot(i);
+		}
+		for (int i=s; i<N; i+=bw) {
+			// Form the perturbed y vector
+			if (ydot(i) != 0) {
+				ydotTemp(i) *= 1+eps;
+			} else {
+				ydotTemp(i) = eps;
+			}
+		}
+
+		f(t, y, ydotTemp, resTemp);
+
+		int counter = 0;
+		int col = 0;
+		for (int i=0; i<N; i++) {
+			if (col+s>=N) {
+				continue;
+			}
+			(*jacMatrix)(i,s+col) += c_j*(resTemp(i)-res(i))/(ydotTemp(s+col)-ydot(s+col));
+			if (++counter % bw == 0) {
+				col += bw;
+			}
+		}
+	}
+
+	denGETRF(jacMatrix->forSundials()->data,N,N,&pMat[0]);
+ 	return 0;
+
+	// A complete, dense Jacobian
+	//
+	//double eps = sqrt(DBL_EPSILON);
+	//	
+	//sdVector yTemp(N);
+	//sdVector ydotTemp(N);
+	//sdVector resTemp(N);
+
+	//// dF/dy
+	//for (int j=0; j<N; j++) {
+	//	for (int i=0; i<N; i++) {
+	//		yTemp(i) = y(i);
+	//	}
+	//	double dy;
+	//	if (yTemp(j) != 0) {
+	//		dy = y(j)*(eps);
+	//	} else {
+	//		dy = eps;
+	//	}
+	//	yTemp(j) += dy;
+	//	f(t,yTemp,ydot,resTemp);
+	//		for (int i=0; i<N; i++) {
+	//			dFdy[i][j] = (resTemp(i)-res(i))/dy;
+	//		}
+	//	}
+
+	//	// dF/dydot
+	//	for (int j=0; j<N; j++) {
+	//		for (int i=0; i<N; i++) {
+	//			ydotTemp(i) = ydot(i);
+	//		}
+	//		double dy;
+	//		if (ydotTemp(j) != 0) {
+	//			dy = ydot(j)*(eps);
+	//		} else {
+	//			dy = eps;
+	//		}
+	//		ydotTemp(j) += dy;
+	//		f(t,y,ydotTemp,resTemp);
+
+	//		for (int i=0; i<N; i++) {
+	//			dFdydot[i][j] = (resTemp(i)-res(i))/dy;
+	//		}
+	//	}
+	//	for (int i=0; i<N; i++) {
+	//		for (int j=0; j<N; j++) {
+	//			(*jacMatrix)(i,j) = dFdy[i][j] + c_j*dFdydot[i][j];
+	//		}
+	//	}
+	//}
+
+}
+
+int strainedFlameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, 
+										  sdVector& resIn, sdVector& rhs, 
+										  sdVector& outVec, realtype c_j, realtype delta)
+{
+	//if (c_j != cjSave) {
+	//	cout << "Warning: c_j changed unexpectedly!" << endl;
+	//}
+	vector<double> xVec(N);
+	for (int i=0; i<N; i++) {
+		xVec[i] = rhs(i);
+	}
+
+	denGETRS(jacMatrix->forSundials()->data,N,&pMat[0],&xVec[0]);
+
+	for (int i=0; i<N; i++) {
+		outVec(i) = xVec[i];
+	}
+
+	//// Diagonal preconditioner (?)
+	//for (int i=0; i<N; i++) {
+	//	outVec(i) = rhs(i)/(dFdy[i][i] + c_j*dFdydot[i][i]);
+	//}
+	return 0;
+}
 
 
 strainedFlameSys::strainedFlameSys(void) 
 {
 }
+
+strainedFlameSys::~strainedFlameSys(void)
+{
+	delete jacMatrix;
+	delete jacMatrix2;
+	delete jacMatrixErr;
+}
+
 void strainedFlameSys::unrollYdot(const sdVector& yDot)
 {
 	for (int i=0; i<nPoints; i++) {

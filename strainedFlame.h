@@ -3,6 +3,7 @@
 
 #include "sundialsUtils.h"
 
+
 #include <cantera/Cantera.h>
 #include <cantera/IdealGasMix.h>    // defines class IdealGasMix
 #include <cantera/equilibrium.h>    // chemical equilibrium
@@ -14,11 +15,19 @@ class strainedFlameSys : public sdDAE
 {
 public:
 	strainedFlameSys(void);
+	~strainedFlameSys(void);
 	
 	// the functions for solving the ODE
 	int f(realtype t, sdVector& y, sdVector& ydot, sdVector& res);
-	int Jac(realtype t, sdVector& y, sdVector& ydot, sdVector& res,
-		    realtype c_j, sdMatrix& J);
+
+	int JvProd(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn, 
+			   sdVector& vIn, sdVector& JvIn, realtype c_j);
+
+	int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn, 
+		                    sdVector& resIn, realtype c_j);
+
+	int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
+						    sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta);
 	
 	// Chemistry:
 	//Cantera::IdealGasMix gas;
@@ -35,7 +44,7 @@ public:
 	double cp; // specific heat capacity
 	double rhoLeft;
 	void setup();
-
+	
 	// Utility functions
 	void unrollY(const sdVector& y);
 	void unrollYdot(const sdVector& yDot);
@@ -71,5 +80,21 @@ private:
 	vector<double> resContinuity;
 	vector<double> resMomentum;
 	vector<double> resEnergy;
+
+	// Jacobian data
+	vector< vector<double> > dFdy;
+	vector< vector<double> > dFdydot;
+
+	int nVars; // Number of solution variables at each point
+	int jacBW; // Bandwidth of the Jacobian (number of filled blocks per row, 
+			   // dependent on the order of the finite difference stencil)
+	int jacBWdot; // Bandwidth of dF/dydot component of Jacobian
+
+	sdMatrix* jacMatrix;
+	sdMatrix* jacMatrix2;
+	sdMatrix* jacMatrixErr;
+	vector<long int> pMat;
+
+	double cjSave;
 };
 

@@ -2,12 +2,14 @@
 
 #include <nvector/nvector_serial.h>
 #include <sundials/sundials_dense.h>
+
 #include <sundials/sundials_types.h>
 
 #include <cvode/cvode.h>
 #include <cvode/cvode_dense.h>
 #include <ida/ida.h>
-#include <ida/ida_dense.h>
+//#include <ida/ida_dense.h>
+#include <ida/ida_spgmr.h>
 
 #include <iostream>
 #include <vector>
@@ -37,10 +39,12 @@ class sdMatrix
 public:
 	sdMatrix(unsigned int n, unsigned int m);
 	sdMatrix(DenseMat other);
+	sdMatrix(void);
 	~sdMatrix(void);
 	realtype& operator()(unsigned int i, unsigned int j);
 	realtype operator()(unsigned int i, unsigned int j) const;
 	DenseMat forSundials(void) const {return M;}
+
 private:
 	DenseMat M;
 	bool alloc;
@@ -109,11 +113,22 @@ class sdDAE {
 public:
 	virtual int f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)=0;
 	virtual int g(realtype t, sdVector& y, sdVector& ydot, realtype* gOut) {return 0;}
+
 	virtual int Jac(realtype t, sdVector& y, sdVector& ydot, sdVector& res,
-		            realtype c_j, sdMatrix& J)=0;
+			        realtype c_j, sdMatrix& J) {return 0;}
+
+	virtual int JvProd(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn, 
+					   sdVector& vIn, sdVector& JvIn, realtype c_j) {return 0;}
+
+	virtual int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn, 
+		                            sdVector& resIn, realtype c_j) {return 0;}
+
+	virtual int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn,
+									sdVector& resIn, sdVector& rhs, sdVector& outVec,
+									realtype c_j, realtype delta) {return 0;}
+
 	virtual ~sdDAE(void) {}
 };
-
 
 // wrapper class for the Sundials IDA solver
 // for Differential-Algebraic Equations
@@ -156,10 +171,23 @@ private:
 
 	static int f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void *f_data); // f(y) = res
 	static int g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, void *g_data);
+
 	static int Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn, 
-		           N_Vector res, realtype c_j, void *jac_data, DenseMat Jin, 
+		           N_Vector res, realtype c_j, void* jac_data, DenseMat Jin, 
 				   N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+
+	static int JvProd(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn,
+					  N_Vector vIn, N_Vector JvIn, realtype c_j, void* jac_data,
+					  N_Vector tmp1, N_Vector tmp2);
+
+	static int preconditionerSetup(realtype t, N_Vector yIn, N_Vector ydotIn, 
+		                           N_Vector resIn, realtype c_j, void* p_data, 
+								   N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 	
+	static int preconditionerSolve(realtype t, N_Vector yIn, N_Vector ydotIn,
+								   N_Vector resIn, N_Vector rhs, N_Vector outVec,
+								   realtype c_j, realtype delta, void* p_data,
+								   N_Vector tmp);
 	sdDAE* theDAE;
 	void *sundialsMem;
 	int flag;
