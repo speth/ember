@@ -64,7 +64,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib"
+				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib"
 				LinkIncremental="0"
 				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;"
 				GenerateDebugInformation="true"
@@ -72,6 +72,7 @@
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
 				TargetMachine="1"
+				Profile="true"
 			/>
 			<Tool
 				Name="VCALinkTool"

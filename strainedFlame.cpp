@@ -38,13 +38,13 @@ void strainedFlame() {
 	t1 = clock();
 
     strainedFlameSys theSys;
-	theSys.nPoints = 200;
+	theSys.nPoints = 2000;
 	//theSys.nPoints = 10;
 	theSys.xLeft = -0.05;
 	theSys.xRight = 0.05;
 	theSys.Tleft = 300;
 	theSys.Tright = 600;
-	theSys.strainRate = 100;
+	theSys.strainRate = 20;
 	theSys.mu = 1.8e-5;
 	theSys.lambda = 0.0243;
 	theSys.cp = 1.005;
@@ -100,9 +100,6 @@ void strainedFlame() {
 	while(t <= theSys.tEnd) {
 		
 		flag = theSolver.integrateToTime(t);
-		//cout << theSolver.tInt << ": " << theSolver.y << endl;
-		
-
 
 		if (flag == CV_SUCCESS) {
 			i++;
@@ -152,12 +149,8 @@ void strainedFlameSys::setup(void)
 	dFdy.resize(N, vector<double> (N));
 	dFdydot.resize(N, vector<double> (N));
 
-	jacMatrix = new sdMatrix(N,N);
-	jacMatrix2 = new sdMatrix(N,N);
-	jacMatrixErr = new sdMatrix(N,N);
-
-	denzero(jacMatrix2->forSundials()->data,N,N);
-	denzero(jacMatrix->forSundials()->data,N,N);
+	bandedJacobian = new sdBandMatrix(N,2*nVars-1,2*nVars-1,4*nVars-2);
+	BandZero(bandedJacobian->forSundials());
 
 	pMat.resize(N);
 
@@ -287,8 +280,7 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 
 	// J = dF/dy
 	// Block tridiagonal
-		
-	denzero(jacMatrix->forSundials()->data,N,N);
+
 	int bw = nVars*3;
 	for (int s=0; s<bw; s++)
 	{
@@ -314,7 +306,7 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 				if (col+s>=N) {
 					continue;
 				}
-				(*jacMatrix)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
+				(*bandedJacobian)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
 			}
 		} else if (s<2*nVars) {
 			int counter = 0;
@@ -326,7 +318,7 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 				if (col+s>=N) {
 					continue;
 				}
-				(*jacMatrix)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
+				(*bandedJacobian)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
 			}
 		} else {
 			int counter = 0;
@@ -338,7 +330,7 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 				if (col+s>=N) {
 					continue;
 				}
-				(*jacMatrix)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
+				(*bandedJacobian)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
 			}
 		}
 	}
@@ -368,14 +360,14 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 			if (col+s>=N) {
 				continue;
 			}
-			(*jacMatrix)(i,s+col) += c_j*(resTemp(i)-res(i))/(ydotTemp(s+col)-ydot(s+col));
+			(*bandedJacobian)(i,s+col) += c_j*(resTemp(i)-res(i))/(ydotTemp(s+col)-ydot(s+col));
 			if (++counter % bw == 0) {
 				col += bw;
 			}
 		}
 	}
-
-	denGETRF(jacMatrix->forSundials()->data,N,N,&pMat[0]);
+	BandGBTRF(bandedJacobian->forSundials(),&pMat[0]);
+//	denGETRF(jacMatrix->forSundials(),N,N,&pMat[0]);
  	return 0;
 
 	// A complete, dense Jacobian
@@ -443,7 +435,9 @@ int strainedFlameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& y
 		xVec[i] = rhs(i);
 	}
 
-	denGETRS(jacMatrix->forSundials()->data,N,&pMat[0],&xVec[0]);
+//	denGETRS(jacMatrix->forSundials(),N,&pMat[0],&xVec[0]);
+	BandGBTRS(bandedJacobian->forSundials(),&pMat[0],&xVec[0]);
+
 
 	for (int i=0; i<N; i++) {
 		outVec(i) = xVec[i];
@@ -463,9 +457,7 @@ strainedFlameSys::strainedFlameSys(void)
 
 strainedFlameSys::~strainedFlameSys(void)
 {
-	delete jacMatrix;
-	delete jacMatrix2;
-	delete jacMatrixErr;
+	delete bandedJacobian;
 }
 
 void strainedFlameSys::unrollYdot(const sdVector& yDot)

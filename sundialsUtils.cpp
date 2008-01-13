@@ -238,11 +238,46 @@ realtype& sdMatrix::operator() (unsigned int i, unsigned int j)
 	return DENSE_ELEM(M,i,j);
 }
 
-realtype sdMatrix::operator() (unsigned int i, unsigned int j) const
+realtype& sdMatrix::operator() (unsigned int i, unsigned int j) const
 {
 	return DENSE_ELEM(M,i,j);
 }
 
+// Band Matrix
+
+sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower, long int storeUpper)
+{
+	alloc = true;
+	M = BandAllocMat(N,bwUpper,bwLower,storeUpper);
+}
+
+sdBandMatrix::sdBandMatrix(BandMat other) 
+{
+	alloc = false;
+	M = other;
+}
+
+sdBandMatrix::sdBandMatrix(void)
+{
+	alloc = false;
+	M = NULL;
+}
+
+sdBandMatrix::~sdBandMatrix(void) {
+	if (alloc) {
+		BandFreeMat(M);
+	}
+}
+
+realtype& sdBandMatrix::operator() (unsigned int i, unsigned int j)
+{
+	return BAND_ELEM(M,i,j);
+}
+
+realtype& sdBandMatrix::operator() (unsigned int i, unsigned int j) const
+{
+	return BAND_ELEM(M,i,j);
+}
 
 // Sundials IDA Solver
 
@@ -296,11 +331,10 @@ void sundialsIDA::initialize(void)
 		}
 	}
 
-	// Call IDADense to specify the IDADENSE dense linear solver
-	flag = IDASpgmr(sundialsMem, 0);
+	// Call IDASpgmr to specify the IDASpgmr dense linear solver
+	flag = IDASpbcg(sundialsMem, 0);
 	if (check_flag(&flag, "IDASpbcg", 1)) {
 		throw;
-		std::cout << "IDASpbcg Error" << std::endl;
 	}
 
 	// this seems to work better using the default J-v function rather than specifying our own...
@@ -318,14 +352,11 @@ void sundialsIDA::initialize(void)
 	if (check_flag(&flag, "IDACalcIC", 1)) {
 		std::cout << "IDACalcIC Error" << std::endl;
 		throw;
-
 	}
 
 	flag = IDAGetConsistentIC(sundialsMem, y0.forSundials(), ydot0.forSundials());
 	if (check_flag(&flag, "IDAGetConsistentIC", 1)) {
-		std::cout << "IDAGetConsistentIC Error" << std::endl;
 		throw;
-
 	}
 
 }

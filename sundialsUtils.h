@@ -2,6 +2,7 @@
 
 #include <nvector/nvector_serial.h>
 #include <sundials/sundials_dense.h>
+#include <sundials/sundials_band.h>
 
 #include <sundials/sundials_types.h>
 
@@ -9,7 +10,7 @@
 #include <cvode/cvode_dense.h>
 #include <ida/ida.h>
 //#include <ida/ida_dense.h>
-#include <ida/ida_spgmr.h>
+#include <ida/ida_spbcgs.h>
 
 #include <iostream>
 #include <vector>
@@ -23,7 +24,7 @@ public:
 	~sdVector(void);
 	realtype& operator()(unsigned int i);
 	realtype operator()(unsigned int i) const;
-	N_Vector forSundials(void) const {return v;}
+	N_Vector& forSundials(void) {return v;}
 	unsigned int length(void) const {return n;}
 private:
 	N_Vector v;
@@ -42,11 +43,27 @@ public:
 	sdMatrix(void);
 	~sdMatrix(void);
 	realtype& operator()(unsigned int i, unsigned int j);
-	realtype operator()(unsigned int i, unsigned int j) const;
-	DenseMat forSundials(void) const {return M;}
+	realtype& operator()(unsigned int i, unsigned int j) const;
+	realtype** forSundials(void) {return M->data;}
 
 private:
 	DenseMat M;
+	bool alloc;
+};
+
+class sdBandMatrix
+{
+public:
+	sdBandMatrix(long int N, long int bwUpper, long int bwLower, long int storeUpper);
+	sdBandMatrix(BandMat other);
+	sdBandMatrix(void);
+	~sdBandMatrix(void);
+	realtype& operator()(unsigned int i, unsigned int j);
+	realtype& operator()(unsigned int i, unsigned int j) const;
+	BandMat& forSundials(void) {return M;}
+	
+private:
+	BandMat M;
 	bool alloc;
 };
 

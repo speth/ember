@@ -90,9 +90,9 @@ private:
 			   // dependent on the order of the finite difference stencil)
 	int jacBWdot; // Bandwidth of dF/dydot component of Jacobian
 
-	sdMatrix* jacMatrix;
-	sdMatrix* jacMatrix2;
-	sdMatrix* jacMatrixErr;
+	sdBandMatrix* bandedJacobian;
+
+
 	vector<long int> pMat;
 
 	double cjSave;
