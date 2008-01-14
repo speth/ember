@@ -38,7 +38,7 @@ void strainedFlame() {
 	t1 = clock();
 
     strainedFlameSys theSys;
-	theSys.nPoints = 2000;
+	theSys.nPoints = 1000;
 	//theSys.nPoints = 10;
 	theSys.xLeft = -0.05;
 	theSys.xRight = 0.05;
@@ -149,7 +149,7 @@ void strainedFlameSys::setup(void)
 	dFdy.resize(N, vector<double> (N));
 	dFdydot.resize(N, vector<double> (N));
 
-	bandedJacobian = new sdBandMatrix(N,2*nVars-1,2*nVars-1,4*nVars-2);
+	bandedJacobian = new sdBandMatrix(N,nVars+1,nVars+1,2*nVars+2);
 	BandZero(bandedJacobian->forSundials());
 
 	pMat.resize(N);
@@ -277,69 +277,63 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 	sdVector yTemp(N);
 	sdVector ydotTemp(N);
 	sdVector resTemp(N);
+	BandZero(bandedJacobian->forSundials());
 
 	// J = dF/dy
-	// Block tridiagonal
-
-	int bw = nVars*3;
+	// Banded, upper & lower bandwidths = nVars. 
+	int bw = 2*nVars+1;
 	for (int s=0; s<bw; s++)
 	{
 		for (int i=0; i<N; i++) {
 			yTemp(i) = y(i);
 		}
+		// Form the perturbed y vector
 		for (int i=s; i<N; i+=bw) {
-			// Form the perturbed y vector
+			
 			if (y(i) != 0) {
 				yTemp(i) += yTemp(i)*eps;
 			} else {
 				yTemp(i) = eps;
 			}
 		}
+		// Evaluate the residuals
 		f(t, yTemp, ydot, resTemp);
-			if (s<nVars) {
-			int counter = nVars;
-			int col = 0;
-			for (int i=0; i<N; i++) {
-				if (counter++ % bw == 0) {
-					col += bw;
-				}
-				if (col+s>=N) {
-					continue;
-				}
-				(*bandedJacobian)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
-			}
-		} else if (s<2*nVars) {
-			int counter = 0;
-			int col = -bw;
-			for (int i=0; i<N; i++) {
-				if (counter++ % bw == 0) {
-					col += bw;
-				}
-				if (col+s>=N) {
-					continue;
-				}
-				(*bandedJacobian)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
-			}
+		
+		// Fill in the corresponding Jacobian elements
+		int iStart = max(0,s-nVars);
+		int counter;
+		int col;
+		//int counter = max(1,nVars-s);
+		if (s >= nVars) {
+			counter = 0;
+			col = -bw;
+			
 		} else {
-			int counter = 0;
-			int col = -bw;
-			for (int i=nVars; i<N; i++) {
-				if (counter++ % bw == 0) {
-					col += bw;
-				}
-				if (col+s>=N) {
-					continue;
-				}
-				(*bandedJacobian)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
+			counter = nVars - s;
+			col = 0;
+		}
+		
+		for (int i=iStart; i<N; i++) {
+			if (counter++ % bw == 0) {
+				col += bw;
 			}
+			if (col+s>=N) {
+				continue;
+			}
+			(*bandedJacobian)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
+			//outFile << "Jv2(" << i+1 << "," << s+col+1 << ") = " << (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col)) << ";" << endl;
 		}
 	}
 
 	// J += c_j*dF/dydot
-	// Block diagonal
-	bw = nVars;
+	// Banded, upper & lower bandwidths = nVars-1. 
+	bw = 2*nVars-1;
 	for (int s=0; s<bw; s++)
 	{
+		for (int i=0; i<N; i++) {
+			yTemp(i) = y(i);
+		}
+		// Form the perturbed ydot vector
 		for (int i=0; i<N; i++) {
 			ydotTemp(i) = ydot(i);
 		}
@@ -352,75 +346,37 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 			}
 		}
 
+		// Evaluate the residuals
 		f(t, y, ydotTemp, resTemp);
 
-		int counter = 0;
-		int col = 0;
-		for (int i=0; i<N; i++) {
+		
+		// Fill in the corresponding Jacobian elements
+		int iStart = max(0,s-nVars);
+		int counter;
+		int col;
+		if (s >= nVars) {
+			counter = 0;
+			col = -bw;
+			
+		} else {
+			counter = nVars - s;
+			col = 0;
+		}
+		
+		for (int i=iStart; i<N; i++) {
+			if (counter++ % bw == 0) {
+				col += bw;
+			}
 			if (col+s>=N) {
 				continue;
 			}
 			(*bandedJacobian)(i,s+col) += c_j*(resTemp(i)-res(i))/(ydotTemp(s+col)-ydot(s+col));
-			if (++counter % bw == 0) {
-				col += bw;
-			}
 		}
 	}
+
 	BandGBTRF(bandedJacobian->forSundials(),&pMat[0]);
-//	denGETRF(jacMatrix->forSundials(),N,N,&pMat[0]);
+	
  	return 0;
-
-	// A complete, dense Jacobian
-	//
-	//double eps = sqrt(DBL_EPSILON);
-	//	
-	//sdVector yTemp(N);
-	//sdVector ydotTemp(N);
-	//sdVector resTemp(N);
-
-	//// dF/dy
-	//for (int j=0; j<N; j++) {
-	//	for (int i=0; i<N; i++) {
-	//		yTemp(i) = y(i);
-	//	}
-	//	double dy;
-	//	if (yTemp(j) != 0) {
-	//		dy = y(j)*(eps);
-	//	} else {
-	//		dy = eps;
-	//	}
-	//	yTemp(j) += dy;
-	//	f(t,yTemp,ydot,resTemp);
-	//		for (int i=0; i<N; i++) {
-	//			dFdy[i][j] = (resTemp(i)-res(i))/dy;
-	//		}
-	//	}
-
-	//	// dF/dydot
-	//	for (int j=0; j<N; j++) {
-	//		for (int i=0; i<N; i++) {
-	//			ydotTemp(i) = ydot(i);
-	//		}
-	//		double dy;
-	//		if (ydotTemp(j) != 0) {
-	//			dy = ydot(j)*(eps);
-	//		} else {
-	//			dy = eps;
-	//		}
-	//		ydotTemp(j) += dy;
-	//		f(t,y,ydotTemp,resTemp);
-
-	//		for (int i=0; i<N; i++) {
-	//			dFdydot[i][j] = (resTemp(i)-res(i))/dy;
-	//		}
-	//	}
-	//	for (int i=0; i<N; i++) {
-	//		for (int j=0; j<N; j++) {
-	//			(*jacMatrix)(i,j) = dFdy[i][j] + c_j*dFdydot[i][j];
-	//		}
-	//	}
-	//}
-
 }
 
 int strainedFlameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, 
