@@ -129,20 +129,20 @@ private:
 class sdDAE {
 public:
 	virtual int f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)=0;
-	virtual int g(realtype t, sdVector& y, sdVector& ydot, realtype* gOut) {return 0;}
+	virtual int g(realtype t, sdVector& y, sdVector& ydot, realtype* gOut) {return -1;}
 
 	virtual int Jac(realtype t, sdVector& y, sdVector& ydot, sdVector& res,
-			        realtype c_j, sdMatrix& J) {return 0;}
+			        realtype c_j, sdMatrix& J) {return -1;}
 
 	virtual int JvProd(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn, 
-					   sdVector& vIn, sdVector& JvIn, realtype c_j) {return 0;}
+					   sdVector& vIn, sdVector& JvIn, realtype c_j) {return -1;}
 
 	virtual int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn, 
-		                            sdVector& resIn, realtype c_j) {return 0;}
+		                            sdVector& resIn, realtype c_j) {return -1;}
 
 	virtual int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn,
 									sdVector& resIn, sdVector& rhs, sdVector& outVec,
-									realtype c_j, realtype delta) {return 0;}
+									realtype c_j, realtype delta) {return -1;}
 
 	virtual ~sdDAE(void) {}
 };
