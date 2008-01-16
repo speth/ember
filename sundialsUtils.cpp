@@ -133,26 +133,32 @@ int sundialsCVODE::check_flag(void *flagvalue, char *funcname, int opt)
 }
 
 // f routine. Compute function f(t,y). 
-int sundialsCVODE::f(realtype t, N_Vector y, N_Vector ydot, void *f_data)
+int sundialsCVODE::f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data)
 {
+	sdVector y(yIn);
+	sdVector ydot(ydotIn);
 	// f_data contains a pointer to the "theODE" object
-	return ((sdODE*) f_data)->f(t, sdVector(y), sdVector(ydot));
+	return ((sdODE*) f_data)->f(t, y, ydot);
 }
 
 // g routine. Compute functions g_i(t,y) for i = 0,1. 
-int sundialsCVODE::g(realtype t, N_Vector y, realtype *gout, void *g_data)
+int sundialsCVODE::g(realtype t, N_Vector yIn, realtype *gout, void *g_data)
 {
+	sdVector y(yIn);
 	// g_data contains a pointer to the "theODE" object
-	return ((sdODE*) g_data)->g(t, sdVector(y), gout);
+	return ((sdODE*) g_data)->g(t, y, gout);
 }
 
 // Jacobian routine. Compute J(t,y) = df/dy. *
-int sundialsCVODE::Jac(long int N, DenseMat J, realtype t,
-               N_Vector y, N_Vector fy, void *jac_data,
+int sundialsCVODE::Jac(long int N, DenseMat JIn, realtype t,
+               N_Vector yIn, N_Vector fyIn, void *jac_data,
                N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
+	sdVector y(yIn);
+	sdVector fy(fyIn);
+	sdMatrix J(JIn);
 	// jac_data contains a pointer to the "theODE" object
-	return ((sdODE*) jac_data)->Jac(t, sdVector(y), sdVector(fy), sdMatrix(J));
+	return ((sdODE*) jac_data)->Jac(t, y, fy, J);
 }
 
 void sundialsCVODE::setODE(sdODE* newODE)
@@ -245,9 +251,12 @@ realtype& sdMatrix::operator() (unsigned int i, unsigned int j) const
 
 // Band Matrix
 
-sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower, long int storeUpper)
+sdBandMatrix::sdBandMatrix(long int N, long int bwUpperIn, long int bwLowerIn, long int storeUpperIn)
 {
 	alloc = true;
+	bwUpper = bwUpperIn;
+	bwLower = bwLowerIn;
+	storeUpper = storeUpperIn; 
 	M = BandAllocMat(N,bwUpper,bwLower,storeUpper);
 }
 
@@ -269,12 +278,12 @@ sdBandMatrix::~sdBandMatrix(void) {
 	}
 }
 
-realtype& sdBandMatrix::operator() (unsigned int i, unsigned int j)
+realtype& sdBandMatrix::operator() (long int i, long int j)
 {
 	return BAND_ELEM(M,i,j);
 }
 
-realtype& sdBandMatrix::operator() (unsigned int i, unsigned int j) const
+realtype& sdBandMatrix::operator() (long int i, long int j) const
 {
 	return BAND_ELEM(M,i,j);
 }
@@ -283,9 +292,9 @@ realtype& sdBandMatrix::operator() (unsigned int i, unsigned int j) const
 
 sundialsIDA::sundialsIDA(unsigned int n)
 	: abstol(n)
-	, y0(n)
 	, y(n)
 	, ydot(n)
+	, y0(n)
 	, ydot0(n)
 	, componentId(n)
 {
@@ -448,51 +457,53 @@ int sundialsIDA::check_flag(void *flagvalue, char *funcname, int opt)
 // f routine. Compute function f(t,y,y') = res
 int sundialsIDA::f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void *f_data)
 {
+	sdVector y(yIn), ydot(ydotIn), res(resIn);
 	// f_data contains a pointer to the "theODE" object
-	return ((sdDAE*) f_data)->f(t, sdVector(yIn), sdVector(ydotIn), sdVector(resIn));
+	return ((sdDAE*) f_data)->f(t, y, ydot, res);
 }
 
 // g routine. Compute functions g_i(t,y)
 int sundialsIDA::g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, void *g_data)
 {
+	sdVector y(yIn), ydot(ydotIn);
 	// g_data contains a pointer to the "theODE" object
-	return ((sdDAE*) g_data)->g(t, sdVector(yIn), sdVector(ydotIn), gout);
+	return ((sdDAE*) g_data)->g(t, y, ydot, gout);
 }
 
 // Jacobian routine. Compute J(t,y) = df/dy. *
 int sundialsIDA::Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn, 
-		             N_Vector res, realtype c_j, void *jac_data, DenseMat Jin, 
+		             N_Vector resIn, realtype c_j, void *jac_data, DenseMat Jin, 
 				     N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
+	sdVector y(yIn), ydot(ydotIn), res(resIn);
+	sdMatrix J(Jin);
 	// jac_data contains a pointer to the "theODE" object
-	return ((sdDAE*) jac_data)->Jac(t, sdVector(yIn), sdVector(ydotIn),
-						        sdVector(res), c_j, sdMatrix(Jin));
+	return ((sdDAE*) jac_data)->Jac(t, y, ydot, res, c_j, J);
 }
 
 int sundialsIDA::JvProd(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn,
 					    N_Vector vIn, N_Vector JvIn, realtype c_j, void* jac_data,
 					    N_Vector tmp1, N_Vector tmp2)
 {
-	return ((sdDAE*) jac_data)->JvProd(t, sdVector(yIn), sdVector(ydotIn),
-								       sdVector(resIn), sdVector(vIn), sdVector(JvIn), c_j);
+	sdVector y(yIn), ydot(ydotIn), res(resIn), v(vIn), Jv(JvIn);
+	return ((sdDAE*) jac_data)->JvProd(t,y , ydot, res, v, Jv , c_j);
 }
 
 int sundialsIDA::preconditionerSetup(realtype t, N_Vector yIn, N_Vector ydotIn,
 									 N_Vector resIn, realtype c_j, void* p_data, 
 									 N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-	return ((sdDAE*) p_data)->preconditionerSetup(t, sdVector(yIn), sdVector(ydotIn),
-												  sdVector(resIn), c_j);
+	sdVector y(yIn), ydot(ydotIn), res(resIn);
+	return ((sdDAE*) p_data)->preconditionerSetup(t, y, ydot, res, c_j);
 }
 
 int sundialsIDA::preconditionerSolve(realtype t, N_Vector yIn, N_Vector ydotIn,
-								     N_Vector resIn, N_Vector rhs, N_Vector outVec,
+								     N_Vector resIn, N_Vector rhsIn, N_Vector vIn,
 								     realtype c_j, realtype delta, void* p_data,
 								     N_Vector tmp)
 {
-	return ((sdDAE*) p_data)->preconditionerSolve(t, sdVector(yIn), sdVector(ydotIn),
-											     sdVector(resIn), sdVector(rhs),
-												 sdVector(outVec), c_j, delta);
+	sdVector y(yIn), ydot(ydotIn), res(resIn), rhs(rhsIn), v(vIn);
+	return ((sdDAE*) p_data)->preconditionerSolve(t, y, ydot, res, rhs, v, c_j, delta);
 }
 
 void sundialsIDA::setDAE(sdDAE* newDAE)

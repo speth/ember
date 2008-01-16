@@ -104,12 +104,12 @@ void strainedFlame() {
 		if (flag == CV_SUCCESS) {
 			i++;
 			
-			theSys.unrollY(theSolver.y);
-			theSys.printForMatlab(outFile, theSys.rhov, i, "rhov");
-			theSys.printForMatlab(outFile, theSys.T, i, "T");
-			theSys.printForMatlab(outFile, theSys.U, i, "U");
-			outFile << "t(" << i << ") = " << t << ";" << endl;
-			cout << "t(" << i << ") = " << t << ";" << endl;
+//			theSys.unrollY(theSolver.y);
+//			theSys.printForMatlab(outFile, theSys.rhov, i, "rhov");
+//			theSys.printForMatlab(outFile, theSys.T, i, "T");
+//			theSys.printForMatlab(outFile, theSys.U, i, "U");
+//			outFile << "t(" << i << ") = " << t << ";" << endl;
+//			cout << "t(" << i << ") = " << t << ";" << endl;
 			t += dt;
 		}
 	}
@@ -124,8 +124,6 @@ void strainedFlame() {
 void strainedFlameSys::setup(void)
 {
 	N = 3*nPoints;
-	jacBW = 3;
-	jacBWdot = 1;
 	nVars = 3;
 
 	T.resize(nPoints);
@@ -149,7 +147,7 @@ void strainedFlameSys::setup(void)
 	dFdy.resize(N, vector<double> (N));
 	dFdydot.resize(N, vector<double> (N));
 
-	bandedJacobian = new sdBandMatrix(N,nVars+1,nVars+1,2*nVars+2);
+	bandedJacobian = new sdBandMatrix(N,nVars+2,nVars+2,2*nVars+4);
 	BandZero(bandedJacobian->forSundials());
 
 	pMat.resize(N);
@@ -242,7 +240,6 @@ int strainedFlameSys::JvProd(realtype t, sdVector& y, sdVector& ydot,
 	sdVector yTemp(N);
 	double yNorm = 0;
 	double vNorm = 0;
-	double errNorm = 0;
 	for (int i=0; i<N; i++) {
 		yNorm += y(i)*y(i);
 		vNorm += v(i)*v(i);
@@ -278,7 +275,7 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 	sdVector ydotTemp(N);
 	sdVector resTemp(N);
 	BandZero(bandedJacobian->forSundials());
-
+	
 	// J = dF/dy
 	// Banded, upper & lower bandwidths = nVars. 
 	int bw = 2*nVars+1;
@@ -321,7 +318,7 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 				continue;
 			}
 			(*bandedJacobian)(i,s+col) = (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col));
-			//outFile << "Jv2(" << i+1 << "," << s+col+1 << ") = " << (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col)) << ";" << endl;
+			//std::cout << "J(" << i+1 << "," << s+col+1 << ") = " << (resTemp(i)-res(i))/(yTemp(s+col)-y(s+col)) << ";" << endl;
 		}
 	}
 

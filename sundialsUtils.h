@@ -58,12 +58,13 @@ public:
 	sdBandMatrix(BandMat other);
 	sdBandMatrix(void);
 	~sdBandMatrix(void);
-	realtype& operator()(unsigned int i, unsigned int j);
-	realtype& operator()(unsigned int i, unsigned int j) const;
+	realtype& operator()(long int i, long int j);
+	realtype& operator()(long int i, long int j) const;
 	BandMat& forSundials(void) {return M;}
 	
-private:
+//private:
 	BandMat M;
+	long int bwUpper, bwLower, storeUpper;
 	bool alloc;
 };
 
@@ -177,10 +178,11 @@ public:
 	
 	realtype t0; // initial time
 	realtype tInt; // time reached by integrator
-	sdVector y0; // initial condition
-	sdVector ydot0;
 	sdVector y;
 	sdVector ydot;
+	sdVector y0; // initial condition
+	sdVector ydot0;
+
 	sdVector componentId; // elements are 1.0 for differential variables, 0.0 for algebraic
 	std::vector<int> rootsFound;
 	unsigned int nRoots;
