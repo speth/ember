@@ -22,10 +22,12 @@ public:
 	sdVector(N_Vector other);
 	sdVector(const sdVector& other);
 	~sdVector(void);
+
 	realtype& operator()(unsigned int i);
 	realtype operator()(unsigned int i) const;
 	N_Vector& forSundials(void) {return v;}
 	unsigned int length(void) const {return n;}
+
 private:
 	N_Vector v;
 	bool alloc;
@@ -62,9 +64,8 @@ public:
 	realtype& operator()(long int i, long int j) const;
 	BandMat& forSundials(void) {return M;}
 	
-//private:
+private:
 	BandMat M;
-	long int bwUpper, bwLower, storeUpper;
 	bool alloc;
 };
 

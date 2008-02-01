@@ -44,14 +44,16 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				EnableFiberSafeOptimizations="true"
-				AdditionalIncludeDirectories="&quot;c:\program files\sundials\include&quot;;&quot;c:\Program Files\Cantera\include&quot;"
+				AdditionalIncludeDirectories="&quot;c:\program files\sundials\include&quot;;&quot;c:\Program Files\Cantera\include&quot;;&quot;c:\Program Files\libraries\libconfig-1.2.1\include&quot;;&quot;c:\Program Files\libraries\blitz++\include&quot;"
 				PreprocessorDefinitions="WIN32;_CONSOLE;"
 				RuntimeLibrary="2"
+				EnableEnhancedInstructionSet="2"
+				FloatingPointModel="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4996"
+				DisableSpecificWarnings="4996;4290"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -64,9 +66,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib"
+				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib libconfig++.lib blitz.lib"
 				LinkIncremental="0"
-				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;"
+				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;;&quot;c:\Program Files\libraries\libconfig-1.2.1\lib&quot;;&quot;c:\Program Files\libraries\blitz++\lib&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -120,7 +122,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;c:\program files\sundials\include&quot;;&quot;c:\Program Files\Cantera\include&quot;"
+				AdditionalIncludeDirectories="&quot;c:\program files\sundials\include&quot;;&quot;c:\Program Files\Cantera\include&quot;;&quot;c:\Program Files\libraries\libconfig-1.2.1\include&quot;"
 				PreprocessorDefinitions="WIN32;_CONSOLE;"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="2"
@@ -128,7 +130,7 @@
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4996"
+				DisableSpecificWarnings="4996;4290"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -141,9 +143,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib"
+				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib libconfig++.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;"
+				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;;&quot;c:\Program Files\libraries\libconfig-1.2.1\lib&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="0"
@@ -182,6 +184,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\mathUtils.h"
+				>
+			</File>
+			<File
 				RelativePath=".\strainedFlame.h"
 				>
 			</File>
@@ -201,6 +207,10 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File
+				RelativePath=".\mathUtils.cpp"
+				>
+			</File>
 			<File
 				RelativePath=".\strainedFlame.cpp"
 				>

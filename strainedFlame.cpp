@@ -1,24 +1,148 @@
 #include "strainedFlame.h"
+#include <libconfig.h++>
 #include <iostream>
 #include <vector>
-
+#include "mathUtils.h"
 #include <cmath>
 
-typedef vector<double> dvector;
-
+using namespace mathUtils;
 // All Cantera names are in namespace Cantera. You can either
 // reference everything as Cantera::<name>, or include the following
 // 'using namespace' line.
 //using namespace Cantera;
 
-int main(int argc, char** argv) {
-		
+using std::vector; using std::valarray;
+
+int main(int argc, char** argv)
+{
+	int N = 20;
+	dvector aa(N);
+	dvector bb(N);
+	vector<bool> cc(N);
+
+	for (int i=0; i<N; i++) {
+		aa[i] = rand();
+		bb[i] = rand();
+	}
+
+	cc = aa>bb;
+	cout << cc << std::endl;
+	cout << find(cc);
+	clock_t t1, t2;
+	t1 = clock();
+	cc = aa > bb;
+	t2 = clock();
+	cout << "direct overload ";
+	cout << ((double) (t2-t1))/CLOCKS_PER_SEC << endl;
+
+	return 0;
+	int n = 20000000;
+	vector<double> w(n), r(n);
+	valarray<double> x(n), y(n);
+
+
+	for (int i=0; i<n; i++) {
+		w[i] = 10.0*((double) i)/((double) n);
+	}
+
+	t1 = clock();
+	for (int i=0; i<n; i++) {
+		r[i] = 2.0*exp(w[i]) + exp(0.5*w[i]);
+	}
+
+	
+	t2 = clock();
+	cout << "std::vector: ";
+	cout << ((double) (t2-t1))/CLOCKS_PER_SEC << endl;
+
+	dvector d, e;
+	d.resize(n); e.resize(n);
+	for (int i=0; i<n; i++) {
+		d[i] = 10.0*((double) i)/((double) n);
+	}
+
+	t1 = clock();
+	for (int i=0; i<n; i++) {
+		e[i] = 2.0*exp(d[i]) + exp(0.5*d[i]);
+	}
+
+	t2 = clock();
+	cout << "dvector: ";
+	cout << ((double) (t2-t1))/CLOCKS_PER_SEC << endl;
+
+
+
+
+
+	for (int i=0; i<n; i++) {
+		x[i] = 10.0*((double) i)/((double) n);
+	}
+
+	t1 = clock();
+	//  for (int i=0; i<n; i++) {
+	//  y[i] = 2*exp(x[i]) + exp(0.5*x[i]);
+	//  }
+	static double two = 2.0;
+	static double half = 0.5;
+	// 	y = two*exp(x) + exp(half*x);
+	for (int i=0; i<n; i++) {
+		y[i] = 2.0*exp(x[i]) + exp(0.5*x[i]);
+	}
+
+
+	t2 = clock();
+	cout << "std::valarray: ";
+	cout << ((double) (t2-t1))/CLOCKS_PER_SEC << endl;
+
+	
+
+//	vector<double> xxx(typename vector<double>::size_type _Count);
+//	vector<double> yyy(..., const _Ty& _Val);
+
+	//int n = 500;
+	//clock_t t1, t2;
+	//dvector x; x.resize(n);
+	//dvector r; r.resize(n);
+	//valarray<double> y(n), z(n);
+	//for (int i=0; i<n; i++) {
+	//	x[i] = rand();
+	//	y[i] = rand();
+	//}
+
+	//t1 = clock();
+	//for (int j=0; j<80000; j++) {
+	//	
+	//}
+	////y = cos(y);
+	////y = tan(y);
+	////y = log(y);
+	////cout << y.max() << endl;
+
+	//t2 = clock();
+	//cout << "valarray: " << t2-t1 << endl;
+
+	//t1 = clock();
+	//for (int j=0; j<80000; j++) {
+	//	for (int i=0; i<n; i++) {
+	//		x[i] += x[i] + 1e0;
+	//	//	x[i] = cos(x[i]);
+	//	//	x[i] = tan(x[i]);
+	//	//	x[i] = log(x[i]);
+	//	}
+	////cout << mathUtils::max(x) << endl;
+	//}
+	//
+	//t2 = clock();
+	//cout << "dvector: " << t2-t1 << endl;
+
+
+
 	char* python_cmd = getenv("PYTHON_CMD");
 	if (!python_cmd) {
 		putenv("PYTHON_CMD=python");
 	}
     try {
-    	strainedFlame();
+    	//strainedFlame();
     }
 	catch (Cantera::CanteraError) {
 		Cantera::showErrors(cout);
@@ -31,26 +155,39 @@ void strainedFlame() {
 
     cout << "**** strainedFlame (1dflame Version 2.0) ****" << std::endl;
 
+    strainedFlameSys theSys;
+
+	// read input file
+	libconfig::Config configFile;
+	
+	configFile.readFile("input.txt");
+	configFile.setAutoConvert(true);
+
+	bool cfgFlag = 
+		configFile.lookupValue("grid.nPoints",theSys.nPoints) &&
+		configFile.lookupValue("grid.xLeft",theSys.xLeft) &&
+		configFile.lookupValue("grid.xRight",theSys.xRight) &&
+		configFile.lookupValue("flow.Tleft",theSys.Tleft) &&
+		configFile.lookupValue("flow.Tright",theSys.Tright) &&
+		configFile.lookupValue("flow.rhoLeft",theSys.rhoLeft) &&
+		configFile.lookupValue("flow.strainRate",theSys.strainRate) &&
+		configFile.lookupValue("fluid.mu",theSys.mu) &&
+		configFile.lookupValue("fluid.lambda",theSys.lambda) &&
+		configFile.lookupValue("fluid.cp",theSys.cp) &&
+		configFile.lookupValue("tStart",theSys.tStart) &&
+		configFile.lookupValue("tEnd",theSys.tEnd);
+	if (!cfgFlag) {
+		cout << "Failed to read required settings from input.txt" << endl;
+		throw;
+	}
+	
 	// output file:
 	ofstream outFile;
 	outFile.open("out.m");
+
 	clock_t t1, t2;
 	t1 = clock();
 
-    strainedFlameSys theSys;
-	theSys.nPoints = 1000;
-	//theSys.nPoints = 10;
-	theSys.xLeft = -0.05;
-	theSys.xRight = 0.05;
-	theSys.Tleft = 300;
-	theSys.Tright = 600;
-	theSys.strainRate = 20;
-	theSys.mu = 1.8e-5;
-	theSys.lambda = 0.0243;
-	theSys.cp = 1.005;
-	theSys.rhoLeft = 1.20;
-	theSys.tStart = 0;
-	theSys.tEnd = 0.2;
 	// Initial Conditions for ODE
 	theSys.setup();
 
@@ -467,3 +604,4 @@ void strainedFlameSys::printForMatlab(ofstream& file, vector<double>& v, int ind
 	}
 	file << v[v.size()-1] << "];" << endl;
 }
+
