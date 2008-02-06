@@ -1,0 +1,26 @@
+grid:
+{
+	nPoints = 100;
+	xLeft = -0.05;
+	xRight = 0.05;
+};
+
+flow:
+{
+	Tleft = 300;
+	Tright = 600;
+	rhoLeft = 1.20;
+	strainRate = 20;
+};
+
+fluid:
+{
+	mu = 1.8e-5;
+	lambda = 0.0243;
+	cp = 1.005;
+
+};
+
+tStart = 0;
+tEnd = 0.20;
+

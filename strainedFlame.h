@@ -56,6 +56,7 @@ public:
 
 	// these should be read-only:
 	int N; // total problem size;
+	int nVars; // Number of solution variables at each point
 
 	// State variables:
 	vector<double> rhov;
@@ -85,7 +86,7 @@ private:
 	vector< vector<double> > dFdy;
 	vector< vector<double> > dFdydot;
 
-	int nVars; // Number of solution variables at each point
+	
 	int jacBW; // Bandwidth of the Jacobian (number of filled blocks per row, 
 			   // dependent on the order of the finite difference stencil)
 	int jacBWdot; // Bandwidth of dF/dydot component of Jacobian

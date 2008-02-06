@@ -14,8 +14,13 @@ typedef vector<double> dvector;
 namespace mathUtils
 {
 	double max(const vector<double>& v);
-	double min(vector<double>& v);
-	double range(vector<double>& v);
+	double min(const vector<double>& v);
+	double range(const vector<double>& v);
+
+	// Find the min/max of a subvector
+	double max(const vector<double>& v, int iStart, int iEnd);
+	double min(const vector<double>& v, int iStart, int iEnd);
+	double range(const vector<double>& v, int iStart, int iEnd);
 
 	// Returns the index of the first element of v which is true
 	// Returns -1 if all elements of v are false

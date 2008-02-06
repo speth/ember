@@ -2,12 +2,6 @@
 
 double mathUtils::max(const vector<double>& v)
 {
-	//vector<double>::const_iterator i;
-	//double val = *v.begin();
-	//for (i=v.begin(); i!=v.end(); i++) {
-	//	val = std::max(*i,val);
-	//}
-	//return val;
 	int n = v.size();
 	if (n==0) { return 0; }
 	double val = v[0];
@@ -19,7 +13,7 @@ double mathUtils::max(const vector<double>& v)
 	return val;
 }
 
-double mathUtils::min(vector<double>& v)
+double mathUtils::min(const vector<double>& v)
 {
 	vector<double>::const_iterator i;
 	double val = *v.begin();
@@ -29,9 +23,42 @@ double mathUtils::min(vector<double>& v)
 	return val;
 }
 
-double mathUtils::range(vector<double>& v)
+double mathUtils::range(const vector<double>& v)
 {
 	return (max(v)-min(v));
+}
+
+double mathUtils::max(const vector<double>& v, int iStart, int iEnd)
+{
+	int n = v.size();
+	if (n==0) { return 0; }
+	if (iStart < 0 || iEnd > n) { throw; }
+	double val = v[0];
+	for (int i=iStart; i<iEnd; i++) {
+		if (v[i] > val) {
+			val = v[i];
+		}
+	}
+	return val;
+}
+
+double mathUtils::min(const vector<double>& v, int iStart, int iEnd)
+{
+	int n = v.size();
+	if (n==0) { return 0; }
+	if (iStart < 0 || iEnd > n) { throw; }
+	double val = v[0];
+	for (int i=iStart; i<iEnd; i++) {
+		if (v[i] < val) {
+			val = v[i];
+		}
+	}
+	return val;
+}
+
+double mathUtils::range(const vector<double>& v, int iStart, int iEnd)
+{
+	return max(v,iStart,iEnd) - min(v,iStart,iEnd);
 }
 
 int mathUtils::minloc(vector<bool>& v)

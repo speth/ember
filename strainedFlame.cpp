@@ -2,8 +2,9 @@
 #include <libconfig.h++>
 #include <iostream>
 #include <vector>
-#include "mathUtils.h"
 #include <cmath>
+#include "mathUtils.h"
+#include "grid.h"
 
 using namespace mathUtils;
 // All Cantera names are in namespace Cantera. You can either
@@ -15,134 +16,12 @@ using std::vector; using std::valarray;
 
 int main(int argc, char** argv)
 {
-	int N = 20;
-	dvector aa(N);
-	dvector bb(N);
-	vector<bool> cc(N);
-
-	for (int i=0; i<N; i++) {
-		aa[i] = rand();
-		bb[i] = rand();
-	}
-
-	cc = aa>bb;
-	cout << cc << std::endl;
-	cout << find(cc);
-	clock_t t1, t2;
-	t1 = clock();
-	cc = aa > bb;
-	t2 = clock();
-	cout << "direct overload ";
-	cout << ((double) (t2-t1))/CLOCKS_PER_SEC << endl;
-
-	return 0;
-	int n = 20000000;
-	vector<double> w(n), r(n);
-	valarray<double> x(n), y(n);
-
-
-	for (int i=0; i<n; i++) {
-		w[i] = 10.0*((double) i)/((double) n);
-	}
-
-	t1 = clock();
-	for (int i=0; i<n; i++) {
-		r[i] = 2.0*exp(w[i]) + exp(0.5*w[i]);
-	}
-
-	
-	t2 = clock();
-	cout << "std::vector: ";
-	cout << ((double) (t2-t1))/CLOCKS_PER_SEC << endl;
-
-	dvector d, e;
-	d.resize(n); e.resize(n);
-	for (int i=0; i<n; i++) {
-		d[i] = 10.0*((double) i)/((double) n);
-	}
-
-	t1 = clock();
-	for (int i=0; i<n; i++) {
-		e[i] = 2.0*exp(d[i]) + exp(0.5*d[i]);
-	}
-
-	t2 = clock();
-	cout << "dvector: ";
-	cout << ((double) (t2-t1))/CLOCKS_PER_SEC << endl;
-
-
-
-
-
-	for (int i=0; i<n; i++) {
-		x[i] = 10.0*((double) i)/((double) n);
-	}
-
-	t1 = clock();
-	//  for (int i=0; i<n; i++) {
-	//  y[i] = 2*exp(x[i]) + exp(0.5*x[i]);
-	//  }
-	static double two = 2.0;
-	static double half = 0.5;
-	// 	y = two*exp(x) + exp(half*x);
-	for (int i=0; i<n; i++) {
-		y[i] = 2.0*exp(x[i]) + exp(0.5*x[i]);
-	}
-
-
-	t2 = clock();
-	cout << "std::valarray: ";
-	cout << ((double) (t2-t1))/CLOCKS_PER_SEC << endl;
-
-	
-
-//	vector<double> xxx(typename vector<double>::size_type _Count);
-//	vector<double> yyy(..., const _Ty& _Val);
-
-	//int n = 500;
-	//clock_t t1, t2;
-	//dvector x; x.resize(n);
-	//dvector r; r.resize(n);
-	//valarray<double> y(n), z(n);
-	//for (int i=0; i<n; i++) {
-	//	x[i] = rand();
-	//	y[i] = rand();
-	//}
-
-	//t1 = clock();
-	//for (int j=0; j<80000; j++) {
-	//	
-	//}
-	////y = cos(y);
-	////y = tan(y);
-	////y = log(y);
-	////cout << y.max() << endl;
-
-	//t2 = clock();
-	//cout << "valarray: " << t2-t1 << endl;
-
-	//t1 = clock();
-	//for (int j=0; j<80000; j++) {
-	//	for (int i=0; i<n; i++) {
-	//		x[i] += x[i] + 1e0;
-	//	//	x[i] = cos(x[i]);
-	//	//	x[i] = tan(x[i]);
-	//	//	x[i] = log(x[i]);
-	//	}
-	////cout << mathUtils::max(x) << endl;
-	//}
-	//
-	//t2 = clock();
-	//cout << "dvector: " << t2-t1 << endl;
-
-
-
 	char* python_cmd = getenv("PYTHON_CMD");
 	if (!python_cmd) {
 		putenv("PYTHON_CMD=python");
 	}
     try {
-    	//strainedFlame();
+    	strainedFlame();
     }
 	catch (Cantera::CanteraError) {
 		Cantera::showErrors(cout);
@@ -253,6 +132,35 @@ void strainedFlame() {
 	theSolver.printStats();
 	t2 = clock();
 	cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
+	
+	// Test of grid adaptation:
+
+	oneDimGrid theGrid;
+	theGrid.alpha = 0;
+	theGrid.vtol = 0.04;
+	theGrid.dvtol = 0.4;
+	theGrid.rmTol = 0.67;
+	theGrid.dampConst = 6000;
+	theGrid.gridMin = 2.0e-4;
+	theGrid.gridMax = 0.2;
+	theGrid.uniformityTol = 2.7;
+	theGrid.dampVal.resize(theSys.nPoints);
+
+	theGrid.x = theSys.x;
+	for (int j=0; j<theSys.nPoints; j++) {
+		theGrid.dampVal[j] = abs(theSys.mu/theSys.rhov[j]);
+	}
+
+	vector<dvector> currentSolution;
+	currentSolution.push_back(theSys.rhov);
+	currentSolution.push_back(theSys.U);
+	currentSolution.push_back(theSys.T);
+
+	outFile << "oldGrid = [" << theGrid.x << "];" << endl;
+	outFile << "oldT = [" << currentSolution[2] << "];" << endl;
+	theGrid.adapt(currentSolution);
+	outFile << "newGrid = [" << theGrid.x << "];" << endl;
+	outFile << "newT = [" << currentSolution[2] << "];" << endl;
 	
 	outFile.close();
  	int blargh = 0;
