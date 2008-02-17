@@ -8,6 +8,8 @@ public:
 	static bool debugAdapt;
 	static bool debugRegrid;
 	static bool debugSundials;
+	static bool debugJacobian;
+	static bool debugCalcIC;
 };
 
 namespace debugType {

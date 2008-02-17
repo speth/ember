@@ -1,15 +1,15 @@
 #pragma once
 #define _USE_MATH_DEFINES
 
+#include <iostream>
 #include "sundialsUtils.h"
+#include "chemistry.h"
+#include "grid.h"
 
-
-#include <cantera/Cantera.h>
-#include <cantera/IdealGasMix.h>    // defines class IdealGasMix
-#include <cantera/equilibrium.h>    // chemical equilibrium
-#include <cantera/transport.h>      // transport properties
+using Cantera::Array2D;
 
 void strainedFlame(void);
+void chemistryTest(void);
 
 class strainedFlameSys : public sdDAE 
 {
@@ -29,11 +29,9 @@ public:
 	int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
 						    sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta);
 	
-	// Chemistry:
-	//Cantera::IdealGasMix gas;
 
 	// Problem definition
-	double Tleft, Tright;
+	double Tu, Tb;
 	double xLeft, xRight;
 	int nPoints;
 	double strainRate;
@@ -42,8 +40,14 @@ public:
 	double mu; // viscosity
 	double lambda; // thermal conductivity
 	double cp; // specific heat capacity
-	double rhoLeft;
-	void setup();
+	double rhou;
+	std::string reactants;
+	std::string diluent;
+
+	void setup(void);
+	void generateInitialProfiles(void);
+	void readOptionsFile(const char* filename);
+	void getInitialCondition(double t, sdVector& y, sdVector& ydot, vector<bool>& algebraic);
 	
 	// Utility functions
 	void unrollY(const sdVector& y);
@@ -57,25 +61,31 @@ public:
 	// these should be read-only:
 	int N; // total problem size;
 	int nVars; // Number of solution variables at each point
+	int nSpec; // Number of chemical species
 
 	// State variables:
-	vector<double> rhov;
-	vector<double> U;
-	vector<double> T;
-
-	// Auxillary variables:
-	vector<double> rho;
-	vector<double> drhodt;
-
-	// the grid:
-	vector<double> x;
-	vector<double> dx;
-
-private:
+	vector<double> rhov; // mass flux normal to flame per unit area (rho*v) 
+	vector<double> U; // normalized tangential velocity (u/u_inf)
+	vector<double> T; // temperature
+	Array2D Y; // species mass fractions; Y(k,j)
+	
 	// Derivatives of state variables:
 	vector<double> drhovdt;
 	vector<double> dUdt;
 	vector<double> dTdt;
+
+	// Auxillary variables:
+	vector<double> rho; // density [kg/m^3]
+	vector<double> drhodt;
+
+	// the grid:
+	oneDimGrid grid;
+
+	// Cantera data
+	gasArray gas;
+
+private:
+
 
 	// Residuals of governing equations:
 	vector<double> resContinuity;
@@ -92,7 +102,7 @@ private:
 	int jacBWdot; // Bandwidth of dF/dydot component of Jacobian
 
 	sdBandMatrix* bandedJacobian;
-
+	bool jacobianIsAllocated;
 
 	vector<long int> pMat;
 

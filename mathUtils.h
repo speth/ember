@@ -22,13 +22,21 @@ namespace mathUtils
 	double min(const vector<double>& v, int iStart, int iEnd);
 	double range(const vector<double>& v, int iStart, int iEnd);
 
-	// Returns the index of the first element of v which is true
+	// location of the minimum / maximum
+	int minloc(const dvector& v);
+	int maxloc(const dvector& v);
+
+	dvector abs(const dvector& v);
+
+	// Returns the index of the first/last element of v which is true
 	// Returns -1 if all elements of v are false
-	int minloc(vector<bool>& v);
-	int maxloc(vector<bool>& v);
+	int findFirst(vector<bool>& v);
+	int findLast(vector<bool>& v);
 
 	// Returns the indices of the elements of v which are true
 	vector<int> find(vector<bool>& v);
+
+	void smooth(dvector& v);
 };
 
 std::ostream& operator<<(std::ostream& os, vector<double>& v);

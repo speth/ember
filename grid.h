@@ -10,27 +10,36 @@ public:
 	dvector x; // The grid points
 	dvector dampVal; // ratio of convective to diffusive coefficients (e.g. nu/v)
 	
-	// domain curvature parameter. 0: planar, 1: cylindrical
-	int alpha;
+	int alpha;	// domain curvature parameter. 0: planar, 1: cylindrical
+	int ju, jb; 	// indices of burned / unburned boundaries
+	int kMomentum; // index into solutionState of the Momentum equation
+	int kContinuity; // index into solutionState of the continuity equation
 
-	double vtol; // relative solution variable tolerance
-	double dvtol; // derivative solution variable tolerance
+	// Parameters for controlling internal grid points:
+	double vtol; // relative solution variable tolerance for point insertion
+	double dvtol; // derivative solution variable tolerance for point insertion
 	double absvtol; // absolute tolerance (ignore components with range smaller than this)
-	double rmTol; // relative removal tolerance
+	double rmTol; // relative grid point removal tolerance
+	double uniformityTol; // maximum ratio of adjacent grid point separation distances
+	double gridMin, gridMax; // minimum and maximum grid point separation
+	double dampConst; // relative allowable numerical damping
 
-	double uniformityTol;
-	double gridMin, gridMax;
-	double dampConst;
+	// Parameters for controlling exterior grid points:
+	bool fixedBurnedValFlag;
+	bool fixedLeftLoc;
+	bool unburnedLeft;
+	double boundaryTol;
+	double boundaryTolRm;
 
 	// Derived mesh parameters (calculated by updateDerivedSizes)
-	dvector cfm;
-	dvector cf;
-	dvector cfp;
+	dvector cfm, cf, cfp; // first centered difference
+	dvector csm, cs, csp; // second centered difference
 	dvector dlj;
 	dvector hh;
 	dvector rphalf;
+	int jj; // number of grid points
 
-	double jZero; // index adjacent to the stagnation point
+	int jZero; // index adjacent to the stagnation point
 
 	// Update the grid based on the solutionState, and adjust it to fit 
 	// on the new grid. Each element of the solutionState is a vector 
@@ -38,16 +47,18 @@ public:
 	// Return value is true if the grid has been modified
 	// adapt inserts and removes points within the problem domain
 	// regrid inserts and removes points at the ends of the problem domain
-	bool adapt(vector<dvector>& solutionState);
-	bool regrid(vector<dvector>& solutionState);
-
-private:	
-	int jj; // number of grid points
-	int nVars; // number of solution variables at each grid point
-
+	bool adapt(vector<dvector>& y, vector<dvector>& ydot);
+	bool regrid(vector<dvector>& y, vector<dvector>& ydot);
 	void updateDerivedSizes(void);
-	void removePoint(int jRemove, vector<dvector>& y);
-	void addPoint(int jInsert, vector<dvector>& y);
-	void update_jZero(void);
+	void update_jZero(dvector& rhov);
 
+	void updateBoundaryIndices(void);
+
+private:
+	
+	int nVars; // number of solution variables at each grid point
+	
+	void removePoint(int jRemove, vector<dvector>& y, vector<dvector>& ydot);
+	void addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot);
+	
 };

@@ -45,14 +45,15 @@
 				FavorSizeOrSpeed="1"
 				EnableFiberSafeOptimizations="true"
 				AdditionalIncludeDirectories="&quot;c:\program files\sundials\include&quot;;&quot;c:\Program Files\Cantera\include&quot;;&quot;c:\Program Files\libraries\libconfig-1.2.1\include&quot;;&quot;c:\Program Files\libraries\blitz++\include&quot;"
-				PreprocessorDefinitions="WIN32;_CONSOLE;"
+				PreprocessorDefinitions="WIN32;_CONSOLE;NDEBUG"
 				RuntimeLibrary="2"
+				BufferSecurityCheck="false"
 				EnableEnhancedInstructionSet="2"
 				FloatingPointModel="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="false"
-				DebugInformationFormat="3"
+				DebugInformationFormat="0"
 				DisableSpecificWarnings="4996;4290"
 			/>
 			<Tool
@@ -69,12 +70,13 @@
 				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib libconfig++.lib blitz.lib"
 				LinkIncremental="0"
 				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;;&quot;c:\Program Files\libraries\libconfig-1.2.1\lib&quot;;&quot;c:\Program Files\libraries\blitz++\lib&quot;"
-				GenerateDebugInformation="true"
+				GenerateDebugInformation="false"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
+				OptimizeForWindows98="1"
 				TargetMachine="1"
-				Profile="true"
+				Profile="false"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -184,6 +186,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\chemistry.h"
+				>
+			</File>
+			<File
 				RelativePath=".\debugUtils.h"
 				>
 			</File>
@@ -215,6 +221,10 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File
+				RelativePath=".\chemistry.cpp"
+				>
+			</File>
 			<File
 				RelativePath=".\debugUtils.cpp"
 				>

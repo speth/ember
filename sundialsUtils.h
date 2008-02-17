@@ -176,7 +176,8 @@ public:
 	sdVector abstol;
 	
 	bool findRoots; // Specify whether or not to use the function g for rootfinding
-	
+	bool calcIC;
+
 	realtype t0; // initial time
 	realtype tInt; // time reached by integrator
 	sdVector y;

@@ -1,9 +1,10 @@
 #include "debugUtils.h"
 
-bool debugParameters::debugAdapt = true;
+bool debugParameters::debugAdapt = false;
 bool debugParameters::debugRegrid = true;
 bool debugParameters::debugSundials = false;
-
+bool debugParameters::debugJacobian = false;
+bool debugParameters::debugCalcIC = false;
 
 void debugWrite(debugType::debugType type, std::string message)
 {

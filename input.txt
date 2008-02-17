@@ -1,3 +1,18 @@
+general:
+{
+	fixedBurnedValFlag = true;
+	fixedLeftLocation = false;
+	unburnedLeft = true;
+};
+
+chemistry:
+{
+	mechanismFile = "gri30.xml";
+	phaseID = "gri30_mix";
+	reactants = "O2:1.0, N2:3.76, CH4:0.5";
+	diluent = "AR:1.0";
+};
+			
 grid:
 {
 	nPoints = 100;
@@ -7,10 +22,10 @@ grid:
 
 flow:
 {
-	Tleft = 300;
-	Tright = 600;
-	rhoLeft = 1.20;
-	strainRate = 20;
+	Tu = 300;
+	Tb = 2000;
+	rhou = 1.20;
+	strainRate = 100;
 };
 
 fluid:
@@ -23,4 +38,21 @@ fluid:
 
 tStart = 0;
 tEnd = 0.20;
+
+adaptation:
+{
+	vtol = 0.04;
+	dvtol = 0.4;
+	rmTol = 0.67;
+	dampConst = 6000;
+	gridMin = 2.0e-4;
+	gridMax = 0.2;
+	uniformityTol = 2.7;
+};
+
+regridding:
+{
+	boundaryTol = 2e-5;
+	boundaryTolRm = 5e-6;
+};
 

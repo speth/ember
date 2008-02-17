@@ -354,15 +354,17 @@ void sundialsIDA::initialize(void)
 		throw;
 	}
 
-	flag = IDACalcIC(sundialsMem, IDA_YA_YDP_INIT, t0+1e-4);
-	if (check_flag(&flag, "IDACalcIC", 1)) {
-		std::cout << "IDACalcIC Error" << std::endl;
-		throw;
-	}
+	if (calcIC) {
+		flag = IDACalcIC(sundialsMem, IDA_YA_YDP_INIT, t0+1e-4);
+		if (check_flag(&flag, "IDACalcIC", 1)) {
+			std::cout << "IDACalcIC Error" << std::endl;
+			throw;
+		}
 
-	flag = IDAGetConsistentIC(sundialsMem, y0.forSundials(), ydot0.forSundials());
-	if (check_flag(&flag, "IDAGetConsistentIC", 1)) {
-		throw;
+		flag = IDAGetConsistentIC(sundialsMem, y0.forSundials(), ydot0.forSundials());
+		if (check_flag(&flag, "IDAGetConsistentIC", 1)) {
+			throw;
+		}
 	}
 
 }
