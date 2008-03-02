@@ -11,6 +11,8 @@
 #include <cantera/kernel/GasKinetics.h>
 #include <cantera/kernel/ctml.h>
 
+#include "mathUtils.h"
+
 class gasArray
 {
 public:
@@ -18,19 +20,30 @@ public:
 	~gasArray();
 	std::string mechanismFile;
 	std::string phaseID;
+	double pressure; // thermodynamic pressure
 	
+	void initialize(void);
 	void resize(unsigned int n);
-	void init(void);
+	
+	void setState(Cantera::Array2D& Y, dvector& T);
+
 	Cantera::IdealGasPhase& operator[](unsigned int i) const;
 	Cantera::IdealGasPhase& thermo(unsigned int i) const;
 	Cantera::GasKinetics& kinetics(unsigned int i) const;
+	Cantera::MultiTransport& trans(unsigned int i) const;
+
+	void testFunction(void);
 
 private:
 	Cantera::XML_Node* rootXmlNode;
-	Cantera::XML_Node* root;
 	Cantera::XML_Node* phaseXmlNode;
-	Cantera::IdealGasPhase thermoBase;
 
-	vector<Cantera::IdealGasPhase*> d_thermo;
-	vector<Cantera::GasKinetics*> d_kinetics;
+	vector<Cantera::IdealGasPhase*> m_thermo;
+	vector<Cantera::GasKinetics*> m_kinetics;
+	vector<Cantera::MultiTransport*> m_transport;
+
+	// Default objects
+	Cantera::IdealGasPhase m_thermoBase;
+	Cantera::GasKinetics* m_kineticsBase;
+	Cantera::MultiTransport* m_transportBase;
 };

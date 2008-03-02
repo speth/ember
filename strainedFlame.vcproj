@@ -124,9 +124,9 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;c:\program files\sundials\include&quot;;&quot;c:\Program Files\Cantera\include&quot;;&quot;c:\Program Files\libraries\libconfig-1.2.1\include&quot;"
+				AdditionalIncludeDirectories="&quot;c:\program files\sundials\include&quot;;&quot;c:\Program Files\Cantera\include&quot;;&quot;c:\Program Files\libraries\include&quot;;&quot;c:\Program Files\MATLAB R2007a\extern\include&quot;"
 				PreprocessorDefinitions="WIN32;_CONSOLE;"
-				BasicRuntimeChecks="3"
+				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -145,9 +145,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib libconfig++.lib"
+				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib libconfig++.lib zlib.lib matio.lib libmat.lib libmx.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;;&quot;c:\Program Files\libraries\libconfig-1.2.1\lib&quot;"
+				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;;&quot;c:\Program Files\libraries\lib&quot;;&quot;c:\Program Files\MATLAB R2007a\extern\lib\win32\microsoft&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="0"
@@ -202,7 +202,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\matlabFile.h"
+				>
+			</File>
+			<File
+				RelativePath=".\readConfig.h"
+				>
+			</File>
+			<File
 				RelativePath=".\strainedFlame.h"
+				>
+			</File>
+			<File
+				RelativePath=".\strainedFlameSys.h"
 				>
 			</File>
 			<File
@@ -238,7 +250,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\matlabFile.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\readConfig.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\strainedFlame.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\strainedFlameSys.cpp"
 				>
 			</File>
 			<File

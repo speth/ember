@@ -1,21 +1,29 @@
+paths:
+{
+	inputDir = "input";
+	outputDir = "output";
+};
+
 general:
 {
 	fixedBurnedValFlag = true;
 	fixedLeftLocation = false;
 	unburnedLeft = true;
+	curvedDomain = false;
 };
 
 chemistry:
 {
 	mechanismFile = "gri30.xml";
-	phaseID = "gri30_mix";
+	phaseID = "gri30_multi";
 	reactants = "O2:1.0, N2:3.76, CH4:0.5";
 	diluent = "AR:1.0";
+	pressure = 101325;
 };
 			
 grid:
 {
-	nPoints = 100;
+	nPoints = 80;
 	xLeft = -0.05;
 	xRight = 0.05;
 };
@@ -37,7 +45,7 @@ fluid:
 };
 
 tStart = 0;
-tEnd = 0.20;
+tEnd = 0.05;
 
 adaptation:
 {

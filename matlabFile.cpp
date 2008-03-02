@@ -1,79 +1,145 @@
 #include "matlabFile.h"
+#include "boost/filesystem.hpp"
 
-matFile::matFile(void) 
+matlabFile::matlabFile(void) 
 	 : file(NULL)
 {
 }
 
-matFile::~matFile(void)
+matlabFile::~matlabFile(void)
 {
 	close();
 }
 
-matFile::matFile(const std::string& filename)
+matlabFile::matlabFile(const std::string& filename)
 {
 	open(filename);
 }
 
-void matFile::close(void)
+void matlabFile::close(void)
 {
 	if (file) {
-		Mat_Close(file);
+		matClose(file);
 		file = NULL;
 	}
 }
 
-bool matFile::open(const std::string& filename)
+bool matlabFile::open(const std::string& filename)
 {
+	myFilename = filename;
 	if (boost::filesystem::exists(filename)) {
-		file = Mat_Open(filename.c_str(), MAT_ACC_RDWR);
+		file = matOpen(filename.c_str(), "u");
+		accessModeIsUpdate = true;
 	} else {
-		file = Mat_Create(filename.c_str(), NULL);
+		file = matOpen(filename.c_str(), "wz");
+		accessModeIsUpdate = false;
 	}
 	
 	return (file != NULL) ? true : false;
 }
 
-void matFile::writeVector(const std::string& name, const dvector& v) 
+void matlabFile::writeVector(const std::string& name, const dvector& v) 
 {
 	if (file) {
-
-		int dims[2] = {v.size(),1};
-		matvar_t* var = Mat_VarCreate(name.c_str(),MAT_C_DOUBLE, MAT_T_DOUBLE, 2, dims, (void*) &v[0], 0);
-		var->compression = COMPRESSION_ZLIB;
-		Mat_VarWrite(file, var, COMPRESSION_ZLIB);
-		Mat_VarFree(var);
+		mxArray* var;
+		var = mxCreateDoubleMatrix(1,v.size(),mxREAL);
+		if (v.size() != 0) {
+			memcpy( mxGetPr(var), &v[0], v.size()*sizeof(double));
+		}
+		int status = matPutVariable(file, name.c_str(), var);
+		if (status) {
+			std::cout << "matFile::writeVector: Error writing variable \"" << 
+				name << "\" to \"" << myFilename << "\"." << std::endl;
+		}
+		mxDestroyArray(var);
 	}
 }
 
-dvector matFile::readVector(const std::string& name)
+dvector matlabFile::readVector(const std::string& name)
 {
+	if (!accessModeIsUpdate) {
+		reopenForUpdate();
+	}
+
 	dvector v;
 	if (!file) {
 		return v;
 	}
+	mxArray* var = matGetVariable(file, name.c_str());
+	if (var == NULL) {
+		std::cout << "matFile::readVector: Error reading variable \"" << name << "\" from \"" << myFilename << "\"." << std::endl;
+	}
 
-	// The fact that Mat_VarReadInfo doesn't take a const char* is really annoying
-	char* varName = new char[name.size()];
-	strcpy(varName,name.c_str());
-	matvar_t* var = Mat_VarReadInfo(file,varName);
-	int stride[2] = {1,1};
-	int start[2] = {0,0};
-	int edge[2] = {var->dims[0],var->dims[1]};
-
-	size_t classSize = Mat_SizeOfClass(var->class_type);
-	if (classSize != SIZEOF_DOUBLE) {
+	if (!mxIsDouble(var)) {
 		std::cout << "matFile::readVector: Error: Data type is not double" << std::endl;
 		throw;
 	}
 
-	v.resize(edge[0]*edge[1]);
-	int fail = Mat_VarReadData(file, var, &v[0], start, stride, edge);
-	if (fail) {
-		std::cout << "matFile::readVector: Error reading variable \"" << name << "\" from \"" << filename << "\"." << std::endl;
+	int n = mxGetNumberOfElements(var);
+	v.resize(n);
+	memcpy(&v[0], mxGetPr(var), n*sizeof(double));
+
+	mxDestroyArray(var);
+
+	return v;
+}
+
+void matlabFile::writeArray2D(const std::string& name, const Cantera::Array2D& y) 
+{
+
+	if (file) {
+		mxArray* var;
+		var = mxCreateDoubleMatrix(y.nRows(), y.nColumns(), mxREAL);
+		if (y.data().size() != 0) {
+			memcpy( mxGetPr(var), &y.data()[0], y.data().size()*sizeof(double));
+		}
+		int status = matPutVariable(file, name.c_str(), var);
+		if (status) {
+			std::cout << "matFile::writeVector: Error writing variable \"" << 
+				name << "\" to \"" << myFilename << "\"." << std::endl;
+		}
+		mxDestroyArray(var);
+	}
+}
+
+Cantera::Array2D matlabFile::readArray2D(const std::string& name)
+{
+	if (!accessModeIsUpdate) {
+		reopenForUpdate();
 	}
 
-	Mat_VarFree(var);
-	delete &varName; // is this right?
-	return v;
+	Cantera::Array2D y;
+	if (!file) {
+		return y;
+	}
+	mxArray* var = matGetVariable(file, name.c_str());
+	if (var == NULL) {
+		std::cout << "matlabFile::readArray2D: Error reading variable \"" << name << "\" from \"" << myFilename << "\"." << std::endl;
+	}
+
+	if (!mxIsDouble(var)) {
+		std::cout << "matlabFile::readArray2D: Error: Data type is not double." << std::endl;
+		throw;
+	}
+
+	int nDims = mxGetNumberOfDimensions(var);
+	if (nDims != 2) {
+		std::cout << "matlabFile::readArray2D: Error: Matlab array is not 2D." << std::endl;
+	}
+
+	int n = mxGetN(var);
+	int m = mxGetM(var);
+	y.resize(n,m);
+	memcpy(&y(0,0), mxGetPr(var), n*m*sizeof(double));
+	mxDestroyArray(var);
+
+	return y;
+}
+
+
+void matlabFile::reopenForUpdate(void)
+{
+	close();
+	open(myFilename);
+	
 }

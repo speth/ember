@@ -1,7 +1,7 @@
 #include "debugUtils.h"
 
 bool debugParameters::debugAdapt = false;
-bool debugParameters::debugRegrid = true;
+bool debugParameters::debugRegrid = false;
 bool debugParameters::debugSundials = false;
 bool debugParameters::debugJacobian = false;
 bool debugParameters::debugCalcIC = false;

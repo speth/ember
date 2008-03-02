@@ -171,6 +171,9 @@ public:
 	//   opt == 2 means function allocates memory so check if returned
 	//            NULL pointer 
 	static int check_flag(void *flagvalue, char *funcname, int opt);
+
+	double getStepSize(void);
+	void setInitialStepSize(double dt);
 	
 	realtype reltol;
 	sdVector abstol;
@@ -182,10 +185,13 @@ public:
 	realtype tInt; // time reached by integrator
 	sdVector y;
 	sdVector ydot;
-	sdVector y0; // initial condition
+	sdVector y0; // initial condition (output only)
 	sdVector ydot0;
 
-	sdVector componentId; // elements are 1.0 for differential variables, 0.0 for algebraic
+	// elements are 1.0 for differential variables, 0.0 for algebraic
+	// Needs to be set only if using the solver's IC finder (calcIC==true)
+	sdVector componentId; 
+
 	std::vector<int> rootsFound;
 	unsigned int nRoots;
 private:

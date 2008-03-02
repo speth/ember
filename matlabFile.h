@@ -1,22 +1,29 @@
 #pragma once
-#include <matio.h>
 #include <string>
-#include "boost/filesystem.hpp"
+#include "mat.h"
 #include "mathUtils.h"
+#include <cantera/Cantera.h>
+#include <cantera/kernel/Array.h>
 
-class matFile {
+class matlabFile {
 public:
-	matFile(void);
-	matFile(const std::string& filename);
-	~matFile(void);
+	matlabFile(void);
+	matlabFile(const std::string& filename);
+	~matlabFile(void);
 
 	void writeVector(const std::string& name, const dvector& v);
 	dvector readVector(const std::string& name);
 
+	void writeArray2D(const std::string& name, const Cantera::Array2D& y);
+	Cantera::Array2D readArray2D(const std::string& name);
+
 	bool open(const std::string& filename);
 	void close(void);
 private:
-	std::string filename;
-	mat_t* file;
+	std::string myFilename;
+	MATFile* file;
+	bool accessModeIsUpdate;
+
+	void reopenForUpdate(void);
 
 };

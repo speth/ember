@@ -317,9 +317,10 @@ void sundialsIDA::initialize(void)
 
 	IDASetRdata(sundialsMem, theDAE);
 
-	
-	// Pick an appropriate initial condition for ydot
-	flag = IDASetId(sundialsMem, componentId.forSundials());
+	if (calcIC)	{
+		// Pick an appropriate initial condition for ydot and algebraic components of y
+		flag = IDASetId(sundialsMem, componentId.forSundials());
+	}
 
 	flag = IDAMalloc(sundialsMem, f, t0, y.forSundials(), ydot.forSundials(),
 		IDA_SV, reltol, abstol.forSundials());
@@ -451,6 +452,18 @@ int sundialsIDA::check_flag(void *flagvalue, char *funcname, int opt)
   }
 
   return 0;
+}
+
+double sundialsIDA::getStepSize(void)
+{
+	double dt;
+	IDAGetCurrentStep(sundialsMem, &dt);
+	return dt;
+}
+
+void sundialsIDA::setInitialStepSize(double dt)
+{
+	IDASetInitStep(sundialsMem, dt);
 }
 
 // f routine. Compute function f(t,y,y') = res
