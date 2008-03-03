@@ -10,153 +10,13 @@
 #include "boost/filesystem.hpp"
 
 using namespace mathUtils;
-using std::vector;
-
-void strainedFlameSys::setup(void)
-{
-	gas.resize(nPoints);
-	nSpec = gas.thermo(0).nSpecies();
-
-	nVars = 3+nSpec;
-	N = nVars*nPoints;
-
-	rhov.resize(nPoints);
-	U.resize(nPoints);
-	T.resize(nPoints);
-	Y.resize(nSpec,nPoints);
-
-	drhovdt.resize(nPoints,0);
-	dUdt.resize(nPoints,0);
-	dTdt.resize(nPoints,0);
-	dYdt.resize(nSpec,nPoints);
-
-	resContinuity.resize(nPoints);
-	resMomentum.resize(nPoints);
-	resEnergy.resize(nPoints);
-	resSpecies.resize(nSpec,nPoints);
-
-	rho.resize(nPoints);
-	drhodt.resize(nPoints);
-
-	if (jacobianIsAllocated) {
-		delete bandedJacobian;
-	}
-	bandedJacobian = new sdBandMatrix(N,nVars+2,nVars+2,2*nVars+4);
-	BandZero(bandedJacobian->forSundials());
-
-	pMat.resize(N);
-	grid.jj = nPoints-1;
-	grid.updateBoundaryIndices();
-}
-
-void strainedFlameSys::generateInitialProfiles(void)
-{
-	grid.x.resize(nPoints);
-	int jm = (grid.ju+grid.jb)/2; // midpoint of the profiles.
-	int jl = (jm)/3;
-	int jr = (5*jm)/3;
-	grid.jZero = jm;
-
-	// Reactants
-	gas[grid.ju].setState_TPX(Tu,Cantera::OneAtm,reactants);
-	rhou = gas[grid.ju].density();
-
-	// Products
-	gas[grid.jb].setState_TPX(Tu,Cantera::OneAtm,reactants);
-	Cantera::equilibrate(gas[grid.jb],"HP");
-	// Tb = gas[grid.jb].temperature();
-	
-	// Diluent in the center to delay ignition
-	gas[jm].setState_TPX(Tu,Cantera::OneAtm,diluent);
-
-	double Tleft = (grid.ju==0) ? Tu : Tb;
-	double Tright = (grid.ju==0) ? Tb : Tu;
-	T[0] = Tleft; T[grid.jj] = Tright;
-	T[jm] = T[grid.ju];
-
-	// Uniform initial grid
-	for (int j=0; j<nPoints; j++) {
-		grid.x[j] = xLeft + (xRight-xLeft)*((double) j)/((double) nPoints);
-	}
-
-	gas[grid.ju].getMassFractions(&Y(0,grid.ju));
-	gas[grid.jb].getMassFractions(&Y(0,grid.jb));
-	gas[jm].getMassFractions(&Y(0,jm));
-
-	for (int j=1; j<jl; j++) {
-		for (int k=0; k<nSpec; k++) {
-			Y(k,j) = Y(k,0);
-			T[j] = T[0];
-		}
-	}
-
-	for (int j=jl; j<jm; j++) {
-		for (int k=0; k<nSpec; k++) {
-			Y(k,j) = Y(k,0) + (Y(k,jm)-Y(k,0))*(grid.x[j]-grid.x[jl])/(grid.x[jm]-grid.x[jl]);
-			T[j] = T[0] + (T[jm]-T[0])*(grid.x[j]-grid.x[jl])/(grid.x[jm]-grid.x[jl]);
-		}
-	}
-
-	for (int j=jm+1; j<jr; j++) {
-		for (int k=0; k<nSpec; k++) {
-			Y(k,j) = Y(k,jm) + (Y(k,grid.jj)-Y(k,jm))*(grid.x[j]-grid.x[jm])/(grid.x[jr]-grid.x[jm]);
-			T[j] = T[jm] + (T[grid.jj]-T[jm])*(grid.x[j]-grid.x[jm])/(grid.x[jr]-grid.x[jm]);
-		}
-	}
-
-	for (int j=jr; j<nPoints; j++) {
-		for (int k=0; k<nSpec; k++) {
-			Y(k,j) = Y(k,grid.jj);
-			T[j] = T[grid.jj];
-		}
-	}
-
-	dvector yTemp(nPoints);
-	for (int k=0; k<nSpec; k++) {
-		for (int j=0; j<nPoints; j++) {
-			yTemp[j] = Y(k,j);
-		}
-		
-		for (int i=0; i<10; i++) {
-			mathUtils::smooth(yTemp);
-		}
-
-		for (int j=0; j<nPoints; j++) {
-			Y(k,j) = yTemp[j];
-		}
-	}
-
-	for (int i=0; i<10; i++) {
-		mathUtils::smooth(T);
-	}
-
-	// Grid and initial profiles of T, U and rhov
-	for (int i=0; i<nPoints; i++) {
-		grid.x[i] = xLeft + (xRight-xLeft)*((double) i)/((double) nPoints);
-		//T[i] = Tleft + (Tright-Tleft)*(grid.x[i]-xLeft)/(xRight-xLeft);
-		rho[i] = rhou*Tu/T[i];
-		U[i] = sqrt(rho[grid.ju]/rho[i]);
-	}
-
-	for (int i=0; i<5; i++) {
-		mathUtils::smooth(U);
-	}
-
-	rhov[jm] = 0;
-	for (int j=jm+1; j<nPoints; j++) {
-		rhov[j] = rhov[j-1] - rho[j]*U[j]*strainRate*(grid.x[j]-grid.x[j-1]);
-	}
-
-	for (int j=jm-1; j>=0; j--) {
-		rhov[j] = rhov[j+1] + rho[j]*U[j]*strainRate*(grid.x[j+1]-grid.x[j]);
-	}
-}
 
 int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 {
 	tNow = t;
 	unrollY(y);
 	unrollYdot(ydot);
+	double a = strainRate(t);
 
 	// Update auxillary data:
 	for (int j=0; j<nPoints; j++) {
@@ -184,8 +44,8 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		resMomentum[j] = rhov[j]*(U[j-1]*grid.cfm[j] + U[j]*grid.cf[j] + U[j+1]*grid.cfp[j])
 			- mu*(U[j-1]*grid.csm[j] + U[j]*grid.cs[j] + U[j+1]*grid.csp[j])
 			+ rho[j]*dUdt[j]
-			+ rho[j]*U[j]*U[j]*strainRate
-			- rhou*strainRate;
+			+ rho[j]*U[j]*U[j]*a
+			- rhou*a;
 
 		for (int k=0; k<nSpec; k++) {
 			resSpecies(k,j) = rhov[j]*(Y(k,j-1)*grid.cfm[j] + Y(k,j)*grid.cf[j] + Y(k,j+1)*grid.cfp[j])
@@ -197,12 +57,12 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	// Continuity equation
 	resContinuity[grid.jZero] = drhovdt[grid.jZero];
 	for (int j=grid.jZero+1; j<nPoints; j++) {
-		resContinuity[j] = drhodt[j] + rho[j]*U[j]*strainRate
+		resContinuity[j] = drhodt[j] + rho[j]*U[j]*a
 			+ (rhov[j]-rhov[j-1])/grid.hh[j-1];
 	}
 
 	for (int j=grid.jZero-1; j>=0; j--) {
-		resContinuity[j] = drhodt[j] + rho[j]*U[j]*strainRate
+		resContinuity[j] = drhodt[j] + rho[j]*U[j]*a
 			+ (rhov[j+1]-rhov[j])/grid.hh[j];
 	}
 
@@ -374,7 +234,7 @@ int strainedFlameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& y
 										  sdVector& resIn, sdVector& rhs, 
 										  sdVector& outVec, realtype c_j, realtype delta)
 {
-	vector<double> xVec(N);
+	dvector xVec(N);
 	for (int i=0; i<N; i++) {
 		xVec[i] = rhs(i);
 	}
@@ -388,6 +248,195 @@ int strainedFlameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& y
 	return 0;
 }
 
+void strainedFlameSys::setup(void)
+{
+	gas.resize(nPoints);
+	nSpec = gas.thermo(0).nSpecies();
+
+	nVars = 3+nSpec;
+	N = nVars*nPoints;
+
+	rhov.resize(nPoints);
+	U.resize(nPoints);
+	T.resize(nPoints);
+	Y.resize(nSpec,nPoints);
+
+	drhovdt.resize(nPoints,0);
+	dUdt.resize(nPoints,0);
+	dTdt.resize(nPoints,0);
+	dYdt.resize(nSpec,nPoints);
+
+	resContinuity.resize(nPoints);
+	resMomentum.resize(nPoints);
+	resEnergy.resize(nPoints);
+	resSpecies.resize(nSpec,nPoints);
+
+	rho.resize(nPoints);
+	drhodt.resize(nPoints);
+
+	if (jacobianIsAllocated) {
+		delete bandedJacobian;
+	}
+	bandedJacobian = new sdBandMatrix(N,nVars+2,nVars+2,2*nVars+4);
+	BandZero(bandedJacobian->forSundials());
+
+	pMat.resize(N);
+	grid.jj = nPoints-1;
+	grid.updateBoundaryIndices();
+}
+
+void strainedFlameSys::generateInitialProfiles(void)
+{
+	grid.x.resize(nPoints);
+	int jm = (grid.ju+grid.jb)/2; // midpoint of the profiles.
+	int jl = (jm)/3;
+	int jr = (5*jm)/3;
+	grid.jZero = jm;
+
+	// Reactants
+	gas[grid.ju].setState_TPX(Tu,Cantera::OneAtm,reactants);
+	rhou = gas[grid.ju].density();
+
+	// Products
+	gas[grid.jb].setState_TPX(Tu,Cantera::OneAtm,reactants);
+	Cantera::equilibrate(gas[grid.jb],"HP");
+	// Tb = gas[grid.jb].temperature();
+	
+	// Diluent in the center to delay ignition
+	gas[jm].setState_TPX(Tu,Cantera::OneAtm,diluent);
+
+	double Tleft = (grid.ju==0) ? Tu : Tb;
+	double Tright = (grid.ju==0) ? Tb : Tu;
+	T[0] = Tleft; T[grid.jj] = Tright;
+	T[jm] = T[grid.ju];
+
+	// Uniform initial grid
+	for (int j=0; j<nPoints; j++) {
+		grid.x[j] = xLeft + (xRight-xLeft)*((double) j)/((double) nPoints);
+	}
+
+	gas[grid.ju].getMassFractions(&Y(0,grid.ju));
+	gas[grid.jb].getMassFractions(&Y(0,grid.jb));
+	gas[jm].getMassFractions(&Y(0,jm));
+
+	mu = gas.trans(grid.ju).viscosity();
+	lambda = gas.trans(grid.ju).thermalConductivity();
+	cp = gas.thermo(grid.ju).cp_mass();
+
+	for (int j=1; j<jl; j++) {
+		for (int k=0; k<nSpec; k++) {
+			Y(k,j) = Y(k,0);
+			T[j] = T[0];
+		}
+	}
+
+	for (int j=jl; j<jm; j++) {
+		for (int k=0; k<nSpec; k++) {
+			Y(k,j) = Y(k,0) + (Y(k,jm)-Y(k,0))*(grid.x[j]-grid.x[jl])/(grid.x[jm]-grid.x[jl]);
+			T[j] = T[0] + (T[jm]-T[0])*(grid.x[j]-grid.x[jl])/(grid.x[jm]-grid.x[jl]);
+		}
+	}
+
+	for (int j=jm+1; j<jr; j++) {
+		for (int k=0; k<nSpec; k++) {
+			Y(k,j) = Y(k,jm) + (Y(k,grid.jj)-Y(k,jm))*(grid.x[j]-grid.x[jm])/(grid.x[jr]-grid.x[jm]);
+			T[j] = T[jm] + (T[grid.jj]-T[jm])*(grid.x[j]-grid.x[jm])/(grid.x[jr]-grid.x[jm]);
+		}
+	}
+
+	for (int j=jr; j<nPoints; j++) {
+		for (int k=0; k<nSpec; k++) {
+			Y(k,j) = Y(k,grid.jj);
+			T[j] = T[grid.jj];
+		}
+	}
+
+	dvector yTemp(nPoints);
+	for (int k=0; k<nSpec; k++) {
+		for (int j=0; j<nPoints; j++) {
+			yTemp[j] = Y(k,j);
+		}
+		
+		for (int i=0; i<10; i++) {
+			mathUtils::smooth(yTemp);
+		}
+
+		for (int j=0; j<nPoints; j++) {
+			Y(k,j) = yTemp[j];
+		}
+	}
+
+	for (int i=0; i<10; i++) {
+		mathUtils::smooth(T);
+	}
+
+	// Grid and initial profiles of T, U and rhov
+	for (int i=0; i<nPoints; i++) {
+		grid.x[i] = xLeft + (xRight-xLeft)*((double) i)/((double) nPoints);
+		//T[i] = Tleft + (Tright-Tleft)*(grid.x[i]-xLeft)/(xRight-xLeft);
+		rho[i] = rhou*Tu/T[i];
+		U[i] = sqrt(rho[grid.ju]/rho[i]);
+	}
+
+	for (int i=0; i<5; i++) {
+		mathUtils::smooth(U);
+	}
+
+	rhov[jm] = 0;
+	for (int j=jm+1; j<nPoints; j++) {
+		rhov[j] = rhov[j-1] - rho[j]*U[j]*strainRate(tStart)*(grid.x[j]-grid.x[j-1]);
+	}
+
+	for (int j=jm-1; j>=0; j--) {
+		rhov[j] = rhov[j+1] + rho[j]*U[j]*strainRate(tStart)*(grid.x[j+1]-grid.x[j]);
+	}
+}
+
+void strainedFlameSys::loadInitialProfiles(void)
+{
+	std::string inputFilename = options.inputDir + "/" + options.restartFile;
+	matlabFile infile(inputFilename);
+	grid.x = infile.readVector("x");
+	
+	nPoints = grid.x.size();
+	setup();
+
+	U = infile.readVector("U");
+	rhov = infile.readVector("V");
+	T = infile.readVector("T");
+	Y = infile.readArray2D("Y");
+	
+	dvector timevec = infile.readVector("t");
+	tStart = timevec[0];
+
+	infile.close();
+
+	if (options.overrideTu) {
+		T[grid.ju] = Tu;
+	} else {
+		Tu = T[grid.ju];
+	}
+
+	if (options.overrideReactants) {
+		gas.thermo(grid.ju).setMoleFractionsByName(reactants);
+		dvector yu(nSpec);
+		gas.thermo(grid.ju).getMassFractions(&yu[0]);
+		for (int k=0; k<nSpec; k++) {
+			Y(k,grid.ju) = yu[k];
+		}
+	} else {
+		gas.thermo(grid.ju).setMoleFractions(&Y(0,grid.ju));
+	}
+	gas.thermo(grid.ju).setState_TP(T[grid.ju],gas.pressure);
+
+	mu = gas.trans(grid.ju).viscosity();
+	lambda = gas.trans(grid.ju).thermalConductivity();
+	cp = gas.thermo(grid.ju).cp_mass();
+	rhou = gas.thermo(grid.ju).density();
+
+	grid.update_jZero(rhov);
+
+}
 
 strainedFlameSys::strainedFlameSys(void) 
 	: jacobianIsAllocated(false)
@@ -461,7 +510,7 @@ void strainedFlameSys::rollResiduals(sdVector& res)
 	}
 }
 
-void strainedFlameSys::printForMatlab(ofstream& file, vector<double>& v, int index, char* name)
+void strainedFlameSys::printForMatlab(ofstream& file, dvector& v, int index, char* name)
 {
 	file << name << "{" << index << "} = [";
 	for (unsigned int i=0; i<v.size()-1; i++)
@@ -472,7 +521,7 @@ void strainedFlameSys::printForMatlab(ofstream& file, vector<double>& v, int ind
 }
 
 
-void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, vector<bool>& algebraic)
+void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::vector<bool>& algebraic)
 {
 	sdBandMatrix ICmatrix(N,nVars+2,nVars+2,2*nVars+4);
 	double eps = 1; // eps might be a bad name for this.
@@ -555,7 +604,7 @@ void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot
 	// Solve the linear system to get the IC:
 
 	// LU factorization
-	vector<long int> ICpermMat(N);
+	std::vector<long int> ICpermMat(N);
 	long int iError = BandGBTRF(ICmatrix.forSundials(),&ICpermMat[0]);
 	if (iError!=0) {
 		cout << "iError = " << iError << endl;
@@ -592,7 +641,6 @@ void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot
 
 void strainedFlameSys::writeStateMatFile(void)
 {
-	
 	// Determine the name of the output file (outXXXXXX.mat)
 	std::ostringstream fileName(ostringstream::out);
 	fileName << options.outputDir << "/out";
@@ -620,4 +668,20 @@ void strainedFlameSys::writeStateMatFile(void)
 
 	outFile.close();
 
+}
+
+double strainedFlameSys::strainRate(const double t)
+{	
+	// Strain rate is at initial value until time strainRateT0,
+	// then increases linearly to the final value at time strainRateT0+strainRateDt
+	return (t <= strainRateT0) ? strainRateInitial 
+		:  (t >= strainRateT0+strainRateDt) ? strainRateFinal
+		: strainRateInitial + (strainRateFinal-strainRateInitial)*(t-tStart)/strainRateDt;
+}
+
+double strainedFlameSys::dStrainRateDt(const double t)
+{
+	return (t <= strainRateT0) ? 0
+		:  (t >= strainRateT0+strainRateDt) ? 0
+		: (strainRateFinal-strainRateInitial)/strainRateDt;
 }

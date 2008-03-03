@@ -27,26 +27,36 @@ public:
 	int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
 						    sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta);
 	
+	// Finds a consistent solution for the DAE to begin the integration
+	void getInitialCondition(double t, sdVector& y, sdVector& ydot, vector<bool>& algebraic);
 
 	// Problem definition
 	double Tu, Tb;
 	double xLeft, xRight;
 	int nPoints;
-	double strainRate;
+
+	double strainRateInitial;
+	double strainRateFinal;
+	double strainRateDt;
+	double strainRateT0;
+
 	double tStart;
 	double tEnd;
 	double tNow;
+
 	double mu; // viscosity
 	double lambda; // thermal conductivity
 	double cp; // specific heat capacity
+
 	double rhou;
 	std::string reactants;
 	std::string diluent;
 
 	void setup(void);
-	void generateInitialProfiles(void);
 	void readOptionsFile(std::string filename);
-	void getInitialCondition(double t, sdVector& y, sdVector& ydot, vector<bool>& algebraic);
+	
+	void generateInitialProfiles(void);
+	void loadInitialProfiles(void);
 	
 	// Utility functions
 	void unrollY(const sdVector& y);
@@ -104,4 +114,7 @@ private:
 	vector<long int> pMat;
 
 	int outputFileNumber; // number of output files written
+
+	double strainRate(const double t);
+	double dStrainRateDt(const double t);
 };

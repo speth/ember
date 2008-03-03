@@ -5,18 +5,18 @@
 void strainedFlameSys::readOptionsFile(std::string filename)
 {
 	// read input file
-	libconfig::Config configFile;
+	libconfig::Config cfg;
 	if (boost::filesystem::exists(filename)) {
-		configFile.readFile(filename.c_str());
+		cfg.readFile(filename.c_str());
 		cout << "Reading configuration opions from " << filename << endl;
 	} else {
 		cout << "readOptionsFile: Error: Input file \"" << filename << "\" does not exist." << endl;
 		throw;
 	}
 
-	configFile.setAutoConvert(true);
+	cfg.setAutoConvert(true);
 
-	// These are default values for the configuration options
+	// These are default values for the configuration options:
 
 	// Paths
 	options.inputDir = "input";
@@ -25,13 +25,20 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	// Chemistry
 	gas.mechanismFile = "gri30.xml";
 	gas.phaseID = "gri30_multi";
+
+	// Initial Conditions
+	options.restartFile = "";
 	reactants = "O2:1.0, N2:3.76, CH4:0.5";
 	diluent = "Ar:1.0";
-
-	// Flow
 	Tu = 300;
 	Tb = 2000;
-	strainRate = 100;
+
+	// Strain Rate Parameters
+	strainRateInitial = 100;
+	strainRateFinal = 100;
+	strainRateDt = 1e-3;
+	strainRateT0 = 0;
+	
 	options.curvedDomain = false;
 
 	// Grid	
@@ -62,43 +69,55 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 
 
 	// Read options from the configuration file
-	configFile.lookupValue("paths.inputDir",options.inputDir);
-	configFile.lookupValue("paths.outputDir",options.outputDir);
+	cfg.lookupValue("paths.inputDir",options.inputDir);
+	cfg.lookupValue("paths.outputDir",options.outputDir);
+	
 
-	configFile.lookupValue("chemistry.mechanismFile",gas.mechanismFile);
-	configFile.lookupValue("chemistry.phaseID",gas.phaseID);
-	configFile.lookupValue("chemistry.reactants",reactants);
-	configFile.lookupValue("chemistry.diluent",diluent);
-	configFile.lookupValue("chemistry.pressure",gas.pressure);
+	cfg.lookupValue("chemistry.mechanismFile",gas.mechanismFile);
+	cfg.lookupValue("chemistry.phaseID",gas.phaseID);
 
-	configFile.lookupValue("grid.nPoints",nPoints);
-	configFile.lookupValue("grid.xLeft",xLeft);
-	configFile.lookupValue("grid.xRight",xRight);
 
-	configFile.lookupValue("flow.Tu",Tu);
-	configFile.lookupValue("flow.Tb",Tb);
+	cfg.lookupValue("grid.nPoints",nPoints);
+	cfg.lookupValue("grid.xLeft",xLeft);
+	cfg.lookupValue("grid.xRight",xRight);
 
-	configFile.lookupValue("flow.rhou",rhou);
-	configFile.lookupValue("flow.strainRate",strainRate);
+	options.haveRestartFile = cfg.lookupValue("InitialCondition.file",options.restartFile);
+	options.overrideTu = cfg.lookupValue("InitialCondition.Tu",Tu);
+	options.overrideReactants = cfg.lookupValue("InitialCondition.reactants",reactants);
+	cfg.lookupValue("InitialCondition.diluent",diluent);
+	cfg.lookupValue("InitialCondition.pressure",gas.pressure);
 
-	configFile.lookupValue("tStart",tStart);
-	configFile.lookupValue("tEnd",tEnd);
+	cfg.lookupValue("StrainParameters.initial",strainRateInitial);
+	cfg.lookupValue("StrainParameters.final",strainRateFinal);
+	cfg.lookupValue("StrainParameters.start",strainRateT0);
+	cfg.lookupValue("StrainParameters.dt",strainRateDt);
 
-	configFile.lookupValue("adaptation.vtol",grid.vtol);
-	configFile.lookupValue("adaptation.dvtol",grid.dvtol);
-	configFile.lookupValue("adaptation.rmTol",grid.rmTol);
-	configFile.lookupValue("adaptation.dampConst",grid.dampConst);
-	configFile.lookupValue("adaptation.gridMin",grid.gridMin);
-	configFile.lookupValue("adaptation.gridMax",grid.gridMax);
-	configFile.lookupValue("adaptation.uniformityTol",grid.uniformityTol);
+	cfg.lookupValue("grid.adaptation.vtol",grid.vtol);
+	cfg.lookupValue("grid.adaptation.dvtol",grid.dvtol);
+	cfg.lookupValue("grid.adaptation.rmTol",grid.rmTol);
+	cfg.lookupValue("grid.adaptation.dampConst",grid.dampConst);
+	cfg.lookupValue("grid.adaptation.gridMin",grid.gridMin);
+	cfg.lookupValue("grid.adaptation.gridMax",grid.gridMax);
+	cfg.lookupValue("grid.adaptation.uniformityTol",grid.uniformityTol);
+	
+	cfg.lookupValue("grid.regridding.boundaryTol",grid.boundaryTol);
+	cfg.lookupValue("grid.regridding.boundaryTolRm",grid.boundaryTolRm);
 
-	configFile.lookupValue("general.fixedBurnedValFlag",grid.fixedBurnedValFlag);
-	configFile.lookupValue("general.fixedLeftLocation",grid.fixedLeftLoc);
-	configFile.lookupValue("general.unburnedLeft",grid.unburnedLeft);
+	cfg.lookupValue("tStart",tStart);
+	cfg.lookupValue("tEnd",tEnd);
 
-	configFile.lookupValue("regridding.boundaryTol",grid.boundaryTol);
-	configFile.lookupValue("regridding.boundaryTolRm",grid.boundaryTolRm);
+	cfg.lookupValue("general.fixedBurnedValFlag",grid.fixedBurnedValFlag);
+	cfg.lookupValue("general.fixedLeftLocation",grid.fixedLeftLoc);
+	cfg.lookupValue("general.unburnedLeft",grid.unburnedLeft);
 
+	if (options.haveRestartFile) {
+		options.haveRestartFile = 
+			boost::filesystem::exists(options.inputDir + "/" + options.restartFile);
+	}
+
+	if (!boost::filesystem::exists(options.outputDir)) {
+		boost::filesystem::create_directory(options.outputDir);
+	}
 
 	grid.alpha = (options.curvedDomain) ? 1 : 0;
 

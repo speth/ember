@@ -48,17 +48,15 @@ void strainedFlame(const std::string& inputFile) {
 	theSys.gas.initialize();
 	//theSys.gas.testFunction();
 
-	theSys.writeStateMatFile();
-
 	// output file:
 	ofstream outFile;
-	outFile.open("out.m");
-
+	std::string outFileName = theSys.options.outputDir+"/out.m";
+	outFile.open(outFileName.c_str());
 
 	bool newSolver = true; 
 
 	double dt = theSys.tEnd/500;
-	double t = 0;
+
 	double integratorTimestep = 0;
 	double dtRegrid = dt*10;
 	double tRegrid = dtRegrid;
@@ -67,7 +65,14 @@ void strainedFlame(const std::string& inputFile) {
 
 	// Initial Conditions for ODE
 	theSys.setup();
-	theSys.generateInitialProfiles();
+	if (theSys.options.haveRestartFile) {
+		theSys.loadInitialProfiles();
+	} else {
+		theSys.generateInitialProfiles();
+	}
+
+	double t = theSys.tStart;
+
 
 	for (int j=0; j<theSys.nPoints; j++) {
 		for (int k=0; k<theSys.nSpec; k++) {

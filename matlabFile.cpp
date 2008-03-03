@@ -129,7 +129,7 @@ Cantera::Array2D matlabFile::readArray2D(const std::string& name)
 
 	int n = mxGetN(var);
 	int m = mxGetM(var);
-	y.resize(n,m);
+	y.resize(m,n);
 	memcpy(&y(0,0), mxGetPr(var), n*m*sizeof(double));
 	mxDestroyArray(var);
 
