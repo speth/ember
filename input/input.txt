@@ -25,26 +25,28 @@ grid:
 	xRight = 0.05;
 	adaptation:
 	{
-		vtol = 0.04;
-		dvtol = 0.4;
-		rmTol = 0.67;
+		vtol = 0.02;
+		dvtol = 0.1;
+		rmTol = 0.7;
 		dampConst = 6000;
-		gridMin = 2.0e-4;
-		gridMax = 0.2;
-		uniformityTol = 2.7;
+		gridMin = 2.0e-7;
+		gridMax = 0.004;
+		uniformityTol = 3;
+		absvtol = 1e-9;
 	};
 
 	regridding:
 	{
-		boundaryTol = 2e-5;
-		boundaryTolRm = 5e-6;
+		boundaryTol = 2e-4;
+		boundaryTolRm = 5e-5;
+		addPointCount = 5;
 	};
 };
 
 InitialCondition:
 {
 	// Read Initial profile from a file.
-	file = "restart.mat";
+	//file = "restart.mat";
 	
 	// These properties will override parameters read from the file
 	Tu = 300;
@@ -56,8 +58,8 @@ InitialCondition:
 
 StrainParameters:
 {
-	initial = 10;
-	final = 10;
+	initial = 50;
+	final = 50;
 	start = 0;
 	dt = 0.1;
 };
@@ -70,6 +72,23 @@ fluid:
 
 };
 
-tEnd = 0.05;
+times:
+{
+	//regridTimeInterval = 5e-3;
+	regridStepInterval = 10;
+	outputStepInterval = 10;
+	outputTimeInterval = 5e-4;
+	tEnd = 5;
+};
+	
+debug:
+{
+	adaptation: false;
+	regridding: true;
+	sundials: false;
+	jacobian: false;
+	calcIC: false;
+	
+};
 
 

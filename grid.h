@@ -14,6 +14,8 @@ public:
 	int ju, jb; 	// indices of burned / unburned boundaries
 	int kMomentum; // index into solutionState of the Momentum equation
 	int kContinuity; // index into solutionState of the continuity equation
+	int kEnergy; // index into solutionState of the Energy equation
+	int kSpecies; // index into solutionState of the first species equation
 
 	// Parameters for controlling internal grid points:
 	double vtol; // relative solution variable tolerance for point insertion
@@ -30,6 +32,7 @@ public:
 	bool unburnedLeft;
 	double boundaryTol;
 	double boundaryTolRm;
+	int addPointCount; // number of points to add when regridding
 
 	// Derived mesh parameters (calculated by updateDerivedSizes)
 	dvector cfm, cf, cfp; // first centered difference

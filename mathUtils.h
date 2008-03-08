@@ -6,8 +6,12 @@
 #include <iostream>
 #include <string>
 
+#include <cantera/Cantera.h>
+#include <cantera/kernel/Array.h>
+
 using std::vector;
 using std::valarray;
+using Cantera::Array2D;
 
 typedef vector<double> dvector;
 
@@ -37,6 +41,18 @@ namespace mathUtils
 	vector<int> find(vector<bool>& v);
 
 	void smooth(dvector& v);
+	dvector linspace(const double x1, const double x2, const int n);
+
+	// Cubic Spline interpolation
+	dvector splines(const dvector& xIn, const dvector& yIn, const dvector& xOut);
+	double splines(const dvector& xIn, const dvector& yIn, const double xOut);
+
+	// Internal function for splines
+	vector<dvector> computeSplines(const dvector& xIn, const dvector& yIn);
+
+	void vectorVectorToArray2D(const vector<dvector>& v, Array2D& a);
+	void array2DToVectorVector(const Array2D& a, vector<dvector>& v);
+	
 };
 
 std::ostream& operator<<(std::ostream& os, vector<double>& v);

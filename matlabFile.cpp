@@ -38,6 +38,50 @@ bool matlabFile::open(const std::string& filename)
 	return (file != NULL) ? true : false;
 }
 
+
+void matlabFile::writeScalar(const std::string& name, const double x) 
+{
+	if (file) {
+		mxArray* var;
+		var = mxCreateDoubleMatrix(1,1,mxREAL);
+		memcpy( mxGetPr(var), &x, sizeof(double));
+		int status = matPutVariable(file, name.c_str(), var);
+		if (status) {
+			std::cout << "matFile::writeScalar: Error writing variable \"" << 
+				name << "\" to \"" << myFilename << "\"." << std::endl;
+		}
+		mxDestroyArray(var);
+	}
+}
+
+double matlabFile::readScalar(const std::string& name)
+{
+	if (!accessModeIsUpdate) {
+		reopenForUpdate();
+	}
+
+	double x;
+	if (!file) {
+		return 0;
+	}
+	mxArray* var = matGetVariable(file, name.c_str());
+	if (var == NULL) {
+		std::cout << "matFile::readScalar: Error reading variable \"" << name << "\" from \"" << myFilename << "\"." << std::endl;
+	}
+
+	if (!mxIsDouble(var)) {
+		std::cout << "matFile::readScalar: Error: Data type is not double" << std::endl;
+		throw;
+	}
+
+	memcpy(&x, mxGetPr(var), sizeof(double));
+
+	mxDestroyArray(var);
+
+	return x;
+}
+
+
 void matlabFile::writeVector(const std::string& name, const dvector& v) 
 {
 	if (file) {

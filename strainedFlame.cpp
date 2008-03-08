@@ -2,6 +2,7 @@
 #include "debugUtils.h"
 #include "matlabFile.h"
 #include "boost/filesystem.hpp"
+#include "sundialsUtils.h"
 
 using namespace mathUtils;
 
@@ -25,6 +26,7 @@ int main(int argc, char** argv)
     	strainedFlame(inputFile);
 		//chemistryTest();
 		//matlabioTest();
+		//miscTest();
 
     }
 	catch (Cantera::CanteraError) {
@@ -34,8 +36,8 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-void strainedFlame(const std::string& inputFile) {
-
+void strainedFlame(const std::string& inputFile) 
+{
     cout << "**** strainedFlame (1dflame Version 2.0) ****" << std::endl;
 
 	clock_t t1, t2;
@@ -54,14 +56,7 @@ void strainedFlame(const std::string& inputFile) {
 	outFile.open(outFileName.c_str());
 
 	bool newSolver = true; 
-
-	double dt = theSys.tEnd/500;
-
-	double integratorTimestep = 0;
-	double dtRegrid = dt*10;
-	double tRegrid = dtRegrid;
-	int i=1;
-
+	double nSteps = 0;
 
 	// Initial Conditions for ODE
 	theSys.setup();
@@ -70,19 +65,19 @@ void strainedFlame(const std::string& inputFile) {
 	} else {
 		theSys.generateInitialProfiles();
 	}
+	
+	double integratorTimestep = 0;
+	int nRegrid = 0;
+	int nOutput = 0;
+	double tOutput = theSys.tStart;
+	double tRegrid = theSys.tStart;
+
+	int i=1;
 
 	double t = theSys.tStart;
 
-
-	for (int j=0; j<theSys.nPoints; j++) {
-		for (int k=0; k<theSys.nSpec; k++) {
-			outFile << "Yo( " << k+1 << "," << j+1 << ") = " << theSys.Y(k,j) << ";" << endl;
-		}
-	}
-
 	theSys.grid.jj = theSys.nPoints;
 	theSys.grid.updateDerivedSizes();
-
 
 	while (t < theSys.tEnd) {
 
@@ -90,7 +85,7 @@ void strainedFlame(const std::string& inputFile) {
 
 		// Sundials IDA Solver:
 		sundialsIDA theSolver(theSys.N);
-		theSolver.reltol = 1e-5;
+		theSolver.reltol = 5e-4;
 		theSolver.nRoots = 0;
 		theSolver.findRoots = false;
 		vector<bool> algebraic(theSys.N);
@@ -99,14 +94,14 @@ void strainedFlame(const std::string& inputFile) {
 		// Initial condition:
 		theSys.rollY(theSolver.y);
 		for (int j=0; j<theSys.nPoints; j++) {
-			theSolver.abstol(nVars*j) = 1e-6; // rhov
-			theSolver.abstol(nVars*j+1) = 1e-6; // U
-			theSolver.abstol(nVars*j+2) = 1e-6; // T
+			theSolver.abstol(nVars*j) = 1e-5; // rhov
+			theSolver.abstol(nVars*j+1) = 1e-5; // U
+			theSolver.abstol(nVars*j+2) = 1e-5; // T
 			algebraic[nVars*j] = true;
 			algebraic[nVars*j+1] = false;
 			algebraic[nVars*j+2] = false;
 			for (int k=0; k<theSys.nSpec; k++) {
-				theSolver.abstol(nVars*j+k+3) = 1e-10; // Y
+				theSolver.abstol(nVars*j+k+3) = 1e-1; // Y
 				algebraic[nVars*j+3+k] = false;
 			}
 		}
@@ -122,12 +117,6 @@ void strainedFlame(const std::string& inputFile) {
 		theSolver.setDAE(&theSys);
 		theSolver.calcIC = false;
 
-		if (debugParameters::debugCalcIC) {
-			outFile << "xIC{ " << i << "} = [" << theSys.grid.x << "];" << endl;
-			outFile << "yIC{ " << i << "} = [" << theSolver.y << "];" << endl;
-			outFile << "ydotIC{ " << i << "} = [" << theSolver.ydot << "];" << endl;
-		}
-
 		theSolver.initialize();
 		
 		if (integratorTimestep != 0) {
@@ -135,66 +124,54 @@ void strainedFlame(const std::string& inputFile) {
 		}
 
 		int flag;
-		theSys.printForMatlab(outFile, theSys.grid.x, i, "x");
-		theSys.unrollY(theSolver.y);
-		theSys.printForMatlab(outFile, theSys.rhov, i, "rhov");
-		theSys.printForMatlab(outFile, theSys.T, i, "T");
-		theSys.printForMatlab(outFile, theSys.U, i, "U");
-		outFile << "t(" << i << ") = " << t << ";" << endl;
 
 		theSys.writeStateMatFile();
 		i++;
 
 		while (t < theSys.tEnd) {
-			flag = theSolver.integrateToTime(t+dt);
+			flag = theSolver.integrateOneStep();
+
+			nOutput++;
+			nRegrid++;
+			t = theSolver.tInt;
 
 			if (flag == CV_SUCCESS) {
 				cout << "t = " << t << endl;
-				t += dt;
 			}
 
-			theSys.printForMatlab(outFile, theSys.grid.x, i, "x");
-			theSys.unrollY(theSolver.y);
-			theSys.printForMatlab(outFile, theSys.rhov, i, "rhov");
-			theSys.printForMatlab(outFile, theSys.T, i, "T");
-			theSys.printForMatlab(outFile, theSys.U, i, "U");
-			outFile << "t(" << i << ") = " << theSolver.tInt << ";" << endl;
 			i++;
 
-			theSys.writeStateMatFile();
+			if (t > tOutput || nOutput > theSys.options.outputStepInterval) {
+				theSys.writeStateMatFile();
+				while (t > tOutput) {
+					tOutput += theSys.options.outputTimeInterval;
+				}
+				nOutput = 0;
+			}
 
-			if (t > tRegrid) {
+			if (t > tRegrid || nRegrid > theSys.options.regridStepInterval) {
+				while (t > tRegrid) {
+					tRegrid += theSys.options.regridTimeInterval;
+				}
+				nRegrid = 0;
 				// Adapt the grid if necessary
 
-				tRegrid += dtRegrid;
-						theSys.grid.dampVal.resize(theSys.nPoints);
-
-				for (int j=0; j<theSys.nPoints; j++) {
+ 				for (int j=0; j<theSys.nPoints; j++) {
 					theSys.grid.dampVal[j] = abs(theSys.mu/theSys.rhov[j]);
 				}
 				vector<dvector> currentSolution, currentSolutionDot;
-				theSys.unrollYdot(theSolver.ydot);
-				currentSolution.push_back(theSys.rhov);
-				currentSolution.push_back(theSys.U);
-				currentSolution.push_back(theSys.T);
 
-				currentSolutionDot.push_back(theSys.drhovdt);
-				currentSolutionDot.push_back(theSys.dUdt);
-				currentSolutionDot.push_back(theSys.dTdt);
+				theSys.rollVectorVector(theSolver.y, currentSolution);
+				theSys.rollVectorVector(theSolver.ydot, currentSolutionDot);
 
 				bool adaptFlag = theSys.grid.adapt(currentSolution, currentSolutionDot);
 				bool regridFlag = theSys.grid.regrid(currentSolution, currentSolutionDot);
 				
-
-				theSys.rhov = currentSolution[0];
-				theSys.U = currentSolution[1];
-				theSys.T = currentSolution[2];
-
-				theSys.drhovdt = currentSolutionDot[0];
-				theSys.dUdt= currentSolutionDot[1];
-				theSys.dTdt = currentSolutionDot[2];
-				
 				theSys.nPoints = theSys.grid.jj+1;
+				theSys.setup();
+
+				theSys.unrollVectorVector(currentSolution);
+				theSys.unrollVectorVectorDot(currentSolutionDot);
 
 				if (adaptFlag || regridFlag) {
 					break; // exit the inner loop and reinitialize the solver for the new problem size
@@ -335,4 +312,21 @@ void matlabioTest(void)
 	cout << hi << endl;	
 
 	outFile.close();
+}
+
+void miscTest(void)
+{
+	Cantera::Array2D a(53,100);
+	for (int k=0; k<53; k++) {
+		for (int j=0; j<100; j++) {
+			a(k,j) = k;
+		}
+	}
+
+	vector<dvector> v;
+	array2DToVectorVector(a,v);
+
+	vectorVectorToArray2D(v,a);
+
+	int blargh = 0;
 }

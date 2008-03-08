@@ -1,4 +1,7 @@
 #include "mathUtils.h"
+#include "sundialsUtils.h"
+
+using std::cout; using std::endl;
 
 double mathUtils::max(const vector<double>& v)
 {
@@ -141,6 +144,138 @@ void mathUtils::smooth(dvector& v)
 		q = v[i];
 		v[i] = 0.25*p + 0.5*v[i] + 0.25*v[i+1];
 		std::swap(p,q);
+	}
+}
+
+dvector mathUtils::linspace(const double x1, const double x2, const int n)
+{
+	dvector v(n);
+	for (int i=0; i<n; i++) {
+		v[i] = x1 + ((x2-x1)*i)/(n-1);
+	}
+	return v;
+}
+
+vector<dvector> mathUtils::computeSplines(const dvector& xIn, const dvector& yIn)
+{
+	if (xIn.size() != yIn.size()) {
+		cout << "mathUtils::ComputeSplines: error: xIn and yIn must be the same size." << endl;
+		throw;
+	}
+
+	int nIn = xIn.size();
+
+	// Compute spacing of x and derivative of y
+	dvector h(nIn), b(nIn);
+	for (int i=0; i<nIn-1;  i++) {
+		h[i] = xIn[i+1]-xIn[i];
+		b[i] = (yIn[i+1]-yIn[i])/h[i];
+	}
+
+	// Gaussian elimination for the Tridiagonal system
+	dvector u(nIn), v(nIn);
+	u[0] = 0; v[0] = 0;
+	u[1] = 2*(h[0]+h[1]);
+	v[1] = 6*(b[1]-b[0]);
+	for (int i=2; i<nIn-1; i++) {
+		u[i] = 2*(h[i-1]+h[i]) - h[i-1]*h[i-1]/u[i-1];
+		v[i] = 6*(b[i]-b[i-1]) - h[i-1]*v[i-1]/u[i-1];
+	}
+
+	// Back-substitute
+	dvector z(nIn);
+	z[nIn-1] = 0;
+	for (int i=nIn-2; i>0; i--) {
+		z[i] = (v[i]-h[i]*z[i+1])/u[i];
+	}
+	
+	// Evaluate the polynomial coefficients
+	dvector c0(nIn), c1(nIn), c2(nIn), c3(nIn);
+	vector<dvector> c(4, dvector(nIn));
+	for (int i=0; i<nIn-1; i++) {
+		c[0][i] = yIn[i];
+		c[1][i] = -h[i]/6*z[i+1] - h[i]/3*z[i] + (yIn[i+1]-yIn[i])/h[i];
+		c[2][i] = 0.5*z[i];
+		c[3][i] = (z[i+1]-z[i])/(6*h[i]);
+	}
+
+	return c;
+}
+
+dvector mathUtils::splines(const dvector& xIn, const dvector& yIn, const dvector& xOut)
+{
+	if (xIn.size() != yIn.size()) {
+		cout << "mathUtils::splines: error: xIn and yIn must be the same size." << endl;
+		throw;
+	}
+
+	int nOut = xOut.size();
+	int nIn = xIn.size();
+
+	vector<dvector> c = computeSplines(xIn, yIn);
+
+	// Evaluate the spline at the selected points
+	double dx;
+	dvector yOut(nOut);
+
+	for (int i=0; i<nOut; i++) {
+		int j = findFirst(xIn >= xOut[i]) - 1;
+		if (j == -1) {
+			j = 0;
+		} else if (j == -2) {
+			j = nIn-1;
+		}
+		dx = xOut[i]-xIn[j];
+		yOut[i] = c[0][j] + dx*(c[1][j] + dx*(c[2][j] + dx*c[3][j]));
+	}
+
+	return yOut;
+}
+
+double mathUtils::splines(const dvector& xIn, const dvector& yIn, const double xOut)
+{
+	if (xIn.size() != yIn.size()) {
+		cout << "mathUtils::splines: error: xIn and yIn must be the same size." << endl;
+		throw;
+	}
+
+	int nIn = xIn.size();
+
+	vector<dvector> c = computeSplines(xIn, yIn);
+
+	// Evaluate the spline at the selected point
+	int j = findFirst(xIn >= xOut) - 1;
+	if (j == -1) {
+		j = 0;
+	} else if (j == -2) {
+		j = nIn-1;
+	}
+	double dx = xOut-xIn[j];
+	return c[0][j] + dx*(c[1][j] + dx*(c[2][j] + dx*c[3][j]));
+}
+
+void mathUtils::vectorVectorToArray2D(const vector<dvector>& v, Array2D& a)
+{
+	int m = v.size();
+	int n = v.begin()->size();
+	a.resize(m,n);
+	for (int i=0; i<m; i++) {
+		for (int j=0; j<n; j++) {
+			a(i,j) = v[i][j];
+		}
+	}
+}
+
+void mathUtils::array2DToVectorVector(const Array2D& a, vector<dvector>& v)
+{
+	int n = a.nRows();
+	int m = a.nColumns();
+	v.resize(n);
+	for (int i=0; i<n; i++) {
+		v[i].resize(m);
+		for (int j=0; j<m; j++) {
+			v[i][j] = a(i,j);
+		}
 	}
 }
 

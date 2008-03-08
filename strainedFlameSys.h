@@ -64,6 +64,13 @@ public:
 	void rollY(sdVector& y);
 	void rollYdot(sdVector& yDot);
 	void rollResiduals(sdVector& res);
+
+	// Utility functions for adaptation & regridding
+	void rollVectorVector(const sdVector& y, vector<dvector>& v);
+	void unrollVectorVector(const vector<dvector>& v);
+	void unrollVectorVectorDot(const vector<dvector>& v);
+
+
 	
 	void printForMatlab(ofstream& file, vector<double>& v, int index, char* name);
 	void writeStateMatFile(void);
@@ -79,11 +86,16 @@ public:
 	vector<double> T; // temperature
 	Array2D Y; // species mass fractions; Y(k,j)
 	
-	// Derivatives of state variables:
+	// Time derivatives of state variables:
 	vector<double> drhovdt;
 	vector<double> dUdt;
 	vector<double> dTdt;
 	Array2D dYdt;
+
+	// Spatial derivatives of state variables:
+	dvector dUdx;
+	dvector dTdx;
+	Array2D dYdx;
 
 	// Auxillary variables:
 	vector<double> rho; // density [kg/m^3]
@@ -110,7 +122,6 @@ private:
 			   // dependent on the order of the finite difference stencil)
 	int jacBWdot; // Bandwidth of dF/dydot component of Jacobian
 	sdBandMatrix* bandedJacobian;
-	bool jacobianIsAllocated;
 	vector<long int> pMat;
 
 	int outputFileNumber; // number of output files written

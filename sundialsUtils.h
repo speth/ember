@@ -159,6 +159,7 @@ public:
 
 	void initialize(void);
 	int integrateToTime(realtype t);
+	int integrateOneStep(void);
 	void setDAE(sdDAE* newDAE);
 	int getRootInfo(); 
 	void printStats();

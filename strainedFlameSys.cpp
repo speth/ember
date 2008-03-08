@@ -21,7 +21,7 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	// Update auxillary data:
 	for (int j=0; j<nPoints; j++) {
 		rho[j] = rhou*Tu/T[j];
-		drhodt[j] = rho[j]/T[j]*dTdt[j];
+		drhodt[j] = -rho[j]/T[j]*dTdt[j];
 	}
 
 	int jj = nPoints-1;
@@ -35,20 +35,41 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	}
 	double diffCoeff = lambda/cp; // Le = 1;
 
+	//// Upwinded spatial derivatives:
+	//for (int j=1; j<jj; j++) {
+	//	if (rhov[j] > 0) {
+	//		dUdx[j] = (U[j]-U[j-1])/grid.hh[j-1];
+	//		dTdx[j] = (T[j]-T[j-1])/grid.hh[j-1];
+	//		for (int k=0; k<nSpec; k++) {
+	//			dYdx(k,j) = (Y(k,j)-Y(k,j-1))/grid.hh[j-1];
+	//		}
+	//	} else {
+	//		dUdx[j] = (U[j+1]-U[j])/grid.hh[j];
+	//		dTdx[j] = (T[j+1]-T[j])/grid.hh[j];
+	//		for (int k=0; k<nSpec; k++) {
+	//			dYdx(k,j) = (Y(k,j+1)-Y(k,j))/grid.hh[j];
+	//		}
+	//	}
+	//}
+
+
 	// Intermediate points (energy & momentum equations)
 	for (int j=1; j<jj; j++) {
-		resEnergy[j] = rhov[j]*(T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j])
+		dTdx[j] = (T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j]);
+		dUdx[j] = (U[j-1]*grid.cfm[j] + U[j]*grid.cf[j] + U[j+1]*grid.cfp[j]);
+
+		resEnergy[j] = rhov[j]*dTdx[j]
 			- lambda/cp*(T[j-1]*grid.csm[j] + T[j]*grid.cs[j] + T[j+1]*grid.csp[j])
 			+ rho[j]*dTdt[j];
 
-		resMomentum[j] = rhov[j]*(U[j-1]*grid.cfm[j] + U[j]*grid.cf[j] + U[j+1]*grid.cfp[j])
+		resMomentum[j] = rhov[j]*dUdx[j]
 			- mu*(U[j-1]*grid.csm[j] + U[j]*grid.cs[j] + U[j+1]*grid.csp[j])
 			+ rho[j]*dUdt[j]
 			+ rho[j]*U[j]*U[j]*a
 			- rhou*a;
 
 		for (int k=0; k<nSpec; k++) {
-			resSpecies(k,j) = rhov[j]*(Y(k,j-1)*grid.cfm[j] + Y(k,j)*grid.cf[j] + Y(k,j+1)*grid.cfp[j])
+			resSpecies(k,j) = rhov[j]*dYdx(k,j)
 				- diffCoeff*(Y(k,j-1)*grid.csm[j] + Y(k,j)*grid.cs[j] + Y(k,j+1)*grid.csp[j])
 				+ rho[j]*dYdt(k,j);
 		}
@@ -103,7 +124,7 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot, 
 										  sdVector& res, realtype c_j)
 {
-	double eps = sqrt(DBL_EPSILON);
+	double eps = sqrt(DBL_EPSILON)*10;
 	sdVector yTemp(N);
 	sdVector ydotTemp(N);
 	sdVector resTemp(N);
@@ -127,7 +148,7 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 		// Form the perturbed y vector
 		for (int i=s; i<N; i+=bw) {
 			
-			if (y(i) != 0) {
+			if (abs(y(i)) > eps*eps) {
 				yTemp(i) += yTemp(i)*eps;
 			} else {
 				yTemp(i) = eps;
@@ -250,6 +271,11 @@ int strainedFlameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& y
 
 void strainedFlameSys::setup(void)
 {
+	int nPointsOld = T.size();
+	if (nPoints == nPointsOld) {
+		return;
+	}
+
 	gas.resize(nPoints);
 	nSpec = gas.thermo(0).nSpecies();
 
@@ -266,6 +292,10 @@ void strainedFlameSys::setup(void)
 	dTdt.resize(nPoints,0);
 	dYdt.resize(nSpec,nPoints);
 
+	dUdx.resize(nPoints,0);
+	dTdx.resize(nPoints,0);
+	dYdx.resize(nSpec,nPoints,0);
+
 	resContinuity.resize(nPoints);
 	resMomentum.resize(nPoints);
 	resEnergy.resize(nPoints);
@@ -274,9 +304,7 @@ void strainedFlameSys::setup(void)
 	rho.resize(nPoints);
 	drhodt.resize(nPoints);
 
-	if (jacobianIsAllocated) {
-		delete bandedJacobian;
-	}
+	delete bandedJacobian;
 	bandedJacobian = new sdBandMatrix(N,nVars+2,nVars+2,2*nVars+4);
 	BandZero(bandedJacobian->forSundials());
 
@@ -405,9 +433,12 @@ void strainedFlameSys::loadInitialProfiles(void)
 	rhov = infile.readVector("V");
 	T = infile.readVector("T");
 	Y = infile.readArray2D("Y");
+
+	cout << "Read profiles from restart file: U = " << U << endl;
+	cout << "rhov = " << rhov << endl;
+	cout << "T = " << T << endl;
 	
-	dvector timevec = infile.readVector("t");
-	tStart = timevec[0];
+	tStart = infile.readScalar("t");
 
 	infile.close();
 
@@ -429,18 +460,24 @@ void strainedFlameSys::loadInitialProfiles(void)
 	}
 	gas.thermo(grid.ju).setState_TP(T[grid.ju],gas.pressure);
 
-	mu = gas.trans(grid.ju).viscosity();
-	lambda = gas.trans(grid.ju).thermalConductivity();
+	mu = gas.trans(grid.ju).viscosity()*5;
+
+
+	lambda = gas.trans(grid.ju).thermalConductivity()*5;
 	cp = gas.thermo(grid.ju).cp_mass();
 	rhou = gas.thermo(grid.ju).density();
+
+	cout << "mu = " << mu << endl;
+	cout << "lambda = " << lambda << endl;
+	cout << "cp = " << cp << endl;
+	cout << "rhou = " << rhou << endl;
 
 	grid.update_jZero(rhov);
 
 }
 
 strainedFlameSys::strainedFlameSys(void) 
-	: jacobianIsAllocated(false)
-	, bandedJacobian(NULL)
+	: bandedJacobian(NULL)
 	, outputFileNumber(0)
 {
 }
@@ -506,6 +543,47 @@ void strainedFlameSys::rollResiduals(sdVector& res)
 		res(nVars*j+2) = resEnergy[j];
 		for (int k=0; k<nSpec; k++) {
 			res(nVars*j+k+3) = resSpecies(k,j);
+		}
+	}
+}
+
+void strainedFlameSys::rollVectorVector(const sdVector& y, vector<dvector>& v)
+{
+	v.resize(nVars);
+	for (int i=0; i<nVars; i++) {
+		v[i].resize(nPoints);
+		for (int j=0; j<nPoints; j++) {
+			v[i][j] = y(i+nVars*j);
+		}
+	}
+}
+
+void strainedFlameSys::unrollVectorVector(const vector<dvector>& v)
+{
+	for (int j=0; j<nPoints; j++) {
+		rhov[j] = v[grid.kContinuity][j];
+		U[j] = v[grid.kMomentum][j];
+		T[j] = v[grid.kEnergy][j];
+	}
+
+	for (int k=0; k<nSpec; k++) {
+		for (int j=0; j<nPoints; j++) {
+			Y(k,j) = v[grid.kSpecies+k][j];
+		}
+	}
+}
+
+void strainedFlameSys::unrollVectorVectorDot(const vector<dvector>& v)
+{
+	for (int j=0; j<nPoints; j++) {
+		drhovdt[j] = v[grid.kContinuity][j];
+		dUdt[j] = v[grid.kMomentum][j];
+		dTdt[j] = v[grid.kEnergy][j];
+	}
+
+	for (int k=0; k<nSpec; k++) {
+		for (int j=0; j<nPoints; j++) {
+			dYdt(k,j) = v[grid.kSpecies+k][j];
 		}
 	}
 }
@@ -649,16 +727,15 @@ void strainedFlameSys::writeStateMatFile(void)
 	fileName.width(6);
 	fileName << outputFileNumber++ << ".mat";
 
+	cout << "Writing output file: " << fileName.str() << endl;
 	// Erase the existing file and create a new one
 	if (boost::filesystem::exists(fileName.str())) {
 		boost::filesystem::remove(fileName.str());
 	}
 	matlabFile outFile(fileName.str());
 
-	dvector t(1, tNow); // convert t to a format that class matlabFile likes
-
 	// Write the system data to the output file:
-	outFile.writeVector("t", t);
+	outFile.writeScalar("t", tNow);
 	outFile.writeVector("x", grid.x);
 	outFile.writeVector("T", T);
 	outFile.writeVector("U", U);

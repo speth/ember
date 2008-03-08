@@ -16,6 +16,7 @@ void oneDimGrid::updateDerivedSizes()
 	csp.resize(jj);
 	dlj.resize(jj);
 	rphalf.resize(jj);
+	dampVal.resize(jj+1);
 
 	for (unsigned int j=0; j<x.size()-1; j++) {
 		hh[j] = x[j+1]-x[j];
@@ -192,7 +193,6 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
 			double vRange = mathUtils::range(v);
 			double dvRange = mathUtils::range(dv,1,jj-1);
-
 			if (vRange < absvtol) {
 				continue; // ignore minor componenents
 			}
@@ -284,24 +284,31 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
 void oneDimGrid::addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot)
 {
-  	dvector::iterator iter = x.begin() + jInsert;
-	x.insert(iter+1,0.5*(x[jInsert+1]+x[jInsert]));
-
+  	dvector::iterator iter;
+	double xInsert = 0.5*(x[jInsert+1]+x[jInsert]);
+	
 	iter = dampVal.begin() + jInsert;
-	dampVal.insert(iter+1,0.5*(dampVal[jInsert+1]+dampVal[jInsert]));
+
+	dampVal.insert(iter+1, mathUtils::splines(x,dampVal, xInsert));
 
 	vector<dvector>::iterator i;
+	double yNew, ydotNew;
+
 	for (i=y.begin(); i!=y.end(); i++) {
 		iter = i->begin();
 		iter += jInsert;
-		i->insert(iter+1, 0.5*(*(iter+1) + *(iter)));
+		yNew = mathUtils::splines(x,*i, xInsert);
+		i->insert(iter+1, yNew);
 	}
 
 	for (i=ydot.begin(); i!=ydot.end(); i++) {
 		iter = i->begin();
 		iter += jInsert;
-		i->insert(iter+1, 0.5*(*(iter+1) + *(iter)));
+		ydotNew = mathUtils::splines(x,*i, xInsert);
+		i->insert(iter+1, ydotNew);
 	}
+
+	x.insert(x.begin()+jInsert+1, xInsert);
 }
 
 void oneDimGrid::removePoint(int jRemove, vector<dvector>& y, vector<dvector>& ydot)
@@ -468,19 +475,22 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 		gridUpdated = true;
 		cout << "Regrid: Adding point to right side." << endl;
 
-		x.push_back(x[jj] + (x[jj]-x[jj-1]));
-		for (unsigned int k=0; k<y.size(); k++) {
-			if (k==kContinuity) {
-				// linear extrapolation for rhov
-				y[k].push_back(y[k][jj] + (y[k][jj]-y[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
-				ydot[k].push_back(ydot[k][jj] + (ydot[k][jj]-ydot[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
-			} else {
-				// keep constant boundary value
-				y[k].push_back(y[k][jj]);
-				ydot[k].push_back(ydot[k][jj]);
+		for (int i=0; i<addPointCount; i++) {
+			x.push_back(x[jj] + (x[jj]-x[jj-1]));
+			for (unsigned int k=0; k<y.size(); k++) {
+				if (k==kContinuity) {
+					// linear extrapolation for rhov
+					y[k].push_back(y[k][jj] + (y[k][jj]-y[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
+					ydot[k].push_back(ydot[k][jj] + (ydot[k][jj]-ydot[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
+				} else {
+					// keep constant boundary value
+					y[k].push_back(y[k][jj]);
+					ydot[k].push_back(ydot[k][jj]);
+				}
 			}
+			jj++;
 		}
-		jj++;
+
 	} else if (removeRight) {
 		gridUpdated = true;
 		cout << "Regrid: Removing point from right side." << endl;
@@ -503,19 +513,21 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 		cout << "Regrid: Adding point to left side." << endl;
 
 		// Add point to the left.
-		x.insert(x.begin(),x[0]-(x[1]-x[0]));
-		for (unsigned int k=0; k<y.size(); k++) {
-			if (k==kContinuity) {
-				// linear extrapolation
-				y[k].insert(y[k].begin(),y[k][0] + (y[k][1]-y[k][0])*(x[0]-x[1])/(x[2]-x[1]));
-				ydot[k].insert(ydot[k].begin(),ydot[k][0] + (ydot[k][1]-ydot[k][0])*(x[1]-x[0])/(x[2]-x[1]));
-			} else {
-				// keep constant boundary value
-				y[k].insert(y[k].begin(),y[k][0]);
-				ydot[k].insert(ydot[k].begin(),ydot[k][0]);
+		for (int i=0; i<addPointCount; i++) {
+			x.insert(x.begin(),x[0]-(x[1]-x[0]));
+			for (unsigned int k=0; k<y.size(); k++) {
+				if (k==kContinuity) {
+					// linear extrapolation
+					y[k].insert(y[k].begin(),y[k][0] + (y[k][1]-y[k][0])*(x[0]-x[1])/(x[2]-x[1]));
+					ydot[k].insert(ydot[k].begin(),ydot[k][0] + (ydot[k][1]-ydot[k][0])*(x[1]-x[0])/(x[2]-x[1]));
+				} else {
+					// keep constant boundary value
+					y[k].insert(y[k].begin(),y[k][0]);
+					ydot[k].insert(ydot[k].begin(),ydot[k][0]);
+				}
 			}
+			jj++;
 		}
-		jj++;
 
 	} else if (removeLeft) {
 		gridUpdated = true;

@@ -1,6 +1,7 @@
 #include "strainedFlameSys.h"
 #include "libconfig.h++"
 #include "boost/filesystem.hpp"
+#include "debugUtils.h"
 
 void strainedFlameSys::readOptionsFile(std::string filename)
 {
@@ -53,6 +54,7 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	grid.gridMin = 2.0e-4;
 	grid.gridMax = 0.2;
 	grid.uniformityTol = 2.7;
+	grid.absvtol = 1e-10;
 	
 	grid.boundaryTol = 2e-5;
 	grid.boundaryTolRm = 5e-6;
@@ -60,10 +62,17 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	grid.fixedBurnedValFlag = true;
 	grid.fixedLeftLoc = false;
 	grid.unburnedLeft = true;
+	grid.addPointCount = 2;
 
-	// Integrator
+	// Times
 	tStart = 0;
 	tEnd = 0.05;
+
+	options.regridTimeInterval = 100;
+	options.outputTimeInterval = 100;
+	options.regridStepInterval = 10000000;
+	options.outputStepInterval = 10000000;
+	
 
 	// Flags
 
@@ -72,10 +81,8 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	cfg.lookupValue("paths.inputDir",options.inputDir);
 	cfg.lookupValue("paths.outputDir",options.outputDir);
 	
-
 	cfg.lookupValue("chemistry.mechanismFile",gas.mechanismFile);
 	cfg.lookupValue("chemistry.phaseID",gas.phaseID);
-
 
 	cfg.lookupValue("grid.nPoints",nPoints);
 	cfg.lookupValue("grid.xLeft",xLeft);
@@ -99,16 +106,29 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	cfg.lookupValue("grid.adaptation.gridMin",grid.gridMin);
 	cfg.lookupValue("grid.adaptation.gridMax",grid.gridMax);
 	cfg.lookupValue("grid.adaptation.uniformityTol",grid.uniformityTol);
+	cfg.lookupValue("grid.adaptation.absvtol",grid.absvtol);
 	
 	cfg.lookupValue("grid.regridding.boundaryTol",grid.boundaryTol);
 	cfg.lookupValue("grid.regridding.boundaryTolRm",grid.boundaryTolRm);
+	cfg.lookupValue("grid.regridding.addPointCount",grid.addPointCount);
 
-	cfg.lookupValue("tStart",tStart);
-	cfg.lookupValue("tEnd",tEnd);
+	cfg.lookupValue("times.tStart",tStart);
+	cfg.lookupValue("times.tEnd",tEnd);
 
 	cfg.lookupValue("general.fixedBurnedValFlag",grid.fixedBurnedValFlag);
 	cfg.lookupValue("general.fixedLeftLocation",grid.fixedLeftLoc);
 	cfg.lookupValue("general.unburnedLeft",grid.unburnedLeft);
+
+	cfg.lookupValue("times.regridTimeInterval",options.regridTimeInterval);
+	cfg.lookupValue("times.regridStepInterval",options.regridStepInterval);
+	cfg.lookupValue("times.outputTimeInterval",options.outputTimeInterval);
+	cfg.lookupValue("times.outputStepInterval",options.outputStepInterval);
+
+	cfg.lookupValue("debug.adaptation",debugParameters::debugAdapt);
+	cfg.lookupValue("debug.regridding",debugParameters::debugRegrid);
+	cfg.lookupValue("debug.sundials",debugParameters::debugSundials);
+	cfg.lookupValue("debug.jacobian",debugParameters::debugJacobian);
+	cfg.lookupValue("debug.calcIC",debugParameters::debugCalcIC);
 
 	if (options.haveRestartFile) {
 		options.haveRestartFile = 
@@ -123,4 +143,16 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 
 	grid.kContinuity = 0;
 	grid.kMomentum = 1;
+	grid.kEnergy = 2;
+	grid.kSpecies = 3;
+
+	// If neither step nor time intervals have been specified, use a default step interval
+	if (options.outputTimeInterval == 100 && options.outputStepInterval == 10000000) {
+		options.outputStepInterval = 50;
+	}
+
+	if (options.regridTimeInterval == 100 && options.regridStepInterval == 10000000) {
+		options.regridStepInterval = 20;
+	}
+	
 }

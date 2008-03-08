@@ -377,6 +377,13 @@ int sundialsIDA::integrateToTime(realtype t)
 	return flag;
 }
 
+int sundialsIDA::integrateOneStep(void)
+{
+	flag = IDASolve(sundialsMem, tInt+1, &tInt, y.forSundials(),
+		ydot.forSundials(), IDA_ONE_STEP);
+	return flag;
+}
+
 int sundialsIDA::getRootInfo(void)
 {
     flagr = IDAGetRootInfo(sundialsMem, &rootsFound[0]);
