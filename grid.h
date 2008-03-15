@@ -1,12 +1,15 @@
 #pragma once
 
 #include "mathUtils.h"
+#include "readConfig.h"
 
 using std::vector;
 
 class oneDimGrid
 {
 public:
+	oneDimGrid(configOptions& theOptions);
+
 	dvector x; // The grid points
 	dvector dampVal; // ratio of convective to diffusive coefficients (e.g. nu/v)
 	
@@ -27,8 +30,7 @@ public:
 	double dampConst; // relative allowable numerical damping
 
 	// Parameters for controlling exterior grid points:
-	bool fixedBurnedValFlag;
-	bool fixedLeftLoc;
+	bool fixedBurnedVal;
 	bool unburnedLeft;
 	double boundaryTol;
 	double boundaryTolRm;
@@ -42,7 +44,7 @@ public:
 	dvector rphalf;
 	int jj; // number of grid points
 
-	int jZero; // index adjacent to the stagnation point
+	int jZero; // index of the stagnation point
 
 	// Update the grid based on the solutionState, and adjust it to fit 
 	// on the new grid. Each element of the solutionState is a vector 
@@ -58,7 +60,8 @@ public:
 	void updateBoundaryIndices(void);
 
 private:
-	
+
+	configOptions& options;
 	int nVars; // number of solution variables at each grid point
 	
 	void removePoint(int jRemove, vector<dvector>& y, vector<dvector>& ydot);

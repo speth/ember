@@ -44,12 +44,13 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				EnableFiberSafeOptimizations="true"
-				AdditionalIncludeDirectories="&quot;c:\program files\sundials\include&quot;;&quot;c:\Program Files\Cantera\include&quot;;&quot;c:\Program Files\libraries\libconfig-1.2.1\include&quot;;&quot;c:\Program Files\libraries\blitz++\include&quot;"
+				AdditionalIncludeDirectories="&quot;c:\program files\sundials\include&quot;;&quot;c:\Program Files\Cantera\include&quot;;&quot;c:\Program Files\libraries\include&quot;;&quot;c:\Program Files\MATLAB R2007a\extern\include&quot;"
 				PreprocessorDefinitions="WIN32;_CONSOLE;NDEBUG"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="false"
 				EnableEnhancedInstructionSet="2"
 				FloatingPointModel="0"
+				OpenMP="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="false"
@@ -67,16 +68,16 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib libconfig++.lib blitz.lib"
+				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib libconfig++.lib zlib.lib matio.lib libmat.lib libmx.lib"
 				LinkIncremental="0"
-				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;;&quot;c:\Program Files\libraries\libconfig-1.2.1\lib&quot;;&quot;c:\Program Files\libraries\blitz++\lib&quot;"
+				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;;&quot;c:\Program Files\libraries\lib&quot;;&quot;c:\Program Files\MATLAB R2007a\extern\lib\win32\microsoft&quot;"
 				GenerateDebugInformation="false"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
-				OptimizeForWindows98="1"
+				OptimizeForWindows98="0"
 				TargetMachine="1"
-				Profile="false"
+				Profile="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -128,6 +129,7 @@
 				PreprocessorDefinitions="WIN32;_CONSOLE;"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
+				OpenMP="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="false"
@@ -153,6 +155,7 @@
 				OptimizeReferences="0"
 				EnableCOMDATFolding="0"
 				TargetMachine="1"
+				Profile="false"
 			/>
 			<Tool
 				Name="VCALinkTool"

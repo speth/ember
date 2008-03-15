@@ -3,9 +3,9 @@
 class configOptions
 {
 public:
-	string inputDir;
-	string outputDir;
-	string restartFile;
+	std::string inputDir;
+	std::string outputDir;
+	std::string restartFile;
 
 	bool curvedDomain;
 
@@ -13,9 +13,18 @@ public:
 	bool overrideReactants;
 	bool haveRestartFile;
 
+	bool fixedBurnedVal;
+	bool fixedLeftLoc;
+
 	int regridStepInterval;
 	int outputStepInterval;
 	double regridTimeInterval;
 	double outputTimeInterval;
+	double maxTimestep;
 	
+	double idaRelTol;
+	double idaContinuityAbsTol;
+	double idaMomentumAbsTol;
+	double idaEnergyAbsTol;
+	double idaSpeciesAbsTol;
 };

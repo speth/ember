@@ -14,7 +14,7 @@ gasArray::~gasArray()
 	Cantera::close_XML_File(mechanismFile);
 	phaseXmlNode->unlock();
 	rootXmlNode->unlock();
-	delete rootXmlNode; // this deletes all child nodes as well
+//	delete rootXmlNode; // this deletes all child nodes as well
 
 	delete m_kineticsBase;
 	delete m_transportBase;
@@ -58,6 +58,7 @@ void gasArray::resize(unsigned int n)
 		}
 		m_transport.erase(m_transport.begin()+n,m_transport.end());
 	}
+	nPoints = n;
 }
 
 void gasArray::initialize(void) 
@@ -84,8 +85,36 @@ void gasArray::initialize(void)
 
 void gasArray::setState(Cantera::Array2D& Y, dvector& T)
 {
-	for (unsigned int j=0; j<Y.nColumns(); j++) {
+	for (int j=0; j<nPoints; j++) {
 		m_thermo[j]->setState_TPX(T[j], pressure, &Y(0,j));
+	}
+}
+
+void gasArray::getViscosity(dvector& mu) 
+{
+	for (int j=0; j<nPoints; j++) {
+		mu[j] = m_transport[j]->viscosity();
+	}
+}
+
+void gasArray::getThermalConductivity(dvector& lambda)
+{
+	for (int j=0; j<nPoints; j++) {
+		lambda[j] = m_transport[j]->thermalConductivity();
+	}
+}
+
+void gasArray::getDiffusionCoefficients(Cantera::Array2D& Dkm)
+{
+	for (int j=0; j<nPoints; j++) {
+		m_transport[j]->getMixDiffCoeffs(&Dkm(0,j));
+	}
+}
+
+void gasArray::getSpecificHeatCapacity(dvector& cp)
+{
+	for (int j=0; j<nPoints; j++) {
+		cp[j] = m_thermo[j]->cp_mass();
 	}
 }
 

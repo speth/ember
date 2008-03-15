@@ -16,6 +16,12 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	tNow = t;
 	unrollY(y);
 	unrollYdot(ydot);
+	gas.setState(Y,T);
+
+	if (!inJacobianUpdate && !inGetIC) {
+		updateTransportProperties();
+	}
+
 	double a = strainRate(t);
 
 	// Update auxillary data:
@@ -33,9 +39,8 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	for (int k=0; k<nSpec; k++) {
 		resSpecies(k,0) = dYdt(k,0);
 	}
-	double diffCoeff = lambda/cp; // Le = 1;
 
-	//// Upwinded spatial derivatives:
+	//// Upwinded convective derivatives:
 	//for (int j=1; j<jj; j++) {
 	//	if (rhov[j] > 0) {
 	//		dUdx[j] = (U[j]-U[j-1])/grid.hh[j-1];
@@ -57,26 +62,29 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	for (int j=1; j<jj; j++) {
 		dTdx[j] = (T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j]);
 		dUdx[j] = (U[j-1]*grid.cfm[j] + U[j]*grid.cf[j] + U[j+1]*grid.cfp[j]);
+		for (int k=0; k<nSpec; k++) {
+			dYdx(k,j) = (Y(k,j-1)*grid.cfm[j] + Y(k,j)*grid.cf[j] + Y(k,j+1)*grid.cfp[j]);
+		}
 
 		resEnergy[j] = rhov[j]*dTdx[j]
-			- lambda/cp*(T[j-1]*grid.csm[j] + T[j]*grid.cs[j] + T[j+1]*grid.csp[j])
+			- lambda[j]/cp[j]*(T[j-1]*grid.csm[j] + T[j]*grid.cs[j] + T[j+1]*grid.csp[j])
 			+ rho[j]*dTdt[j];
 
 		resMomentum[j] = rhov[j]*dUdx[j]
-			- mu*(U[j-1]*grid.csm[j] + U[j]*grid.cs[j] + U[j+1]*grid.csp[j])
+			- mu[j]*(U[j-1]*grid.csm[j] + U[j]*grid.cs[j] + U[j+1]*grid.csp[j])
 			+ rho[j]*dUdt[j]
 			+ rho[j]*U[j]*U[j]*a
 			- rhou*a;
 
 		for (int k=0; k<nSpec; k++) {
 			resSpecies(k,j) = rhov[j]*dYdx(k,j)
-				- diffCoeff*(Y(k,j-1)*grid.csm[j] + Y(k,j)*grid.cs[j] + Y(k,j+1)*grid.csp[j])
+				- Dkm(k,j)*(Y(k,j-1)*grid.csm[j] + Y(k,j)*grid.cs[j] + Y(k,j+1)*grid.csp[j])
 				+ rho[j]*dYdt(k,j);
 		}
 	}
 
 	// Continuity equation
-	resContinuity[grid.jZero] = drhovdt[grid.jZero];
+	resContinuity[grid.jZero] = rhov[grid.jZero];
 	for (int j=grid.jZero+1; j<nPoints; j++) {
 		resContinuity[j] = drhodt[j] + rho[j]*U[j]*a
 			+ (rhov[j]-rhov[j-1])/grid.hh[j-1];
@@ -96,27 +104,29 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 
 	rollResiduals(res);
 
-	//double resNorm = 0;
-	//double resC = 0;
-	//double resE = 0;
-	//double resM = 0;
-	//for (int i=0; i<N; i++) {
-	//	resNorm += res(i)*res(i);
+	//if (!inJacobianUpdate && !inGetIC) {
+	//	double resNorm = 0;
+	//	double resC = 0;
+	//	double resE = 0;
+	//	double resM = 0;
+	//	for (int i=0; i<N; i++) {
+	//		resNorm += res(i)*res(i);
+	//	}
+	//	for (int i=0; i<nPoints; i++) {
+	//		resC += resContinuity[i]*resContinuity[i];
+	//		resE += resEnergy[i]*resEnergy[i];
+	//		resM += resMomentum[i]*resMomentum[i];
+	//	}
+	//	resNorm = sqrt(resNorm);
+	//	resC = sqrt(resC);
+	//	resE = sqrt(resE);
+	//	resM = sqrt(resM);
+
+	//	cout << "resNorm = " << resNorm << ";  ";
+	//	cout << "resC = " << resC << ";  ";
+	//	cout << "resE = " << resE << ";  ";
+	//	cout << "resM = " << resM << endl;
 	//}
-	//for (int i=0; i<nPoints; i++) {
-	//	resC += resContinuity[i]*resContinuity[i];
-	//	resE += resEnergy[i]*resEnergy[i];
-	//	resM += resMomentum[i]*resMomentum[i];
-	//}
-	//resNorm = sqrt(resNorm);
-	//resC = sqrt(resC);
-	//resE = sqrt(resE);
-	//resM = sqrt(resM);
-	
-	//cout << "resNorm = " << resNorm << endl;
-	//cout << "resC = " << resC << endl;
-	//cout << "resE = " << resE << endl;
-	//cout << "resM = " << resM << endl;
 
 	return 0;
 }
@@ -124,6 +134,7 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot, 
 										  sdVector& res, realtype c_j)
 {
+	inJacobianUpdate = true;
 	double eps = sqrt(DBL_EPSILON)*10;
 	sdVector yTemp(N);
 	sdVector ydotTemp(N);
@@ -248,6 +259,7 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 		outFile.close();
 	}
 
+	inJacobianUpdate = false;
  	return 0;
 }
 
@@ -273,7 +285,7 @@ void strainedFlameSys::setup(void)
 {
 	int nPointsOld = T.size();
 	if (nPoints == nPointsOld) {
-		return;
+		return; // nothing to do
 	}
 
 	gas.resize(nPoints);
@@ -303,6 +315,10 @@ void strainedFlameSys::setup(void)
 
 	rho.resize(nPoints);
 	drhodt.resize(nPoints);
+	mu.resize(nPoints);
+	lambda.resize(nPoints);
+	Dkm.resize(nSpec,nPoints);
+	cp.resize(nPoints);
 
 	delete bandedJacobian;
 	bandedJacobian = new sdBandMatrix(N,nVars+2,nVars+2,2*nVars+4);
@@ -346,10 +362,6 @@ void strainedFlameSys::generateInitialProfiles(void)
 	gas[grid.ju].getMassFractions(&Y(0,grid.ju));
 	gas[grid.jb].getMassFractions(&Y(0,grid.jb));
 	gas[jm].getMassFractions(&Y(0,jm));
-
-	mu = gas.trans(grid.ju).viscosity();
-	lambda = gas.trans(grid.ju).thermalConductivity();
-	cp = gas.thermo(grid.ju).cp_mass();
 
 	for (int j=1; j<jl; j++) {
 		for (int k=0; k<nSpec; k++) {
@@ -418,6 +430,11 @@ void strainedFlameSys::generateInitialProfiles(void)
 	for (int j=jm-1; j>=0; j--) {
 		rhov[j] = rhov[j+1] + rho[j]*U[j]*strainRate(tStart)*(grid.x[j+1]-grid.x[j]);
 	}
+
+	gas.setState(Y,T);
+	
+	grid.update_jZero(rhov);
+	grid.x -= grid.x[grid.jZero];
 }
 
 void strainedFlameSys::loadInitialProfiles(void)
@@ -433,11 +450,6 @@ void strainedFlameSys::loadInitialProfiles(void)
 	rhov = infile.readVector("V");
 	T = infile.readVector("T");
 	Y = infile.readArray2D("Y");
-
-	cout << "Read profiles from restart file: U = " << U << endl;
-	cout << "rhov = " << rhov << endl;
-	cout << "T = " << T << endl;
-	
 	tStart = infile.readScalar("t");
 
 	infile.close();
@@ -455,22 +467,10 @@ void strainedFlameSys::loadInitialProfiles(void)
 		for (int k=0; k<nSpec; k++) {
 			Y(k,grid.ju) = yu[k];
 		}
-	} else {
-		gas.thermo(grid.ju).setMoleFractions(&Y(0,grid.ju));
 	}
-	gas.thermo(grid.ju).setState_TP(T[grid.ju],gas.pressure);
 
-	mu = gas.trans(grid.ju).viscosity()*5;
-
-
-	lambda = gas.trans(grid.ju).thermalConductivity()*5;
-	cp = gas.thermo(grid.ju).cp_mass();
+	gas.setState(Y,T);
 	rhou = gas.thermo(grid.ju).density();
-
-	cout << "mu = " << mu << endl;
-	cout << "lambda = " << lambda << endl;
-	cout << "cp = " << cp << endl;
-	cout << "rhou = " << rhou << endl;
 
 	grid.update_jZero(rhov);
 
@@ -479,6 +479,9 @@ void strainedFlameSys::loadInitialProfiles(void)
 strainedFlameSys::strainedFlameSys(void) 
 	: bandedJacobian(NULL)
 	, outputFileNumber(0)
+	, inJacobianUpdate(false)
+	, inGetIC(false)
+	, grid(options)
 {
 }
 
@@ -588,6 +591,14 @@ void strainedFlameSys::unrollVectorVectorDot(const vector<dvector>& v)
 	}
 }
 
+void strainedFlameSys::updateTransportProperties(void)
+{
+	gas.getSpecificHeatCapacity(cp);
+	gas.getViscosity(mu);
+	gas.getThermalConductivity(lambda);
+	gas.getDiffusionCoefficients(Dkm);
+}
+
 void strainedFlameSys::printForMatlab(ofstream& file, dvector& v, int index, char* name)
 {
 	file << name << "{" << index << "} = [";
@@ -601,6 +612,7 @@ void strainedFlameSys::printForMatlab(ofstream& file, dvector& v, int index, cha
 
 void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::vector<bool>& algebraic)
 {
+	inGetIC = true;
 	sdBandMatrix ICmatrix(N,nVars+2,nVars+2,2*nVars+4);
 	double eps = 1; // eps might be a bad name for this.
 	sdVector yTemp(N);
@@ -715,6 +727,15 @@ void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot
 	}
 
 	f(t, y, ydot, resTemp);
+	double resnorm = 0;
+	for (int i=0; i<N; i++) {
+		resnorm += resTemp(i)*resTemp(i);
+	}
+	resnorm = sqrt(resnorm);
+	cout << "Residual norm after IC calculation: " << resnorm << endl;
+
+	inGetIC = false;
+
 }
 
 void strainedFlameSys::writeStateMatFile(void)
@@ -742,9 +763,54 @@ void strainedFlameSys::writeStateMatFile(void)
 	outFile.writeVector("V", rhov);
 	outFile.writeArray2D("Y", Y);
 	outFile.writeVector("rho", rho);
+	
+	outFile.writeVector("dUdt", dUdt);
+	outFile.writeVector("dTdt", dTdt);
+	outFile.writeVector("dVdt", drhovdt);
+	outFile.writeArray2D("dYdt", dYdt);
 
 	outFile.close();
 
+}
+
+void strainedFlameSys::writeErrorFile(void)
+{
+	std::string fileName = "errorOutput.mat";
+	cout << "Writing error output file: " << fileName << endl;
+	// Erase the existing file and create a new one
+	if (boost::filesystem::exists(fileName)) {
+		boost::filesystem::remove(fileName);
+	}
+	matlabFile outFile(options.outputDir+"/"+fileName);
+
+	// Write the system data to the output file:
+	outFile.writeScalar("t", tNow);
+	outFile.writeVector("x", grid.x);
+	outFile.writeVector("T", T);
+	outFile.writeVector("U", U);
+	outFile.writeVector("V", rhov);
+	outFile.writeArray2D("Y", Y);
+
+	outFile.writeVector("dUdt", dUdt);
+	outFile.writeVector("dTdt", dTdt);
+	outFile.writeVector("dVdt", drhovdt);
+	outFile.writeArray2D("dYdt", dYdt);
+	
+	outFile.writeVector("rho", rho);
+	outFile.writeVector("drhodt", drhodt);
+	outFile.writeArray2D("dkm",Dkm);
+	outFile.writeVector("lambda",lambda);
+	outFile.writeVector("cp",cp);
+	outFile.writeVector("mu",mu);
+
+	outFile.writeVector("resContinuity",resContinuity);
+	outFile.writeVector("resMomentum",resMomentum);
+	outFile.writeVector("resEnergy",resEnergy);
+	outFile.writeArray2D("resSpecies",resSpecies);
+
+	outFile.writeScalar("a",strainRate(tNow));
+
+	outFile.close();
 }
 
 double strainedFlameSys::strainRate(const double t)

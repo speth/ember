@@ -326,6 +326,55 @@ vector<double> operator+(const vector<double>& v1, const vector<double>& v2)
 	return (v += v2);
 }
 
+vector<double>& operator-=(vector<double>& v1, const vector<double>& v2)
+{
+	if (v1.size() != v2.size()) {
+		throw;
+	}
+	unsigned int n = v1.size();
+
+	for (unsigned int i=0; i<n; i++) {
+		v1[i] -= v2[i];
+	}
+	return v1;
+}
+
+vector<double> operator-(const vector<double>& v1, const vector<double>& v2)
+{
+	vector<double> v(v1);
+	return (v -= v2);
+}
+
+vector<double>& operator+=(vector<double>& v1, const double s)
+{
+	unsigned int n = v1.size();
+	for (unsigned int i=0; i<n; i++) {
+		v1[i] += s;
+	}
+	return v1;
+}
+
+vector<double> operator+(const vector<double>& v1, const double s)
+{
+	vector<double> v(v1);
+	return (v += s);
+}
+
+vector<double>& operator-=(vector<double>& v1, const double s)
+{
+	unsigned int n = v1.size();
+	for (unsigned int i=0; i<n; i++) {
+		v1[i] -= s;
+	}
+	return v1;
+}
+
+vector<double> operator-(const vector<double>& v1, const double s)
+{
+	vector<double> v(v1);
+	return (v -= s);
+}
+
 vector<bool> operator>(const dvector& v1, const dvector& v2)
 {
 	if (v1.size() != v2.size()) throw;

@@ -473,6 +473,11 @@ void sundialsIDA::setInitialStepSize(double dt)
 	IDASetInitStep(sundialsMem, dt);
 }
 
+void sundialsIDA::setMaxStepSize(double dt)
+{
+	IDASetMaxStep(sundialsMem, dt);
+}
+
 // f routine. Compute function f(t,y,y') = res
 int sundialsIDA::f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void *f_data)
 {

@@ -6,7 +6,7 @@ paths:
 
 general:
 {
-	fixedBurnedValFlag = true;
+	fixedBurnedVal = true;
 	fixedLeftLocation = false;
 	unburnedLeft = true;
 	curvedDomain = false;
@@ -14,23 +14,24 @@ general:
 
 chemistry:
 {
-	mechanismFile = "gri30.xml";
-	phaseID = "gri30_multi";
+	mechanismFile = "gri30syngas.xml";
+	phaseID = "syngas";
 };
 			
 grid:
 {
 	nPoints = 80;
-	xLeft = -0.05;
-	xRight = 0.05;
+	xLeft = -0.01;
+	xRight = 0.01;
+	
 	adaptation:
 	{
-		vtol = 0.02;
+		vtol = 0.025;
 		dvtol = 0.1;
-		rmTol = 0.7;
-		dampConst = 6000;
-		gridMin = 2.0e-7;
-		gridMax = 0.004;
+		rmTol = 0.6;
+		dampConst = 50;
+		gridMin = 2.0e-6;
+		gridMax = 0.01;
 		uniformityTol = 3;
 		absvtol = 1e-9;
 	};
@@ -39,7 +40,7 @@ grid:
 	{
 		boundaryTol = 2e-4;
 		boundaryTolRm = 5e-5;
-		addPointCount = 5;
+		addPointCount = 4;
 	};
 };
 
@@ -50,45 +51,45 @@ InitialCondition:
 	
 	// These properties will override parameters read from the file
 	Tu = 300;
-	reactants = "O2:1.0, N2:3.76, CH4:0.5";
-	diluent = "AR:1.0";
+	reactants = "O2:1.0, N2:3.76, H2:0.6, CO:0.4";
+	
+	diluent = "AR:1.0"; // not used if there is a restart file
 
 	pressure = 101325;
 };
 
 StrainParameters:
 {
-	initial = 50;
-	final = 50;
+	initial = 200;
+	final = 200;
 	start = 0;
 	dt = 0.1;
-};
-
-fluid:
-{
-	mu = 1.8e-5;
-	lambda = 0.0243;
-	cp = 1.005;
-
 };
 
 times:
 {
 	//regridTimeInterval = 5e-3;
-	regridStepInterval = 10;
-	outputStepInterval = 10;
-	outputTimeInterval = 5e-4;
-	tEnd = 5;
+	regridStepInterval = 15;
+	outputStepInterval = 5;
+	//outputTimeInterval = 5e-4;
+	tEnd = 0.2;
+	maxTimestep = 1e-3;
 };
-	
+
+integrator:
+{
+	relativeTolerance = 1e-4;
+	continuityAbsTol = 1e-6;
+	momentumAbsTol = 1e-6;
+	energyAbsTol = 1e-6;
+	speciesAbsTol = 1e-10;
+};
+
 debug:
 {
 	adaptation: false;
-	regridding: true;
+	regridding: false;
 	sundials: false;
 	jacobian: false;
 	calcIC: false;
-	
 };
-
-

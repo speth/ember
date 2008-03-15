@@ -44,10 +44,6 @@ public:
 	double tEnd;
 	double tNow;
 
-	double mu; // viscosity
-	double lambda; // thermal conductivity
-	double cp; // specific heat capacity
-
 	double rhou;
 	std::string reactants;
 	std::string diluent;
@@ -70,10 +66,11 @@ public:
 	void unrollVectorVector(const vector<dvector>& v);
 	void unrollVectorVectorDot(const vector<dvector>& v);
 
+	void updateTransportProperties(void);
 
-	
 	void printForMatlab(ofstream& file, vector<double>& v, int index, char* name);
 	void writeStateMatFile(void);
+	void writeErrorFile(void);
 
 	// these should be read-only:
 	int N; // total problem size;
@@ -100,6 +97,11 @@ public:
 	// Auxillary variables:
 	vector<double> rho; // density [kg/m^3]
 	vector<double> drhodt;
+	
+	dvector mu; // viscosity
+	dvector lambda; // thermal conductivity
+	Array2D Dkm;
+	dvector cp; // specific heat capacity
 
 	// the grid:
 	oneDimGrid grid;
@@ -107,7 +109,7 @@ public:
 	// Cantera data
 	gasArray gas;
 
-	// Miscellaneous configuration options
+	// Miscellaneous options
 	configOptions options;
 
 private:
@@ -123,6 +125,8 @@ private:
 	int jacBWdot; // Bandwidth of dF/dydot component of Jacobian
 	sdBandMatrix* bandedJacobian;
 	vector<long int> pMat;
+	bool inJacobianUpdate;
+	bool inGetIC;
 
 	int outputFileNumber; // number of output files written
 

@@ -26,6 +26,10 @@ public:
 	void resize(unsigned int n);
 	
 	void setState(Cantera::Array2D& Y, dvector& T);
+	void getViscosity(dvector& mu);
+	void getThermalConductivity(dvector& lambda);
+	void getDiffusionCoefficients(Cantera::Array2D& Dkm);
+	void getSpecificHeatCapacity(dvector& cp);
 
 	Cantera::IdealGasPhase& operator[](unsigned int i) const;
 	Cantera::IdealGasPhase& thermo(unsigned int i) const;
@@ -37,6 +41,8 @@ public:
 private:
 	Cantera::XML_Node* rootXmlNode;
 	Cantera::XML_Node* phaseXmlNode;
+
+	int nPoints;
 
 	vector<Cantera::IdealGasPhase*> m_thermo;
 	vector<Cantera::GasKinetics*> m_kinetics;

@@ -44,23 +44,15 @@ void strainedFlame(const std::string& inputFile)
 	t1 = clock();
 
     strainedFlameSys theSys;
+	configOptions& options = theSys.options;
 
 	theSys.readOptionsFile(inputFile);
 
 	theSys.gas.initialize();
-	//theSys.gas.testFunction();
-
-	// output file:
-	ofstream outFile;
-	std::string outFileName = theSys.options.outputDir+"/out.m";
-	outFile.open(outFileName.c_str());
-
-	bool newSolver = true; 
-	double nSteps = 0;
 
 	// Initial Conditions for ODE
 	theSys.setup();
-	if (theSys.options.haveRestartFile) {
+	if (options.haveRestartFile) {
 		theSys.loadInitialProfiles();
 	} else {
 		theSys.generateInitialProfiles();
@@ -71,13 +63,12 @@ void strainedFlame(const std::string& inputFile)
 	int nOutput = 0;
 	double tOutput = theSys.tStart;
 	double tRegrid = theSys.tStart;
-
-	int i=1;
-
 	double t = theSys.tStart;
+	double dt;
 
-	theSys.grid.jj = theSys.nPoints;
 	theSys.grid.updateDerivedSizes();
+
+	theSys.writeStateMatFile();
 
 	while (t < theSys.tEnd) {
 
@@ -85,39 +76,42 @@ void strainedFlame(const std::string& inputFile)
 
 		// Sundials IDA Solver:
 		sundialsIDA theSolver(theSys.N);
-		theSolver.reltol = 5e-4;
+		theSolver.reltol = options.idaRelTol;
 		theSolver.nRoots = 0;
 		theSolver.findRoots = false;
 		vector<bool> algebraic(theSys.N);
 
-		int nVars = theSys.nVars;
+		int N = theSys.nVars;
 		// Initial condition:
 		theSys.rollY(theSolver.y);
 		for (int j=0; j<theSys.nPoints; j++) {
-			theSolver.abstol(nVars*j) = 1e-5; // rhov
-			theSolver.abstol(nVars*j+1) = 1e-5; // U
-			theSolver.abstol(nVars*j+2) = 1e-5; // T
-			algebraic[nVars*j] = true;
-			algebraic[nVars*j+1] = false;
-			algebraic[nVars*j+2] = false;
+			theSolver.abstol(N*j) = options.idaContinuityAbsTol;
+			theSolver.abstol(N*j+1) = options.idaMomentumAbsTol;
+			theSolver.abstol(N*j+2) = options.idaEnergyAbsTol;
+			algebraic[N*j] = true;
+			algebraic[N*j+1] = false;
+			algebraic[N*j+2] = false;
 			for (int k=0; k<theSys.nSpec; k++) {
-				theSolver.abstol(nVars*j+k+3) = 1e-1; // Y
-				algebraic[nVars*j+3+k] = false;
+				theSolver.abstol(N*j+k+3) = options.idaSpeciesAbsTol;
+				algebraic[N*j+3+k] = false;
 			}
 		}
-		algebraic[nVars*theSys.grid.jZero] = false;
+		//algebraic[N*theSys.grid.jZero] = false;
 
 		for (int j=0; j<theSys.N; j++) {
 			theSolver.ydot(j) = 0;
 		}
 
 		theSolver.t0 = t;
+		theSys.gas.setState(theSys.Y, theSys.T);
+		theSys.updateTransportProperties();
 		theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, algebraic);
 
 		theSolver.setDAE(&theSys);
 		theSolver.calcIC = false;
 
 		theSolver.initialize();
+		theSolver.setMaxStepSize(options.maxTimestep);
 		
 		if (integratorTimestep != 0) {
 			theSolver.setInitialStepSize(integratorTimestep);
@@ -125,39 +119,47 @@ void strainedFlame(const std::string& inputFile)
 
 		int flag;
 
-		theSys.writeStateMatFile();
-		i++;
-
 		while (t < theSys.tEnd) {
-			flag = theSolver.integrateOneStep();
 
-			nOutput++;
-			nRegrid++;
+			try {
+				flag = theSolver.integrateOneStep();
+			} catch (Cantera::CanteraError) {
+				theSys.writeErrorFile();
+				throw;
+			}
+
+			dt = integratorTimestep = theSolver.getStepSize();
 			t = theSolver.tInt;
 
 			if (flag == CV_SUCCESS) {
-				cout << "t = " << t << endl;
+				nOutput++;
+				nRegrid++;
+				cout << "t = " << t << "  (dt = " << dt << ")" << endl;
+			} else {
+				cout << "IDA Solver failed at time t = " << t << "  (dt = " << dt << ")" << endl;
+				cout << "Writing errorOutput.mat." << endl;
+				theSys.writeErrorFile();
+				integratorTimestep = 0;
+				break;
 			}
 
-			i++;
-
-			if (t > tOutput || nOutput > theSys.options.outputStepInterval) {
+			if (t > tOutput || nOutput >= options.outputStepInterval) {
 				theSys.writeStateMatFile();
 				while (t > tOutput) {
-					tOutput += theSys.options.outputTimeInterval;
+					tOutput += options.outputTimeInterval;
 				}
 				nOutput = 0;
 			}
 
-			if (t > tRegrid || nRegrid > theSys.options.regridStepInterval) {
+			if (t > tRegrid || nRegrid >= options.regridStepInterval) {
 				while (t > tRegrid) {
-					tRegrid += theSys.options.regridTimeInterval;
+					tRegrid += options.regridTimeInterval;
 				}
 				nRegrid = 0;
 				// Adapt the grid if necessary
 
  				for (int j=0; j<theSys.nPoints; j++) {
-					theSys.grid.dampVal[j] = abs(theSys.mu/theSys.rhov[j]);
+					theSys.grid.dampVal[j] = abs(theSys.mu[j]/theSys.rhov[j]);
 				}
 				vector<dvector> currentSolution, currentSolutionDot;
 
@@ -166,31 +168,26 @@ void strainedFlame(const std::string& inputFile)
 
 				bool adaptFlag = theSys.grid.adapt(currentSolution, currentSolutionDot);
 				bool regridFlag = theSys.grid.regrid(currentSolution, currentSolutionDot);
-				
-				theSys.nPoints = theSys.grid.jj+1;
-				theSys.setup();
-
-				theSys.unrollVectorVector(currentSolution);
-				theSys.unrollVectorVectorDot(currentSolutionDot);
 
 				if (adaptFlag || regridFlag) {
+					theSys.nPoints = theSys.grid.jj+1;
+					theSys.setup();
+
+					theSys.unrollVectorVector(currentSolution);
+					theSys.unrollVectorVectorDot(currentSolutionDot);
+
 					break; // exit the inner loop and reinitialize the solver for the new problem size
 				}
 
 			}
 		}
-		integratorTimestep = theSolver.getStepSize();
+		
 		theSolver.printStats();
 		
 	}
 
 	t2 = clock();
 	cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
-	
-	// Test of grid adaptation:
-	outFile.close();
-
-   	int blargh = 0;
 }
 
 void chemistryTest(void)

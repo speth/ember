@@ -5,6 +5,11 @@ using std::cout;
 using std::endl;
 using namespace mathUtils;
 
+oneDimGrid::oneDimGrid(configOptions& theOptions)
+	: options(theOptions)
+{
+}
+
 void oneDimGrid::updateDerivedSizes()
 {
 	hh.resize(jj);
@@ -287,25 +292,19 @@ void oneDimGrid::addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot
   	dvector::iterator iter;
 	double xInsert = 0.5*(x[jInsert+1]+x[jInsert]);
 	
-	iter = dampVal.begin() + jInsert;
-
-	dampVal.insert(iter+1, mathUtils::splines(x,dampVal, xInsert));
+	dampVal.insert(dampVal.begin()+jInsert+1, mathUtils::splines(x,dampVal, xInsert));
 
 	vector<dvector>::iterator i;
 	double yNew, ydotNew;
 
 	for (i=y.begin(); i!=y.end(); i++) {
-		iter = i->begin();
-		iter += jInsert;
 		yNew = mathUtils::splines(x,*i, xInsert);
-		i->insert(iter+1, yNew);
+		i->insert(i->begin()+jInsert+1, yNew);
 	}
 
 	for (i=ydot.begin(); i!=ydot.end(); i++) {
-		iter = i->begin();
-		iter += jInsert;
 		ydotNew = mathUtils::splines(x,*i, xInsert);
-		i->insert(iter+1, ydotNew);
+		i->insert(i->begin()+jInsert+1, ydotNew);
 	}
 
 	x.insert(x.begin()+jInsert+1, xInsert);
@@ -344,8 +343,8 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 	int djMom = (jb==jj) ? 2 : 1;
 
 	// All other variables use fixed or zero gradient conditions
-	// depending on fixedBurnedValFlag
-	int djOther = (jb==jj && !fixedBurnedValFlag) ? 2 : 1;
+	// depending on fixedBurnedVal
+	int djOther = (jb==jj && !fixedBurnedVal) ? 2 : 1;
 
 	bool addRight = false; // Assume no addition
 
@@ -372,7 +371,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 
 	// *** Criteria for addition to the left (j=1) ***
 
-	djOther = (jb==1 && !fixedBurnedValFlag) ? 2 : 1;
+	djOther = (jb==1 && !fixedBurnedVal) ? 2 : 1;
 	djMom = (jb==1) ? 2 : 1;
 
 	bool addLeft = false;
@@ -392,7 +391,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 		}
 	}
 
-	if (fixedLeftLoc && x[0]!=0.0) {
+	if (options.fixedLeftLoc && x[0]!=0.0) {
 		if (!addLeft && debugParameters::debugRegrid) {
 			cout << "Regrid: Adding point to force left boundary toward x=0" << endl;
 		}
@@ -415,7 +414,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 	// Comparison point for flatness criteria, depending on 
 	// zero-gradient or fixed value boundary condition
 	djMom = (jb==jj) ? 3 : 2;
-	djOther = (jb==jj && !fixedBurnedValFlag) ? 3 : 2;
+	djOther = (jb==jj && !fixedBurnedVal) ? 3 : 2;
 
 	bool removeRight = true; // assume removal
 	for (unsigned int k=0; k<y.size(); k++) {
@@ -439,11 +438,11 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 
 	// *** Criteria for removal from the left (j==1) ***
 	djMom = (jb==1) ? 3 : 2;
-	djOther = (jb==1 && !fixedBurnedValFlag) ? 3 : 2;
+	djOther = (jb==1 && !fixedBurnedVal) ? 3 : 2;
 	
 	// Don't remove points if the location of the left boundary is fixed
 	bool removeLeft = true; // assume removal
-	if (fixedLeftLoc) {
+	if (options.fixedLeftLoc) {
 		if (removeLeft && debugParameters::debugRegrid) {
 			cout << "Regrid: left removal prevented by fixed left boundary" << endl;
 		}
@@ -495,16 +494,17 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 		gridUpdated = true;
 		cout << "Regrid: Removing point from right side." << endl;
 		// Remove point from the right
-		for (unsigned int k=0; k<y.size(); k++) {
-			if (k != kContinuity) {
-				y[k][jj-1] = y[k][jj];
-				ydot[k][jj-1] = ydot[k][jj];
-			}
-			y[k].erase(y[k].end()-1);
-			ydot[k].erase(ydot[k].end()-1);
+		removePoint(jj,y,ydot);
+		//for (unsigned int k=0; k<y.size(); k++) {
+		//	if (k != kContinuity) {
+		//		y[k][jj-1] = y[k][jj];
+		//		ydot[k][jj-1] = ydot[k][jj];
+		//	}
+		//	y[k].erase(y[k].end()-1);
+		//	ydot[k].erase(ydot[k].end()-1);
 
-		}
-		x.erase(x.end()-1);
+		//}
+		//x.erase(x.end()-1);
 		jj--;
 	}
 
@@ -533,15 +533,16 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 		gridUpdated = true;
 		cout << "Regrid: Removing point from left side." << endl;
 
-		for (unsigned int k=0; k<y.size(); k++) {
-			if (k != kContinuity) {
-				y[k][1] = y[k][0];
-				ydot[k][1] = ydot[k][0];
-			}
-			y[k].erase(y[k].begin());
-			ydot[k].erase(ydot[k].begin());
-		}
-		x.erase(x.begin());
+		//for (unsigned int k=0; k<y.size(); k++) {
+		//	if (k != kContinuity) {
+		//		y[k][1] = y[k][0];
+		//		ydot[k][1] = ydot[k][0];
+		//	}
+		//	y[k].erase(y[k].begin());
+		//	ydot[k].erase(ydot[k].begin());
+		//}
+		//x.erase(x.begin());
+		removePoint(0,y,ydot);
 		jj--;
 	}
 
@@ -558,7 +559,6 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 void oneDimGrid::update_jZero(dvector& rhov)
 {
 	jZero = mathUtils::minloc(mathUtils::abs(rhov));
-	//cout << "updating jZero = " << jZero << "/" << jj << endl;
 	rhov[jZero] = 0;
 }
 

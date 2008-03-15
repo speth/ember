@@ -61,6 +61,13 @@ std::ostream& operator<<(std::ostream& os, vector<int>& v);
 
 dvector& operator+=(dvector& v1, const dvector& v2);
 dvector operator+(const dvector& v1, const dvector& v2);
+dvector& operator-=(dvector& v1, const dvector& v2);
+dvector operator-(const dvector& v1, const dvector& v2);
+
+dvector& operator+=(dvector& v1, const double s);
+dvector operator+(const dvector& v1, const double s);
+dvector& operator-=(dvector& v1, const double s);
+dvector operator-(const dvector& v1, const double s);
 
 vector<bool> operator>(const dvector& v1, const dvector& v2);
 vector<bool> operator<(const dvector& v1, const dvector& v2);

@@ -9,7 +9,7 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	libconfig::Config cfg;
 	if (boost::filesystem::exists(filename)) {
 		cfg.readFile(filename.c_str());
-		cout << "Reading configuration opions from " << filename << endl;
+		cout << "Reading configuration options from " << filename << endl;
 	} else {
 		cout << "readOptionsFile: Error: Input file \"" << filename << "\" does not exist." << endl;
 		throw;
@@ -59,19 +59,26 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	grid.boundaryTol = 2e-5;
 	grid.boundaryTolRm = 5e-6;
 
-	grid.fixedBurnedValFlag = true;
-	grid.fixedLeftLoc = false;
+	grid.fixedBurnedVal = true;
+	options.fixedLeftLoc = false;
 	grid.unburnedLeft = true;
 	grid.addPointCount = 2;
 
 	// Times
 	tStart = 0;
 	tEnd = 0.05;
+	options.maxTimestep = 10000;
 
 	options.regridTimeInterval = 100;
 	options.outputTimeInterval = 100;
 	options.regridStepInterval = 10000000;
 	options.outputStepInterval = 10000000;
+
+	options.idaRelTol = 1e-5;
+	options.idaContinuityAbsTol = 1e-6;
+	options.idaMomentumAbsTol = 1e-6;
+	options.idaEnergyAbsTol = 1e-6;
+	options.idaSpeciesAbsTol = 1e-10;
 	
 
 	// Flags
@@ -115,20 +122,28 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	cfg.lookupValue("times.tStart",tStart);
 	cfg.lookupValue("times.tEnd",tEnd);
 
-	cfg.lookupValue("general.fixedBurnedValFlag",grid.fixedBurnedValFlag);
-	cfg.lookupValue("general.fixedLeftLocation",grid.fixedLeftLoc);
+	cfg.lookupValue("general.fixedBurnedVal",options.fixedBurnedVal);
+	cfg.lookupValue("general.fixedLeftLocation",options.fixedLeftLoc);
 	cfg.lookupValue("general.unburnedLeft",grid.unburnedLeft);
+	cfg.lookupValue("general.curvedDomain",options.curvedDomain);
 
 	cfg.lookupValue("times.regridTimeInterval",options.regridTimeInterval);
 	cfg.lookupValue("times.regridStepInterval",options.regridStepInterval);
 	cfg.lookupValue("times.outputTimeInterval",options.outputTimeInterval);
 	cfg.lookupValue("times.outputStepInterval",options.outputStepInterval);
+	cfg.lookupValue("times.maxTimestep",options.maxTimestep);
 
 	cfg.lookupValue("debug.adaptation",debugParameters::debugAdapt);
 	cfg.lookupValue("debug.regridding",debugParameters::debugRegrid);
 	cfg.lookupValue("debug.sundials",debugParameters::debugSundials);
 	cfg.lookupValue("debug.jacobian",debugParameters::debugJacobian);
 	cfg.lookupValue("debug.calcIC",debugParameters::debugCalcIC);
+
+	cfg.lookupValue("integrator.relativeTolerance",options.idaRelTol);
+	cfg.lookupValue("integrator.continuityAbsTol",options.idaContinuityAbsTol);
+	cfg.lookupValue("integrator.momentumAbsTol",options.idaMomentumAbsTol);
+	cfg.lookupValue("integrator.energyAbsTol",options.idaEnergyAbsTol);
+	cfg.lookupValue("integrator.speciesAbsTol",options.idaSpeciesAbsTol);
 
 	if (options.haveRestartFile) {
 		options.haveRestartFile = 
@@ -139,7 +154,12 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 		boost::filesystem::create_directory(options.outputDir);
 	}
 
+	if (boost::filesystem::exists(options.inputDir + "/" + gas.mechanismFile)) {
+		gas.mechanismFile = options.inputDir + "/" + gas.mechanismFile;
+	}
+
 	grid.alpha = (options.curvedDomain) ? 1 : 0;
+	grid.fixedBurnedVal = options.fixedBurnedVal;
 
 	grid.kContinuity = 0;
 	grid.kMomentum = 1;
