@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 
 void strainedFlame(const std::string& inputFile) 
 {
-    cout << "**** strainedFlame (1dflame Version 2.0) ****" << std::endl;
+    cout << "**** strainedFlame (1dflame Version 2.0) ****\n" << std::endl;
 
 	clock_t t1, t2;
 	t1 = clock();
@@ -49,6 +49,7 @@ void strainedFlame(const std::string& inputFile)
 	theSys.readOptionsFile(inputFile);
 
 	theSys.gas.initialize();
+	// theSys.gas.testFunction();
 
 	// Initial Conditions for ODE
 	theSys.setup();
@@ -66,7 +67,7 @@ void strainedFlame(const std::string& inputFile)
 	double t = theSys.tStart;
 	double dt;
 
-	theSys.grid.updateDerivedSizes();
+	theSys.grid.updateValues();
 
 	theSys.writeStateMatFile();
 
@@ -79,7 +80,6 @@ void strainedFlame(const std::string& inputFile)
 		theSolver.reltol = options.idaRelTol;
 		theSolver.nRoots = 0;
 		theSolver.findRoots = false;
-		vector<bool> algebraic(theSys.N);
 
 		int N = theSys.nVars;
 		// Initial condition:
@@ -88,24 +88,19 @@ void strainedFlame(const std::string& inputFile)
 			theSolver.abstol(N*j) = options.idaContinuityAbsTol;
 			theSolver.abstol(N*j+1) = options.idaMomentumAbsTol;
 			theSolver.abstol(N*j+2) = options.idaEnergyAbsTol;
-			algebraic[N*j] = true;
-			algebraic[N*j+1] = false;
-			algebraic[N*j+2] = false;
 			for (int k=0; k<theSys.nSpec; k++) {
 				theSolver.abstol(N*j+k+3) = options.idaSpeciesAbsTol;
-				algebraic[N*j+3+k] = false;
 			}
 		}
-		//algebraic[N*theSys.grid.jZero] = false;
 
 		for (int j=0; j<theSys.N; j++) {
 			theSolver.ydot(j) = 0;
 		}
 
+		theSys.updateLeftBC();
+		theSys.updateAlgebraicComponents();
 		theSolver.t0 = t;
-		theSys.gas.setState(theSys.Y, theSys.T);
-		theSys.updateTransportProperties();
-		theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, algebraic);
+		theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, theSys.algebraic);
 
 		theSolver.setDAE(&theSys);
 		theSolver.calcIC = false;

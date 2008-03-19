@@ -10,8 +10,9 @@ oneDimGrid::oneDimGrid(configOptions& theOptions)
 {
 }
 
-void oneDimGrid::updateDerivedSizes()
+void oneDimGrid::updateValues()
 {
+	// Derived mesh sizes
 	hh.resize(jj);
 	cfm.resize(jj);
 	cf.resize(jj);
@@ -21,13 +22,16 @@ void oneDimGrid::updateDerivedSizes()
 	csp.resize(jj);
 	dlj.resize(jj);
 	rphalf.resize(jj);
+	r.resize(jj+1);
 	dampVal.resize(jj+1);
 
 	for (unsigned int j=0; j<x.size()-1; j++) {
 		hh[j] = x[j+1]-x[j];
 		rphalf[j] =  pow(0.5*(x[j]+x[j+1]),alpha);
+		r[j] = pow(x[j],alpha);
 	}
 	hh[jj-1] = hh[jj-2];
+	r[jj] = pow(x[jj],alpha);
 
 	for (unsigned int j=1; j<x.size()-1; j++) {
 		cfp[j] = hh[j-1]/(hh[j]*(hh[j]+hh[j-1]));
@@ -81,7 +85,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 	vector<double> dv(jj+1); // dv/dx
 
 	while (j < jj) {
-		updateDerivedSizes();
+		updateValues();
 		dv.resize(jj+1);
 		bool insert = false;
 
@@ -183,7 +187,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
 	j = 1;
 	while (j < jj) {
-		updateDerivedSizes();
+		updateValues();
 
 		// Assume removal, then look for a conditon which prevents removal
 		bool remove = true;
@@ -278,7 +282,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 	}
 
 	if (gridUpdated) {
-		updateDerivedSizes();
+		updateValues();
 		updateBoundaryIndices();
 		update_jZero(y[kContinuity]);
 	}
@@ -493,18 +497,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 	} else if (removeRight) {
 		gridUpdated = true;
 		cout << "Regrid: Removing point from right side." << endl;
-		// Remove point from the right
 		removePoint(jj,y,ydot);
-		//for (unsigned int k=0; k<y.size(); k++) {
-		//	if (k != kContinuity) {
-		//		y[k][jj-1] = y[k][jj];
-		//		ydot[k][jj-1] = ydot[k][jj];
-		//	}
-		//	y[k].erase(y[k].end()-1);
-		//	ydot[k].erase(ydot[k].end()-1);
-
-		//}
-		//x.erase(x.end()-1);
 		jj--;
 	}
 
@@ -532,22 +525,12 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 	} else if (removeLeft) {
 		gridUpdated = true;
 		cout << "Regrid: Removing point from left side." << endl;
-
-		//for (unsigned int k=0; k<y.size(); k++) {
-		//	if (k != kContinuity) {
-		//		y[k][1] = y[k][0];
-		//		ydot[k][1] = ydot[k][0];
-		//	}
-		//	y[k].erase(y[k].begin());
-		//	ydot[k].erase(ydot[k].begin());
-		//}
-		//x.erase(x.begin());
 		removePoint(0,y,ydot);
 		jj--;
 	}
 
 	if (gridUpdated) {
-		updateDerivedSizes();
+		updateValues();
 		updateBoundaryIndices();
 		update_jZero(y[kContinuity]);
 	}

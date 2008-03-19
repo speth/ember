@@ -20,26 +20,28 @@ chemistry:
 			
 grid:
 {
-	nPoints = 80;
+	nPoints = 40;
 	xLeft = -0.01;
 	xRight = 0.01;
 	
 	adaptation:
 	{
-		vtol = 0.025;
-		dvtol = 0.1;
+		vtol = 0.1;
+		dvtol = 0.2;
+		//vtol = 0.025;
+		//dvtol = 0.1;
 		rmTol = 0.6;
-		dampConst = 50;
+		dampConst = 1e9;
 		gridMin = 2.0e-6;
-		gridMax = 0.01;
+		gridMax = 0.02;
 		uniformityTol = 3;
 		absvtol = 1e-9;
 	};
 
 	regridding:
 	{
-		boundaryTol = 2e-4;
-		boundaryTolRm = 5e-5;
+		boundaryTol = 5e-4;
+		boundaryTolRm = 1e-4;
 		addPointCount = 4;
 	};
 };

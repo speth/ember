@@ -31,22 +31,21 @@ public:
 	void getInitialCondition(double t, sdVector& y, sdVector& ydot, vector<bool>& algebraic);
 
 	// Problem definition
-	double Tu, Tb;
+	std::string reactants;
+	std::string diluent;
+
 	double xLeft, xRight;
 	int nPoints;
-
-	double strainRateInitial;
-	double strainRateFinal;
-	double strainRateDt;
-	double strainRateT0;
 
 	double tStart;
 	double tEnd;
 	double tNow;
 
-	double rhou;
-	std::string reactants;
-	std::string diluent;
+	// Boundary values
+	double rhou, rhob, rhoLeft, rhoRight;
+	double Tu, Tb, Tleft, Tright;
+	double Ub, Uleft, Uright; // Uu = 1 by definition
+	dvector Yu, Yb, Yleft, Yright;
 
 	void setup(void);
 	void readOptionsFile(std::string filename);
@@ -67,6 +66,8 @@ public:
 	void unrollVectorVectorDot(const vector<dvector>& v);
 
 	void updateTransportProperties(void);
+	void updateThermoProperties(void);
+	void updateLeftBC(void);
 
 	void printForMatlab(ofstream& file, vector<double>& v, int index, char* name);
 	void writeStateMatFile(void);
@@ -81,7 +82,7 @@ public:
 	vector<double> rhov; // mass flux normal to flame per unit area (rho*v) 
 	vector<double> U; // normalized tangential velocity (u/u_inf)
 	vector<double> T; // temperature
-	Array2D Y; // species mass fractions; Y(k,j)
+	Array2D Y; // species mass fractions, Y(k,j)
 	
 	// Time derivatives of state variables:
 	vector<double> drhovdt;
@@ -95,16 +96,46 @@ public:
 	Array2D dYdx;
 
 	// Auxillary variables:
-	vector<double> rho; // density [kg/m^3]
-	vector<double> drhodt;
+	dvector rrhov;
+	dvector rho; // density [kg/m^3]
+	dvector drhodt;
+	Array2D X; // species mole fractions, X(k,j)
+	Array2D dXdx;
+	dvector W; // species molecular weights
+	dvector Wmx; // mixture molecular weight
+	dvector sumcpj; // for enthalpy flux term
 	
 	dvector mu; // viscosity
+
 	dvector lambda; // thermal conductivity
-	Array2D Dkm;
-	dvector cp; // specific heat capacity
+	dvector cp; // specific heat capacity (average)
+	Array2D cpSpec; // species specific heat capacity
+	dvector qFourier; // heat flux
+
+	// Diffusion coefficients
+	Array2D Dkm; // mixture-averaged diffusion coefficients
+	Array2D Dkt; // thermal diffusion coefficients
+
+	// Diffusion mass fluxes
+	Array2D jFick; // Normal diffusion (Fick's Law)
+	Array2D jSoret; // Soret Effect
+	
+	Array2D wDot; // species net production rates
+	Array2D hk; // species enthalpies
+	dvector qDot; // heat release rate per unit volume
 
 	// the grid:
 	oneDimGrid grid;
+
+	// Strain rate parameters
+	double strainRateInitial, strainRateFinal;
+	double strainRateDt;
+	double strainRateT0;
+	double rStag; // nominal stagnation point radius
+
+	 // Algebraic components of state, for IC calculation
+	vector<bool> algebraic;
+	void updateAlgebraicComponents(void);
 
 	// Cantera data
 	gasArray gas;
@@ -113,11 +144,11 @@ public:
 	configOptions options;
 
 private:
-	// Residuals of governing equations:
-	vector<double> resContinuity;
-	vector<double> resMomentum;
-	vector<double> resEnergy;
-	Array2D resSpecies;
+	// Subdivided governing equation components
+	dvector energyUnst, energyDiff, energyConv, energyProd;
+	dvector momentumUnst, momentumDiff, momentumConv, momentumProd;
+	Array2D speciesUnst, speciesDiff, speciesConv, speciesProd;
+	dvector continuityUnst, continuityRhov, continuityStrain;
 	
 	// Jacobian data
 	int jacBW; // Bandwidth of the Jacobian (number of filled blocks per row, 

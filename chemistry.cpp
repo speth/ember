@@ -30,8 +30,13 @@ void gasArray::resize(unsigned int n)
 			m_thermo.insert(m_thermo.end(),new Cantera::IdealGasPhase);
 			**m_thermo.rbegin() = m_thermoBase;
 
-			m_kinetics.insert(m_kinetics.end(), new Cantera::GasKinetics(&m_thermoBase));
-			(**m_kinetics.rbegin()).m_thermo[0] = *m_thermo.rbegin();
+			m_kinetics.insert(m_kinetics.end(), new Cantera::GasKinetics(*m_thermo.rbegin()));
+			(**m_kinetics.rbegin()).init();
+			Cantera::installReactionArrays(*phaseXmlNode, **m_kinetics.rbegin(), phaseID);
+			(**m_kinetics.rbegin()).finalize();
+
+			//**m_kinetics.rbegin() = *m_kineticsBase;
+			//(**m_kinetics.rbegin()).m_thermo[0] = *m_thermo.rbegin();
 
 			m_transport.insert(m_transport.end(), new Cantera::MultiTransport);
 			(**m_transport.rbegin()) = *m_transportBase;
@@ -59,6 +64,7 @@ void gasArray::resize(unsigned int n)
 		m_transport.erase(m_transport.begin()+n,m_transport.end());
 	}
 	nPoints = n;
+	nSpec = m_thermoBase.nSpecies();
 }
 
 void gasArray::initialize(void) 
@@ -86,7 +92,35 @@ void gasArray::initialize(void)
 void gasArray::setState(Cantera::Array2D& Y, dvector& T)
 {
 	for (int j=0; j<nPoints; j++) {
-		m_thermo[j]->setState_TPX(T[j], pressure, &Y(0,j));
+		m_thermo[j]->setState_TPY(T[j], pressure, &Y(0,j));
+	}
+}
+
+void gasArray::getMoleFractions(Cantera::Array2D& X)
+{
+	for (int j=0; j<nPoints; j++) {
+		m_thermo[j]->getMoleFractions(&X(0,j));
+	}
+}
+
+void gasArray::getDensity(dvector& rho)
+{
+	for (int j=0; j<nPoints; j++) {
+		rho[j] = m_thermo[j]->density();
+	}
+}
+
+void gasArray::getMixtureMolecularWeight(dvector& Wmx)
+{
+	for (int j=0; j<nPoints; j++) {
+		Wmx[j] = m_thermo[j]->meanMolecularWeight();
+	}
+}
+
+void gasArray::getMolecularWeights(dvector& W)
+{
+	for (int k=0; k<nSpec; k++) {
+		W[k] = m_thermoBase.molecularWeight(k);
 	}
 }
 
@@ -111,10 +145,38 @@ void gasArray::getDiffusionCoefficients(Cantera::Array2D& Dkm)
 	}
 }
 
+void gasArray::getThermalDiffusionCoefficients(Cantera::Array2D& Dkt)
+{
+	for (int j=0; j<nPoints; j++) {
+		m_transport[j]->getThermalDiffCoeffs(&Dkt(0,j));
+	}
+}
+
 void gasArray::getSpecificHeatCapacity(dvector& cp)
 {
 	for (int j=0; j<nPoints; j++) {
 		cp[j] = m_thermo[j]->cp_mass();
+	}
+}
+
+void gasArray::getSpecificHeatCapacities(Cantera::Array2D& cpSpec)
+{
+	for (int j=0; j<nPoints; j++) {
+		m_thermo[j]->getPartialMolarCp(&cpSpec(0,j));
+	}
+}
+
+void gasArray::getEnthalpies(Cantera::Array2D& hk)
+{
+	for (int j=0; j<nPoints; j++) {
+		m_thermo[j]->getPartialMolarEnthalpies(&hk(0,j));
+	}
+}
+
+void gasArray::getReactionRates(Cantera::Array2D& wDot)
+{
+	for (int j=0; j<nPoints; j++) {
+		m_kinetics[j]->getNetProductionRates(&wDot(0,j));
 	}
 }
 
@@ -175,7 +237,7 @@ void gasArray::testFunction(void)
 	trans2->m_thermo = &thermo2;
 
 
-	thermo1.setState_TPX(300,101325,"O2:1.0, CH4:0.5");
+	thermo1.setState_TPX(300,101325,"O2:1.0, H2:0.5");
 	thermo2.setState_TPX(300,101325,"AR:1.0");
 
 	kin1->getNetProductionRates(&wdot1[0]);
@@ -188,7 +250,7 @@ void gasArray::testFunction(void)
 	cout << trans2->viscosity() << endl;
 
 	thermo1.setState_TPX(300,101325,"AR:1.0");
-	thermo2.setState_TPX(300,101325,"O2:1.0, CH4:0.5");
+	thermo2.setState_TPX(300,101325,"O2:1.0, H2:0.5");
 
 	cout << trans1->viscosity() << endl;
 	cout << trans2->viscosity() << endl;

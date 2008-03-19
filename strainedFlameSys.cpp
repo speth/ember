@@ -16,117 +16,213 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	tNow = t;
 	unrollY(y);
 	unrollYdot(ydot);
+	
+	int jj = nPoints-1;
+
+	// Update the thermodynamic state, and evaluate the 
+	// thermodynamic, transport and kinetic parameters
+
 	gas.setState(Y,T);
+	gas.getMoleFractions(X);
 
 	if (!inJacobianUpdate && !inGetIC) {
 		updateTransportProperties();
 	}
 
-	double a = strainRate(t);
-
+	if (!inGetIC) {
+		updateThermoProperties();
+		gas.getReactionRates(wDot);
+		for (int j=0; j<=jj; j++) {
+			qDot[j] = 0;
+			for (int k=0; k<nSpec; k++) {
+				qDot[j] += wDot(k,j)*hk(k,j);
+			}
+		}
+	}
+	
 	// Update auxillary data:
-	for (int j=0; j<nPoints; j++) {
-		rho[j] = rhou*Tu/T[j];
-		drhodt[j] = -rho[j]/T[j]*dTdt[j];
+	for (int j=0; j<=jj; j++) {
+		double sum = 0;
+		for (int k=0; k<nSpec; k++) {
+			sum += dYdt(k,j)/W[k];
+		}
+		drhodt[j] = -rho[j]*(dTdt[j]/T[j] + Wmx[j]*sum);
 	}
 
-	int jj = nPoints-1;
+	double a = strainRate(t);
+	double daDt = dStrainRateDt(t);
 
-	// Left boundary:
-	//resContinuity[0] = drhovdt[0];
-	resEnergy[0] = dTdt[0];
-	resMomentum[0] = dUdt[0];
-	for (int k=0; k<nSpec; k++) {
-		resSpecies(k,0) = dYdt(k,0);
+	// Calculate diffusion mass fluxes, heat flux, enthalpy flux
+	for (int j=0; j<jj; j++) {
+		sumcpj[j] = 0;
+		for (int k=0; k<nSpec; k++) {
+			jFick(k,j) = -W[k]*0.5
+				* (rho[j]*Dkm(k,j)/Wmx[j] + rho[j+1]*Dkm(k,j+1)/Wmx[j+1])
+				* (X(k,j+1)-X(k,j))/grid.hh[j];
+			jSoret(k,j) = 0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
+				* (T[j+1]-T[j])/grid.hh[j];
+			sumcpj[j] += cpSpec(k,j)*(jFick(k,j) + jSoret(k,j));
+		}
+		qFourier[j] = -0.5*(lambda[j]+lambda[j+1])*(T[j+1]-T[j])/grid.hh[j];
 	}
 
-	//// Upwinded convective derivatives:
-	//for (int j=1; j<jj; j++) {
-	//	if (rhov[j] > 0) {
-	//		dUdx[j] = (U[j]-U[j-1])/grid.hh[j-1];
-	//		dTdx[j] = (T[j]-T[j-1])/grid.hh[j-1];
-	//		for (int k=0; k<nSpec; k++) {
-	//			dYdx(k,j) = (Y(k,j)-Y(k,j-1))/grid.hh[j-1];
-	//		}
-	//	} else {
-	//		dUdx[j] = (U[j+1]-U[j])/grid.hh[j];
-	//		dTdx[j] = (T[j+1]-T[j])/grid.hh[j];
-	//		for (int k=0; k<nSpec; k++) {
-	//			dYdx(k,j) = (Y(k,j+1)-Y(k,j))/grid.hh[j];
-	//		}
-	//	}
-	//}
+	// Left Boundary values for U, T, Y
+	if (grid.leftBoundaryConfig == grid.lbFixedValNonCenter) {
+		// Fixed values for T, Y and U
+		momentumUnst[0] = dUdt[0];
+		energyUnst[0] = dTdt[0];
+		energyDiff[0] = energyConv[0] = energyProd[0] = 0;
+		momentumDiff[0] = momentumConv[0] = momentumProd[0] = 0;
 
+		for (int k=0; k<nSpec; k++) {
+			speciesUnst(k,0) = dYdt(k,0);
+			speciesDiff(k,0) = speciesConv(k,0) = speciesProd(k,0) = 0;
+		}
 
-	// Intermediate points (energy & momentum equations)
+	} else if (grid.leftBoundaryConfig == grid.lbZeroGradNonCenter) {
+		// Zero gradient condition, not at centerline
+		energyDiff[0] = (T[1]-T[0])/grid.hh[0];
+		momentumDiff[0] = (U[1]-U[0])/grid.hh[0];
+		energyProd[0] = energyConv[0] = energyProd[0] = 0;
+		momentumProd[0] = momentumConv[0] = momentumProd[0] = 0;
+
+		for (int k=0; k<nSpec; k++) {
+			speciesDiff(k,0) = (Y(k,1)-Y(k,0))/grid.hh[0];
+			speciesUnst(k,0) = speciesConv(k,0) = speciesProd(k,0) = 0;
+		}
+
+	} else if (grid.leftBoundaryConfig == grid.lbZeroGradCenter) {
+		// Zero-gradient condition at domain centerline
+		energyUnst[0] = rho[0]*dTdt[0];
+		energyDiff[0] = 2*(grid.alpha+1)/(cp[0]*grid.hh[0])*qFourier[0];
+		energyProd[0] = qDot[0]/cp[0];
+		energyConv[0] = 0;
+
+		momentumUnst[0] = rho[0]*dUdt[0];
+		momentumDiff[0] = (grid.alpha+1)*(mu[1]+mu[0])
+			/(grid.hh[0]*grid.hh[0])*(U[1]-U[0]);
+		momentumProd[0] = daDt*(rho[0]*U[0]-rhou)/a + (rho[0]*U[0]*U[0]-rhou)/a;
+		momentumConv[0] = 0;
+
+		for (int k=0; k<nSpec; k++) {
+			speciesUnst(k,0) = rho[0]*dYdt(k,0);
+			speciesDiff(k,0) = 2*(grid.alpha+1)*(jFick(k,0)+jSoret(k,0))/grid.hh[0];
+			speciesProd(k,0) = -wDot(k,0)*W[k];
+			speciesConv(k,0) = 0;
+		}
+
+	} else if (grid.leftBoundaryConfig == grid.lbControlVolume) {
+		double centerVol = pow(grid.x[1],grid.alpha+1)/(grid.alpha+1);
+		double centerArea = pow(grid.x[1],grid.alpha+1);
+
+		energyUnst[0] = centerVol*rho[0]*dUdt[0];
+		energyDiff[0] = centerArea*qFourier[0]/cp[0];
+		energyProd[0] = centerVol*qDot[0]/cp[0];
+		energyConv[0] = -rrhov[0]*(Tleft-T[0]);
+
+		momentumUnst[0] = centerVol*rho[0]*dUdt[0];
+		momentumDiff[0] = -centerArea*0.5*(mu[0]+mu[1])*(U[1]-U[0])/grid.hh[0];
+		momentumProd[0] = centerVol*daDt*(rho[0]*U[0]-rhou)/a + (rho[0]*U[0]*U[0]-rhou)*a;
+		momentumConv[0] = -rrhov[0]*(Uleft-U[0]);
+
+		for (int k=0; k<nSpec; k++) {
+			speciesUnst(k,0) = centerVol*rho[0]*dYdt(k,0);
+			speciesDiff(k,0) = centerArea*(jFick(k,0) + jSoret(k,0));
+			speciesProd(k,0) = -centerVol*wDot(k,0)*W[k];
+			speciesConv(k,0) = -rrhov[0]*(Yleft[k]-Y(k,0));
+		}
+	}
+
+	// Intermediate points for U, T, Y
 	for (int j=1; j<jj; j++) {
-		dTdx[j] = (T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j]);
-		dUdx[j] = (U[j-1]*grid.cfm[j] + U[j]*grid.cf[j] + U[j+1]*grid.cfp[j]);
-		for (int k=0; k<nSpec; k++) {
-			dYdx(k,j) = (Y(k,j-1)*grid.cfm[j] + Y(k,j)*grid.cf[j] + Y(k,j+1)*grid.cfp[j]);
+		// First derivative for convective terms: centered difference
+		//dTdx[j] = (T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j]);
+		//dUdx[j] = (U[j-1]*grid.cfm[j] + U[j]*grid.cf[j] + U[j+1]*grid.cfp[j]);
+		//for (int k=0; k<nSpec; k++) {
+		//	dYdx(k,j) = (Y(k,j-1)*grid.cfm[j] + Y(k,j)*grid.cf[j] + Y(k,j+1)*grid.cfp[j]);
+		//}
+
+		//// Upwinded convective derivatives:
+		if (rhov[j] > 0) {
+			dUdx[j] = (U[j]-U[j-1])/grid.hh[j-1];
+			dTdx[j] = (T[j]-T[j-1])/grid.hh[j-1];
+			for (int k=0; k<nSpec; k++) {
+				dYdx(k,j) = (Y(k,j)-Y(k,j-1))/grid.hh[j-1];
+			}
+		} else {
+			dUdx[j] = (U[j+1]-U[j])/grid.hh[j];
+			dTdx[j] = (T[j+1]-T[j])/grid.hh[j];
+			for (int k=0; k<nSpec; k++) {
+				dYdx(k,j) = (Y(k,j+1)-Y(k,j))/grid.hh[j];
+			}
 		}
 
-		resEnergy[j] = rhov[j]*dTdx[j]
-			- lambda[j]/cp[j]*(T[j-1]*grid.csm[j] + T[j]*grid.cs[j] + T[j+1]*grid.csp[j])
-			+ rho[j]*dTdt[j];
+		// Momentum Equation
+		momentumConv[j] = rhov[j]*dUdx[j];
+		momentumDiff[j] = -0.5*( grid.rphalf[j]*(mu[j]+mu[j+1])*(U[j+1]-U[j])/grid.hh[j] -
+			grid.rphalf[j-1]*(mu[j-1]+mu[j])*(U[j]-U[j-1])/grid.hh[j-1])/(grid.dlj[j]*grid.r[j]);
+		momentumProd[j] = daDt*(rho[j]*U[j]-rhou)/a + (rho[j]*U[j]*U[j]-rhou)*a;
+		momentumUnst[j] = rho[j]*dUdt[j];
 
-		resMomentum[j] = rhov[j]*dUdx[j]
-			- mu[j]*(U[j-1]*grid.csm[j] + U[j]*grid.cs[j] + U[j+1]*grid.csp[j])
-			+ rho[j]*dUdt[j]
-			+ rho[j]*U[j]*U[j]*a
-			- rhou*a;
+		// Energy Equation
+		energyConv[j] = rhov[j]*dTdx[j];
+		energyDiff[j] = sumcpj[j]*(T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j])/cp[j] +
+			(grid.rphalf[j]*qFourier[j] - grid.rphalf[j-1]*qFourier[j-1])/(grid.dlj[j]*cp[j]*grid.r[j]);
+		energyProd[j] = qDot[j]/cp[j];
+		energyUnst[j] = rho[j]*dTdt[j];
 
+		// Species Equations
 		for (int k=0; k<nSpec; k++) {
-			resSpecies(k,j) = rhov[j]*dYdx(k,j)
-				- Dkm(k,j)*(Y(k,j-1)*grid.csm[j] + Y(k,j)*grid.cs[j] + Y(k,j+1)*grid.csp[j])
-				+ rho[j]*dYdt(k,j);
+			speciesUnst(k,j) = rho[j]*dYdt(k,j);
+			speciesConv(k,j) = rhov[j]*dYdx(k,j);
+			speciesDiff(k,j) = (grid.rphalf[j]*(jFick(k,j)+jSoret(k,j))
+				- grid.rphalf[j-1]*(jFick(k,j-1)+jSoret(k,j-1)))/(grid.dlj[j]*grid.r[j]);
+			speciesProd(k,j) = -wDot(k,j)*W[k];
 		}
 	}
 
-	// Continuity equation
-	resContinuity[grid.jZero] = rhov[grid.jZero];
+	// Right boundary values for U, T, Y
+	if (grid.unburnedLeft && !grid.fixedBurnedVal) {
+		// zero gradient condition
+		energyDiff[jj] = (T[jj]-T[jj-1])/grid.hh[jj-1];
+		momentumDiff[jj] = (U[jj]-U[jj-1])/grid.hh[jj-1];
+		energyProd[jj] = energyConv[jj] = energyUnst[jj] = 0;
+		momentumProd[jj] = momentumConv[jj] = momentumUnst[jj] = 0;
+
+		for (int k=0; k<nSpec; k++) {
+			speciesDiff(k,jj) = (Y(k,jj)-Y(k,jj-1))/grid.hh[jj-1];
+			speciesProd(k,jj) = speciesConv(k,jj) = speciesUnst(k,jj) = 0;
+		}
+	} else {
+		// Fixed values
+		energyUnst[jj] = dTdt[jj];
+		momentumUnst[jj] = dUdt[jj];
+		energyDiff[jj] = energyProd[jj] = energyConv[jj] = 0;
+		momentumDiff[jj] = momentumProd[jj] = momentumConv[jj] = 0;
+
+		for (int k=0; k<nSpec; k++) {
+			speciesUnst(k,jj) = dYdt(k,jj);
+			speciesProd(k,jj) = speciesConv(k,jj) = speciesDiff(k,jj) = 0;
+		}
+	}
+
+	// Continuity Equation
+	continuityUnst[grid.jZero] = rhov[grid.jZero];
+	continuityRhov[grid.jZero] = continuityStrain[grid.jZero] = 0;
+
 	for (int j=grid.jZero+1; j<nPoints; j++) {
-		resContinuity[j] = drhodt[j] + rho[j]*U[j]*a
-			+ (rhov[j]-rhov[j-1])/grid.hh[j-1];
+		continuityRhov[j] = (rrhov[j]-rrhov[j-1])/(grid.hh[j-1]*grid.rphalf[j-1]);
+		continuityUnst[j] = drhodt[j];
+		continuityStrain[j] = rho[j]*U[j]*a;
 	}
 
 	for (int j=grid.jZero-1; j>=0; j--) {
-		resContinuity[j] = drhodt[j] + rho[j]*U[j]*a
-			+ (rhov[j+1]-rhov[j])/grid.hh[j];
-	}
-
-	// Right Boundary: fixed values
-	resEnergy[jj] = dTdt[jj];
-	resMomentum[jj] = dUdt[jj];
-	for (int k=0; k<nSpec; k++) {
-		resSpecies(k,jj) = dYdt(k,jj);
+		continuityRhov[j] = (rrhov[j+1]-rrhov[j])/(grid.hh[j]*grid.rphalf[j]);
+		continuityUnst[j] = drhodt[j];
+		continuityStrain[j] = rho[j]*U[j]*a;
 	}
 
 	rollResiduals(res);
-
-	//if (!inJacobianUpdate && !inGetIC) {
-	//	double resNorm = 0;
-	//	double resC = 0;
-	//	double resE = 0;
-	//	double resM = 0;
-	//	for (int i=0; i<N; i++) {
-	//		resNorm += res(i)*res(i);
-	//	}
-	//	for (int i=0; i<nPoints; i++) {
-	//		resC += resContinuity[i]*resContinuity[i];
-	//		resE += resEnergy[i]*resEnergy[i];
-	//		resM += resMomentum[i]*resMomentum[i];
-	//	}
-	//	resNorm = sqrt(resNorm);
-	//	resC = sqrt(resC);
-	//	resE = sqrt(resE);
-	//	resM = sqrt(resM);
-
-	//	cout << "resNorm = " << resNorm << ";  ";
-	//	cout << "resC = " << resC << ";  ";
-	//	cout << "resE = " << resE << ";  ";
-	//	cout << "resM = " << resM << endl;
-	//}
 
 	return 0;
 }
@@ -284,6 +380,7 @@ int strainedFlameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& y
 void strainedFlameSys::setup(void)
 {
 	int nPointsOld = T.size();
+
 	if (nPoints == nPointsOld) {
 		return; // nothing to do
 	}
@@ -308,17 +405,38 @@ void strainedFlameSys::setup(void)
 	dTdx.resize(nPoints,0);
 	dYdx.resize(nSpec,nPoints,0);
 
-	resContinuity.resize(nPoints);
-	resMomentum.resize(nPoints);
-	resEnergy.resize(nPoints);
-	resSpecies.resize(nSpec,nPoints);
+	energyUnst.resize(nPoints,0); energyDiff.resize(nPoints,0);
+	energyConv.resize(nPoints,0); energyProd.resize(nPoints,0);
+	momentumUnst.resize(nPoints,0); momentumDiff.resize(nPoints,0);
+	momentumConv.resize(nPoints,0); momentumProd.resize(nPoints,0);
+	speciesUnst.resize(nSpec,nPoints,0); speciesDiff.resize(nSpec,nPoints,0);
+	speciesConv.resize(nSpec,nPoints,0); speciesProd.resize(nSpec,nPoints,0);
+	continuityUnst.resize(nPoints,0); continuityRhov.resize(nPoints,0);
+	continuityStrain.resize(nPoints,0);
 
+	rrhov.resize(nPoints);
 	rho.resize(nPoints);
 	drhodt.resize(nPoints);
+	Wmx.resize(nPoints);
+	W.resize(nSpec);
+
 	mu.resize(nPoints);
 	lambda.resize(nPoints);
-	Dkm.resize(nSpec,nPoints);
 	cp.resize(nPoints);
+	cpSpec.resize(nSpec,nPoints);
+	qFourier.resize(nPoints);
+
+	X.resize(nSpec,nPoints);
+	dXdx.resize(nSpec,nPoints);
+	Dkm.resize(nSpec,nPoints);
+	Dkt.resize(nSpec,nPoints);
+	sumcpj.resize(nPoints);
+	
+	jFick.resize(nSpec,nPoints);
+	jSoret.resize(nSpec,nPoints);
+	wDot.resize(nSpec,nPoints);
+	hk.resize(nSpec,nPoints);
+	qDot.resize(nPoints);
 
 	delete bandedJacobian;
 	bandedJacobian = new sdBandMatrix(N,nVars+2,nVars+2,2*nVars+4);
@@ -344,13 +462,18 @@ void strainedFlameSys::generateInitialProfiles(void)
 	// Products
 	gas[grid.jb].setState_TPX(Tu,Cantera::OneAtm,reactants);
 	Cantera::equilibrate(gas[grid.jb],"HP");
-	// Tb = gas[grid.jb].temperature();
+	Tb = gas[grid.jb].temperature();
+	rhob = gas[grid.jb].density();
 	
 	// Diluent in the center to delay ignition
 	gas[jm].setState_TPX(Tu,Cantera::OneAtm,diluent);
 
 	double Tleft = (grid.ju==0) ? Tu : Tb;
 	double Tright = (grid.ju==0) ? Tb : Tu;
+
+	double rhoLeft = (grid.ju==0) ? rhou : rhob;
+	double rhoRight = (grid.ju==0) ? rhob : rhou;
+
 	T[0] = Tleft; T[grid.jj] = Tright;
 	T[jm] = T[grid.ju];
 
@@ -414,7 +537,8 @@ void strainedFlameSys::generateInitialProfiles(void)
 	for (int i=0; i<nPoints; i++) {
 		grid.x[i] = xLeft + (xRight-xLeft)*((double) i)/((double) nPoints);
 		//T[i] = Tleft + (Tright-Tleft)*(grid.x[i]-xLeft)/(xRight-xLeft);
-		rho[i] = rhou*Tu/T[i];
+		gas[i].setState_TPY(T[i],gas.pressure,&Y(0,i));
+		rho[i] = gas[i].density();
 		U[i] = sqrt(rho[grid.ju]/rho[i]);
 	}
 
@@ -432,6 +556,7 @@ void strainedFlameSys::generateInitialProfiles(void)
 	}
 
 	gas.setState(Y,T);
+	gas.getMolecularWeights(W);
 	
 	grid.update_jZero(rhov);
 	grid.x -= grid.x[grid.jZero];
@@ -470,6 +595,7 @@ void strainedFlameSys::loadInitialProfiles(void)
 	}
 
 	gas.setState(Y,T);
+	gas.getMolecularWeights(W);
 	rhou = gas.thermo(grid.ju).density();
 
 	grid.update_jZero(rhov);
@@ -524,6 +650,22 @@ void strainedFlameSys::unrollY(const sdVector& y)
 			Y(k,j) = y(nVars*j+3+k);
 		}
 	}
+
+	if (grid.alpha == 0) {
+		for (int j=0; j<nPoints; j++) {
+			rrhov[j] = rhov[j];
+		} 
+	} else {
+		for (int j=0; j<nPoints; j++) {
+			rrhov[j] = grid.x[j]*rhov[j];
+		}
+	}
+
+	// In the case where the centerline is part of the domain,
+	// rhov[0] actually stores rrhov[0] (since rhov = Inf there)
+	if (grid.x[0] == 0) {
+		rrhov[0] = rhov[0];
+	}
 }
 
 void strainedFlameSys::rollY(sdVector& y)
@@ -541,11 +683,11 @@ void strainedFlameSys::rollY(sdVector& y)
 void strainedFlameSys::rollResiduals(sdVector& res)
 {
 	for (int j=0; j<nPoints; j++) {
-		res(nVars*j) = resContinuity[j];
-		res(nVars*j+1) = resMomentum[j];
-		res(nVars*j+2) = resEnergy[j];
+		res(nVars*j) = continuityRhov[j] + continuityStrain[j] + continuityUnst[j];
+		res(nVars*j+1) = momentumConv[j] + momentumDiff[j] + momentumProd[j] + momentumUnst[j];
+		res(nVars*j+2) = energyConv[j] + energyDiff[j] + energyProd[j] + energyUnst[j];
 		for (int k=0; k<nSpec; k++) {
-			res(nVars*j+k+3) = resSpecies(k,j);
+			res(nVars*j+k+3) = speciesConv(k,j) + speciesDiff(k,j) + speciesProd(k,j) + speciesUnst(k,j);
 		}
 	}
 }
@@ -593,11 +735,21 @@ void strainedFlameSys::unrollVectorVectorDot(const vector<dvector>& v)
 
 void strainedFlameSys::updateTransportProperties(void)
 {
-	gas.getSpecificHeatCapacity(cp);
 	gas.getViscosity(mu);
 	gas.getThermalConductivity(lambda);
 	gas.getDiffusionCoefficients(Dkm);
+	gas.getThermalDiffusionCoefficients(Dkt);
 }
+
+void strainedFlameSys::updateThermoProperties(void)
+{
+	gas.getDensity(rho);
+	gas.getSpecificHeatCapacity(cp);
+	gas.getSpecificHeatCapacities(cpSpec);
+	gas.getEnthalpies(hk);
+	gas.getMixtureMolecularWeight(Wmx);
+}
+
 
 void strainedFlameSys::printForMatlab(ofstream& file, dvector& v, int index, char* name)
 {
@@ -612,13 +764,14 @@ void strainedFlameSys::printForMatlab(ofstream& file, dvector& v, int index, cha
 
 void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::vector<bool>& algebraic)
 {
-	inGetIC = true;
+	
 	sdBandMatrix ICmatrix(N,nVars+2,nVars+2,2*nVars+4);
 	double eps = 1; // eps might be a bad name for this.
 	sdVector yTemp(N);
 	sdVector ydotTemp(N);
 	sdVector resTemp(N);
 	sdVector res(N);
+
 
 	ofstream outFile;
 	if (debugParameters::debugCalcIC) {
@@ -627,6 +780,8 @@ void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot
 	}
 	BandZero(ICmatrix.forSundials());
 	f(t, y, ydot, res);
+	
+	inGetIC = true; // Turns off property evaluations in f
 	
 	// ICmatrix = mix of dF/dy and dF/dydot
 	// Banded, upper & lower bandwidths = nVars. 
@@ -763,11 +918,13 @@ void strainedFlameSys::writeStateMatFile(void)
 	outFile.writeVector("V", rhov);
 	outFile.writeArray2D("Y", Y);
 	outFile.writeVector("rho", rho);
+	outFile.writeVector("q",qDot);
 	
 	outFile.writeVector("dUdt", dUdt);
 	outFile.writeVector("dTdt", dTdt);
 	outFile.writeVector("dVdt", drhovdt);
 	outFile.writeArray2D("dYdt", dYdt);
+	outFile.writeArray2D("wdot", wDot);
 
 	outFile.close();
 
@@ -803,11 +960,6 @@ void strainedFlameSys::writeErrorFile(void)
 	outFile.writeVector("cp",cp);
 	outFile.writeVector("mu",mu);
 
-	outFile.writeVector("resContinuity",resContinuity);
-	outFile.writeVector("resMomentum",resMomentum);
-	outFile.writeVector("resEnergy",resEnergy);
-	outFile.writeArray2D("resSpecies",resSpecies);
-
 	outFile.writeScalar("a",strainRate(tNow));
 
 	outFile.close();
@@ -827,4 +979,76 @@ double strainedFlameSys::dStrainRateDt(const double t)
 	return (t <= strainRateT0) ? 0
 		:  (t >= strainRateT0+strainRateDt) ? 0
 		: (strainRateFinal-strainRateInitial)/strainRateDt;
+}
+
+void strainedFlameSys::updateAlgebraicComponents(void)
+{
+	int jj = nPoints-1;
+	algebraic.resize(N);
+
+	algebraic[0] = true; // continuity
+	if (grid.leftBoundaryConfig == grid.lbFixedValNonCenter) {
+		algebraic[1] = false; // momentum
+		algebraic[2] = false; // energy
+		for (int k=0; k<nSpec; k++) {
+			algebraic[3+k] = false; // species
+		}
+	} else if (grid.leftBoundaryConfig == grid.lbZeroGradNonCenter) {
+		algebraic[1] = true; // momentum
+		algebraic[2] = true; // energy
+		for (int k=0; k<nSpec; k++) {
+			algebraic[3+k] = true; // species
+		}
+	} else if (grid.leftBoundaryConfig == grid.lbZeroGradCenter) {
+		algebraic[1] = false; // momentum
+		algebraic[2] = false; // energy
+		for (int k=0; k<nSpec; k++) {
+			algebraic[3+k] = false; // species
+		}
+	} else if (grid.leftBoundaryConfig == grid.lbControlVolume) {
+		algebraic[1] = false; // momentum
+		algebraic[2] = false; // energy
+		for (int k=0; k<nSpec; k++) {
+			algebraic[3+k] = false; // species
+		}
+	}
+
+	for (int j=1; j<jj; j++) {
+		algebraic[nVars*j] = true; // continuity
+		algebraic[nVars*j+1] = false; // momentum
+		algebraic[nVars*j+2] = false; // energy
+		for (int k=0; k<nSpec; k++) {
+			algebraic[nVars*j+3+k] = false; //species
+		}
+	}
+
+	algebraic[nVars*jj] = true; // continuity
+	if (grid.unburnedLeft && !grid.fixedBurnedVal) {
+		algebraic[nVars*jj+1] = true; // momentum;
+		algebraic[nVars*jj+2] = true; // energy
+		for (int k=0; k<nSpec; k++) {
+			algebraic[nVars*jj+3+k] = true; // species
+		}
+	} else {
+		algebraic[nVars*jj+1] = false; // momentum;
+		algebraic[nVars*jj+2] = false; // energy
+		for (int k=0; k<nSpec; k++) {
+			algebraic[nVars*jj+3+k] = false; // species
+		}
+	}
+
+}
+
+void strainedFlameSys::updateLeftBC(void)
+{
+	// Boundary condition for left edge of domain
+	if ( (grid.ju == 0 && grid.x[0] != 0) || (grid.jb == 0 && grid.fixedBurnedVal) ) {
+		grid.leftBoundaryConfig = grid.lbFixedValNonCenter;
+	} else if (grid.x[0] != 0) {
+		grid.leftBoundaryConfig = grid.lbZeroGradNonCenter;
+	} else if (rrhov[0] <= 0) {
+		grid.leftBoundaryConfig = grid.lbZeroGradCenter;
+	} else {
+		grid.leftBoundaryConfig = grid.lbControlVolume;
+	}
 }

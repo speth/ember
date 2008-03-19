@@ -36,12 +36,13 @@ public:
 	double boundaryTolRm;
 	int addPointCount; // number of points to add when regridding
 
-	// Derived mesh parameters (calculated by updateDerivedSizes)
+	// Derived mesh parameters (calculated by updateValues)
 	dvector cfm, cf, cfp; // first centered difference
 	dvector csm, cs, csp; // second centered difference
 	dvector dlj;
 	dvector hh;
 	dvector rphalf;
+	dvector r;
 	int jj; // number of grid points
 
 	int jZero; // index of the stagnation point
@@ -54,10 +55,19 @@ public:
 	// regrid inserts and removes points at the ends of the problem domain
 	bool adapt(vector<dvector>& y, vector<dvector>& ydot);
 	bool regrid(vector<dvector>& y, vector<dvector>& ydot);
-	void updateDerivedSizes(void);
+	void updateValues(void);
 	void update_jZero(dvector& rhov);
 
 	void updateBoundaryIndices(void);
+
+	enum leftBoundaryConfigOptions {
+		lbFixedValNonCenter,
+		lbZeroGradNonCenter,
+		lbZeroGradCenter,
+		lbControlVolume
+	};
+
+	int leftBoundaryConfig;
 
 private:
 
