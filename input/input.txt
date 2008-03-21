@@ -1,7 +1,7 @@
 paths:
 {
 	inputDir = "input";
-	outputDir = "output";
+	outputDir = "output6";
 };
 
 general:
@@ -21,18 +21,18 @@ chemistry:
 grid:
 {
 	nPoints = 40;
-	xLeft = -0.01;
-	xRight = 0.01;
+	xLeft = -0.005;
+	xRight = 0.005;
 	
 	adaptation:
 	{
-		vtol = 0.1;
-		dvtol = 0.2;
+		vtol = 0.4;
+		dvtol = 0.5;
 		//vtol = 0.025;
 		//dvtol = 0.1;
-		rmTol = 0.6;
+		rmTol = 0.7;
 		dampConst = 1e9;
-		gridMin = 2.0e-6;
+		gridMin = 1.0e-5;
 		gridMax = 0.02;
 		uniformityTol = 3;
 		absvtol = 1e-9;
@@ -40,8 +40,8 @@ grid:
 
 	regridding:
 	{
-		boundaryTol = 5e-4;
-		boundaryTolRm = 1e-4;
+		boundaryTol = 1e-3;
+		boundaryTolRm = 2e-4;
 		addPointCount = 4;
 	};
 };
@@ -49,7 +49,7 @@ grid:
 InitialCondition:
 {
 	// Read Initial profile from a file.
-	//file = "restart.mat";
+	file = "restart.mat";
 	
 	// These properties will override parameters read from the file
 	Tu = 300;
@@ -71,20 +71,20 @@ StrainParameters:
 times:
 {
 	//regridTimeInterval = 5e-3;
-	regridStepInterval = 15;
-	outputStepInterval = 5;
-	//outputTimeInterval = 5e-4;
+	regridStepInterval = 40;
+	//outputStepInterval = 30;
+	outputTimeInterval = 1e-4;
 	tEnd = 0.2;
 	maxTimestep = 1e-3;
 };
 
 integrator:
 {
-	relativeTolerance = 1e-4;
-	continuityAbsTol = 1e-6;
-	momentumAbsTol = 1e-6;
+	relativeTolerance = 1e-3;
+	continuityAbsTol = 1e-9;
+	momentumAbsTol = 1e-9;
 	energyAbsTol = 1e-6;
-	speciesAbsTol = 1e-10;
+	speciesAbsTol = 1e-11;
 };
 
 debug:

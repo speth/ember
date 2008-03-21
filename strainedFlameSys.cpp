@@ -22,12 +22,25 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	// Update the thermodynamic state, and evaluate the 
 	// thermodynamic, transport and kinetic parameters
 
+	for (int j=0; j<nPoints; j++) {
+		for (int k=0; k<nSpec; k++) {
+			Y(k,j) = std::max(Y(k,j),0.0);
+		}
+	}
+
 	gas.setState(Y,T);
 	gas.getMoleFractions(X);
 
 	if (!inJacobianUpdate && !inGetIC) {
-		updateTransportProperties();
+	//if (!inGetIC) {
+		//transportUpdateCounter++; 
+//		if (forceTransportUpdate || transportUpdateCounter > 1) {
+			updateTransportProperties();
+			transportUpdateCounter = 0;
+			forceTransportUpdate = false;
+//		}
 	}
+
 
 	if (!inGetIC) {
 		updateThermoProperties();
@@ -39,7 +52,7 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 			}
 		}
 	}
-	
+
 	// Update auxillary data:
 	for (int j=0; j<=jj; j++) {
 		double sum = 0;
@@ -61,7 +74,7 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 				* (X(k,j+1)-X(k,j))/grid.hh[j];
 			jSoret(k,j) = 0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
 				* (T[j+1]-T[j])/grid.hh[j];
-			sumcpj[j] += cpSpec(k,j)*(jFick(k,j) + jSoret(k,j));
+			sumcpj[j] += cpSpec(k,j)/W[k]*(jFick(k,j) + jSoret(k,j));
 		}
 		qFourier[j] = -0.5*(lambda[j]+lambda[j+1])*(T[j+1]-T[j])/grid.hh[j];
 	}
@@ -207,22 +220,32 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	}
 
 	// Continuity Equation
-	continuityUnst[grid.jZero] = rhov[grid.jZero];
-	continuityRhov[grid.jZero] = continuityStrain[grid.jZero] = 0;
+	//continuityUnst[grid.jZero] = rhov[grid.jZero];
+	//continuityRhov[grid.jZero] = continuityStrain[grid.jZero] = 0;
 
-	for (int j=grid.jZero+1; j<nPoints; j++) {
+	//for (int j=grid.jZero+1; j<nPoints; j++) {
+	//	continuityRhov[j] = (rrhov[j]-rrhov[j-1])/(grid.hh[j-1]*grid.rphalf[j-1]);
+	//	continuityUnst[j] = drhodt[j];
+	//	continuityStrain[j] = rho[j]*U[j]*a;
+	//}
+
+	//for (int j=grid.jZero-1; j>=0; j--) {
+	//	continuityRhov[j] = (rrhov[j+1]-rrhov[j])/(grid.hh[j]*grid.rphalf[j]);
+	//	continuityUnst[j] = drhodt[j];
+	//	continuityStrain[j] = rho[j]*U[j]*a;
+	//}
+
+	// Continuity Equation
+	continuityUnst[0] = drhovdt[0];
+	continuityRhov[0] = continuityStrain[0] = 0;
+	for (int j=1; j<=jj; j++) {
 		continuityRhov[j] = (rrhov[j]-rrhov[j-1])/(grid.hh[j-1]*grid.rphalf[j-1]);
 		continuityUnst[j] = drhodt[j];
 		continuityStrain[j] = rho[j]*U[j]*a;
 	}
 
-	for (int j=grid.jZero-1; j>=0; j--) {
-		continuityRhov[j] = (rrhov[j+1]-rrhov[j])/(grid.hh[j]*grid.rphalf[j]);
-		continuityUnst[j] = drhodt[j];
-		continuityStrain[j] = rho[j]*U[j]*a;
-	}
-
 	rollResiduals(res);
+
 
 	return 0;
 }
@@ -340,19 +363,19 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 			if (debugParameters::debugJacobian && abs(resTemp(i)-res(i)) > DBL_EPSILON) {
 				outFile << "J2(" << i+1 << "," << s+col+1 << ") = " << (resTemp(i)-res(i))/(ydotTemp(s+col)-ydot(s+col)) << ";" << endl;
 			}
-
 		}
+	}
+
+	if (debugParameters::debugJacobian) {
+		outFile.close();
 	}
 
 	long int iError = BandGBTRF(bandedJacobian->forSundials(),&pMat[0]);
 
 	if (iError!=0) {
 		cout << "Error in LU factorization: i = " << iError << endl;
-		throw;
-	}
-
-	if (debugParameters::debugJacobian) {
-		outFile.close();
+		debugParameters::debugJacobian = true;
+		return 1;
 	}
 
 	inJacobianUpdate = false;
@@ -779,6 +802,8 @@ void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot
 		outFile << "J = sparse( " << N << "," << N << ");" << endl;
 	}
 	BandZero(ICmatrix.forSundials());
+
+	forceTransportUpdate = true;
 	f(t, y, ydot, res);
 	
 	inGetIC = true; // Turns off property evaluations in f
@@ -925,6 +950,7 @@ void strainedFlameSys::writeStateMatFile(void)
 	outFile.writeVector("dVdt", drhovdt);
 	outFile.writeArray2D("dYdt", dYdt);
 	outFile.writeArray2D("wdot", wDot);
+	outFile.writeVector("drhodt",drhodt);
 
 	outFile.close();
 
@@ -986,7 +1012,7 @@ void strainedFlameSys::updateAlgebraicComponents(void)
 	int jj = nPoints-1;
 	algebraic.resize(N);
 
-	algebraic[0] = true; // continuity
+	algebraic[0] = false; // continuity
 	if (grid.leftBoundaryConfig == grid.lbFixedValNonCenter) {
 		algebraic[1] = false; // momentum
 		algebraic[2] = false; // energy

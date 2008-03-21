@@ -542,7 +542,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 void oneDimGrid::update_jZero(dvector& rhov)
 {
 	jZero = mathUtils::minloc(mathUtils::abs(rhov));
-	rhov[jZero] = 0;
+	//rhov[jZero] = 0;
 }
 
 void oneDimGrid::updateBoundaryIndices(void) {

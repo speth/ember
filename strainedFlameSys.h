@@ -137,6 +137,9 @@ public:
 	vector<bool> algebraic;
 	void updateAlgebraicComponents(void);
 
+	bool forceTransportUpdate;
+	int transportUpdateCounter;
+
 	// Cantera data
 	gasArray gas;
 
