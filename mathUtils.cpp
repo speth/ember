@@ -94,7 +94,7 @@ double mathUtils::range(const vector<double>& v, int iStart, int iEnd)
 	return max(v,iStart,iEnd) - min(v,iStart,iEnd);
 }
 
-int mathUtils::findFirst(vector<bool>& v)
+int mathUtils::findFirst(const vector<bool>& v)
 {
 	for (vector<bool>::size_type i=0; i<v.size(); i++) {
 		if (v[i]) {
@@ -114,7 +114,7 @@ dvector mathUtils::abs(const dvector& v)
 	return a;
 }
 
-int mathUtils::findLast(vector<bool>& v)
+int mathUtils::findLast(const vector<bool>& v)
 {
 	for (vector<bool>::size_type i=v.size()-1; i>=0; i--) {
 		if (v[i]) {

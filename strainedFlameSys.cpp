@@ -491,11 +491,11 @@ void strainedFlameSys::generateInitialProfiles(void)
 	// Diluent in the center to delay ignition
 	gas[jm].setState_TPX(Tu,Cantera::OneAtm,diluent);
 
-	double Tleft = (grid.ju==0) ? Tu : Tb;
-	double Tright = (grid.ju==0) ? Tb : Tu;
+	Tleft = (grid.ju==0) ? Tu : Tb;
+	Tright = (grid.ju==0) ? Tb : Tu;
 
-	double rhoLeft = (grid.ju==0) ? rhou : rhob;
-	double rhoRight = (grid.ju==0) ? rhob : rhou;
+	rhoLeft = (grid.ju==0) ? rhou : rhob;
+	rhoRight = (grid.ju==0) ? rhob : rhou;
 
 	T[0] = Tleft; T[grid.jj] = Tright;
 	T[jm] = T[grid.ju];
@@ -627,10 +627,10 @@ void strainedFlameSys::loadInitialProfiles(void)
 
 strainedFlameSys::strainedFlameSys(void) 
 	: bandedJacobian(NULL)
-	, outputFileNumber(0)
 	, inJacobianUpdate(false)
-	, inGetIC(false)
+	, outputFileNumber(0)
 	, grid(options)
+	, inGetIC(false)
 {
 }
 

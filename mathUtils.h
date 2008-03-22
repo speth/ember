@@ -11,6 +11,7 @@
 
 using std::vector;
 using std::valarray;
+using std::abs;
 using Cantera::Array2D;
 
 typedef vector<double> dvector;
@@ -34,8 +35,8 @@ namespace mathUtils
 
 	// Returns the index of the first/last element of v which is true
 	// Returns -1 if all elements of v are false
-	int findFirst(vector<bool>& v);
-	int findLast(vector<bool>& v);
+	int findFirst(const vector<bool>& v);
+	int findLast(const vector<bool>& v);
 
 	// Returns the indices of the elements of v which are true
 	vector<int> find(vector<bool>& v);

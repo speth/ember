@@ -13,6 +13,21 @@
 
 #include "mathUtils.h"
 
+// NOTE: Use of this class requires a slightly modified installation of Cantera
+// gasArray modifies protected members of Transport objects, requiring gasArray
+// to be declared as a friend of Cantera's transport-related classes.
+// In the files "transport/TransportBase.h", "transport/MixTransport.h" and
+// "transport/MultiTransport.h", add the following declaration near the top of
+// the file (before the start of namespace Cantera):
+//
+// class gasArray;
+//
+// And, as the first line of class Transport, class MixTransport and 
+// class MultiTransport, add the friend declaration (before "public:")
+// 
+// friend class ::gasArray;
+//
+
 class gasArray
 {
 public:

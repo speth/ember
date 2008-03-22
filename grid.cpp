@@ -105,7 +105,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 			}
 
 			// Apply grid point addition criteria:
-
+			
 			// resolution of v
 			if (abs(v[j+1]-v[j]) > vtol*vRange) {
 				insert = true;
@@ -130,7 +130,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 			insert = true;
 			if (debugParameters::debugAdapt) { 
 				cout << "Adapt: left uniformity wants grid point j = " << j;
-				cout << " hh(j)/hh(j-1) = " << hh[j]/hh[j-1] << ' > ' << uniformityTol << endl;
+				cout << " hh(j)/hh(j-1) = " << hh[j]/hh[j-1] << " > " << uniformityTol << endl;
 			}
 		}
 
@@ -353,7 +353,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 	bool addRight = false; // Assume no addition
 
 	// check flatness of temperature, velocity and species profiles at the boundary
-	for (unsigned int k=0; k<y.size(); k++) {
+	for (int k=0; k<nVars; k++) {
 		if (k == kContinuity) {
 			continue;
 		}
@@ -379,7 +379,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 	djMom = (jb==1) ? 2 : 1;
 
 	bool addLeft = false;
-	for (unsigned int k=0; k<y.size(); k++) {
+	for (int k=0; k<nVars; k++) {
 		if (k==kContinuity) {
 			continue;
 		}
@@ -421,7 +421,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 	djOther = (jb==jj && !fixedBurnedVal) ? 3 : 2;
 
 	bool removeRight = true; // assume removal
-	for (unsigned int k=0; k<y.size(); k++) {
+	for (int k=0; k<nVars; k++) {
 		if (k==kContinuity) {
 			continue; // no flatness criterion for continuity equation
 		}
@@ -453,7 +453,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 		removeLeft = false;
 	}
 
-	for (unsigned int k=0; k<y.size(); k++) {
+	for (int k=0; k<nVars; k++) {
 		int dj = (k==kMomentum) ? djMom : djOther;
 		if (k==kContinuity) {
 			continue;
@@ -480,7 +480,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 
 		for (int i=0; i<addPointCount; i++) {
 			x.push_back(x[jj] + (x[jj]-x[jj-1]));
-			for (unsigned int k=0; k<y.size(); k++) {
+			for (int k=0; k<nVars; k++) {
 				if (k==kContinuity) {
 					// linear extrapolation for rhov
 					y[k].push_back(y[k][jj] + (y[k][jj]-y[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
@@ -508,7 +508,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 		// Add point to the left.
 		for (int i=0; i<addPointCount; i++) {
 			x.insert(x.begin(),x[0]-(x[1]-x[0]));
-			for (unsigned int k=0; k<y.size(); k++) {
+			for (int k=0; k<nVars; k++) {
 				if (k==kContinuity) {
 					// linear extrapolation
 					y[k].insert(y[k].begin(),y[k][0] + (y[k][1]-y[k][0])*(x[0]-x[1])/(x[2]-x[1]));

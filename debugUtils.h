@@ -20,5 +20,4 @@ namespace debugType {
 	};
 };
 
-
 void debugWrite(debugType::debugType type, std::string message);

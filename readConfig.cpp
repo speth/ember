@@ -174,5 +174,4 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	if (options.regridTimeInterval == 100 && options.regridStepInterval == 10000000) {
 		options.regridStepInterval = 20;
 	}
-	
 }

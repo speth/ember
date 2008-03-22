@@ -26,6 +26,7 @@
 <option id="gnu.cpp.compiler.exe.debug.option.debugging.level.443256613" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.option.include.paths.310142151" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 <listOptionValue builtIn="false" value="/usr/local/cantera/include"/>
+<listOptionValue builtIn="false" value="/usr/local/matlab/extern/include"/>
 </option>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1480131720" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
@@ -38,11 +39,40 @@
 <tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.677362871" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug">
 <option id="gnu.cpp.link.option.libs.1372195364" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="sundials_nvecserial"/>
+<listOptionValue builtIn="false" value="hdf5"/>
+<listOptionValue builtIn="false" value="icui18n"/>
+<listOptionValue builtIn="false" value="icuio"/>
+<listOptionValue builtIn="false" value="icuuc"/>
+<listOptionValue builtIn="false" value="icudata"/>
+<listOptionValue builtIn="false" value="ut"/>
+<listOptionValue builtIn="false" value="boost_filesystem"/>
+<listOptionValue builtIn="false" value="config++"/>
+<listOptionValue builtIn="false" value="boost_thread"/>
+<listOptionValue builtIn="false" value="mat"/>
+<listOptionValue builtIn="false" value="mx"/>
 <listOptionValue builtIn="false" value="sundials_cvode"/>
 <listOptionValue builtIn="false" value="sundials_ida"/>
+<listOptionValue builtIn="false" value="user"/>
+<listOptionValue builtIn="false" value="oneD"/>
+<listOptionValue builtIn="false" value="zeroD"/>
+<listOptionValue builtIn="false" value="equil"/>
+<listOptionValue builtIn="false" value="kinetics"/>
+<listOptionValue builtIn="false" value="transport"/>
+<listOptionValue builtIn="false" value="thermo"/>
+<listOptionValue builtIn="false" value="ctnumerics"/>
+<listOptionValue builtIn="false" value="sundials_cvodes"/>
+<listOptionValue builtIn="false" value="sundials_nvecserial"/>
 <listOptionValue builtIn="false" value="ctbase"/>
+<listOptionValue builtIn="false" value="ctlapack"/>
+<listOptionValue builtIn="false" value="ctblas"/>
+<listOptionValue builtIn="false" value="ctmath"/>
+<listOptionValue builtIn="false" value="converters"/>
+<listOptionValue builtIn="false" value="tpx"/>
+<listOptionValue builtIn="false" value="ctf2c"/>
+<listOptionValue builtIn="false" value="ctcxx"/>
 </option>
 <option id="gnu.cpp.link.option.paths.43547539" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
+<listOptionValue builtIn="false" value="/usr/local/matlab/bin/glnxa64"/>
 <listOptionValue builtIn="false" value="/usr/local/lib"/>
 <listOptionValue builtIn="false" value="/usr/local/cantera/lib"/>
 </option>
@@ -58,6 +88,9 @@
 </folderInfo>
 </configuration>
 </storageModule>
+
+<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile">
@@ -223,7 +256,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.837257934;cdt.managedbuild.config.gnu.exe.release.837257934.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.928860952;cdt.managedbuild.tool.gnu.cpp.compiler.input.1301370737">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.319712924;cdt.managedbuild.config.gnu.exe.debug.319712924.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.776351692;cdt.managedbuild.tool.gnu.cpp.compiler.input.1480131720">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile">
 <buildOutputProvider>
@@ -306,7 +339,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.319712924;cdt.managedbuild.config.gnu.exe.debug.319712924.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.776351692;cdt.managedbuild.tool.gnu.cpp.compiler.input.1480131720">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.837257934;cdt.managedbuild.config.gnu.exe.release.837257934.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.928860952;cdt.managedbuild.tool.gnu.cpp.compiler.input.1301370737">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile">
 <buildOutputProvider>
@@ -473,8 +506,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
-<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 </cconfiguration>
 <cconfiguration id="cdt.managedbuild.config.gnu.exe.release.837257934">
 <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.exe.release.837257934" moduleId="org.eclipse.cdt.core.settings" name="Release">
@@ -530,6 +561,9 @@
 </folderInfo>
 </configuration>
 </storageModule>
+
+<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
+<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile">
@@ -695,7 +729,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.837257934;cdt.managedbuild.config.gnu.exe.release.837257934.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.928860952;cdt.managedbuild.tool.gnu.cpp.compiler.input.1301370737">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.319712924;cdt.managedbuild.config.gnu.exe.debug.319712924.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.776351692;cdt.managedbuild.tool.gnu.cpp.compiler.input.1480131720">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile">
 <buildOutputProvider>
@@ -778,7 +812,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.319712924;cdt.managedbuild.config.gnu.exe.debug.319712924.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.776351692;cdt.managedbuild.tool.gnu.cpp.compiler.input.1480131720">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.837257934;cdt.managedbuild.config.gnu.exe.release.837257934.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.928860952;cdt.managedbuild.tool.gnu.cpp.compiler.input.1301370737">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile">
 <buildOutputProvider>
@@ -945,8 +979,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
-<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 </cconfiguration>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">

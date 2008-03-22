@@ -1,5 +1,6 @@
 #include "chemistry.h"
 #include "mathUtils.h"
+#include "boost/filesystem.hpp"
 
 gasArray::gasArray()
 	: rootXmlNode(NULL)
@@ -12,8 +13,8 @@ gasArray::gasArray()
 gasArray::~gasArray()
 {
 	Cantera::close_XML_File(mechanismFile);
-	phaseXmlNode->unlock();
-	rootXmlNode->unlock();
+	//phaseXmlNode->unlock();
+	//rootXmlNode->unlock();
 //	delete rootXmlNode; // this deletes all child nodes as well
 
 	delete m_kineticsBase;
@@ -70,6 +71,11 @@ void gasArray::resize(unsigned int n)
 void gasArray::initialize(void) 
 {
 	// XML Information File
+	if (!boost::filesystem::exists(mechanismFile)) {
+		cout << "Error: Cantera input file \"" << mechanismFile << "\" not found." << endl; 
+		throw;
+	}
+	
 	rootXmlNode = Cantera::get_XML_File(mechanismFile);
 	phaseXmlNode = rootXmlNode->findNameID("phase",phaseID);
 
@@ -254,9 +260,6 @@ void gasArray::testFunction(void)
 
 	cout << trans1->viscosity() << endl;
 	cout << trans2->viscosity() << endl;
-
-	int blargh = 0;
-
 		
 	delete kin1;
 	delete kin2;
