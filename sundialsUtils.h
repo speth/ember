@@ -24,7 +24,7 @@ public:
 	~sdVector(void);
 
 	realtype& operator()(unsigned int i);
-	realtype operator()(unsigned int i) const;
+	realtype& operator()(unsigned int i) const;
 	N_Vector& forSundials(void) {return v;}
 	unsigned int length(void) const {return n;}
 

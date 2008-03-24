@@ -1,15 +1,16 @@
 paths:
 {
 	inputDir = "input";
-	outputDir = "output6";
+	outputDir = "output4";
 };
 
 general:
 {
 	fixedBurnedVal = true;
-	fixedLeftLocation = false;
-	unburnedLeft = true;
-	curvedDomain = false;
+	fixedLeftLocation = true;
+	unburnedLeft = false;
+	curvedFlame = false;
+	twinFlame = true;
 };
 
 chemistry:
@@ -20,14 +21,15 @@ chemistry:
 			
 grid:
 {
+	// These are only used when not reading from a restart file
 	nPoints = 40;
 	xLeft = -0.005;
 	xRight = 0.005;
 	
 	adaptation:
 	{
-		vtol = 0.4;
-		dvtol = 0.5;
+		vtol = 0.3;
+		dvtol = 0.3;
 		//vtol = 0.025;
 		//dvtol = 0.1;
 		rmTol = 0.7;
@@ -40,16 +42,16 @@ grid:
 
 	regridding:
 	{
-		boundaryTol = 1e-3;
-		boundaryTolRm = 2e-4;
-		addPointCount = 4;
+		boundaryTol = 5e-4;
+		boundaryTolRm = 1e-4;
+		addPointCount = 3;
 	};
 };
 
 InitialCondition:
 {
 	// Read Initial profile from a file.
-	file = "restart.mat";
+	//file = "restart.mat";
 	
 	// These properties will override parameters read from the file
 	Tu = 300;
@@ -71,16 +73,16 @@ StrainParameters:
 times:
 {
 	//regridTimeInterval = 5e-3;
-	regridStepInterval = 40;
+	regridStepInterval = 30;
 	//outputStepInterval = 30;
 	outputTimeInterval = 1e-4;
-	tEnd = 0.2;
+	tEnd = 0.05;
 	maxTimestep = 1e-3;
 };
 
 integrator:
 {
-	relativeTolerance = 1e-3;
+	relativeTolerance = 1e-4;
 	continuityAbsTol = 1e-9;
 	momentumAbsTol = 1e-9;
 	energyAbsTol = 1e-6;
@@ -92,6 +94,6 @@ debug:
 	adaptation: false;
 	regridding: false;
 	sundials: false;
-	jacobian: false;
-	calcIC: false;
+	jacobian: true;
+	calcIC: true;
 };

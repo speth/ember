@@ -507,7 +507,12 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 
 		// Add point to the left.
 		for (int i=0; i<addPointCount; i++) {
-			x.insert(x.begin(),x[0]-(x[1]-x[0]));
+			double xLeft = x[0]-hh[0];
+			if (options.twinFlame || options.curvedFlame) {
+				xLeft = std::max(xLeft,0.0e0);
+			}
+			x.insert(x.begin(),xLeft);
+
 			for (int k=0; k<nVars; k++) {
 				if (k==kContinuity) {
 					// linear extrapolation
@@ -542,7 +547,6 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 void oneDimGrid::update_jZero(dvector& rhov)
 {
 	jZero = mathUtils::minloc(mathUtils::abs(rhov));
-	//rhov[jZero] = 0;
 }
 
 void oneDimGrid::updateBoundaryIndices(void) {

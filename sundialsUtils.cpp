@@ -201,7 +201,7 @@ realtype& sdVector::operator() (unsigned int i)
 	return NV_Ith_S(v,i);
 }
 
-realtype sdVector::operator() (unsigned int i) const
+realtype& sdVector::operator() (unsigned int i) const
 {
 	return NV_Ith_S(v,i);
 }
@@ -215,7 +215,7 @@ std::ostream& operator<<(std::ostream& os, const sdVector& v)
 	return os;
 }
 
-sdMatrix::sdMatrix(unsigned int n, unsigned int m) 
+sdMatrix::sdMatrix(unsigned int n, unsigned int m)
 {
 	alloc = true;
 	M = DenseAllocMat(n,m);
@@ -239,7 +239,7 @@ sdMatrix::~sdMatrix(void) {
 	}
 }
 
-realtype& sdMatrix::operator() (unsigned int i, unsigned int j)
+realtype& sdMatrix::operator() (unsigned int i, unsigned int j) 
 {
 	return DENSE_ELEM(M,i,j);
 }

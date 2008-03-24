@@ -7,14 +7,14 @@ public:
 	std::string outputDir;
 	std::string restartFile;
 
-	bool curvedDomain;
-
 	bool overrideTu;
 	bool overrideReactants;
 	bool haveRestartFile;
 
 	bool fixedBurnedVal;
 	bool fixedLeftLoc;
+	bool twinFlame;
+	bool curvedFlame;
 
 	int regridStepInterval;
 	int outputStepInterval;

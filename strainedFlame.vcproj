@@ -43,7 +43,9 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
+				OmitFramePointers="true"
 				EnableFiberSafeOptimizations="true"
+				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="&quot;c:\program files\sundials\include&quot;;&quot;c:\Program Files\Cantera\include&quot;;&quot;c:\Program Files\libraries\include&quot;;&quot;c:\Program Files\MATLAB R2007a\extern\include&quot;"
 				PreprocessorDefinitions="WIN32;_CONSOLE;NDEBUG"
 				RuntimeLibrary="2"
@@ -76,6 +78,7 @@
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
 				OptimizeForWindows98="0"
+				LinkTimeCodeGeneration="1"
 				TargetMachine="1"
 				Profile="true"
 			/>
@@ -129,7 +132,7 @@
 				PreprocessorDefinitions="WIN32;_CONSOLE;"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
-				OpenMP="false"
+				OpenMP="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="false"
@@ -230,6 +233,10 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+			<File
+				RelativePath=".\input\input.txt"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Source Files"

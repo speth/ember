@@ -40,9 +40,11 @@ public:
 	void initialize(void);
 	void resize(unsigned int n);
 	
-	void setState(Cantera::Array2D& Y, dvector& T);
+	void setStateMass(Cantera::Array2D& Y, dvector& T);
+	void setStateMole(Cantera::Array2D& X, dvector& T);
 
 	void getMoleFractions(Cantera::Array2D& X);
+	void getMassFractions(Cantera::Array2D& Y);
 	void getDensity(dvector& rho);
 	void getMixtureMolecularWeight(dvector& Wmx);
 	void getMolecularWeights(dvector& W);

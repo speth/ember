@@ -161,6 +161,9 @@ private:
 	vector<long int> pMat;
 	bool inJacobianUpdate;
 	bool inGetIC;
+	sdVector* yTempJac;
+	sdVector* ydotTempJac;
+	sdVector* resTempJac;
 
 	int outputFileNumber; // number of output files written
 

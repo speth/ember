@@ -95,10 +95,17 @@ void gasArray::initialize(void)
 	transFac->deleteFactory();
 }
 
-void gasArray::setState(Cantera::Array2D& Y, dvector& T)
+void gasArray::setStateMass(Cantera::Array2D& Y, dvector& T)
 {
 	for (int j=0; j<nPoints; j++) {
 		m_thermo[j]->setState_TPY(T[j], pressure, &Y(0,j));
+	}
+}
+
+void gasArray::setStateMole(Cantera::Array2D& X, dvector& T)
+{
+	for (int j=0; j<nPoints; j++) {
+		m_thermo[j]->setState_TPX(T[j], pressure, &X(0,j));
 	}
 }
 
@@ -106,6 +113,13 @@ void gasArray::getMoleFractions(Cantera::Array2D& X)
 {
 	for (int j=0; j<nPoints; j++) {
 		m_thermo[j]->getMoleFractions(&X(0,j));
+	}
+}
+
+void gasArray::getMassFractions(Cantera::Array2D& Y)
+{
+	for (int j=0; j<nPoints; j++) {
+		m_thermo[j]->getMassFractions(&Y(0,j));
 	}
 }
 

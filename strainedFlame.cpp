@@ -3,6 +3,7 @@
 #include "matlabFile.h"
 #include "boost/filesystem.hpp"
 #include "sundialsUtils.h"
+//#include <omp.h>
 
 using namespace mathUtils;
 
@@ -14,6 +15,10 @@ int main(int argc, char** argv)
 	if (!python_cmd) {
 		putenv("PYTHON_CMD=python");
 	}
+
+	//int nProcs = omp_get_num_procs();
+	//cout << "Detected " << nProcs << " processors." << endl;
+	//omp_set_num_threads(nProcs);
 
 	std::string inputFile;
 	if (argc > 1) {

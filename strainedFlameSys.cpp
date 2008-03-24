@@ -28,23 +28,20 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		}
 	}
 
-	gas.setState(Y,T);
+	gas.setStateMass(Y,T);
 	gas.getMoleFractions(X);
 
 	if (!inJacobianUpdate && !inGetIC) {
-	//if (!inGetIC) {
-		//transportUpdateCounter++; 
-//		if (forceTransportUpdate || transportUpdateCounter > 1) {
-			updateTransportProperties();
-			transportUpdateCounter = 0;
-			forceTransportUpdate = false;
-//		}
+		updateTransportProperties();
+		transportUpdateCounter = 0;
+		forceTransportUpdate = false;
 	}
 
 
 	if (!inGetIC) {
 		updateThermoProperties();
 		gas.getReactionRates(wDot);
+
 		for (int j=0; j<=jj; j++) {
 			qDot[j] = 0;
 			for (int k=0; k<nSpec; k++) {
@@ -81,11 +78,19 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 
 	// Left Boundary values for U, T, Y
 	if (grid.leftBoundaryConfig == grid.lbFixedValNonCenter) {
-		// Fixed values for T, Y and U
-		momentumUnst[0] = dUdt[0];
+		// Fixed values for T, Y
+		
 		energyUnst[0] = dTdt[0];
 		energyDiff[0] = energyConv[0] = energyProd[0] = 0;
-		momentumDiff[0] = momentumConv[0] = momentumProd[0] = 0;
+		
+		// Momentum equation is always zero gradient on the burned side
+		if (grid.unburnedLeft) {
+			momentumUnst[0] = dUdt[0];
+			momentumDiff[0] = momentumConv[0] = momentumProd[0] = 0;
+		} else {
+			momentumDiff[0] = (U[1]-U[0])/grid.hh[0];
+			momentumProd[0] = momentumConv[0] = momentumProd[0] = 0;
+		}
 
 		for (int k=0; k<nSpec; k++) {
 			speciesUnst(k,0) = dYdt(k,0);
@@ -93,7 +98,7 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		}
 
 	} else if (grid.leftBoundaryConfig == grid.lbZeroGradNonCenter) {
-		// Zero gradient condition, not at centerline
+		// Zero gradient condition for T, Y, U, not at centerline
 		energyDiff[0] = (T[1]-T[0])/grid.hh[0];
 		momentumDiff[0] = (U[1]-U[0])/grid.hh[0];
 		energyProd[0] = energyConv[0] = energyProd[0] = 0;
@@ -155,7 +160,7 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		//	dYdx(k,j) = (Y(k,j-1)*grid.cfm[j] + Y(k,j)*grid.cf[j] + Y(k,j+1)*grid.cfp[j]);
 		//}
 
-		//// Upwinded convective derivatives:
+		// Upwinded convective derivatives:
 		if (rhov[j] > 0) {
 			dUdx[j] = (U[j]-U[j-1])/grid.hh[j-1];
 			dTdx[j] = (T[j]-T[j-1])/grid.hh[j-1];
@@ -194,14 +199,12 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		}
 	}
 
-	// Right boundary values for U, T, Y
+	// Right boundary values for T, Y
 	if (grid.unburnedLeft && !grid.fixedBurnedVal) {
 		// zero gradient condition
 		energyDiff[jj] = (T[jj]-T[jj-1])/grid.hh[jj-1];
-		momentumDiff[jj] = (U[jj]-U[jj-1])/grid.hh[jj-1];
 		energyProd[jj] = energyConv[jj] = energyUnst[jj] = 0;
-		momentumProd[jj] = momentumConv[jj] = momentumUnst[jj] = 0;
-
+		
 		for (int k=0; k<nSpec; k++) {
 			speciesDiff(k,jj) = (Y(k,jj)-Y(k,jj-1))/grid.hh[jj-1];
 			speciesProd(k,jj) = speciesConv(k,jj) = speciesUnst(k,jj) = 0;
@@ -209,35 +212,27 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	} else {
 		// Fixed values
 		energyUnst[jj] = dTdt[jj];
-		momentumUnst[jj] = dUdt[jj];
 		energyDiff[jj] = energyProd[jj] = energyConv[jj] = 0;
-		momentumDiff[jj] = momentumProd[jj] = momentumConv[jj] = 0;
-
+		
 		for (int k=0; k<nSpec; k++) {
 			speciesUnst(k,jj) = dYdt(k,jj);
 			speciesProd(k,jj) = speciesConv(k,jj) = speciesDiff(k,jj) = 0;
 		}
 	}
 
-	// Continuity Equation
-	//continuityUnst[grid.jZero] = rhov[grid.jZero];
-	//continuityRhov[grid.jZero] = continuityStrain[grid.jZero] = 0;
-
-	//for (int j=grid.jZero+1; j<nPoints; j++) {
-	//	continuityRhov[j] = (rrhov[j]-rrhov[j-1])/(grid.hh[j-1]*grid.rphalf[j-1]);
-	//	continuityUnst[j] = drhodt[j];
-	//	continuityStrain[j] = rho[j]*U[j]*a;
-	//}
-
-	//for (int j=grid.jZero-1; j>=0; j--) {
-	//	continuityRhov[j] = (rrhov[j+1]-rrhov[j])/(grid.hh[j]*grid.rphalf[j]);
-	//	continuityUnst[j] = drhodt[j];
-	//	continuityStrain[j] = rho[j]*U[j]*a;
-	//}
+	// Right boundary values for U
+	if (grid.unburnedLeft) {
+		momentumDiff[jj] = (U[jj]-U[jj-1])/grid.hh[jj-1];
+		momentumProd[jj] = momentumConv[jj] = momentumUnst[jj] = 0;
+	} else {
+		momentumUnst[jj] = dUdt[jj];
+		momentumDiff[jj] = momentumProd[jj] = momentumConv[jj] = 0;
+	}
 
 	// Continuity Equation
 	continuityUnst[0] = drhovdt[0];
 	continuityRhov[0] = continuityStrain[0] = 0;
+
 	for (int j=1; j<=jj; j++) {
 		continuityRhov[j] = (rrhov[j]-rrhov[j-1])/(grid.hh[j-1]*grid.rphalf[j-1]);
 		continuityUnst[j] = drhodt[j];
@@ -245,8 +240,6 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	}
 
 	rollResiduals(res);
-
-
 	return 0;
 }
 
@@ -254,11 +247,15 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 										  sdVector& res, realtype c_j)
 {
 	inJacobianUpdate = true;
+	// The constant "10" here has been empirically determined
+	// to give the best performance for typical test cases.
 	double eps = sqrt(DBL_EPSILON)*10;
-	sdVector yTemp(N);
-	sdVector ydotTemp(N);
-	sdVector resTemp(N);
+
 	BandZero(bandedJacobian->forSundials());
+
+	sdVector& yTemp = *yTempJac;
+	sdVector& ydotTemp = *ydotTempJac;
+	sdVector& resTemp = *resTempJac;
 
 	ofstream outFile;
 	if (debugParameters::debugJacobian) {
@@ -376,6 +373,8 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
 		cout << "Error in LU factorization: i = " << iError << endl;
 		debugParameters::debugJacobian = true;
 		return 1;
+	} else {
+		debugParameters::debugJacobian = false;
 	}
 
 	inJacobianUpdate = false;
@@ -468,6 +467,13 @@ void strainedFlameSys::setup(void)
 	pMat.resize(N);
 	grid.jj = nPoints-1;
 	grid.updateBoundaryIndices();
+
+	delete yTempJac;
+	delete ydotTempJac;
+	delete resTempJac;
+	yTempJac = new sdVector(N);
+	ydotTempJac = new sdVector(N);
+	resTempJac = new sdVector(N);
 }
 
 void strainedFlameSys::generateInitialProfiles(void)
@@ -499,6 +505,11 @@ void strainedFlameSys::generateInitialProfiles(void)
 
 	T[0] = Tleft; T[grid.jj] = Tright;
 	T[jm] = T[grid.ju];
+
+	if (options.twinFlame || options.curvedFlame)
+	{
+		xLeft = max(xLeft,0.0);
+	}
 
 	// Uniform initial grid
 	for (int j=0; j<nPoints; j++) {
@@ -558,15 +569,18 @@ void strainedFlameSys::generateInitialProfiles(void)
 
 	// Grid and initial profiles of T, U and rhov
 	for (int i=0; i<nPoints; i++) {
-		grid.x[i] = xLeft + (xRight-xLeft)*((double) i)/((double) nPoints);
-		//T[i] = Tleft + (Tright-Tleft)*(grid.x[i]-xLeft)/(xRight-xLeft);
 		gas[i].setState_TPY(T[i],gas.pressure,&Y(0,i));
 		rho[i] = gas[i].density();
-		U[i] = sqrt(rho[grid.ju]/rho[i]);
+		U[i] = sqrt(rhou/rho[i]);
 	}
 
-	for (int i=0; i<5; i++) {
+	for (int i=0; i<4; i++) {
 		mathUtils::smooth(U);
+	}
+
+	if (options.fixedLeftLoc)
+	{
+		jm = 0;
 	}
 
 	rhov[jm] = 0;
@@ -578,7 +592,8 @@ void strainedFlameSys::generateInitialProfiles(void)
 		rhov[j] = rhov[j+1] + rho[j]*U[j]*strainRate(tStart)*(grid.x[j+1]-grid.x[j]);
 	}
 
-	gas.setState(Y,T);
+	gas.setStateMass(Y,T);
+	gas.getMoleFractions(X);
 	gas.getMolecularWeights(W);
 	
 	grid.update_jZero(rhov);
@@ -617,7 +632,7 @@ void strainedFlameSys::loadInitialProfiles(void)
 		}
 	}
 
-	gas.setState(Y,T);
+	gas.setStateMass(Y,T);
 	gas.getMolecularWeights(W);
 	rhou = gas.thermo(grid.ju).density();
 
@@ -631,12 +646,18 @@ strainedFlameSys::strainedFlameSys(void)
 	, outputFileNumber(0)
 	, grid(options)
 	, inGetIC(false)
+	, yTempJac(NULL)
+	, ydotTempJac(NULL)
+	, resTempJac(NULL)
 {
 }
 
 strainedFlameSys::~strainedFlameSys(void)
 {
 	delete bandedJacobian;
+	delete yTempJac;
+	delete ydotTempJac;
+	delete resTempJac;
 }
 
 void strainedFlameSys::unrollYdot(const sdVector& yDot)
@@ -1014,7 +1035,7 @@ void strainedFlameSys::updateAlgebraicComponents(void)
 
 	algebraic[0] = false; // continuity
 	if (grid.leftBoundaryConfig == grid.lbFixedValNonCenter) {
-		algebraic[1] = false; // momentum
+		algebraic[1] = !grid.unburnedLeft; // momentum
 		algebraic[2] = false; // energy
 		for (int k=0; k<nSpec; k++) {
 			algebraic[3+k] = false; // species
@@ -1062,6 +1083,8 @@ void strainedFlameSys::updateAlgebraicComponents(void)
 			algebraic[nVars*jj+3+k] = false; // species
 		}
 	}
+
+	algebraic[nVars*jj+1] = grid.unburnedLeft;
 
 }
 

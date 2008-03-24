@@ -40,7 +40,9 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	strainRateDt = 1e-3;
 	strainRateT0 = 0;
 	
-	options.curvedDomain = false;
+	options.curvedFlame = false;
+	options.fixedLeftLoc = false;
+	options.twinFlame = false;
 
 	// Grid	
 	nPoints = 50;
@@ -60,9 +62,8 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	grid.boundaryTolRm = 5e-6;
 
 	grid.fixedBurnedVal = true;
-	options.fixedLeftLoc = false;
 	grid.unburnedLeft = true;
-	grid.addPointCount = 2;
+	grid.addPointCount = 1;
 
 	// Times
 	tStart = 0;
@@ -125,7 +126,8 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 	cfg.lookupValue("general.fixedBurnedVal",options.fixedBurnedVal);
 	cfg.lookupValue("general.fixedLeftLocation",options.fixedLeftLoc);
 	cfg.lookupValue("general.unburnedLeft",grid.unburnedLeft);
-	cfg.lookupValue("general.curvedDomain",options.curvedDomain);
+	cfg.lookupValue("general.curvedFlame",options.curvedFlame);
+	cfg.lookupValue("general.twinFlame",options.twinFlame);
 
 	cfg.lookupValue("times.regridTimeInterval",options.regridTimeInterval);
 	cfg.lookupValue("times.regridStepInterval",options.regridStepInterval);
@@ -158,7 +160,7 @@ void strainedFlameSys::readOptionsFile(std::string filename)
 		gas.mechanismFile = options.inputDir + "/" + gas.mechanismFile;
 	}
 
-	grid.alpha = (options.curvedDomain) ? 1 : 0;
+	grid.alpha = (options.curvedFlame) ? 1 : 0;
 	grid.fixedBurnedVal = options.fixedBurnedVal;
 
 	grid.kContinuity = 0;
