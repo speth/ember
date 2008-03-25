@@ -70,7 +70,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib libconfig++.lib zlib.lib matio.lib libmat.lib libmx.lib"
+				AdditionalDependencies="cantera.lib transport.lib ctcxx.lib ctf2c.lib ctblas.lib ctlapack.lib ctmath.lib tpx.lib sundials_cvode.lib sundials_nvecserial.lib sundials_ida.lib libconfig++.lib libmat.lib libmx.lib"
 				LinkIncremental="0"
 				AdditionalLibraryDirectories="&quot;c:\Program Files\Cantera\lib&quot;;&quot;c:\Program Files\sundials\lib&quot;;&quot;c:\Program Files\libraries\lib&quot;;&quot;c:\Program Files\MATLAB R2007a\extern\lib\win32\microsoft&quot;"
 				GenerateDebugInformation="false"

@@ -51,7 +51,8 @@ void strainedFlame(const std::string& inputFile)
     strainedFlameSys theSys;
 	configOptions& options = theSys.options;
 
-	theSys.readOptionsFile(inputFile);
+	theSys.options.readOptionsFile(inputFile);
+	theSys.copyOptions();
 
 	theSys.gas.initialize();
 	// theSys.gas.testFunction();

@@ -48,10 +48,10 @@ public:
 	dvector Yu, Yb, Yleft, Yright;
 
 	void setup(void);
-	void readOptionsFile(std::string filename);
 	
 	void generateInitialProfiles(void);
 	void loadInitialProfiles(void);
+	void copyOptions(void);
 	
 	// Utility functions
 	void unrollY(const sdVector& y);

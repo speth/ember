@@ -12,7 +12,7 @@ public:
 
 	dvector x; // The grid points
 	dvector dampVal; // ratio of convective to diffusive coefficients (e.g. nu/v)
-	
+
 	int alpha;	// domain curvature parameter. 0: planar, 1: cylindrical
 	int ju, jb; 	// indices of burned / unburned boundaries
 	int kMomentum; // index into solutionState of the Momentum equation

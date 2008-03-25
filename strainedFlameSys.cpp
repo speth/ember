@@ -476,6 +476,44 @@ void strainedFlameSys::setup(void)
 	resTempJac = new sdVector(N);
 }
 
+void strainedFlameSys::copyOptions(void)
+{
+	strainRateInitial = options.strainRateInitial;
+	strainRateFinal = options.strainRateFinal;
+	strainRateT0 = options.strainRateT0;
+	strainRateDt = options.strainRateDt;
+
+	tStart = options.tStart;
+	tEnd = options.tEnd;
+
+	gas.mechanismFile = options.gasMechanismFile;
+	gas.phaseID = options.gasPhaseID;
+	gas.pressure = options.pressure;
+
+	nPoints = options.nPoints;
+	grid.unburnedLeft = options.unburnedLeft;
+
+	grid.vtol = options.vtol;
+	grid.dvtol = options.dvtol;
+	grid.absvtol = options.absvtol;
+	grid.rmTol = options.rmTol;
+	grid.uniformityTol = options.uniformityTol;
+	grid.gridMin = options.gridMin;
+	grid.gridMax = options.gridMax;
+	grid.dampConst = options.dampConst;
+	grid.fixedBurnedVal = options.fixedBurnedVal;
+	grid.unburnedLeft = options.unburnedLeft;
+	grid.boundaryTol = options.boundaryTol;
+	grid.boundaryTolRm = options.boundaryTolRm;
+	grid.addPointCount = options.addPointCount;
+
+	grid.alpha = options.gridAlpha;
+	grid.kMomentum = options.kMomentum;
+	grid.kContinuity = options.kContinuity;
+	grid.kEnergy = options.kEnergy;
+	grid.kSpecies = options.kSpecies;
+}
+
 void strainedFlameSys::generateInitialProfiles(void)
 {
 	grid.x.resize(nPoints);
@@ -485,17 +523,19 @@ void strainedFlameSys::generateInitialProfiles(void)
 	grid.jZero = jm;
 
 	// Reactants
-	gas[grid.ju].setState_TPX(Tu,Cantera::OneAtm,reactants);
+	Tu = options.Tu;
+	gas[grid.ju].setState_TPX(Tu,Cantera::OneAtm,options.reactants);
 	rhou = gas[grid.ju].density();
 
 	// Products
-	gas[grid.jb].setState_TPX(Tu,Cantera::OneAtm,reactants);
+	Tb = options.Tb;
+	gas[grid.jb].setState_TPX(Tu,Cantera::OneAtm,options.reactants);
 	Cantera::equilibrate(gas[grid.jb],"HP");
 	Tb = gas[grid.jb].temperature();
 	rhob = gas[grid.jb].density();
 	
 	// Diluent in the center to delay ignition
-	gas[jm].setState_TPX(Tu,Cantera::OneAtm,diluent);
+	gas[jm].setState_TPX(Tu,Cantera::OneAtm,options.diluent);
 
 	Tleft = (grid.ju==0) ? Tu : Tb;
 	Tright = (grid.ju==0) ? Tb : Tu;
@@ -506,10 +546,9 @@ void strainedFlameSys::generateInitialProfiles(void)
 	T[0] = Tleft; T[grid.jj] = Tright;
 	T[jm] = T[grid.ju];
 
-	if (options.twinFlame || options.curvedFlame)
-	{
-		xLeft = max(xLeft,0.0);
-	}
+	xLeft = (options.twinFlame || options.curvedFlame) ?
+		max(options.xLeft,0.0) : options.xLeft;
+	xRight = options.xRight;
 
 	// Uniform initial grid
 	for (int j=0; j<nPoints; j++) {
@@ -618,13 +657,13 @@ void strainedFlameSys::loadInitialProfiles(void)
 	infile.close();
 
 	if (options.overrideTu) {
-		T[grid.ju] = Tu;
+		T[grid.ju] = options.Tu;
 	} else {
 		Tu = T[grid.ju];
 	}
 
 	if (options.overrideReactants) {
-		gas.thermo(grid.ju).setMoleFractionsByName(reactants);
+		gas.thermo(grid.ju).setMoleFractionsByName(options.reactants);
 		dvector yu(nSpec);
 		gas.thermo(grid.ju).getMassFractions(&yu[0]);
 		for (int k=0; k<nSpec; k++) {
@@ -805,7 +844,6 @@ void strainedFlameSys::printForMatlab(ofstream& file, dvector& v, int index, cha
 	file << v[v.size()-1] << "];" << endl;
 }
 
-
 void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::vector<bool>& algebraic)
 {
 	
@@ -815,7 +853,6 @@ void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot
 	sdVector ydotTemp(N);
 	sdVector resTemp(N);
 	sdVector res(N);
-
 
 	ofstream outFile;
 	if (debugParameters::debugCalcIC) {

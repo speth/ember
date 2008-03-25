@@ -3,6 +3,8 @@
 class configOptions
 {
 public:
+	void readOptionsFile(const std::string& filename);
+
 	std::string inputDir;
 	std::string outputDir;
 	std::string restartFile;
@@ -27,6 +29,31 @@ public:
 	double idaMomentumAbsTol;
 	double idaEnergyAbsTol;
 	double idaSpeciesAbsTol;
+
+	std::string gasMechanismFile;
+	std::string gasPhaseID;
+	std::string reactants;
+	std::string diluent;
+	double pressure;
+
+	double Tu, Tb;
+	double strainRateInitial, strainRateFinal;
+	double strainRateDt, strainRateT0;
+
+	int nPoints;
+	double xLeft, xRight;
+
+	double vtol, dvtol, rmTol, dampConst, gridMin, gridMax;
+	double uniformityTol, absvtol;
+	double boundaryTol, boundaryTolRm;
+
+	bool unburnedLeft;
+	int addPointCount;
+
+	double tStart, tEnd;
+
+	int gridAlpha;
+	int kContinuity, kMomentum, kEnergy, kSpecies;
 };
 
 
