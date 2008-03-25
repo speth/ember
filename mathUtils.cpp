@@ -3,7 +3,7 @@
 
 using std::cout; using std::endl;
 
-double mathUtils::max(const vector<double>& v)
+double mathUtils::max(const dvector& v)
 {
 	int n = v.size();
 	if (n==0) { return 0; }
@@ -16,9 +16,9 @@ double mathUtils::max(const vector<double>& v)
 	return val;
 }
 
-double mathUtils::min(const vector<double>& v)
+double mathUtils::min(const dvector& v)
 {
-	vector<double>::const_iterator i;
+	dvector::const_iterator i;
 	double val = *v.begin();
 	for (i=v.begin(); i!=v.end(); i++) {
 		val = std::min(*i,val);
@@ -26,12 +26,12 @@ double mathUtils::min(const vector<double>& v)
 	return val;
 }
 
-double mathUtils::range(const vector<double>& v)
+double mathUtils::range(const dvector& v)
 {
 	return (max(v)-min(v));
 }
 
-double mathUtils::max(const vector<double>& v, int iStart, int iEnd)
+double mathUtils::max(const dvector& v, int iStart, int iEnd)
 {
 	int n = v.size();
 	if (n==0) { return 0; }
@@ -45,7 +45,7 @@ double mathUtils::max(const vector<double>& v, int iStart, int iEnd)
 	return val;
 }
 
-double mathUtils::min(const vector<double>& v, int iStart, int iEnd)
+double mathUtils::min(const dvector& v, int iStart, int iEnd)
 {
 	int n = v.size();
 	if (n==0) { return 0; }
@@ -59,7 +59,7 @@ double mathUtils::min(const vector<double>& v, int iStart, int iEnd)
 	return val;
 }
 
-int mathUtils::maxloc(const vector<double>& v)
+int mathUtils::maxloc(const dvector& v)
 {
 	int n = v.size();
 	if (n==0) { return 0; }
@@ -74,7 +74,7 @@ int mathUtils::maxloc(const vector<double>& v)
 	return loc;
 }
 
-int mathUtils::minloc(const vector<double>& v)
+int mathUtils::minloc(const dvector& v)
 {
 	int n = v.size();
 	if (n==0) { return 0; }
@@ -89,7 +89,7 @@ int mathUtils::minloc(const vector<double>& v)
 	return loc;
 }
 
-double mathUtils::range(const vector<double>& v, int iStart, int iEnd)
+double mathUtils::range(const dvector& v, int iStart, int iEnd)
 {
 	return max(v,iStart,iEnd) - min(v,iStart,iEnd);
 }
@@ -279,9 +279,9 @@ void mathUtils::array2DToVectorVector(const Array2D& a, vector<dvector>& v)
 	}
 }
 
-std::ostream& operator<<(std::ostream& os, vector<double>& v)
+std::ostream& operator<<(std::ostream& os, dvector& v)
 {
-	for (vector<double>::size_type i=0; i<v.size()-1; i++) {
+	for (dvector::size_type i=0; i<v.size()-1; i++) {
 		os << v[i] << ", ";
 	}
 	os << v[v.size()-1];
@@ -306,7 +306,7 @@ std::ostream& operator<<(std::ostream& os, vector<int>& v)
 	return os;
 }
 
-vector<double>& operator+=(vector<double>& v1, const vector<double>& v2)
+dvector& operator+=(dvector& v1, const dvector& v2)
 {
 	if (v1.size() != v2.size()) {
 		throw;
@@ -320,13 +320,13 @@ vector<double>& operator+=(vector<double>& v1, const vector<double>& v2)
 	return v1;
 }
 
-vector<double> operator+(const vector<double>& v1, const vector<double>& v2)
+dvector operator+(const dvector& v1, const dvector& v2)
 {
-	vector<double> v(v1);
+	dvector v(v1);
 	return (v += v2);
 }
 
-vector<double>& operator-=(vector<double>& v1, const vector<double>& v2)
+dvector& operator-=(dvector& v1, const dvector& v2)
 {
 	if (v1.size() != v2.size()) {
 		throw;
@@ -339,13 +339,13 @@ vector<double>& operator-=(vector<double>& v1, const vector<double>& v2)
 	return v1;
 }
 
-vector<double> operator-(const vector<double>& v1, const vector<double>& v2)
+dvector operator-(const dvector& v1, const dvector& v2)
 {
-	vector<double> v(v1);
+	dvector v(v1);
 	return (v -= v2);
 }
 
-vector<double>& operator+=(vector<double>& v1, const double s)
+dvector& operator+=(dvector& v1, const double s)
 {
 	unsigned int n = v1.size();
 	for (unsigned int i=0; i<n; i++) {
@@ -354,13 +354,13 @@ vector<double>& operator+=(vector<double>& v1, const double s)
 	return v1;
 }
 
-vector<double> operator+(const vector<double>& v1, const double s)
+dvector operator+(const dvector& v1, const double s)
 {
-	vector<double> v(v1);
+	dvector v(v1);
 	return (v += s);
 }
 
-vector<double>& operator-=(vector<double>& v1, const double s)
+dvector& operator-=(dvector& v1, const double s)
 {
 	unsigned int n = v1.size();
 	for (unsigned int i=0; i<n; i++) {
@@ -369,9 +369,9 @@ vector<double>& operator-=(vector<double>& v1, const double s)
 	return v1;
 }
 
-vector<double> operator-(const vector<double>& v1, const double s)
+dvector operator-(const dvector& v1, const double s)
 {
-	vector<double> v(v1);
+	dvector v(v1);
 	return (v -= s);
 }
 

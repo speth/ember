@@ -3,8 +3,6 @@
 #include "mathUtils.h"
 #include "readConfig.h"
 
-using std::vector;
-
 class oneDimGrid
 {
 public:

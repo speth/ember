@@ -1,4 +1,4 @@
-#include "strainedFlameSys.h"
+#include "flameSys.h"
 #include "libconfig.h++"
 #include "boost/filesystem.hpp"
 #include "debugUtils.h"

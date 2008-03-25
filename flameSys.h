@@ -9,11 +9,11 @@
 using Cantera::Array2D;
 using std::string;
 
-class strainedFlameSys : public sdDAE 
+class flameSys : public sdDAE 
 {
 public:
-	strainedFlameSys(void);
-	~strainedFlameSys(void);
+	flameSys(void);
+	~flameSys(void);
 	
 	// the functions for solving the ODE
 	int f(realtype t, sdVector& y, sdVector& ydot, sdVector& res);
@@ -69,7 +69,7 @@ public:
 	void updateThermoProperties(void);
 	void updateLeftBC(void);
 
-	void printForMatlab(ofstream& file, vector<double>& v, int index, char* name);
+	void printForMatlab(ofstream& file, dvector& v, int index, char* name);
 	void writeStateMatFile(void);
 	void writeErrorFile(void);
 
@@ -79,15 +79,15 @@ public:
 	int nSpec; // Number of chemical species
 
 	// State variables:
-	vector<double> rhov; // mass flux normal to flame per unit area (rho*v) 
-	vector<double> U; // normalized tangential velocity (u/u_inf)
-	vector<double> T; // temperature
+	dvector rhov; // mass flux normal to flame per unit area (rho*v) 
+	dvector U; // normalized tangential velocity (u/u_inf)
+	dvector T; // temperature
 	Array2D Y; // species mass fractions, Y(k,j)
 	
 	// Time derivatives of state variables:
-	vector<double> drhovdt;
-	vector<double> dUdt;
-	vector<double> dTdt;
+	dvector drhovdt;
+	dvector dUdt;
+	dvector dTdt;
 	Array2D dYdt;
 
 	// Spatial derivatives of state variables:

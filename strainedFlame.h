@@ -1,7 +1,7 @@
 #pragma once
 #define _USE_MATH_DEFINES
 
-#include "strainedFlameSys.h"
+#include "flameSys.h"
 
 void strainedFlame(const std::string& inputFile);
 void chemistryTest(void);

@@ -1,5 +1,4 @@
 #include "chemistry.h"
-#include "mathUtils.h"
 #include "boost/filesystem.hpp"
 
 gasArray::gasArray()

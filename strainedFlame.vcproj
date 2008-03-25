@@ -200,6 +200,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\flameSolver.h"
+				>
+			</File>
+			<File
+				RelativePath=".\flameSys.h"
+				>
+			</File>
+			<File
 				RelativePath=".\grid.h"
 				>
 			</File>
@@ -217,10 +225,6 @@
 			</File>
 			<File
 				RelativePath=".\strainedFlame.h"
-				>
-			</File>
-			<File
-				RelativePath=".\strainedFlameSys.h"
 				>
 			</File>
 			<File
@@ -252,6 +256,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\flameSolver.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\flameSys.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\grid.cpp"
 				>
 			</File>
@@ -269,10 +281,6 @@
 			</File>
 			<File
 				RelativePath=".\strainedFlame.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\strainedFlameSys.cpp"
 				>
 			</File>
 			<File

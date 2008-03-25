@@ -1,17 +1,15 @@
-#include "strainedFlameSys.h"
-#include <iostream>
+#include "flameSys.h"
 #include <sstream>
 #include <vector>
 #include <cmath>
 #include "debugUtils.h"
 #include "mathUtils.h"
-#include "grid.h"
 #include "matlabFile.h"
 #include "boost/filesystem.hpp"
 
 using namespace mathUtils;
 
-int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
+int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 {
 	tNow = t;
 	unrollY(y);
@@ -243,7 +241,7 @@ int strainedFlameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	return 0;
 }
 
-int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot, 
+int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot, 
 										  sdVector& res, realtype c_j)
 {
 	inJacobianUpdate = true;
@@ -381,7 +379,7 @@ int strainedFlameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydo
  	return 0;
 }
 
-int strainedFlameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, 
+int flameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, 
 										  sdVector& resIn, sdVector& rhs, 
 										  sdVector& outVec, realtype c_j, realtype delta)
 {
@@ -399,7 +397,7 @@ int strainedFlameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& y
 	return 0;
 }
 
-void strainedFlameSys::setup(void)
+void flameSys::setup(void)
 {
 	int nPointsOld = T.size();
 
@@ -476,7 +474,7 @@ void strainedFlameSys::setup(void)
 	resTempJac = new sdVector(N);
 }
 
-void strainedFlameSys::copyOptions(void)
+void flameSys::copyOptions(void)
 {
 	strainRateInitial = options.strainRateInitial;
 	strainRateFinal = options.strainRateFinal;
@@ -514,7 +512,7 @@ void strainedFlameSys::copyOptions(void)
 	grid.kSpecies = options.kSpecies;
 }
 
-void strainedFlameSys::generateInitialProfiles(void)
+void flameSys::generateInitialProfiles(void)
 {
 	grid.x.resize(nPoints);
 	int jm = (grid.ju+grid.jb)/2; // midpoint of the profiles.
@@ -639,7 +637,7 @@ void strainedFlameSys::generateInitialProfiles(void)
 	grid.x -= grid.x[grid.jZero];
 }
 
-void strainedFlameSys::loadInitialProfiles(void)
+void flameSys::loadInitialProfiles(void)
 {
 	std::string inputFilename = options.inputDir + "/" + options.restartFile;
 	matlabFile infile(inputFilename);
@@ -679,7 +677,7 @@ void strainedFlameSys::loadInitialProfiles(void)
 
 }
 
-strainedFlameSys::strainedFlameSys(void) 
+flameSys::flameSys(void) 
 	: bandedJacobian(NULL)
 	, inJacobianUpdate(false)
 	, outputFileNumber(0)
@@ -691,7 +689,7 @@ strainedFlameSys::strainedFlameSys(void)
 {
 }
 
-strainedFlameSys::~strainedFlameSys(void)
+flameSys::~flameSys(void)
 {
 	delete bandedJacobian;
 	delete yTempJac;
@@ -699,7 +697,7 @@ strainedFlameSys::~strainedFlameSys(void)
 	delete resTempJac;
 }
 
-void strainedFlameSys::unrollYdot(const sdVector& yDot)
+void flameSys::unrollYdot(const sdVector& yDot)
 {
 	for (int j=0; j<nPoints; j++) {
 		drhovdt[j] = yDot(nVars*j);
@@ -711,7 +709,7 @@ void strainedFlameSys::unrollYdot(const sdVector& yDot)
 	}
 }
 
-void strainedFlameSys::rollYdot(sdVector& yDot)
+void flameSys::rollYdot(sdVector& yDot)
 {
 	for (int j=0; j<nPoints; j++) {
 		yDot(nVars*j) = drhovdt[j];
@@ -723,7 +721,7 @@ void strainedFlameSys::rollYdot(sdVector& yDot)
 	}
 }
 
-void strainedFlameSys::unrollY(const sdVector& y)
+void flameSys::unrollY(const sdVector& y)
 {
 	for (int j=0; j<nPoints; j++) {
 		rhov[j] = y(nVars*j);
@@ -751,7 +749,7 @@ void strainedFlameSys::unrollY(const sdVector& y)
 	}
 }
 
-void strainedFlameSys::rollY(sdVector& y)
+void flameSys::rollY(sdVector& y)
 {
 	for (int j=0; j<nPoints; j++) {
 		y(nVars*j) = rhov[j];
@@ -763,7 +761,7 @@ void strainedFlameSys::rollY(sdVector& y)
 	}
 }
 
-void strainedFlameSys::rollResiduals(sdVector& res)
+void flameSys::rollResiduals(sdVector& res)
 {
 	for (int j=0; j<nPoints; j++) {
 		res(nVars*j) = continuityRhov[j] + continuityStrain[j] + continuityUnst[j];
@@ -775,7 +773,7 @@ void strainedFlameSys::rollResiduals(sdVector& res)
 	}
 }
 
-void strainedFlameSys::rollVectorVector(const sdVector& y, vector<dvector>& v)
+void flameSys::rollVectorVector(const sdVector& y, vector<dvector>& v)
 {
 	v.resize(nVars);
 	for (int i=0; i<nVars; i++) {
@@ -786,7 +784,7 @@ void strainedFlameSys::rollVectorVector(const sdVector& y, vector<dvector>& v)
 	}
 }
 
-void strainedFlameSys::unrollVectorVector(const vector<dvector>& v)
+void flameSys::unrollVectorVector(const vector<dvector>& v)
 {
 	for (int j=0; j<nPoints; j++) {
 		rhov[j] = v[grid.kContinuity][j];
@@ -801,7 +799,7 @@ void strainedFlameSys::unrollVectorVector(const vector<dvector>& v)
 	}
 }
 
-void strainedFlameSys::unrollVectorVectorDot(const vector<dvector>& v)
+void flameSys::unrollVectorVectorDot(const vector<dvector>& v)
 {
 	for (int j=0; j<nPoints; j++) {
 		drhovdt[j] = v[grid.kContinuity][j];
@@ -816,7 +814,7 @@ void strainedFlameSys::unrollVectorVectorDot(const vector<dvector>& v)
 	}
 }
 
-void strainedFlameSys::updateTransportProperties(void)
+void flameSys::updateTransportProperties(void)
 {
 	gas.getViscosity(mu);
 	gas.getThermalConductivity(lambda);
@@ -824,7 +822,7 @@ void strainedFlameSys::updateTransportProperties(void)
 	gas.getThermalDiffusionCoefficients(Dkt);
 }
 
-void strainedFlameSys::updateThermoProperties(void)
+void flameSys::updateThermoProperties(void)
 {
 	gas.getDensity(rho);
 	gas.getSpecificHeatCapacity(cp);
@@ -833,8 +831,7 @@ void strainedFlameSys::updateThermoProperties(void)
 	gas.getMixtureMolecularWeight(Wmx);
 }
 
-
-void strainedFlameSys::printForMatlab(ofstream& file, dvector& v, int index, char* name)
+void flameSys::printForMatlab(ofstream& file, dvector& v, int index, char* name)
 {
 	file << name << "{" << index << "} = [";
 	for (unsigned int i=0; i<v.size()-1; i++)
@@ -844,7 +841,7 @@ void strainedFlameSys::printForMatlab(ofstream& file, dvector& v, int index, cha
 	file << v[v.size()-1] << "];" << endl;
 }
 
-void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::vector<bool>& algebraic)
+void flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::vector<bool>& algebraic)
 {
 	
 	sdBandMatrix ICmatrix(N,nVars+2,nVars+2,2*nVars+4);
@@ -976,7 +973,7 @@ void strainedFlameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot
 
 }
 
-void strainedFlameSys::writeStateMatFile(void)
+void flameSys::writeStateMatFile(void)
 {
 	// Determine the name of the output file (outXXXXXX.mat)
 	std::ostringstream fileName(ostringstream::out);
@@ -1014,7 +1011,7 @@ void strainedFlameSys::writeStateMatFile(void)
 
 }
 
-void strainedFlameSys::writeErrorFile(void)
+void flameSys::writeErrorFile(void)
 {
 	std::string fileName = "errorOutput.mat";
 	cout << "Writing error output file: " << fileName << endl;
@@ -1049,7 +1046,7 @@ void strainedFlameSys::writeErrorFile(void)
 	outFile.close();
 }
 
-double strainedFlameSys::strainRate(const double t)
+double flameSys::strainRate(const double t)
 {	
 	// Strain rate is at initial value until time strainRateT0,
 	// then increases linearly to the final value at time strainRateT0+strainRateDt
@@ -1058,14 +1055,14 @@ double strainedFlameSys::strainRate(const double t)
 		: strainRateInitial + (strainRateFinal-strainRateInitial)*(t-tStart)/strainRateDt;
 }
 
-double strainedFlameSys::dStrainRateDt(const double t)
+double flameSys::dStrainRateDt(const double t)
 {
 	return (t <= strainRateT0) ? 0
 		:  (t >= strainRateT0+strainRateDt) ? 0
 		: (strainRateFinal-strainRateInitial)/strainRateDt;
 }
 
-void strainedFlameSys::updateAlgebraicComponents(void)
+void flameSys::updateAlgebraicComponents(void)
 {
 	int jj = nPoints-1;
 	algebraic.resize(N);
@@ -1125,7 +1122,7 @@ void strainedFlameSys::updateAlgebraicComponents(void)
 
 }
 
-void strainedFlameSys::updateLeftBC(void)
+void flameSys::updateLeftBC(void)
 {
 	// Boundary condition for left edge of domain
 	if ( (grid.ju == 0 && grid.x[0] != 0) || (grid.jb == 0 && grid.fixedBurnedVal) ) {

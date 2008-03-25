@@ -9,23 +9,22 @@
 #include <cantera/Cantera.h>
 #include <cantera/kernel/Array.h>
 
-using std::vector;
-using std::valarray;
 using std::abs;
 using Cantera::Array2D;
 
-typedef vector<double> dvector;
+using std::vector;
+typedef std::vector<double> dvector;
 
 namespace mathUtils
 {
-	double max(const vector<double>& v);
-	double min(const vector<double>& v);
-	double range(const vector<double>& v);
+	double max(const dvector& v);
+	double min(const dvector& v);
+	double range(const dvector& v);
 
 	// Find the min/max of a subvector
-	double max(const vector<double>& v, int iStart, int iEnd);
-	double min(const vector<double>& v, int iStart, int iEnd);
-	double range(const vector<double>& v, int iStart, int iEnd);
+	double max(const dvector& v, int iStart, int iEnd);
+	double min(const dvector& v, int iStart, int iEnd);
+	double range(const dvector& v, int iStart, int iEnd);
 
 	// location of the minimum / maximum
 	int minloc(const dvector& v);
@@ -56,7 +55,7 @@ namespace mathUtils
 	
 };
 
-std::ostream& operator<<(std::ostream& os, vector<double>& v);
+std::ostream& operator<<(std::ostream& os, dvector& v);
 std::ostream& operator<<(std::ostream& os, vector<bool>& v);
 std::ostream& operator<<(std::ostream& os, vector<int>& v);
 

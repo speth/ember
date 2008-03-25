@@ -82,7 +82,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 	// *** Grid point insertion algorithm
 
 	int j = 0;
-	vector<double> dv(jj+1); // dv/dx
+	dvector dv(jj+1); // dv/dx
 
 	while (j < jj) {
 		updateValues();
@@ -92,7 +92,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 		// Consider tolerances for each variable v in the solution y
 		for (int k=0; k<nVars; k++) {
 
-			vector<double>& v = y[k];
+			dvector& v = y[k];
 			for (int i=1; i<jj; i++) {
 				dv[i] = cfp[i]*v[i+1] + cf[i]*v[i] + cfm[i]*v[i-1];
 			}
@@ -195,7 +195,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 		// Consider tolerances each variable v in the solution y
 		for (int k=0; k<nVars; k++) {
 
-			vector<double>& v = y[k];
+			dvector& v = y[k];
 			for (int i=1; i<jj; i++) {
 				dv[i] = cfp[i]*v[i+1] + cf[i]*v[i] + cfm[i]*v[i-1];
 			}
