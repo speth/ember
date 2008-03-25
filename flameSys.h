@@ -28,7 +28,7 @@ public:
 						    sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta);
 	
 	// Finds a consistent solution for the DAE to begin the integration
-	void getInitialCondition(double t, sdVector& y, sdVector& ydot, vector<bool>& algebraic);
+	int getInitialCondition(double t, sdVector& y, sdVector& ydot, vector<bool>& algebraic);
 
 	// Problem definition
 	std::string reactants;
@@ -79,7 +79,7 @@ public:
 	int nSpec; // Number of chemical species
 
 	// State variables:
-	dvector rhov; // mass flux normal to flame per unit area (rho*v) 
+	dvector V; // mass flux normal to flame per unit area (rho*v) 
 	dvector U; // normalized tangential velocity (u/u_inf)
 	dvector T; // temperature
 	Array2D Y; // species mass fractions, Y(k,j)
@@ -91,38 +91,41 @@ public:
 	Array2D dYdt;
 
 	// Spatial derivatives of state variables:
-	dvector dUdx;
-	dvector dTdx;
-	Array2D dYdx;
+	dvector dUdx; // upwinded
+	dvector dTdx; // upwinded
+	Array2D dYdx; // upwinded
+	dvector dTdxCen; // centered difference
 
 	// Auxillary variables:
-	dvector rrhov;
+	dvector rrhov; // mass flux [kg/m^2*s or kg/m*rad*s]
+	double rrhovC; // mass flux at centerline [kg/m^2 or kg/m*rad*s]
 	dvector rho; // density [kg/m^3]
 	dvector drhodt;
 	Array2D X; // species mole fractions, X(k,j)
 	Array2D dXdx;
-	dvector W; // species molecular weights
-	dvector Wmx; // mixture molecular weight
+	dvector W; // species molecular weights [kg/kmol]
+	dvector Wmx; // mixture molecular weight [kg/kmol]
 	dvector sumcpj; // for enthalpy flux term
 	
-	dvector mu; // viscosity
+	
+	dvector mu; // viscosity [Pa*s]
 
-	dvector lambda; // thermal conductivity
-	dvector cp; // specific heat capacity (average)
-	Array2D cpSpec; // species specific heat capacity
-	dvector qFourier; // heat flux
+	dvector lambda; // thermal conductivity [W/m*K]
+	dvector cp; // specific heat capacity (average) [J/kg*K]
+	Array2D cpSpec; // species specific heat capacity [J/mol*K]
+	dvector qFourier; // heat flux [W/m^2]
 
 	// Diffusion coefficients
-	Array2D Dkm; // mixture-averaged diffusion coefficients
-	Array2D Dkt; // thermal diffusion coefficients
+	Array2D rhoD; // density-weighted, mixture-averaged diffusion coefficients [kg/m*s]
+	Array2D Dkt; // thermal diffusion coefficients [m^2/s]
 
 	// Diffusion mass fluxes
 	Array2D jFick; // Normal diffusion (Fick's Law)
-	Array2D jSoret; // Soret Effect
+	Array2D jSoret; // Soret Effect diffusion
 	
-	Array2D wDot; // species net production rates
-	Array2D hk; // species enthalpies
-	dvector qDot; // heat release rate per unit volume
+	Array2D wDot; // species net production rates [kmol/m^3*s]
+	Array2D hk; // species enthalpies [J/kmol]
+	dvector qDot; // heat release rate per unit volume [W/m^3]
 
 	// the grid:
 	oneDimGrid grid;
@@ -159,14 +162,19 @@ private:
 	int jacBWdot; // Bandwidth of dF/dydot component of Jacobian
 	sdBandMatrix* bandedJacobian;
 	vector<long int> pMat;
-	bool inJacobianUpdate;
 	bool inGetIC;
 	sdVector* yTempJac;
 	sdVector* ydotTempJac;
 	sdVector* resTempJac;
 
+	double& jacA(const int j, const int k1, const int k2);
+	double& jacB(const int j, const int k1, const int k2);
+	double& jacC(const int j, const int k1, const int k2);
+
 	int outputFileNumber; // number of output files written
 
 	double strainRate(const double t);
 	double dStrainRateDt(const double t);
+
+	int kMomentum, 	kContinuity, kEnergy, kSpecies;
 };

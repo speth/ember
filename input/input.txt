@@ -76,7 +76,7 @@ times:
 	regridStepInterval = 30;
 	//outputStepInterval = 30;
 	outputTimeInterval = 1e-4;
-	tEnd = 0.05;
+	tEnd = 0.0025;
 	maxTimestep = 1e-3;
 };
 
@@ -95,5 +95,5 @@ debug:
 	regridding: false;
 	sundials: false;
 	jacobian: true;
-	calcIC: true;
+	calcIC: false;
 };

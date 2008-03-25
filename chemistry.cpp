@@ -164,6 +164,17 @@ void gasArray::getDiffusionCoefficients(Cantera::Array2D& Dkm)
 	}
 }
 
+void gasArray::getWeightedDiffusionCoefficients(Cantera::Array2D& rhoD)
+{
+	for (int j=0; j<nPoints; j++) {
+		m_transport[j]->getMixDiffCoeffs(&rhoD(0,j));
+		double rho = m_thermo[j]->density();
+		for (int k=0; k<nSpec; k++) {
+			rhoD(k,j) *= rho;
+		}
+	}
+}
+
 void gasArray::getThermalDiffusionCoefficients(Cantera::Array2D& Dkt)
 {
 	for (int j=0; j<nPoints; j++) {

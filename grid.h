@@ -54,7 +54,7 @@ public:
 	bool adapt(vector<dvector>& y, vector<dvector>& ydot);
 	bool regrid(vector<dvector>& y, vector<dvector>& ydot);
 	void updateValues(void);
-	void update_jZero(dvector& rhov);
+	void update_jZero(dvector& V);
 
 	void updateBoundaryIndices(void);
 

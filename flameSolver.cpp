@@ -121,7 +121,7 @@ void flameSolver::run(void)
 				// Adapt the grid if necessary
 
  				for (int j=0; j<theSys.nPoints; j++) {
-					theSys.grid.dampVal[j] = abs(theSys.mu[j]/theSys.rhov[j]);
+					theSys.grid.dampVal[j] = abs(theSys.mu[j]/theSys.V[j]);
 				}
 				vector<dvector> currentSolution, currentSolutionDot;
 

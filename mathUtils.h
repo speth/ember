@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <cmath>
-#include <valarray>
 #include <iostream>
 #include <string>
 

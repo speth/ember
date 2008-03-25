@@ -29,7 +29,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	gas.setStateMass(Y,T);
 	gas.getMoleFractions(X);
 
-	if (!inJacobianUpdate && !inGetIC) {
+	if (!inGetIC) {
 		updateTransportProperties();
 		transportUpdateCounter = 0;
 		forceTransportUpdate = false;
@@ -65,7 +65,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		sumcpj[j] = 0;
 		for (int k=0; k<nSpec; k++) {
 			jFick(k,j) = -W[k]*0.5
-				* (rho[j]*Dkm(k,j)/Wmx[j] + rho[j+1]*Dkm(k,j+1)/Wmx[j+1])
+				* (rhoD(k,j)/Wmx[j] + rhoD(k,j+1)/Wmx[j+1])
 				* (X(k,j+1)-X(k,j))/grid.hh[j];
 			jSoret(k,j) = 0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
 				* (T[j+1]-T[j])/grid.hh[j];
@@ -117,7 +117,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		momentumUnst[0] = rho[0]*dUdt[0];
 		momentumDiff[0] = (grid.alpha+1)*(mu[1]+mu[0])
 			/(grid.hh[0]*grid.hh[0])*(U[1]-U[0]);
-		momentumProd[0] = daDt*(rho[0]*U[0]-rhou)/a + (rho[0]*U[0]*U[0]-rhou)/a;
+		momentumProd[0] = daDt*(rho[0]*U[0]-rhou)/a + (rho[0]*U[0]*U[0]-rhou)*a;
 		momentumConv[0] = 0;
 
 		for (int k=0; k<nSpec; k++) {
@@ -131,7 +131,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		double centerVol = pow(grid.x[1],grid.alpha+1)/(grid.alpha+1);
 		double centerArea = pow(grid.x[1],grid.alpha+1);
 
-		energyUnst[0] = centerVol*rho[0]*dUdt[0];
+		energyUnst[0] = centerVol*rho[0]*dTdt[0];
 		energyDiff[0] = centerArea*qFourier[0]/cp[0];
 		energyProd[0] = centerVol*qDot[0]/cp[0];
 		energyConv[0] = -rrhov[0]*(Tleft-T[0]);
@@ -158,8 +158,9 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		//	dYdx(k,j) = (Y(k,j-1)*grid.cfm[j] + Y(k,j)*grid.cf[j] + Y(k,j+1)*grid.cfp[j]);
 		//}
 
+		dTdxCen[j] = T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j];
 		// Upwinded convective derivatives:
-		if (rhov[j] > 0) {
+		if (V[j] > 0) {
 			dUdx[j] = (U[j]-U[j-1])/grid.hh[j-1];
 			dTdx[j] = (T[j]-T[j-1])/grid.hh[j-1];
 			for (int k=0; k<nSpec; k++) {
@@ -174,15 +175,15 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		}
 
 		// Momentum Equation
-		momentumConv[j] = rhov[j]*dUdx[j];
+		momentumConv[j] = V[j]*dUdx[j];
 		momentumDiff[j] = -0.5*( grid.rphalf[j]*(mu[j]+mu[j+1])*(U[j+1]-U[j])/grid.hh[j] -
 			grid.rphalf[j-1]*(mu[j-1]+mu[j])*(U[j]-U[j-1])/grid.hh[j-1])/(grid.dlj[j]*grid.r[j]);
 		momentumProd[j] = daDt*(rho[j]*U[j]-rhou)/a + (rho[j]*U[j]*U[j]-rhou)*a;
 		momentumUnst[j] = rho[j]*dUdt[j];
 
 		// Energy Equation
-		energyConv[j] = rhov[j]*dTdx[j];
-		energyDiff[j] = sumcpj[j]*(T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j])/cp[j] +
+		energyConv[j] = V[j]*dTdx[j];
+		energyDiff[j] = sumcpj[j]*dTdxCen[j]/cp[j] +
 			(grid.rphalf[j]*qFourier[j] - grid.rphalf[j-1]*qFourier[j-1])/(grid.dlj[j]*cp[j]*grid.r[j]);
 		energyProd[j] = qDot[j]/cp[j];
 		energyUnst[j] = rho[j]*dTdt[j];
@@ -190,7 +191,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		// Species Equations
 		for (int k=0; k<nSpec; k++) {
 			speciesUnst(k,j) = rho[j]*dYdt(k,j);
-			speciesConv(k,j) = rhov[j]*dYdx(k,j);
+			speciesConv(k,j) = V[j]*dYdx(k,j);
 			speciesDiff(k,j) = (grid.rphalf[j]*(jFick(k,j)+jSoret(k,j))
 				- grid.rphalf[j-1]*(jFick(k,j-1)+jSoret(k,j-1)))/(grid.dlj[j]*grid.r[j]);
 			speciesProd(k,j) = -wDot(k,j)*W[k];
@@ -241,6 +242,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	return 0;
 }
 
+/*
 int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot, 
 										  sdVector& res, realtype c_j)
 {
@@ -378,6 +380,434 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 	inJacobianUpdate = false;
  	return 0;
 }
+*/
+
+
+int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot, 
+										  sdVector& res, realtype c_j)
+{
+	int j;
+	int jj = nPoints-1;
+	// The constant "10" here has been empirically determined
+	// to give the best performance for typical test cases.
+	double eps = sqrt(DBL_EPSILON)*10;
+
+	BandZero(bandedJacobian->forSundials());
+
+	//updateThermoProperties();
+	//updateTransportProperties();
+
+	double a = strainRate(t);
+	double daDt = dStrainRateDt(t);
+	
+	ofstream outFile;
+	if (debugParameters::debugJacobian) {
+		outFile.open("jOut.m");
+		outFile << "J = sparse( " << N << "," << N << ");" << endl;
+		outFile << "J2 = sparse( " << N << "," << N << ");" << endl;
+	}
+	
+	dvector TplusdT(nPoints), UplusdU(nPoints), VplusdV(nPoints);
+	
+	for (j=0; j<nPoints; j++) {
+		TplusdT[j] = T[j]*(1+eps);
+		UplusdU[j] = (abs(U[j]) > eps) ? U[j]*(1+eps) : eps;
+		VplusdV[j] = (abs(V[j]) > eps) ? V[j]*(1+eps) : eps;
+	}
+	
+	dvector dwhdT(nPoints,0);
+	Array2D dwdT(nSpec,nPoints);
+	Array2D wDot2(nSpec,nPoints);
+
+	gas.setStateMass(Y,TplusdT);
+	gas.getReactionRates(wDot2);
+
+	for (j=0; j<nPoints; j++) {
+		for (int k=0; k<nSpec; k++) {
+			dwdT(k,j) = (wDot2(k,j)-wDot(k,j))/(TplusdT[j]-T[j]);
+			dwhdT[j] += hk(k,j)*dwdT(k,j) + cpSpec(k,j)*wDot(k,j);
+		}
+	}
+
+	vector<Array2D> dwdY(nPoints, Array2D(nSpec,nSpec));
+	Array2D hdwdY(nSpec,nPoints,0);
+	Array2D YplusdY(nSpec,nPoints);
+	for (int k=0; k<nSpec; k++) {
+		YplusdY = Y;
+		for (j=0; j<nPoints; j++) {
+			YplusdY(k,j) = (abs(Y(k,j)) > eps) ? Y(k,j)*(1+eps) : eps;
+		}
+		gas.setStateMass(YplusdY,T);
+		gas.getReactionRates(wDot2);
+		for (j=0; j<nPoints; j++) {
+			for (int i=0; i<nSpec; i++) {
+				dwdY[j](i,k) = (wDot2(i,j)-wDot(i,j))/(YplusdY(k,j)-Y(k,j));
+				hdwdY(k,j) += hk(k,j)*dwdY[j](i,k);
+			}
+		}
+	}
+
+	// J = dF/dy + c_j*dF/dydot
+	j=0;
+	// Left Boundary values for U, T, Y
+	if (grid.leftBoundaryConfig == grid.lbFixedValNonCenter) {
+		// Fixed values for T, Y
+		jacB(j,kEnergy,kEnergy) = c_j;
+		
+		// Momentum equation is always zero gradient on the burned side
+		if (grid.unburnedLeft) {
+			jacB(j,kMomentum,kMomentum) = c_j;
+		} else {
+			jacB(j,kMomentum,kMomentum) = -1/grid.hh[0];
+			jacC(j,kMomentum,kMomentum) = 1/grid.hh[0];
+		}
+
+		for (int k=0; k<nSpec; k++) {
+			jacB(j,kSpecies+k,kSpecies+k) = c_j;
+		}
+
+	} else if (grid.leftBoundaryConfig == grid.lbZeroGradNonCenter) {
+		// Zero gradient condition for T, Y, U, not at centerline
+		jacB(j,kEnergy,kEnergy) = -1/grid.hh[0];
+		jacC(j,kEnergy,kEnergy) = 1/grid.hh[0];
+
+		jacB(j,kMomentum,kMomentum) = -1/grid.hh[0];
+		jacC(j,kMomentum,kMomentum) = 1/grid.hh[0];
+
+		for (int k=0; k<nSpec; k++) {
+			jacB(j,kSpecies+k,kSpecies+k) = -1/grid.hh[0];
+			jacC(j,kSpecies+k,kSpecies+k) = 1/grid.hh[0];
+		}
+
+	} else if (grid.leftBoundaryConfig == grid.lbZeroGradCenter) {
+		// Zero-gradient condition at domain centerline
+
+		// dEnergy/dT_j
+		jacB(j,kEnergy,kEnergy) = c_j*rho[j] - rho[j]*dTdt[j]/T[j] +
+			(grid.alpha+1)*(lambda[j+1]+lambda[j])/(grid.hh[j]*grid.hh[j]*cp[j]) +
+			dwhdT[j]/cp[j];
+		// dEnergy/dT_(j+1)
+		jacC(j,kEnergy,kEnergy) = - (grid.alpha+1)*(lambda[j+1]+lambda[j])/(grid.hh[j]*grid.hh[j]*cp[j]);
+
+		// dEnergy/dY
+		for (int k=0; k<nSpec; k++) {
+			jacB(j,kEnergy,kSpecies+k) = -rho[j]*Wmx[j]/W[k]*dTdt[j] +
+				hdwdY(k,j)/cp[j];
+		}
+
+		// dMomentum/dT
+		jacB(j,kMomentum,kEnergy) = -rho[j]/T[j] *
+			(dUdt[j] + U[j]*daDt/a + a*U[j]*U[j]);
+
+		// dMomentum/dY
+		for (int k=0; k<nSpec; k++) {
+			jacB(j,kMomentum,kSpecies+k) = -rho[j]*Wmx[j]/W[k] *
+				(dUdt[j] + U[j]*daDt/a + a*U[j]*U[j]);
+		}
+
+		// dMomentum/dU_j
+		jacB(j,kMomentum,kMomentum) = c_j*rho[j] + daDt/a*rho[j] + 2*rho[j]*U[j]*a 
+			+ (grid.alpha+1)*(mu[1]+mu[0])/(grid.hh[0]*grid.hh[0]);
+
+		// dMomentum/dU_(j+1)
+		jacC(j,kMomentum,kMomentum) = - (grid.alpha+1)*(mu[1]+mu[0])/(grid.hh[0]*grid.hh[0]);
+
+		for (int k=0; k<nSpec; k++) {
+			//dSpecies/dT
+			jacB(j,kSpecies+k,kEnergy) = - rho[j]/T[j]*dYdt(k,j)
+				- dwdT(k,j)*W[k];
+
+			//dSpecies/dY_j
+			for (int i=0; i<nSpec; i++) {
+				jacB(j,kSpecies+k,kSpecies+i) = -dwdY[j](k,i) - rho[j]*Wmx[j]/W[i]*dYdt(k,j);
+			}
+			jacB(j,kSpecies+k,kSpecies+k) += c_j*rho[j] +
+				(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))*Wmx[j]/Wmx[j+1]/(grid.hh[j]*grid.hh[j]);
+			jacC(j,kSpecies+k,kSpecies+k) = - (grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))*Wmx[j]/Wmx[j+1]/(grid.hh[j]*grid.hh[j]);
+		}
+
+	} else if (grid.leftBoundaryConfig == grid.lbControlVolume) {
+		double centerVol = pow(grid.x[1],grid.alpha+1)/(grid.alpha+1);
+		double centerArea = pow(grid.x[1],grid.alpha+1);
+
+		// dEnergy/dT_j
+		jacB(j,kEnergy,kEnergy) = c_j*centerVol*rho[j] - centerVol*rho[j]/T[j] + 
+			centerArea*(grid.alpha+1)*(lambda[j]+lambda[j+1])/(grid.hh[j]*cp[j]) +
+			centerVol*dwhdT[j]/cp[j] + rrhov[0];
+
+		// dEnergy/dT_(j+1)
+		jacC(j,kEnergy,kEnergy) = -centerArea*(grid.alpha+1)*(lambda[j]+lambda[j+1])/(grid.hh[j]*cp[j]);
+
+		// dEnergy/dY
+		for (int k=0; k<nSpec; k++) {
+			jacB(j,kEnergy,kSpecies+k) = hdwdY(k,j)/cp[j] - rho[j]*Wmx[j]/W[k]*dTdt[j];
+		}
+
+		// dMomentum/dT
+		jacB(j,kMomentum,kEnergy) = -rho[j]/T[j] *
+			(centerVol*dUdt[j] - U[j]*daDt/a + U[j]*U[j]*a);
+
+		// dMomentum/dY
+		for (int k=0; k<nSpec; k++) {
+			jacB(j,kMomentum,kSpecies+k) = -rho[j]*Wmx[j]/W[k] *
+				(centerVol*dUdt[j] - U[j]*daDt/a + U[j]*U[j]*a);
+		}
+
+		// dMomentum/dU_j
+		jacB(j,kMomentum,kMomentum) = centerVol*rho[j]*c_j
+			+ centerVol*rho[j]*daDt/a + centerVol*2*rho[j]*U[j]*a
+			+ centerArea*(grid.alpha+1)*(mu[j]+mu[j+1])/grid.hh[j] + rrhov[0];
+
+		// dMomentum/dU_j+1
+		jacC(j,kMomentum,kMomentum) = -centerArea*(grid.alpha+1)*(mu[j]+mu[j+1])/grid.hh[j];
+
+		for (int k=0; k<nSpec; k++) {
+			// dSpecies/dT
+			jacB(j,kSpecies+k,kEnergy) = -centerVol*dwdT(k,j)*W[k] -
+				centerVol*rho[j]/T[j]*dYdt(k,j);
+
+			// dSpecies/dY_j
+			for (int i=0; i<nSpec; i++) {
+				jacB(j,kSpecies+k,kSpecies+i) = -centerVol*dwdY[j](k,i)*W[k] - 
+					centerVol*rho[j]*Wmx[j]/W[i]*dYdt(k,j);
+			}
+			jacB(j,kSpecies+k,kSpecies+k) += centerVol*rho[j]*c_j
+				+ centerArea*(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))*Wmx[j]/Wmx[j+1]/grid.hh[j] + rrhovC;
+
+			// dSpecies/dY_(j+1)
+			jacC(j,kSpecies+k,kSpecies+k) = -centerArea*(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))*Wmx[j]/Wmx[j+1]/grid.hh[j];
+		}
+	}
+
+	// Intermediate points for U, T, Y
+	for (j=1; j<jj; j++) {
+
+		// Upwinded convective derivatives:
+		if (V[j] > 0) {
+			dUdx[j] = (U[j]-U[j-1])/grid.hh[j-1];
+			dTdx[j] = (T[j]-T[j-1])/grid.hh[j-1];
+			for (int k=0; k<nSpec; k++) {
+				dYdx(k,j) = (Y(k,j)-Y(k,j-1))/grid.hh[j-1];
+			}
+		} else {
+			dUdx[j] = (U[j+1]-U[j])/grid.hh[j];
+			dTdx[j] = (T[j+1]-T[j])/grid.hh[j];
+			for (int k=0; k<nSpec; k++) {
+				dYdx(k,j) = (Y(k,j+1)-Y(k,j))/grid.hh[j];
+			}
+		}
+		dTdxCen[j] = T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j];
+
+		
+		for (int k=0; k<nSpec; k++) {
+			// dSpecies/dY
+			for (int i=0; i<nSpec; i++) {
+				jacB(j,kSpecies+k,kSpecies+i) = -dwdY[j](k,i)*W[k] -
+					rho[j]*Wmx[j]/W[i]*dYdt(k,j);
+			}
+
+			// dSpecies/dT
+			jacB(j,kSpecies+k,kEnergy) = -dwdT(k,j)*W[k] - rho[j]/T[j]*dYdt(k,j);
+
+			// dSpecies/dV
+			jacB(j,kSpecies+k,kContinuity) = dYdx(k,j);
+
+			// dSpeciesk/dYk_j
+			jacB(j,kSpecies+k,kSpecies+k) += rho[j]*c_j  +
+				0.5*grid.rphalf[j]*(rhoD(k,j)+rhoD(k,j+1))/(grid.hh[j]*grid.dlj[j]*grid.r[j]) +
+				0.5*grid.rphalf[j-1]*(rhoD(k,j-1)+rhoD(k,j))/(grid.hh[j-1]*grid.dlj[j]*grid.r[j]);
+
+			// dSpeciesk/dYk_j-1
+			jacA(j,kSpecies+k,kSpecies+k) = -0.5*grid.rphalf[j-1]*(rhoD(k,j-1)+rhoD(k,j))/(grid.hh[j-1]*grid.dlj[j]*grid.r[j]);
+
+			// dSpeciesk/dYk_j+1
+			jacC(j,kSpecies+k,kSpecies+k) = -0.5*grid.rphalf[j]*(rhoD(k,j)+rhoD(k,j+1))/(grid.hh[j]*grid.dlj[j]*grid.r[j]);
+
+			if (V[j] > 0) {
+				jacB(j,kSpecies+k,kSpecies+k) += V[j]/grid.hh[j-1];
+				jacA(j,kSpecies+k,kSpecies+k) -= V[j]/grid.hh[j-1];
+			} else {
+				jacB(j,kSpecies+k,kSpecies+k) -= V[j]/grid.hh[j];
+				jacC(j,kSpecies+k,kSpecies+k) += V[j]/grid.hh[j];
+			}
+		}
+
+		// dEnergy/dY
+		for (int k=0; k<nSpec; k++) {
+			jacB(j,kEnergy,kSpecies+k) = hdwdY(k,j)/cp[j] - rho[j]*Wmx[j]/W[k]*dTdt[j];
+
+			// Enthalpy flux term
+			if (V[j] > 0) {
+				jacB(j,kEnergy,kSpecies+k) += dTdxCen[j]*(rhoD(k,j)/Wmx[j]+rhoD(k,j-1)/Wmx[j-1])/cp[j]/grid.hh[j-1];
+				jacA(j,kEnergy,kSpecies+k) -= dTdxCen[j]*(rhoD(k,j)/Wmx[j]+rhoD(k,j-1)/Wmx[j-1])/cp[j]/grid.hh[j-1];
+			} else {
+				jacB(j,kEnergy,kSpecies+k) -= dTdxCen[j]*(rhoD(k,j)/Wmx[j]+rhoD(k,j+1)/Wmx[j+1])/cp[j]/grid.hh[j];
+				jacC(j,kEnergy,kSpecies+k) += dTdxCen[j]*(rhoD(k,j)/Wmx[j]+rhoD(k,j+1)/Wmx[j+1])/cp[j]/grid.hh[j];
+			}
+		}
+
+		// dEnergy/dT_j
+		jacB(j,kEnergy,kEnergy) = rho[j]*c_j - rho[j]/T[j]*dTdt[j] + 
+			(0.5*grid.rphalf[j]*(lambda[j]+lambda[j+1])/grid.hh[j] +
+			0.5*grid.rphalf[j-1]*(lambda[j-1]+lambda[j])/grid.hh[j-1])/(grid.dlj[j]*cp[j]*grid.r[j]) +
+			dwhdT[j]/cp[j] + sumcpj[j]*grid.cf[j]/cp[j];
+
+		// dEnergy/dT_j-1
+		jacA(j,kEnergy,kEnergy) = -0.5*grid.rphalf[j-1]*(lambda[j-1]+lambda[j])/(grid.hh[j-1]*grid.dlj[j]*cp[j]*grid.r[j]) +
+			sumcpj[j]*grid.cfm[j]/cp[j];
+
+		// dEnergy/dT_j+1
+		jacC(j,kEnergy,kEnergy) = -0.5*grid.rphalf[j]*(lambda[j]+lambda[j+1])/(grid.hh[j]*grid.dlj[j]*cp[j]*grid.r[j]) +
+			sumcpj[j]*grid.cfp[j]/cp[j];
+
+		if (V[j] > 0) {
+			jacB(j,kEnergy,kEnergy) += V[j]/grid.hh[j-1];
+			jacA(j,kEnergy,kEnergy) -= V[j]/grid.hh[j-1];
+		} else {
+			jacB(j,kEnergy,kEnergy) -= V[j]/grid.hh[j];
+			jacC(j,kEnergy,kEnergy) += V[j]/grid.hh[j];
+		}
+		
+		// dEnergy/dV
+		jacB(j,kEnergy,kContinuity) = dTdx[j];
+
+		// dMomentum/dY
+		for (int k=0; k<nSpec; k++) {
+			jacB(j,kMomentum,kSpecies+k) = -rho[j]*Wmx[j]/W[k] *
+				(dUdt[j] + a*U[j]*U[j] + U[j]*daDt/a);
+		}
+
+		// dMomentum/dT
+		jacB(j,kMomentum,kEnergy) = -rho[j]/T[j] * 
+			(dUdt[j] + a*U[j]*U[j] + U[j]*daDt/a);
+
+		// dMomentum/dU_j
+		jacB(j,kMomentum,kMomentum) = rho[j]*c_j +
+			0.5*(grid.rphalf[j]*(mu[j]+mu[j+1])/grid.hh[j] +
+			grid.rphalf[j]*(mu[j-1]+mu[j])/grid.hh[j-1])/(grid.dlj[j]*grid.r[j]) +
+			2*a*U[j]*rho[j] + rho[j]*daDt/a;
+		
+		// dMomentum/dU_j-1
+		jacA(j,kMomentum,kMomentum) = -0.5*grid.rphalf[j]*(mu[j-1]+mu[j])/(grid.hh[j-1]*grid.dlj[j]*grid.r[j]);
+
+		// dMomentum/dU_j+1
+		jacC(j,kMomentum,kMomentum) = -0.5*grid.rphalf[j]*(mu[j]+mu[j+1])/(grid.hh[j]*grid.dlj[j]*grid.r[j]);
+
+		if (V[j] > 0) {
+			jacB(j,kMomentum,kMomentum) += V[j]/grid.hh[j-1];
+			jacA(j,kMomentum,kMomentum) -= V[j]/grid.hh[j-1];
+		} else {
+			jacB(j,kMomentum,kMomentum) -= V[j]/grid.hh[j];
+			jacC(j,kMomentum,kMomentum) += V[j]/grid.hh[j];
+		}
+
+		// dMomentum/dV
+		jacB(j,kMomentum,kContinuity) = dUdx[j];
+	}
+
+	j = jj;
+	// Right boundary values for T, Y
+	if (grid.unburnedLeft && !grid.fixedBurnedVal) {
+		// zero gradient condition
+		jacA(j,kEnergy,kEnergy) = -1/grid.hh[j-1];
+		jacB(j,kEnergy,kEnergy) = 1/grid.hh[j-1];
+		for (int k=0; k<nSpec; k++) {
+			jacA(j,kSpecies+k,kSpecies+k) = -1/grid.hh[j-1];
+			jacB(j,kSpecies+k,kSpecies+k) = 1/grid.hh[j-1];
+		}
+	} else {
+		// Fixed values
+		jacB(j,kEnergy,kEnergy) = c_j;
+		for (int k=0; k<nSpec; k++) {
+			jacB(j,kSpecies+k,kSpecies+k) = c_j;
+		}
+	}
+
+	// Right boundary values for U
+	if (grid.unburnedLeft) {
+		// zero gradient
+		jacA(j,kMomentum,kMomentum) = -1/grid.hh[j-1];
+		jacB(j,kMomentum,kMomentum) = 1/grid.hh[j-1];
+	} else {
+		// fixed value
+		jacB(j,kMomentum,kMomentum) = c_j;
+	}
+
+	// Continuity Equation
+	jacB(0,kContinuity,kContinuity) = c_j;
+	for (j=1; j<=jj; j++) {
+		for (int k=0; k<nSpec; k++) {
+			// dContinuity/dY
+			jacB(j,kContinuity,kSpecies+k) = -rho[j]*Wmx[j]/W[k]*(c_j + U[j]*a);
+		}
+
+		// dContinuity/dT
+		jacB(j,kContinuity,kEnergy) = -rho[j]/T[j]*(c_j + U[j]*a);
+
+		// dContinuity/dU
+		jacB(j,kContinuity,kMomentum) = rho[j]*a;
+
+		// dContinuity/dV
+		jacB(j,kContinuity,kContinuity) = grid.r[j]/grid.hh[j-1]/grid.rphalf[j-1];
+
+		// dContinuity/dV_(j-1)
+		jacA(j,kContinuity,kContinuity) = - grid.r[j]/grid.hh[j-1]/grid.rphalf[j-1];
+	}
+
+	if (debugParameters::debugJacobian) {
+
+		ofstream outFile;
+		outFile.open("jOut.m");
+		outFile << "J = sparse( " << N << "," << N << ");" << endl;
+		outFile << "J2 = sparse( " << N << "," << N << ");" << endl;
+
+		// J = dF/dy
+		// Banded, upper & lower bandwidths = nVars. 
+		int bw = 2*nVars+1;
+		for (int s=0; s<bw; s++)
+		{
+			// Fill in the corresponding Jacobian elements
+			int iStart = max(0,s-nVars);
+			int counter;
+			int col;
+
+			if (s >= nVars) {
+				counter = 0;
+				col = -bw;
+			} else {
+				counter = nVars - s;
+				col = 0;
+			}
+
+			for (int i=iStart; i<N; i++) {
+				if (counter++ % bw == 0) {
+					col += bw;
+				}
+				if (col+s>=N) {
+					continue;
+				}
+				if (debugParameters::debugJacobian && (*bandedJacobian)(i,s+col) > DBL_EPSILON) {
+					outFile << "J(" << i+1 << "," << s+col+1 << ") = " << (*bandedJacobian)(i,s+col) << ";" << endl;
+				}
+			}
+		}
+
+		outFile.close();
+	}
+
+	long int iError = BandGBTRF(bandedJacobian->forSundials(),&pMat[0]);
+
+	if (iError!=0) {
+		cout << "Error in LU factorization: i = " << iError << endl;
+		debugParameters::debugJacobian = true;
+		return 1;
+	} else {
+		debugParameters::debugJacobian = false;
+	}
+
+ 	return 0;
+}
+
 
 int flameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, 
 										  sdVector& resIn, sdVector& rhs, 
@@ -411,7 +841,7 @@ void flameSys::setup(void)
 	nVars = 3+nSpec;
 	N = nVars*nPoints;
 
-	rhov.resize(nPoints);
+	V.resize(nPoints);
 	U.resize(nPoints);
 	T.resize(nPoints);
 	Y.resize(nSpec,nPoints);
@@ -424,6 +854,7 @@ void flameSys::setup(void)
 	dUdx.resize(nPoints,0);
 	dTdx.resize(nPoints,0);
 	dYdx.resize(nSpec,nPoints,0);
+	dTdxCen.resize(nPoints,0);
 
 	energyUnst.resize(nPoints,0); energyDiff.resize(nPoints,0);
 	energyConv.resize(nPoints,0); energyProd.resize(nPoints,0);
@@ -448,7 +879,7 @@ void flameSys::setup(void)
 
 	X.resize(nSpec,nPoints);
 	dXdx.resize(nSpec,nPoints);
-	Dkm.resize(nSpec,nPoints);
+	rhoD.resize(nSpec,nPoints);
 	Dkt.resize(nSpec,nPoints);
 	sumcpj.resize(nPoints);
 	
@@ -510,6 +941,11 @@ void flameSys::copyOptions(void)
 	grid.kContinuity = options.kContinuity;
 	grid.kEnergy = options.kEnergy;
 	grid.kSpecies = options.kSpecies;
+
+	kMomentum = options.kMomentum;
+	kContinuity = options.kContinuity;
+	kEnergy = options.kEnergy;
+	kSpecies = options.kSpecies;
 }
 
 void flameSys::generateInitialProfiles(void)
@@ -604,7 +1040,7 @@ void flameSys::generateInitialProfiles(void)
 		mathUtils::smooth(T);
 	}
 
-	// Grid and initial profiles of T, U and rhov
+	// Grid and initial profiles of T, U and V
 	for (int i=0; i<nPoints; i++) {
 		gas[i].setState_TPY(T[i],gas.pressure,&Y(0,i));
 		rho[i] = gas[i].density();
@@ -620,20 +1056,20 @@ void flameSys::generateInitialProfiles(void)
 		jm = 0;
 	}
 
-	rhov[jm] = 0;
+	V[jm] = 0;
 	for (int j=jm+1; j<nPoints; j++) {
-		rhov[j] = rhov[j-1] - rho[j]*U[j]*strainRate(tStart)*(grid.x[j]-grid.x[j-1]);
+		V[j] = V[j-1] - rho[j]*U[j]*strainRate(tStart)*(grid.x[j]-grid.x[j-1]);
 	}
 
 	for (int j=jm-1; j>=0; j--) {
-		rhov[j] = rhov[j+1] + rho[j]*U[j]*strainRate(tStart)*(grid.x[j+1]-grid.x[j]);
+		V[j] = V[j+1] + rho[j]*U[j]*strainRate(tStart)*(grid.x[j+1]-grid.x[j]);
 	}
 
 	gas.setStateMass(Y,T);
 	gas.getMoleFractions(X);
 	gas.getMolecularWeights(W);
 	
-	grid.update_jZero(rhov);
+	grid.update_jZero(V);
 	grid.x -= grid.x[grid.jZero];
 }
 
@@ -647,7 +1083,7 @@ void flameSys::loadInitialProfiles(void)
 	setup();
 
 	U = infile.readVector("U");
-	rhov = infile.readVector("V");
+	V = infile.readVector("V");
 	T = infile.readVector("T");
 	Y = infile.readArray2D("Y");
 	tStart = infile.readScalar("t");
@@ -673,13 +1109,12 @@ void flameSys::loadInitialProfiles(void)
 	gas.getMolecularWeights(W);
 	rhou = gas.thermo(grid.ju).density();
 
-	grid.update_jZero(rhov);
+	grid.update_jZero(V);
 
 }
 
 flameSys::flameSys(void) 
 	: bandedJacobian(NULL)
-	, inJacobianUpdate(false)
 	, outputFileNumber(0)
 	, grid(options)
 	, inGetIC(false)
@@ -724,7 +1159,7 @@ void flameSys::rollYdot(sdVector& yDot)
 void flameSys::unrollY(const sdVector& y)
 {
 	for (int j=0; j<nPoints; j++) {
-		rhov[j] = y(nVars*j);
+		V[j] = y(nVars*j);
 		U[j] = y(nVars*j+1);
 		T[j] = y(nVars*j+2);
 		for (int k=0; k<nSpec; k++) {
@@ -734,25 +1169,25 @@ void flameSys::unrollY(const sdVector& y)
 
 	if (grid.alpha == 0) {
 		for (int j=0; j<nPoints; j++) {
-			rrhov[j] = rhov[j];
+			rrhov[j] = V[j];
 		} 
 	} else {
 		for (int j=0; j<nPoints; j++) {
-			rrhov[j] = grid.x[j]*rhov[j];
+			rrhov[j] = grid.x[j]*V[j];
 		}
 	}
 
 	// In the case where the centerline is part of the domain,
-	// rhov[0] actually stores rrhov[0] (since rhov = Inf there)
+	// V[0] actually stores rrhov[0] (since V = Inf there)
 	if (grid.x[0] == 0) {
-		rrhov[0] = rhov[0];
+		rrhov[0] = V[0];
 	}
 }
 
 void flameSys::rollY(sdVector& y)
 {
 	for (int j=0; j<nPoints; j++) {
-		y(nVars*j) = rhov[j];
+		y(nVars*j) = V[j];
 		y(nVars*j+1) = U[j];
 		y(nVars*j+2) = T[j];
 		for (int k=0; k<nSpec; k++) {
@@ -787,7 +1222,7 @@ void flameSys::rollVectorVector(const sdVector& y, vector<dvector>& v)
 void flameSys::unrollVectorVector(const vector<dvector>& v)
 {
 	for (int j=0; j<nPoints; j++) {
-		rhov[j] = v[grid.kContinuity][j];
+		V[j] = v[grid.kContinuity][j];
 		U[j] = v[grid.kMomentum][j];
 		T[j] = v[grid.kEnergy][j];
 	}
@@ -818,7 +1253,7 @@ void flameSys::updateTransportProperties(void)
 {
 	gas.getViscosity(mu);
 	gas.getThermalConductivity(lambda);
-	gas.getDiffusionCoefficients(Dkm);
+	gas.getWeightedDiffusionCoefficients(rhoD);
 	gas.getThermalDiffusionCoefficients(Dkt);
 }
 
@@ -841,7 +1276,7 @@ void flameSys::printForMatlab(ofstream& file, dvector& v, int index, char* name)
 	file << v[v.size()-1] << "];" << endl;
 }
 
-void flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::vector<bool>& algebraic)
+int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::vector<bool>& algebraic)
 {
 	
 	sdBandMatrix ICmatrix(N,nVars+2,nVars+2,2*nVars+4);
@@ -933,7 +1368,10 @@ void flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::v
 	long int iError = BandGBTRF(ICmatrix.forSundials(),&ICpermMat[0]);
 	if (iError!=0) {
 		cout << "iError = " << iError << endl;
-		throw;
+		debugParameters::debugCalcIC = true;
+		return 1;
+	} else {
+		debugParameters::debugCalcIC = false;
 	}
 
 	// Generate the RHS
@@ -970,7 +1408,7 @@ void flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::v
 	cout << "Residual norm after IC calculation: " << resnorm << endl;
 
 	inGetIC = false;
-
+	return 0;
 }
 
 void flameSys::writeStateMatFile(void)
@@ -995,7 +1433,7 @@ void flameSys::writeStateMatFile(void)
 	outFile.writeVector("x", grid.x);
 	outFile.writeVector("T", T);
 	outFile.writeVector("U", U);
-	outFile.writeVector("V", rhov);
+	outFile.writeVector("V", V);
 	outFile.writeArray2D("Y", Y);
 	outFile.writeVector("rho", rho);
 	outFile.writeVector("q",qDot);
@@ -1026,7 +1464,7 @@ void flameSys::writeErrorFile(void)
 	outFile.writeVector("x", grid.x);
 	outFile.writeVector("T", T);
 	outFile.writeVector("U", U);
-	outFile.writeVector("V", rhov);
+	outFile.writeVector("V", V);
 	outFile.writeArray2D("Y", Y);
 
 	outFile.writeVector("dUdt", dUdt);
@@ -1036,7 +1474,7 @@ void flameSys::writeErrorFile(void)
 	
 	outFile.writeVector("rho", rho);
 	outFile.writeVector("drhodt", drhodt);
-	outFile.writeArray2D("dkm",Dkm);
+	outFile.writeArray2D("rhoD",rhoD);
 	outFile.writeVector("lambda",lambda);
 	outFile.writeVector("cp",cp);
 	outFile.writeVector("mu",mu);
@@ -1134,4 +1572,19 @@ void flameSys::updateLeftBC(void)
 	} else {
 		grid.leftBoundaryConfig = grid.lbControlVolume;
 	}
+}
+
+double& flameSys::jacA(const int j, const int k1, const int k2)
+{
+	return (*bandedJacobian)(j*nVars+k1, (j-1)*nVars+k2);
+}
+
+double& flameSys::jacB(const int j, const int k1, const int k2)
+{
+	return (*bandedJacobian)(j*nVars+k1, j*nVars+k2);
+}
+
+double& flameSys::jacC(const int j, const int k1, const int k2)
+{
+	return (*bandedJacobian)(j*nVars+k1, (j+1)*nVars+k2);
 }

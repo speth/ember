@@ -482,7 +482,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 			x.push_back(x[jj] + (x[jj]-x[jj-1]));
 			for (int k=0; k<nVars; k++) {
 				if (k==kContinuity) {
-					// linear extrapolation for rhov
+					// linear extrapolation for V
 					y[k].push_back(y[k][jj] + (y[k][jj]-y[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
 					ydot[k].push_back(ydot[k][jj] + (ydot[k][jj]-ydot[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
 				} else {
@@ -544,9 +544,9 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 
 }
 
-void oneDimGrid::update_jZero(dvector& rhov)
+void oneDimGrid::update_jZero(dvector& V)
 {
-	jZero = mathUtils::minloc(mathUtils::abs(rhov));
+	jZero = mathUtils::minloc(mathUtils::abs(V));
 }
 
 void oneDimGrid::updateBoundaryIndices(void) {

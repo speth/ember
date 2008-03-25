@@ -52,6 +52,7 @@ public:
 	void getViscosity(dvector& mu);
 	void getThermalConductivity(dvector& lambda);
 	void getDiffusionCoefficients(Cantera::Array2D& Dkm);
+	void getWeightedDiffusionCoefficients(Cantera::Array2D& rhoD);
 	void getThermalDiffusionCoefficients(Cantera::Array2D& Dkt);
 	
 	void getSpecificHeatCapacity(dvector& cp);
