@@ -54,6 +54,10 @@ public:
 
 	int gridAlpha;
 	int kContinuity, kMomentum, kEnergy, kSpecies;
+
+	bool outputAuxiliaryVariables;
+	bool outputTimeDerivatives;
+	bool outputHeatReleaseRate;
 };
 
 

@@ -4,6 +4,7 @@
 #include "boost/filesystem.hpp"
 #include "sundialsUtils.h"
 #include "flameSolver.h"
+#include "libconfig.h++"
 //#include <omp.h>
 
 using namespace mathUtils;
@@ -36,7 +37,10 @@ int main(int argc, char** argv)
     }
 	catch (Cantera::CanteraError) {
 		Cantera::showErrors(cout);
-    }
+	} catch (libconfig::ParseException err) {
+		cout << "Error in config file \"" << inputFile << "\": ";
+		cout << err.getError() << " on line " << err.getLine() << endl;
+	}
     
 	return 0;
 }

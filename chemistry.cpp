@@ -43,7 +43,7 @@ void gasArray::resize(unsigned int n)
 			(**m_transport.rbegin()).m_thermo = *m_thermo.rbegin();
 		}
 
-	} else if (n < m_thermo.size()) {
+	} else if (2*n < m_thermo.size()) {
 		// remove elements from each of the arrays
 		vector<Cantera::GasKinetics*>::iterator iter;
 		for (iter=m_kinetics.begin()+n; iter!=m_kinetics.end(); iter++) {
@@ -96,8 +96,12 @@ void gasArray::initialize(void)
 
 void gasArray::setStateMass(Cantera::Array2D& Y, dvector& T)
 {
+	dvector Yj(nSpec);
 	for (int j=0; j<nPoints; j++) {
-		m_thermo[j]->setState_TPY(T[j], pressure, &Y(0,j));
+		for (int k=0; k<nSpec; k++) {
+			Yj[k] = max(Y(k,j),0.0);
+		}
+		m_thermo[j]->setState_TPY(T[j], pressure, &Yj[0]);
 	}
 }
 

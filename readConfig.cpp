@@ -81,6 +81,10 @@ void configOptions::readOptionsFile(const std::string& filename)
 	idaMomentumAbsTol = 1e-6;
 	idaEnergyAbsTol = 1e-6;
 	idaSpeciesAbsTol = 1e-10;
+
+	outputAuxiliaryVariables = false;
+	outputTimeDerivatives = false;
+	outputHeatReleaseRate = false;
 	
 	// Flags
 
@@ -146,6 +150,10 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("integrator.momentumAbsTol",idaMomentumAbsTol);
 	cfg.lookupValue("integrator.energyAbsTol",idaEnergyAbsTol);
 	cfg.lookupValue("integrator.speciesAbsTol",idaSpeciesAbsTol);
+
+	cfg.lookupValue("outputFiles.heatReleaseRate",outputHeatReleaseRate);
+	cfg.lookupValue("outputFiles.auxiliaryVariables",outputAuxiliaryVariables);
+	cfg.lookupValue("outputFiles.timeDerivatives",outputTimeDerivatives);
 
 	if (haveRestartFile) {
 		haveRestartFile = boost::filesystem::exists(inputDir + "/" + restartFile);

@@ -308,8 +308,6 @@ sundialsIDA::~sundialsIDA(void)
 
 void sundialsIDA::initialize(void)
 {
-	
-	
 	sundialsMem = IDACreate();
 	if (check_flag((void *)sundialsMem, "IDACreate", 0)) {
 		throw;

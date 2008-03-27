@@ -1,7 +1,7 @@
 paths:
 {
 	inputDir = "input";
-	outputDir = "output4";
+	outputDir = "output10";
 };
 
 general:
@@ -28,8 +28,8 @@ grid:
 	
 	adaptation:
 	{
-		vtol = 0.3;
-		dvtol = 0.3;
+		vtol = 0.1;
+		dvtol = 0.25;
 		//vtol = 0.025;
 		//dvtol = 0.1;
 		rmTol = 0.7;
@@ -37,7 +37,7 @@ grid:
 		gridMin = 1.0e-5;
 		gridMax = 0.02;
 		uniformityTol = 3;
-		absvtol = 1e-9;
+		absvtol = 1e-8;
 	};
 
 	regridding:
@@ -51,11 +51,11 @@ grid:
 InitialCondition:
 {
 	// Read Initial profile from a file.
-	//file = "restart.mat";
+	file = "restart80a.mat";
 	
 	// These properties will override parameters read from the file
 	Tu = 300;
-	reactants = "O2:1.0, N2:3.76, H2:0.6, CO:0.4";
+	reactants = "O2:1.0, N2:3.76, H2:0.4, CO:0.6";
 	
 	diluent = "AR:1.0"; // not used if there is a restart file
 
@@ -64,20 +64,20 @@ InitialCondition:
 
 StrainParameters:
 {
-	initial = 200;
-	final = 200;
-	start = 0;
-	dt = 0.1;
+	initial = 80;
+	final = 160;
+	start = 0.25;
+	dt = 0.020;
 };
 
 times:
 {
 	//regridTimeInterval = 5e-3;
 	regridStepInterval = 30;
-	//outputStepInterval = 30;
-	outputTimeInterval = 1e-4;
-	tEnd = 0.0025;
-	maxTimestep = 1e-3;
+	outputStepInterval = 200;
+	outputTimeInterval = 2e-4;
+	tEnd = 0.35;
+	maxTimestep = 2e-4;
 };
 
 integrator:
@@ -94,6 +94,13 @@ debug:
 	adaptation: false;
 	regridding: false;
 	sundials: false;
-	jacobian: true;
+	jacobian: false;
 	calcIC: false;
+};
+
+outputFiles:
+{
+	heatReleaseRate: true;
+	auxiliaryVariables: false;
+	timeDerivatives: false;
 };

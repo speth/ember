@@ -162,7 +162,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 		}
 		
 		// Enforce minimum grid size
-		if (hh[j] < 2*gridMin) {
+		if (insert && hh[j] < 2*gridMin) {
 			insert = false;
 			if (debugParameters::debugAdapt) {
 				cout << "Adapt: grid point addition cancelled by minimum grid size j = " << j;

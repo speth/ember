@@ -70,8 +70,7 @@ public:
 	void updateLeftBC(void);
 
 	void printForMatlab(ofstream& file, dvector& v, int index, char* name);
-	void writeStateMatFile(void);
-	void writeErrorFile(void);
+	void writeStateMatFile(const std::string fileName="", bool errorFile=false);
 
 	// these should be read-only:
 	int N; // total problem size;
@@ -79,9 +78,9 @@ public:
 	int nSpec; // Number of chemical species
 
 	// State variables:
-	dvector V; // mass flux normal to flame per unit area (rho*v) 
-	dvector U; // normalized tangential velocity (u/u_inf)
-	dvector T; // temperature
+	dvector V; // mass flux normal to flame per unit area (rho*v) [kg/m^2*s]
+	dvector U; // normalized tangential velocity (u/u_inf) [non-dim]
+	dvector T; // temperature [K]
 	Array2D Y; // species mass fractions, Y(k,j)
 	
 	// Time derivatives of state variables:
@@ -97,15 +96,15 @@ public:
 	dvector dTdxCen; // centered difference
 
 	// Auxillary variables:
-	dvector rrhov; // mass flux [kg/m^2*s or kg/m*rad*s]
-	double rrhovC; // mass flux at centerline [kg/m^2 or kg/m*rad*s]
+	dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
+	double rVcenter; // mass flux at centerline [kg/m^2 or kg/m*rad*s]
 	dvector rho; // density [kg/m^3]
 	dvector drhodt;
 	Array2D X; // species mole fractions, X(k,j)
 	Array2D dXdx;
 	dvector W; // species molecular weights [kg/kmol]
 	dvector Wmx; // mixture molecular weight [kg/kmol]
-	dvector sumcpj; // for enthalpy flux term
+	dvector sumcpj; // for enthalpy flux term [W/m^2*K]
 	
 	
 	dvector mu; // viscosity [Pa*s]
@@ -116,12 +115,12 @@ public:
 	dvector qFourier; // heat flux [W/m^2]
 
 	// Diffusion coefficients
-	Array2D rhoD; // density-weighted, mixture-averaged diffusion coefficients [kg/m*s]
+	Array2D rhoD; // density-weighted, mixture-averaged diffusion coefficients [kg/m*s] (= rho*Dkm)
 	Array2D Dkt; // thermal diffusion coefficients [m^2/s]
 
 	// Diffusion mass fluxes
-	Array2D jFick; // Normal diffusion (Fick's Law)
-	Array2D jSoret; // Soret Effect diffusion
+	Array2D jFick; // Normal diffusion (Fick's Law) [kg/m^2*s]
+	Array2D jSoret; // Soret Effect diffusion [kg/m^2*s]
 	
 	Array2D wDot; // species net production rates [kmol/m^3*s]
 	Array2D hk; // species enthalpies [J/kmol]
@@ -130,18 +129,19 @@ public:
 	// the grid:
 	oneDimGrid grid;
 
-	// Strain rate parameters
-	double strainRateInitial, strainRateFinal;
-	double strainRateDt;
-	double strainRateT0;
-	double rStag; // nominal stagnation point radius
+	// Strain rate parameters:
+	// The strain rate is constant at a=strainRateInitial until 
+	// t=strainRateT0, after which it increases linearly to a=strainRateFinal 
+	// at t=strainRateT0+strainRateDt, after which it remains constant.
+	double strainRateInitial, strainRateFinal; // [1/s]
+	double strainRateDt; // [s]
+	double strainRateT0; // [s]
+
+	double rStag; // nominal stagnation point radius [m]
 
 	 // Algebraic components of state, for IC calculation
 	vector<bool> algebraic;
 	void updateAlgebraicComponents(void);
-
-	bool forceTransportUpdate;
-	int transportUpdateCounter;
 
 	// Cantera data
 	gasArray gas;
@@ -174,7 +174,7 @@ private:
 	int outputFileNumber; // number of output files written
 
 	double strainRate(const double t);
-	double dStrainRateDt(const double t);
+	double dStrainRatedt(const double t);
 
 	int kMomentum, 	kContinuity, kEnergy, kSpecies;
 };

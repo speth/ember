@@ -67,10 +67,18 @@ void flameSolver::run(void)
 		theSys.updateLeftBC();
 		theSys.updateAlgebraicComponents();
 		theSolver.t0 = t;
-		theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, theSys.algebraic);
+		int ICflag = -1;
+		int ICcount = 0;
+		while (ICflag!=0 && ICcount < 10) {
+			ICcount++;
+			ICflag = theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, theSys.algebraic);
+		}
 
 		theSolver.setDAE(&theSys);
 		theSolver.calcIC = false;
+		//for (unsigned int i=0; i<theSys.algebraic.size(); i++) {
+		//	theSolver.componentId(i) = (theSys.algebraic[i]) ? 0 : 1;
+		//}
 
 		theSolver.initialize();
 		theSolver.setMaxStepSize(options.maxTimestep);
@@ -86,7 +94,7 @@ void flameSolver::run(void)
 			try {
 				flag = theSolver.integrateOneStep();
 			} catch (Cantera::CanteraError) {
-				theSys.writeErrorFile();
+				theSys.writeStateMatFile("errorOutput",true);
 				throw;
 			}
 
@@ -99,8 +107,7 @@ void flameSolver::run(void)
 				cout << "t = " << t << "  (dt = " << dt << ")" << endl;
 			} else {
 				cout << "IDA Solver failed at time t = " << t << "  (dt = " << dt << ")" << endl;
-				cout << "Writing errorOutput.mat." << endl;
-				theSys.writeErrorFile();
+				theSys.writeStateMatFile("errorOutput",true);
 				integratorTimestep = 0;
 				break;
 			}
@@ -125,6 +132,13 @@ void flameSolver::run(void)
 				}
 				vector<dvector> currentSolution, currentSolutionDot;
 
+				//for (int j=0; j<theSys.nPoints; j++) {
+				//	for (int k=0; k<theSys.nSpec; k++) {
+				//		theSys.Y(k,j) = std::max(theSys.Y(k,j),0.0);
+				//	}
+				//	theSys.gas.setStateMass(theSys.Y,theSys.T);
+				//	theSys.gas.getMassFractions(theSys.Y);
+				//}
 				theSys.rollVectorVector(theSolver.y, currentSolution);
 				theSys.rollVectorVector(theSolver.ydot, currentSolutionDot);
 
@@ -133,10 +147,15 @@ void flameSolver::run(void)
 
 				if (adaptFlag || regridFlag) {
 					theSys.nPoints = theSys.grid.jj+1;
+					cout << "Grid size: " << theSys.nPoints << " points." << endl;
 					theSys.setup();
 
 					theSys.unrollVectorVector(currentSolution);
 					theSys.unrollVectorVectorDot(currentSolutionDot);
+
+					// This corrects the drift of the total mass fractions
+					theSys.gas.setStateMass(theSys.Y,theSys.T);
+					theSys.gas.getMassFractions(theSys.Y);
 
 					break; // exit the inner loop and reinitialize the solver for the new problem size
 				}
@@ -149,6 +168,7 @@ void flameSolver::run(void)
 	}
 
 	t2 = clock();
+	theSys.writeStateMatFile();
 	cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
 
 }
