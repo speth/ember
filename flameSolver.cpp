@@ -10,7 +10,6 @@ void flameSolver::run(void)
 	clock_t t1, t2;
 	t1 = clock();
 
-    flameSys theSys;
 	theSys.options = options;
 
 	theSys.copyOptions();
@@ -25,12 +24,14 @@ void flameSolver::run(void)
 	} else {
 		theSys.generateInitialProfiles();
 	}
-	
+
 	double integratorTimestep = 0;
 	int nRegrid = 0;
 	int nOutput = 0;
+	int nProfile = 0;
 	double tOutput = theSys.tStart;
 	double tRegrid = theSys.tStart;
+	double tProfile = theSys.tStart;
 	double t = theSys.tStart;
 	double dt;
 
@@ -104,6 +105,7 @@ void flameSolver::run(void)
 			if (flag == CV_SUCCESS) {
 				nOutput++;
 				nRegrid++;
+				nProfile++;
 				cout << "t = " << t << "  (dt = " << dt << ")" << endl;
 			} else {
 				cout << "IDA Solver failed at time t = " << t << "  (dt = " << dt << ")" << endl;
@@ -113,18 +115,39 @@ void flameSolver::run(void)
 			}
 
 			if (t > tOutput || nOutput >= options.outputStepInterval) {
-				theSys.writeStateMatFile();
-				while (t > tOutput) {
-					tOutput += options.outputTimeInterval;
-				}
+				// Save the time-series data
+				timeVector.push_back(t);
+				timestepVector.push_back(dt);
+				heatReleaseRate.push_back(theSys.getHeatReleaseRate());
+				consumptionSpeed.push_back(theSys.getConsumptionSpeed());
+				flamePosition.push_back(theSys.getFlamePosition());
+
+				tOutput = t + options.outputTimeInterval;
 				nOutput = 0;
 			}
 
+
+			if (t > tProfile || nProfile >= options.profileStepInterval) {
+				theSys.writeStateMatFile();
+
+				tProfile = t + options.profileTimeInterval;
+				nProfile = 0;
+			}
+
 			if (t > tRegrid || nRegrid >= options.regridStepInterval) {
-				while (t > tRegrid) {
-					tRegrid += options.regridTimeInterval;
-				}
+				tRegrid = t + options.regridTimeInterval;
 				nRegrid = 0;
+
+				// Periodic check for terminating the integration
+				// (based on steady heat release rate, etc.)
+				if (checkTerminationCondition()) {
+					theSolver.printStats();
+					t2 = clock();
+					theSys.writeStateMatFile();
+					cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
+					return;
+				}
+
 				// Adapt the grid if necessary
 
  				for (int j=0; j<theSys.nPoints; j++) {
@@ -170,5 +193,65 @@ void flameSolver::run(void)
 	t2 = clock();
 	theSys.writeStateMatFile();
 	cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
+}
 
+void flameSolver::calculateReactantMixture(void)
+{
+	Cantera::IdealGasMix fuel(options.gasMechanismFile,options.gasPhaseID);
+	Cantera::IdealGasMix oxidizer(options.gasMechanismFile,options.gasPhaseID);
+
+	fuel.setState_TPX(options.Tu, options.pressure, options.fuel);
+	oxidizer.setState_TPX(options.Tu, options.pressure, options.oxidizer);
+
+	double Cf(0), Hf(0), Of(0); // moles of C/H/O in fuel
+	double Co(0), Ho(0), Oo(0); // moles of C/H/O in oxidizer
+
+	int nSpec = fuel.nSpecies();
+	int mC = fuel.elementIndex("C");
+	int mO = fuel.elementIndex("O");
+	int mH = fuel.elementIndex("H");
+
+	dvector Xf(nSpec), Xo(nSpec), Xr(nSpec);
+	fuel.getMoleFractions(&Xf[0]);
+	oxidizer.getMoleFractions(&Xo[0]);
+	dvector a(fuel.nElements());
+	for (int k=0; k<nSpec; k++) {
+		fuel.getAtoms(k,&a[0]);
+		Cf += a[mC]*Xf[k];
+		Co += a[mC]*Xo[k];
+		Hf += a[mH]*Xf[k];
+		Ho += a[mH]*Xo[k];
+		Of += a[mO]*Xf[k];
+		Oo += a[mO]*Xo[k];
+	}
+	double stoichAirFuelRatio = -(Of-2*Cf-Hf)/(Oo-2*Co-Ho);
+	options.reactants = Xf*options.equivalenceRatio + stoichAirFuelRatio*Xo;
+	options.reactants /= mathUtils::sum(options.reactants);
+}
+
+bool flameSolver::checkTerminationCondition(void)
+{
+	if (options.terminateForSteadyQdot) {
+		int j1 = mathUtils::findLast(timeVector < (theSys.tNow - options.terminationPeriod));
+		if (j1 == -1)
+		{
+			cout << "Continuing integration: t < terminationPeriod" << endl;
+			return false;
+		}
+		int j2 = timeVector.size()-1;
+		double qMean = mathUtils::sum(heatReleaseRate,j1,j2)/(j2-j1);
+		double hrrError = 0;
+		for (int j=j1; j<=j2; j++) {
+			hrrError += abs(heatReleaseRate[j]-qMean);
+		}
+		hrrError /= (j2-j1);
+		if (hrrError/qMean < options.terminationTolerance) {
+			cout << "Terminating integration: Heat release rate deviation = " << hrrError/qMean*100 << "%" << endl;
+			return true;
+		} else {
+			cout << "Continuing integration: Heat release rate deviation = " << hrrError/qMean*100 << "%" << endl;
+		}
+
+	}
+	return false;
 }

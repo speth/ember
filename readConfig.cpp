@@ -1,3 +1,4 @@
+#include "readConfig.h"
 #include "flameSys.h"
 #include "libconfig.h++"
 #include "boost/filesystem.hpp"
@@ -29,8 +30,9 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	// Initial Conditions
 	restartFile = "";
-	reactants = "O2:1.0, N2:3.76, CH4:0.5";
-	diluent = "Ar:1.0";
+	useRelativeRestartPath = true;
+	fuel = "CH4:1.0";
+	oxidizer = "O2:1.0, N2:3.76";
 	Tu = 300;
 	Tb = 2000;
 	pressure = Cantera::OneAtm;
@@ -68,13 +70,16 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	// Times
 	tStart = 0;
-	tEnd = 0.05;
+	tEnd = 1000;
 	maxTimestep = 10000;
 
-	regridTimeInterval = 100;
-	outputTimeInterval = 100;
-	regridStepInterval = 10000000;
-	outputStepInterval = 10000000;
+	regridTimeInterval = 123456789; // bogus value for later check;
+	profileTimeInterval = 123456789;
+	outputTimeInterval = 1e-5;
+	regridStepInterval = 123456789;
+	profileStepInterval = 123456789;
+	outputStepInterval = 1;
+	
 
 	idaRelTol = 1e-5;
 	idaContinuityAbsTol = 1e-6;
@@ -85,6 +90,9 @@ void configOptions::readOptionsFile(const std::string& filename)
 	outputAuxiliaryVariables = false;
 	outputTimeDerivatives = false;
 	outputHeatReleaseRate = false;
+	outputFileNumber = 0;
+
+	terminateForSteadyQdot = false;
 	
 	// Flags
 
@@ -102,8 +110,9 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	haveRestartFile = cfg.lookupValue("InitialCondition.file",restartFile);
 	overrideTu = cfg.lookupValue("InitialCondition.Tu",Tu);
-	overrideReactants = cfg.lookupValue("InitialCondition.reactants",reactants);
-	cfg.lookupValue("InitialCondition.diluent",diluent);
+	overrideReactants = cfg.lookupValue("InitialCondition.fuel",fuel);
+	cfg.lookupValue("InitialCondition.oxidizer",oxidizer);
+	cfg.lookupValue("InitialCondition.equivalenceRatio",equivalenceRatio);
 	cfg.lookupValue("InitialCondition.pressure",pressure);
 
 	cfg.lookupValue("StrainParameters.initial",strainRateInitial);
@@ -125,7 +134,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("grid.regridding.addPointCount",addPointCount);
 
 	cfg.lookupValue("times.tStart",tStart);
-	cfg.lookupValue("times.tEnd",tEnd);
+	cfg.lookupValue("terminationCondition.tEnd",tEnd);
 
 	cfg.lookupValue("general.fixedBurnedVal",fixedBurnedVal);
 	cfg.lookupValue("general.fixedLeftLocation",fixedLeftLoc);
@@ -137,6 +146,8 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("times.regridStepInterval",regridStepInterval);
 	cfg.lookupValue("times.outputTimeInterval",outputTimeInterval);
 	cfg.lookupValue("times.outputStepInterval",outputStepInterval);
+	cfg.lookupValue("times.profileTimeInterval",profileTimeInterval);
+	cfg.lookupValue("times.profileStepInterval",profileStepInterval);
 	cfg.lookupValue("times.maxTimestep",maxTimestep);
 
 	cfg.lookupValue("debug.adaptation",debugParameters::debugAdapt);
@@ -154,6 +165,22 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("outputFiles.heatReleaseRate",outputHeatReleaseRate);
 	cfg.lookupValue("outputFiles.auxiliaryVariables",outputAuxiliaryVariables);
 	cfg.lookupValue("outputFiles.timeDerivatives",outputTimeDerivatives);
+	fileNumberOverride = cfg.lookupValue("outputFiles.firstFileNumber",outputFileNumber);
+
+	cfg.lookupValue("terminationCondition.tolerance",terminationTolerance);
+	cfg.lookupValue("terminationCondition.time",terminationPeriod);
+
+	std::string terminationMeasurement;
+	cfg.lookupValue("terminationCondition.measurement",terminationMeasurement);
+	terminateForSteadyQdot = (terminationMeasurement == "Q");
+
+	if (cfg.exists("StrainParameters.list")) {
+		libconfig::Setting& strainSetting = cfg.lookup("StrainParameters.list");
+		int strainCount = strainSetting.getLength();
+		for (int i=0; i<strainCount; i++) {
+			strainRateList.push_back(strainSetting[i]);
+		}
+	}
 
 	if (haveRestartFile) {
 		haveRestartFile = boost::filesystem::exists(inputDir + "/" + restartFile);
@@ -175,11 +202,11 @@ void configOptions::readOptionsFile(const std::string& filename)
 	kSpecies = 3;
 
 	// If neither step nor time intervals have been specified, use a default step interval
-	if (outputTimeInterval == 100 && outputStepInterval == 10000000) {
-		outputStepInterval = 50;
+	if (profileTimeInterval == 123456789 && profileStepInterval == 123456789) {
+		profileStepInterval = 50;
 	}
 
-	if (regridTimeInterval == 100 && regridStepInterval == 10000000) {
+	if (regridTimeInterval == 123456789 && regridStepInterval == 123456789) {
 		regridStepInterval = 20;
 	}
 }

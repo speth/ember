@@ -77,6 +77,10 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 	nVars = y.size();
 	jj = y[0].size()-1;
 
+	// Used for informational purposes only
+	std::vector<int> insertionIndicies;
+	std::vector<int> removalIndices;
+
 	bool gridUpdated = false; // flag if adaption has occured
 
 	// *** Grid point insertion algorithm
@@ -172,7 +176,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
 		if (insert) {
 			// Insert a new point
-			cout << "Adapt: inserting grid point j = " << j << endl;
+			insertionIndicies.push_back(j);
 			addPoint(j, y, ydot);
 			gridUpdated = true;
 			jj++;
@@ -181,6 +185,14 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 			// No insertion; step to the next point.
 			j++;
 		}
+	}
+
+	if (insertionIndicies.size() != 0) {
+		cout << "Grid points inserted at j = ";
+		for (unsigned int i=0; i<insertionIndicies.size()-1; i++) {
+			cout << insertionIndicies[i] << ", ";
+		}
+		cout << insertionIndicies[insertionIndicies.size()-1] << endl;
 	}
 
 	// *** Grid point removal algorithm
@@ -272,13 +284,21 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
 
 		if (remove) {
-			cout << "Adapt: removing grid node j = " << j << endl;
+			removalIndices.push_back(j);
 			removePoint(j, y, ydot);
             jj--;
 		    gridUpdated = true;
 		} else {
 			j++;
 		}
+	}
+	
+	if (removalIndices.size() != 0) {
+		cout << "Grid points removed at j = ";
+		for (unsigned int i=0; i<removalIndices.size()-1; i++) {
+			cout << removalIndices[i] << ", ";
+		}
+		cout << removalIndices[removalIndices.size()-1] << endl;
 	}
 
 	if (gridUpdated) {

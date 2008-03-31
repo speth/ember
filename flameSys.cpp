@@ -841,13 +841,6 @@ void flameSys::setup(void)
 	pMat.resize(N);
 	grid.jj = nPoints-1;
 	grid.updateBoundaryIndices();
-
-	delete yTempJac;
-	delete ydotTempJac;
-	delete resTempJac;
-	yTempJac = new sdVector(N);
-	ydotTempJac = new sdVector(N);
-	resTempJac = new sdVector(N);
 }
 
 void flameSys::copyOptions(void)
@@ -897,26 +890,28 @@ void flameSys::generateInitialProfiles(void)
 {
 	grid.x.resize(nPoints);
 	int jm = (grid.ju+grid.jb)/2; // midpoint of the profiles.
-	int jl = jm - 3;
-	int jr = jm + 3;
+	int jl = jm - 4;
+	int jr = jm + 4;
 	//int jl = (jm)/3;
 	//int jr = (5*jm)/3;
 	grid.jZero = jm;
+	Yb.resize(nSpec); Yu.resize(nSpec);
 
 	// Reactants
 	Tu = options.Tu;
-	gas[grid.ju].setState_TPX(Tu,Cantera::OneAtm,options.reactants);
+	gas[grid.ju].setState_TPX(Tu,Cantera::OneAtm,&options.reactants[0]);
 	rhou = gas[grid.ju].density();
 
 	// Products
 	Tb = options.Tb;
-	gas[grid.jb].setState_TPX(Tu,Cantera::OneAtm,options.reactants);
+	gas[grid.jb].setState_TPX(Tu,Cantera::OneAtm,&options.reactants[0]);
 	Cantera::equilibrate(gas[grid.jb],"HP");
 	Tb = gas[grid.jb].temperature();
 	rhob = gas[grid.jb].density();
+	gas[grid.jb].getMassFractions(&Yb[0]);
 	
 	// Diluent in the center to delay ignition
-	gas[jm].setState_TPX(Tu,Cantera::OneAtm,options.diluent);
+	gas[jm].setState_TPY(Tu,Cantera::OneAtm,options.oxidizer);
 
 	Tleft = (grid.ju==0) ? Tu : Tb;
 	Tright = (grid.ju==0) ? Tb : Tu;
@@ -983,7 +978,7 @@ void flameSys::generateInitialProfiles(void)
 		}
 	}
 
-	for (int i=0; i<10; i++) {
+	for (int i=0; i<5; i++) {
 		mathUtils::smooth(T);
 	}
 
@@ -994,7 +989,7 @@ void flameSys::generateInitialProfiles(void)
 		U[i] = sqrt(rhou/rho[i]);
 	}
 
-	for (int i=0; i<4; i++) {
+	for (int i=0; i<2; i++) {
 		mathUtils::smooth(U);
 	}
 
@@ -1022,7 +1017,14 @@ void flameSys::generateInitialProfiles(void)
 
 void flameSys::loadInitialProfiles(void)
 {
-	std::string inputFilename = options.inputDir + "/" + options.restartFile;
+
+	std::string inputFilename;
+	if (options.useRelativeRestartPath) {
+		inputFilename = options.inputDir + "/" + options.restartFile;
+	} else {
+		inputFilename = options.restartFile;
+	}
+
 	matlabFile infile(inputFilename);
 	grid.x = infile.readVector("x");
 	
@@ -1034,22 +1036,24 @@ void flameSys::loadInitialProfiles(void)
 	T = infile.readVector("T");
 	Y = infile.readArray2D("Y");
 	tStart = infile.readScalar("t");
+	if (!options.fileNumberOverride) {
+		options.outputFileNumber = (int) infile.readScalar("fileNumber");
+	}
 
 	infile.close();
 
 	if (options.overrideTu) {
 		T[grid.ju] = options.Tu;
-	} else {
-		Tu = T[grid.ju];
 	}
+	Tu = T[grid.ju];
 
 	if (options.overrideReactants) {
-		gas.thermo(grid.ju).setMoleFractionsByName(options.reactants);
-		dvector yu(nSpec);
-		gas.thermo(grid.ju).getMassFractions(&yu[0]);
-		for (int k=0; k<nSpec; k++) {
-			Y(k,grid.ju) = yu[k];
-		}
+		gas.thermo(grid.ju).setState_TPX(Tu,gas.pressure,&options.reactants[0]);
+		gas.thermo(grid.ju).getMassFractions(&Y(0,grid.ju));
+		gas.thermo(grid.jb).setState_TPX(Tu,gas.pressure,&options.reactants[0]);
+		Cantera::equilibrate(gas.thermo(grid.jb),"HP");
+		gas.thermo(grid.jb).getMassFractions(&Y(0,grid.jb));
+		T[grid.jb] = gas.thermo(grid.jb).temperature();
 	}
 
 	gas.setStateMass(Y,T);
@@ -1057,26 +1061,18 @@ void flameSys::loadInitialProfiles(void)
 	rhou = gas.thermo(grid.ju).density();
 
 	grid.update_jZero(V);
-
 }
 
 flameSys::flameSys(void) 
 	: bandedJacobian(NULL)
-	, outputFileNumber(0)
 	, grid(options)
 	, inGetIC(false)
-	, yTempJac(NULL)
-	, ydotTempJac(NULL)
-	, resTempJac(NULL)
 {
 }
 
 flameSys::~flameSys(void)
 {
 	delete bandedJacobian;
-	delete yTempJac;
-	delete ydotTempJac;
-	delete resTempJac;
 }
 
 void flameSys::unrollYdot(const sdVector& yDot)
@@ -1388,11 +1384,11 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 	if (fileNameStr.length() == 0) {
 	// Determine the name of the output file (outXXXXXX.mat)
 
-		fileName << options.outputDir << "/out";
+		fileName << options.outputDir << "/prof";
 		fileName.flags(ios_base::right);
 		fileName.fill('0');
 		fileName.width(6);
-		fileName << outputFileNumber++ << ".mat";
+		fileName << options.outputFileNumber << ".mat";
 	} else {
 		fileName << options.outputDir << "/" << fileNameStr << ".mat";
 	}
@@ -1417,6 +1413,7 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 	outFile.writeArray2D("Y", Y);	
 	outFile.writeScalar("a",strainRate(tNow));
 	outFile.writeScalar("dadt",dStrainRatedt(tNow));
+	outFile.writeScalar("fileNumber", options.outputFileNumber);
 
 	if (options.outputHeatReleaseRate || errorFile) {
 		outFile.writeVector("q",qDot);
@@ -1440,6 +1437,7 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 	}
 
 	outFile.close();
+	options.outputFileNumber++;
 
 }
 
@@ -1546,4 +1544,22 @@ double& flameSys::jacB(const int j, const int k1, const int k2)
 double& flameSys::jacC(const int j, const int k1, const int k2)
 {
 	return (*bandedJacobian)(j*nVars+k1, (j+1)*nVars+k2);
+}
+
+
+double flameSys::getHeatReleaseRate(void)
+{
+	return mathUtils::integrate(grid.x, qDot);
+}
+
+double flameSys::getConsumptionSpeed(void)
+{
+	double QoverCp = mathUtils::integrate(grid.x,qDot/cp);
+	double rhouDeltaT = rho[grid.ju]*(T[grid.jb]-T[grid.ju]);
+	return QoverCp/rhouDeltaT;
+}
+
+double flameSys::getFlamePosition(void)
+{
+	return mathUtils::integrate(grid.x,grid.x*qDot)/mathUtils::integrate(grid.x,qDot);
 }

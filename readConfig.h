@@ -1,4 +1,6 @@
 #pragma once
+#include <string>
+#include "mathUtils.h"
 
 class configOptions
 {
@@ -8,6 +10,7 @@ public:
 	std::string inputDir;
 	std::string outputDir;
 	std::string restartFile;
+	bool useRelativeRestartPath;
 
 	bool overrideTu;
 	bool overrideReactants;
@@ -20,8 +23,10 @@ public:
 
 	int regridStepInterval;
 	int outputStepInterval;
+	int profileStepInterval;
 	double regridTimeInterval;
 	double outputTimeInterval;
+	double profileTimeInterval;
 	double maxTimestep;
 	
 	double idaRelTol;
@@ -32,8 +37,11 @@ public:
 
 	std::string gasMechanismFile;
 	std::string gasPhaseID;
-	std::string reactants;
-	std::string diluent;
+	std::string fuel;
+	std::string oxidizer;
+	double equivalenceRatio;
+	dvector reactants; // mole fractions
+	dvector products;
 	double pressure;
 
 	double Tu, Tb;
@@ -58,6 +66,13 @@ public:
 	bool outputAuxiliaryVariables;
 	bool outputTimeDerivatives;
 	bool outputHeatReleaseRate;
+
+	bool terminateForSteadyQdot;
+	double terminationTolerance;
+	double terminationPeriod;
+
+	dvector strainRateList;
+
+	int outputFileNumber; // number of output files written
+	bool fileNumberOverride; // true if outputFileNumbe was given in the input file
 };
-
-

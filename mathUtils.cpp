@@ -3,7 +3,7 @@
 
 using std::cout; using std::endl;
 
-double mathUtils::max(const dvector& v)
+double mathUtils::maxval(const dvector& v)
 {
 	int n = v.size();
 	if (n==0) { return 0; }
@@ -16,7 +16,7 @@ double mathUtils::max(const dvector& v)
 	return val;
 }
 
-double mathUtils::min(const dvector& v)
+double mathUtils::minval(const dvector& v)
 {
 	dvector::const_iterator i;
 	double val = *v.begin();
@@ -28,10 +28,21 @@ double mathUtils::min(const dvector& v)
 
 double mathUtils::range(const dvector& v)
 {
-	return (max(v)-min(v));
+	return (maxval(v)-minval(v));
 }
 
-double mathUtils::max(const dvector& v, int iStart, int iEnd)
+double mathUtils::sum(const dvector& v)
+{
+	int n = v.size();
+	if (n==0) { return 0; }
+	double val = 0;
+	for (int i=0; i<n; i++) {
+		val += v[i];
+	}
+	return val;
+}
+
+double mathUtils::maxval(const dvector& v, int iStart, int iEnd)
 {
 	int n = v.size();
 	if (n==0) { return 0; }
@@ -45,7 +56,7 @@ double mathUtils::max(const dvector& v, int iStart, int iEnd)
 	return val;
 }
 
-double mathUtils::min(const dvector& v, int iStart, int iEnd)
+double mathUtils::minval(const dvector& v, int iStart, int iEnd)
 {
 	int n = v.size();
 	if (n==0) { return 0; }
@@ -55,6 +66,18 @@ double mathUtils::min(const dvector& v, int iStart, int iEnd)
 		if (v[i] < val) {
 			val = v[i];
 		}
+	}
+	return val;
+}
+
+double mathUtils::sum(const dvector& v, int iStart, int iEnd)
+{
+	int n = v.size();
+	if (n==0) { return 0; }
+	if (iStart < 0 || iEnd > n) { throw; }
+	double val = 0;
+	for (int i=iStart; i<iEnd; i++) {
+		val += v[i];
 	}
 	return val;
 }
@@ -91,7 +114,7 @@ int mathUtils::minloc(const dvector& v)
 
 double mathUtils::range(const dvector& v, int iStart, int iEnd)
 {
-	return max(v,iStart,iEnd) - min(v,iStart,iEnd);
+	return maxval(v,iStart,iEnd) - minval(v,iStart,iEnd);
 }
 
 int mathUtils::findFirst(const vector<bool>& v)
@@ -116,7 +139,7 @@ dvector mathUtils::abs(const dvector& v)
 
 int mathUtils::findLast(const vector<bool>& v)
 {
-	for (vector<bool>::size_type i=v.size()-1; i>=0; i--) {
+	for (vector<bool>::size_type i=v.size()-1; (i+1)>0; i--) {
 		if (v[i]) {
 			return i;
 		}
@@ -254,6 +277,27 @@ double mathUtils::splines(const dvector& xIn, const dvector& yIn, const double x
 	return c[0][j] + dx*(c[1][j] + dx*(c[2][j] + dx*c[3][j]));
 }
 
+double mathUtils::integrate(const dvector& x, const dvector& y)
+{
+	if (x.size() != y.size()) {
+		cout << "mathUtils::splineInt: error: xIn and yIn must be the same size." << endl;
+		throw;
+	}
+
+	int n = x.size();
+	vector<dvector> c = computeSplines(x, y);
+	double I=0;
+
+	// Integrate the spline on each interval:
+
+	for (int i=0; i<n-1; i++) {
+		double dx = x[i+1]-x[i];
+		I += dx*(c[0][i] + dx*(c[1][i]/2 + dx*(c[2][i]/3 + dx*c[3][i]/4)));
+	}
+
+	return I;
+}
+
 void mathUtils::vectorVectorToArray2D(const vector<dvector>& v, Array2D& a)
 {
 	int m = v.size();
@@ -277,6 +321,20 @@ void mathUtils::array2DToVectorVector(const Array2D& a, vector<dvector>& v)
 			v[i][j] = a(i,j);
 		}
 	}
+}
+
+std::string mathUtils::stringify(double x)
+{
+	std::ostringstream os;
+	os << x;
+	return os.str();
+}
+
+std::string mathUtils::stringify(int x)
+{
+	std::ostringstream os;
+	os << x;
+	return os.str();
 }
 
 std::ostream& operator<<(std::ostream& os, dvector& v)
@@ -373,6 +431,78 @@ dvector operator-(const dvector& v1, const double s)
 {
 	dvector v(v1);
 	return (v -= s);
+}
+
+dvector& operator*=(dvector& v1, const double s)
+{
+	unsigned int n = v1.size();
+	for (unsigned int i=0; i<n; i++) {
+		v1[i] *= s;
+	}
+	return v1;
+}
+
+dvector& operator*=(dvector& v1, const dvector& v2)
+{
+	if (v1.size() != v2.size()) {
+		throw;
+	}
+	unsigned int n = v1.size();
+	for (unsigned int i=0; i<n; i++) {
+		v1[i] *= v2[i];
+	}
+	return v1;
+}
+
+dvector operator*(const dvector& v1, const dvector& v2)
+{
+	dvector v(v1);
+	return (v *= v2);
+}
+
+dvector operator*(const dvector& v1, const double s)
+{
+	dvector v(v1);
+	return (v *= s);
+}
+
+dvector operator*(const double s, const dvector& v1)
+{
+	dvector v(v1);
+	return (v *= s);
+}
+
+dvector& operator/=(dvector& v1, const dvector& v2)
+{
+	if (v1.size() != v2.size()) {
+		throw;
+	}
+	unsigned int n = v1.size();
+	for (unsigned int i=0; i<n; i++) {
+		v1[i] /= v2[i];
+	}
+	return v1;
+}
+
+dvector operator/(const dvector& v1, const dvector& v2)
+{
+	dvector v(v1);
+	return (v /= v2);
+}
+
+dvector& operator/=(dvector& v1, const double s)
+{
+	unsigned int n = v1.size();
+	for (unsigned int i=0; i<n; i++) {
+		v1[i] /= s;
+	}
+	return v1;
+}
+
+dvector operator/(const dvector& v1, const double s)
+{
+	dvector v(v1);
+	return (v /= s);
 }
 
 vector<bool> operator>(const dvector& v1, const dvector& v2)

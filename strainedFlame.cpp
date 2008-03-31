@@ -51,10 +51,58 @@ void strainedFlame(const std::string& inputFile)
 	
 	configOptions mainOptions;
 	mainOptions.readOptionsFile(inputFile);
+	//mainOptions.outputFileNumber = 0;
+	//mainOptions.fileNumberOverride = true;
 
-	flameSolver theFlameSolver;
-	theFlameSolver.setOptions(mainOptions);
-	theFlameSolver.run();
+	if (mainOptions.strainRateList.size()!=0) {
+		for (unsigned int i=0; i<mainOptions.strainRateList.size(); i++) {
+
+			// Instantiate a new solver
+			flameSolver theFlameSolver;
+
+			// Set the strain rate and other options
+			double a = mainOptions.strainRateList[i];
+			mainOptions.strainRateInitial = a;
+			mainOptions.strainRateFinal = a;
+			theFlameSolver.setOptions(mainOptions);
+			theFlameSolver.calculateReactantMixture();
+
+			// Run the simulation
+			theFlameSolver.run();
+			cout << "Completed run at strain rate a = " << a << endl;
+	
+			// copy data needed for the next run
+			mainOptions.fileNumberOverride = false;
+			std::string restartFile = "prof_eps"+stringify(a);
+			theFlameSolver.theSys.writeStateMatFile(restartFile);
+			mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
+			mainOptions.useRelativeRestartPath = false;
+			mainOptions.haveRestartFile = true;
+
+			// Write the time-series data file for this run
+			matlabFile outFile(mainOptions.outputDir+"/out_eps"+stringify(a)+".mat");
+			outFile.writeVector("t",theFlameSolver.timeVector);
+			outFile.writeVector("dt",theFlameSolver.timestepVector);
+			outFile.writeVector("Q",theFlameSolver.heatReleaseRate);
+			outFile.writeVector("Sc",theFlameSolver.consumptionSpeed);
+			outFile.writeVector("xFlame",theFlameSolver.flamePosition);
+			outFile.close();
+		}
+	} else {
+		flameSolver theFlameSolver;
+		theFlameSolver.setOptions(mainOptions);
+		theFlameSolver.calculateReactantMixture();
+		theFlameSolver.run();
+
+		std::string strainString;
+		matlabFile outFile(mainOptions.outputDir+"/out.mat");
+		outFile.writeVector("t",theFlameSolver.timeVector);
+		outFile.writeVector("dt",theFlameSolver.timestepVector);
+		outFile.writeVector("Q",theFlameSolver.heatReleaseRate);
+		outFile.writeVector("Sc",theFlameSolver.consumptionSpeed);
+		outFile.writeVector("xFlame",theFlameSolver.flamePosition);
+		outFile.close();
+	}
 }
 
 void chemistryTest(void)
@@ -180,17 +228,5 @@ void matlabioTest(void)
 
 void miscTest(void)
 {
-	Cantera::Array2D a(53,100);
-	for (int k=0; k<53; k++) {
-		for (int j=0; j<100; j++) {
-			a(k,j) = k;
-		}
-	}
 
-	vector<dvector> v;
-	array2DToVectorVector(a,v);
-
-	vectorVectorToArray2D(v,a);
-
-	int blargh = 0;
 }

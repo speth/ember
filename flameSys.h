@@ -106,7 +106,6 @@ public:
 	dvector Wmx; // mixture molecular weight [kg/kmol]
 	dvector sumcpj; // for enthalpy flux term [W/m^2*K]
 	
-	
 	dvector mu; // viscosity [Pa*s]
 
 	dvector lambda; // thermal conductivity [W/m*K]
@@ -149,6 +148,11 @@ public:
 	// Miscellaneous options
 	configOptions options;
 
+	// Functions for calculating flame information
+	double getHeatReleaseRate(void); // [W/m^2]
+	double getConsumptionSpeed(void); // [m/s]
+	double getFlamePosition(void); // [m]
+
 private:
 	// Subdivided governing equation components
 	dvector energyUnst, energyDiff, energyConv, energyProd;
@@ -163,15 +167,12 @@ private:
 	sdBandMatrix* bandedJacobian;
 	vector<long int> pMat;
 	bool inGetIC;
-	sdVector* yTempJac;
-	sdVector* ydotTempJac;
-	sdVector* resTempJac;
 
+	// Functions for addressing the subdiagonal, 
+	// diagonal, and superdiagonal blocks of the Jacobian
 	double& jacA(const int j, const int k1, const int k2);
 	double& jacB(const int j, const int k1, const int k2);
 	double& jacC(const int j, const int k1, const int k2);
-
-	int outputFileNumber; // number of output files written
 
 	double strainRate(const double t);
 	double dStrainRatedt(const double t);

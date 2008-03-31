@@ -1,8 +1,10 @@
 #pragma once
 
+#define USE_MATH_DEFINES
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include <cantera/Cantera.h>
@@ -16,14 +18,16 @@ typedef std::vector<double> dvector;
 
 namespace mathUtils
 {
-	double max(const dvector& v);
-	double min(const dvector& v);
+	double maxval(const dvector& v);
+	double minval(const dvector& v);
 	double range(const dvector& v);
+	double sum(const dvector& v);
 
 	// Find the min/max of a subvector
-	double max(const dvector& v, int iStart, int iEnd);
-	double min(const dvector& v, int iStart, int iEnd);
+	double maxval(const dvector& v, int iStart, int iEnd);
+	double minval(const dvector& v, int iStart, int iEnd);
 	double range(const dvector& v, int iStart, int iEnd);
+	double sum(const dvector& v, int iStart, int iEnd);
 
 	// location of the minimum / maximum
 	int minloc(const dvector& v);
@@ -46,12 +50,18 @@ namespace mathUtils
 	dvector splines(const dvector& xIn, const dvector& yIn, const dvector& xOut);
 	double splines(const dvector& xIn, const dvector& yIn, const double xOut);
 
+	// Integration of cubic splines
+	double integrate(const dvector& xIn, const dvector& yIn);
+
 	// Internal function for splines
 	vector<dvector> computeSplines(const dvector& xIn, const dvector& yIn);
 
 	void vectorVectorToArray2D(const vector<dvector>& v, Array2D& a);
 	void array2DToVectorVector(const Array2D& a, vector<dvector>& v);
-	
+
+	// For converting numbers into strings
+	std::string stringify(double x);
+	std::string stringify(int x);
 };
 
 std::ostream& operator<<(std::ostream& os, dvector& v);
@@ -67,6 +77,17 @@ dvector& operator+=(dvector& v1, const double s);
 dvector operator+(const dvector& v1, const double s);
 dvector& operator-=(dvector& v1, const double s);
 dvector operator-(const dvector& v1, const double s);
+
+dvector& operator*=(dvector& v1, const dvector& v2);
+dvector operator*(const dvector& v1, const dvector& v2);
+dvector& operator*=(dvector& v1, const double s);
+dvector operator*(const dvector& v1, const double s);
+dvector operator*(const double s, const dvector& v1);
+
+dvector& operator/=(dvector& v1, const dvector& v2);
+dvector operator/(const dvector& v1, const dvector& v2);
+dvector& operator/=(dvector& v1, const double s);
+dvector operator/(const dvector& v1, const double s);
 
 vector<bool> operator>(const dvector& v1, const dvector& v2);
 vector<bool> operator<(const dvector& v1, const dvector& v2);
