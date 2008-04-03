@@ -26,18 +26,39 @@ void flameSolver::run(void)
 	}
 
 	double integratorTimestep = 0;
-	int nRegrid = 0;
-	int nOutput = 0;
-	int nProfile = 0;
-	double tOutput = theSys.tStart;
-	double tRegrid = theSys.tStart;
-	double tProfile = theSys.tStart;
 	double t = theSys.tStart;
 	double dt;
 
+	int nRegrid = 0;
+	int nOutput = 0;
+	int nProfile = 0;
+	int nFlamePos = 0;
+	
+	double tOutput = t;
+	double tRegrid = t;
+	double tProfile = t;
+	double tFlamePos = t;
+
 	theSys.grid.updateValues();
 
+	// Get the initial value for rFlameActual:
+	theSys.gas.setStateMass(theSys.Y,theSys.T);
+	theSys.updateThermoProperties();
+	theSys.gas.getReactionRates(theSys.wDot);
+	for (int j=0; j<=theSys.nPoints-1; j++) {
+		theSys.qDot[j] = 0;
+		for (int k=0; k<theSys.nSpec; k++) {
+			theSys.qDot[j] -= theSys.wDot(k,j)*theSys.hk(k,j);
+		}
+	}
+
+	// Flame position (radius) control:
+	theSys.tFlamePrev = t;
+	theSys.tFlameNext = t + options.rFlameUpdateTimeInterval;
+	theSys.rVcenterInitial = theSys.V[0];
+	theSys.rVcenterPrev = theSys.rVcenterNext = theSys.rVcenterInitial;
 	theSys.writeStateMatFile();
+	bool firstIteration = true;
 
 	while (t < theSys.tEnd) {
 
@@ -66,6 +87,11 @@ void flameSolver::run(void)
 		}
 
 		theSys.updateLeftBC();
+
+		theSys.update_rVcenter(t);
+		tFlamePos = t + options.rFlameUpdateTimeInterval;
+		nFlamePos = 0;
+
 		theSys.updateAlgebraicComponents();
 		theSolver.t0 = t;
 		int ICflag = -1;
@@ -77,9 +103,6 @@ void flameSolver::run(void)
 
 		theSolver.setDAE(&theSys);
 		theSolver.calcIC = false;
-		//for (unsigned int i=0; i<theSys.algebraic.size(); i++) {
-		//	theSolver.componentId(i) = (theSys.algebraic[i]) ? 0 : 1;
-		//}
 
 		theSolver.initialize();
 		theSolver.setMaxStepSize(options.maxTimestep);
@@ -99,13 +122,15 @@ void flameSolver::run(void)
 				throw;
 			}
 
+			firstIteration = false;
 			dt = integratorTimestep = theSolver.getStepSize();
-			t = theSolver.tInt;
+			t = theSys.tPrev = theSolver.tInt;
 
 			if (flag == CV_SUCCESS) {
 				nOutput++;
 				nRegrid++;
 				nProfile++;
+				nFlamePos++;
 				cout << "t = " << t << "  (dt = " << dt << ")" << endl;
 			} else {
 				cout << "IDA Solver failed at time t = " << t << "  (dt = " << dt << ")" << endl;
@@ -113,7 +138,7 @@ void flameSolver::run(void)
 				integratorTimestep = 0;
 				break;
 			}
-
+			
 			if (t > tOutput || nOutput >= options.outputStepInterval) {
 				// Save the time-series data
 				timeVector.push_back(t);
@@ -126,12 +151,19 @@ void flameSolver::run(void)
 				nOutput = 0;
 			}
 
-
 			if (t > tProfile || nProfile >= options.profileStepInterval) {
 				theSys.writeStateMatFile();
 
 				tProfile = t + options.profileTimeInterval;
 				nProfile = 0;
+			}
+
+			if (options.flameRadiusControl && 
+				(t > tFlamePos || nFlamePos > options.rFlameUpdateStepInterval)) {
+				theSys.update_rVcenter(t);
+
+				tFlamePos = t + options.rFlameUpdateTimeInterval;
+				nFlamePos = 0;
 			}
 
 			if (t > tRegrid || nRegrid >= options.regridStepInterval) {
@@ -151,7 +183,12 @@ void flameSolver::run(void)
 				// Adapt the grid if necessary
 
  				for (int j=0; j<theSys.nPoints; j++) {
-					theSys.grid.dampVal[j] = abs(theSys.mu[j]/theSys.V[j]);
+					double num = min(theSys.mu[j],theSys.lambda[j]/theSys.cp[j]);
+					for (int k=0; k<theSys.nSpec; k++) {
+						num = min(num,theSys.rhoD(k,j));
+					}
+
+					theSys.grid.dampVal[j] = num/abs(theSys.V[j]);
 				}
 				vector<dvector> currentSolution, currentSolutionDot;
 
@@ -179,6 +216,8 @@ void flameSolver::run(void)
 					// This corrects the drift of the total mass fractions
 					theSys.gas.setStateMass(theSys.Y,theSys.T);
 					theSys.gas.getMassFractions(theSys.Y);
+
+					//integratorTimestep /= 8;
 
 					break; // exit the inner loop and reinitialize the solver for the new problem size
 				}

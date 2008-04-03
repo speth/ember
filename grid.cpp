@@ -96,6 +96,9 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 		// Consider tolerances for each variable v in the solution y
 		for (int k=0; k<nVars; k++) {
 
+			if (k==kContinuity) {
+				continue;
+			}
 			dvector& v = y[k];
 			for (int i=1; i<jj; i++) {
 				dv[i] = cfp[i]*v[i+1] + cf[i]*v[i] + cfm[i]*v[i-1];

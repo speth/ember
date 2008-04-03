@@ -40,6 +40,7 @@ public:
 	double tStart;
 	double tEnd;
 	double tNow;
+	double tPrev;
 
 	// Boundary values
 	double rhou, rhob, rhoLeft, rhoRight;
@@ -97,9 +98,8 @@ public:
 
 	// Auxillary variables:
 	dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
-	double rVcenter; // mass flux at centerline [kg/m^2 or kg/m*rad*s]
 	dvector rho; // density [kg/m^3]
-	dvector drhodt;
+	dvector drhodt; 
 	Array2D X; // species mole fractions, X(k,j)
 	Array2D dXdx;
 	dvector W; // species molecular weights [kg/kmol]
@@ -136,7 +136,12 @@ public:
 	double strainRateDt; // [s]
 	double strainRateT0; // [s]
 
-	double rStag; // nominal stagnation point radius [m]
+	double rVcenter; // mass flux at centerline [kg/m^2 or kg/m*rad*s]
+	double rVcenterInitial;
+	double rVcenterPrev, rVcenterNext;
+	double tFlamePrev, tFlameNext;
+	double rFlamePrev, rFlameTarget, rFlameActual;
+	double flamePosIntegralError;
 
 	 // Algebraic components of state, for IC calculation
 	vector<bool> algebraic;
@@ -152,6 +157,12 @@ public:
 	double getHeatReleaseRate(void); // [W/m^2]
 	double getConsumptionSpeed(void); // [m/s]
 	double getFlamePosition(void); // [m]
+	
+	double strainRate(const double t); // [1/s]
+	double dStrainRatedt(const double t); // [1/s^2]
+
+	void update_rVcenter(const double t);
+	double targetFlamePosition(double t); // [m]
 
 private:
 	// Subdivided governing equation components
@@ -173,9 +184,6 @@ private:
 	double& jacA(const int j, const int k1, const int k2);
 	double& jacB(const int j, const int k1, const int k2);
 	double& jacC(const int j, const int k1, const int k2);
-
-	double strainRate(const double t);
-	double dStrainRatedt(const double t);
 
 	int kMomentum, 	kContinuity, kEnergy, kSpecies;
 };

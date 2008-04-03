@@ -20,12 +20,6 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	// Update the thermodynamic state, and evaluate the 
 	// thermodynamic, transport and kinetic parameters
 
-	//for (int j=0; j<nPoints; j++) {
-	//	for (int k=0; k<nSpec; k++) {
-	//		Y(k,j) = abs(Y(k,j));
-	//	}
-	//}
-
 	gas.setStateMass(Y,T);
 	gas.getMoleFractions(X);
 	gas.getMassFractions(Y);
@@ -70,7 +64,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	}
 
 	// Left Boundary values for U, T, Y
-	if (grid.leftBoundaryConfig == grid.lbFixedValNonCenter) {
+	if (grid.leftBoundaryConfig == grid.lbFixedVal) {
 		// Fixed values for T, Y
 		
 		energyUnst[0] = dTdt[0];
@@ -110,7 +104,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		energyConv[0] = 0;
 
 		momentumUnst[0] = rho[0]*dUdt[0];
-		momentumDiff[0] = (grid.alpha+1)*(mu[1]+mu[0])
+		momentumDiff[0] = -(grid.alpha+1)*(mu[1]+mu[0])
 			/(grid.hh[0]*grid.hh[0])*(U[1]-U[0]);
 		momentumProd[0] = dadt*(rho[0]*U[0]-rhou)/a + (rho[0]*U[0]*U[0]-rhou)*a;
 		momentumConv[0] = 0;
@@ -170,18 +164,18 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		}
 
 		// Momentum Equation
+		momentumUnst[j] = rho[j]*dUdt[j];
 		momentumConv[j] = V[j]*dUdx[j];
 		momentumDiff[j] = -0.5*( grid.rphalf[j]*(mu[j]+mu[j+1])*(U[j+1]-U[j])/grid.hh[j] -
 			grid.rphalf[j-1]*(mu[j-1]+mu[j])*(U[j]-U[j-1])/grid.hh[j-1])/(grid.dlj[j]*grid.r[j]);
 		momentumProd[j] = dadt*(rho[j]*U[j]-rhou)/a + (rho[j]*U[j]*U[j]-rhou)*a;
-		momentumUnst[j] = rho[j]*dUdt[j];
-
+		
 		// Energy Equation
+		energyUnst[j] = rho[j]*dTdt[j];
 		energyConv[j] = V[j]*dTdx[j];
 		energyDiff[j] = sumcpj[j]*dTdxCen[j]/cp[j] +
 			(grid.rphalf[j]*qFourier[j] - grid.rphalf[j-1]*qFourier[j-1])/(grid.dlj[j]*cp[j]*grid.r[j]);
 		energyProd[j] = -qDot[j]/cp[j];
-		energyUnst[j] = rho[j]*dTdt[j];
 
 		// Species Equations
 		for (int k=0; k<nSpec; k++) {
@@ -224,7 +218,16 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	}
 
 	// Continuity Equation
-	continuityUnst[0] = drhovdt[0];
+
+	if (options.flameRadiusControl) {
+		rVcenter = rVcenterPrev + (rVcenterNext-rVcenterPrev)/(tFlameNext-tFlamePrev)*(t-tFlamePrev);
+		continuityUnst[0] = rV[0] - rVcenter;
+	} else if (options.stagnationRadiusControl) {
+		continuityUnst[0] = rV[0] - pow(options.rStag,grid.alpha+1)/((grid.alpha+1)*rhoLeft*a);
+	} else {
+		continuityUnst[0] = drhovdt[0];
+	}
+	
 	continuityRhov[0] = continuityStrain[0] = 0;
 
 	for (int j=1; j<=jj; j++) {
@@ -436,7 +439,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 	// J = dF/dy + c_j*dF/dydot
 	j=0;
 	// Left Boundary values for U, T, Y
-	if (grid.leftBoundaryConfig == grid.lbFixedValNonCenter) {
+	if (grid.leftBoundaryConfig == grid.lbFixedVal) {
 		// Fixed values for T, Y
 		jacB(j,kEnergy,kEnergy) = c_j;
 		
@@ -470,14 +473,14 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
 		// dEnergy/dT_j
 		jacB(j,kEnergy,kEnergy) = c_j*rho[j] - rho[j]*dTdt[j]/T[j] +
-			(grid.alpha+1)*(lambda[j+1]+lambda[j])/(grid.hh[j]*grid.hh[j]*cp[j]) +
+			(grid.alpha+1)*(lambda[j+1]+lambda[j])/(grid.hh[j]*grid.hh[j]*cp[j]) -
 			dwhdT[j]/cp[j];
 		// dEnergy/dT_(j+1)
 		jacC(j,kEnergy,kEnergy) = - (grid.alpha+1)*(lambda[j+1]+lambda[j])/(grid.hh[j]*grid.hh[j]*cp[j]);
 
 		// dEnergy/dY
 		for (int k=0; k<nSpec; k++) {
-			jacB(j,kEnergy,kSpecies+k) = -rho[j]*Wmx[j]/W[k]*dTdt[j] +
+			jacB(j,kEnergy,kSpecies+k) = -rho[j]*Wmx[j]/W[k]*dTdt[j] -
 				hdwdY(k,j)/cp[j];
 		}
 
@@ -505,7 +508,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
 			//dSpecies/dY_j
 			for (int i=0; i<nSpec; i++) {
-				jacB(j,kSpecies+k,kSpecies+i) = -dwdY[j](k,i) - rho[j]*Wmx[j]/W[i]*dYdt(k,j);
+				jacB(j,kSpecies+k,kSpecies+i) = -dwdY[j](k,i)*W[k] - rho[j]*Wmx[j]/W[i]*dYdt(k,j);
 			}
 			jacB(j,kSpecies+k,kSpecies+k) += c_j*rho[j] +
 				(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))*Wmx[j]/Wmx[j+1]/(grid.hh[j]*grid.hh[j]);
@@ -720,7 +723,12 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 	}
 
 	// Continuity Equation
-	jacB(0,kContinuity,kContinuity) = c_j;
+	if (options.stagnationRadiusControl || options.flameRadiusControl) {
+		jacB(0,kContinuity,kContinuity) = 1;
+	} else {
+		jacB(0,kContinuity,kContinuity) = c_j;
+	}
+
 	for (j=1; j<=jj; j++) {
 		for (int k=0; k<nSpec; k++) {
 			// dContinuity/dY
@@ -913,14 +921,28 @@ void flameSys::generateInitialProfiles(void)
 	// Diluent in the center to delay ignition
 	gas[jm].setState_TPY(Tu,Cantera::OneAtm,options.oxidizer);
 
-	Tleft = (grid.ju==0) ? Tu : Tb;
-	Tright = (grid.ju==0) ? Tb : Tu;
-
-	rhoLeft = (grid.ju==0) ? rhou : rhob;
-	rhoRight = (grid.ju==0) ? rhob : rhou;
+	if (options.unburnedLeft) {
+		Yleft = Yu;
+		Uleft = 1;
+		rhoRight = rhob;
+		Tright = Tb;
+		Yright = Yb;
+		Uright = Ub;
+	} else {
+		rhoLeft = rhob;
+		Tleft = Tb;
+		Yleft = Yb;
+		Uleft = Ub;
+		rhoRight = rhou;
+		Tright = Tu;
+		Yright = Yu;
+		Uright = 1;
+	}
 
 	T[0] = Tleft; T[grid.jj] = Tright;
 	T[jm] = T[grid.ju];
+
+
 
 	xLeft = (options.twinFlame || options.curvedFlame) ?
 		max(options.xLeft,0.0) : options.xLeft;
@@ -1055,10 +1077,37 @@ void flameSys::loadInitialProfiles(void)
 		gas.thermo(grid.jb).getMassFractions(&Y(0,grid.jb));
 		T[grid.jb] = gas.thermo(grid.jb).temperature();
 	}
+	Tb = T[grid.jb];
 
 	gas.setStateMass(Y,T);
 	gas.getMolecularWeights(W);
 	rhou = gas.thermo(grid.ju).density();
+	rhob = gas.thermo(grid.jb).density();
+	Yu.resize(nSpec); Yb.resize(nSpec);
+	gas[grid.ju].getMassFractions(&Yu[0]);
+	gas[grid.jb].getMassFractions(&Yb[0]);
+	Ub = sqrt(rhou/rhob);
+
+	if (options.unburnedLeft) {
+		rhoLeft = rhou;
+		Tleft = Tu;
+		Yleft = Yu;
+		Uleft = 1;
+		rhoRight = rhob;
+		Tright = Tb;
+		Yright = Yb;
+		Uright = Ub;
+
+	} else {
+		rhoLeft = rhob;
+		Tleft = Tb;
+		Yleft = Yb;
+		Uleft = Ub;
+		rhoRight = rhou;
+		Tright = Tu;
+		Yright = Yu;
+		Uright = 1;
+	}
 
 	grid.update_jZero(V);
 }
@@ -1067,6 +1116,7 @@ flameSys::flameSys(void)
 	: bandedJacobian(NULL)
 	, grid(options)
 	, inGetIC(false)
+	, flamePosIntegralError(0)
 {
 }
 
@@ -1380,10 +1430,11 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 {
 	std::ostringstream fileName(ostringstream::out);
+	bool incrementFileNumber = false;
 
 	if (fileNameStr.length() == 0) {
 	// Determine the name of the output file (outXXXXXX.mat)
-
+		incrementFileNumber = true;
 		fileName << options.outputDir << "/prof";
 		fileName.flags(ios_base::right);
 		fileName.fill('0');
@@ -1437,8 +1488,9 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 	}
 
 	outFile.close();
-	options.outputFileNumber++;
-
+	if (incrementFileNumber) {
+		options.outputFileNumber++;
+	}
 }
 
 double flameSys::strainRate(const double t)
@@ -1461,9 +1513,11 @@ void flameSys::updateAlgebraicComponents(void)
 {
 	int jj = nPoints-1;
 	algebraic.resize(N);
+	
+	algebraic[0] = options.stagnationRadiusControl 
+		|| options.flameRadiusControl; // continuity
 
-	algebraic[0] = false; // continuity
-	if (grid.leftBoundaryConfig == grid.lbFixedValNonCenter) {
+	if (grid.leftBoundaryConfig == grid.lbFixedVal) {
 		algebraic[1] = !grid.unburnedLeft; // momentum
 		algebraic[2] = false; // energy
 		for (int k=0; k<nSpec; k++) {
@@ -1521,7 +1575,7 @@ void flameSys::updateLeftBC(void)
 {
 	// Boundary condition for left edge of domain
 	if ( (grid.ju == 0 && grid.x[0] != 0) || (grid.jb == 0 && grid.fixedBurnedVal) ) {
-		grid.leftBoundaryConfig = grid.lbFixedValNonCenter;
+		grid.leftBoundaryConfig = grid.lbFixedVal;
 	} else if (grid.x[0] != 0) {
 		grid.leftBoundaryConfig = grid.lbZeroGradNonCenter;
 	} else if (rV[0] <= 0) {
@@ -1561,5 +1615,32 @@ double flameSys::getConsumptionSpeed(void)
 
 double flameSys::getFlamePosition(void)
 {
-	return mathUtils::integrate(grid.x,grid.x*qDot)/mathUtils::integrate(grid.x,qDot);
+	return mathUtils::trapz(grid.x,grid.x*qDot)/mathUtils::trapz(grid.x,qDot);
+}
+
+double flameSys::targetFlamePosition(double t)
+{
+	return (t <= options.rFlameT0) ? options.rFlameInitial 
+		:  (t >= options.rFlameT0+options.rFlameDt) ? options.rFlameFinal
+		: options.rFlameInitial + (options.rFlameFinal-options.rFlameInitial)*(t-options.rFlameT0)/options.rFlameDt;
+}
+
+void flameSys::update_rVcenter(const double t)
+{
+	rFlameActual = getFlamePosition();
+	rFlameTarget = targetFlamePosition(t);
+	flamePosIntegralError += (rFlameTarget-rFlameActual)*(t-tFlamePrev);
+	double flamePosDerivativeError = (t > tFlamePrev) ? -(rFlameActual-rFlamePrev)/(t-tFlamePrev) : 0;
+
+	rVcenterPrev = rVcenterPrev + (rVcenterNext-rVcenterPrev)/(tFlameNext-tFlamePrev)*(t-tFlamePrev);
+
+	rFlamePrev = rFlameActual;
+	tFlamePrev = t;
+	tFlameNext = t + options.rFlameUpdateTimeInterval;
+	double a = strainRate(t);
+
+	rVcenterNext = rVcenterInitial*a/options.strainRateInitial + 
+		rhou*a*options.rFlameProportionalGain*( (rFlameTarget-rFlameActual) +
+		flamePosDerivativeError*options.rFlameDerivativeGain +
+		flamePosIntegralError*options.rFlameIntegralGain);
 }

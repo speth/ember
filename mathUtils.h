@@ -46,15 +46,18 @@ namespace mathUtils
 	void smooth(dvector& v);
 	dvector linspace(const double x1, const double x2, const int n);
 
+	// Internal function for splines
+	vector<dvector> computeSplines(const dvector& xIn, const dvector& yIn);
+
 	// Cubic Spline interpolation
 	dvector splines(const dvector& xIn, const dvector& yIn, const dvector& xOut);
 	double splines(const dvector& xIn, const dvector& yIn, const double xOut);
 
 	// Integration of cubic splines
-	double integrate(const dvector& xIn, const dvector& yIn);
+	double integrate(const dvector& x, const dvector& y);
 
-	// Internal function for splines
-	vector<dvector> computeSplines(const dvector& xIn, const dvector& yIn);
+	// Trapezoidal rule integration
+	double trapz(const dvector& x, const dvector& y);
 
 	void vectorVectorToArray2D(const vector<dvector>& v, Array2D& a);
 	void array2DToVectorVector(const Array2D& a, vector<dvector>& v);

@@ -59,7 +59,7 @@ public:
 	void updateBoundaryIndices(void);
 
 	enum leftBoundaryConfigOptions {
-		lbFixedValNonCenter,
+		lbFixedVal,
 		lbZeroGradNonCenter,
 		lbZeroGradCenter,
 		lbControlVolume

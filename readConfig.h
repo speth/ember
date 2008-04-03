@@ -75,4 +75,15 @@ public:
 
 	int outputFileNumber; // number of output files written
 	bool fileNumberOverride; // true if outputFileNumbe was given in the input file
+
+	bool flameRadiusControl;
+	double rFlameInitial, rFlameFinal;
+	double rFlameDt, rFlameT0;
+	double rFlameIntegralGain;
+	double rFlameProportionalGain;
+	double rFlameDerivativeGain;
+	double rFlameUpdateStepInterval, rFlameUpdateTimeInterval;
+
+	bool stagnationRadiusControl;
+	double rStag;
 };

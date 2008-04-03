@@ -79,8 +79,10 @@ void configOptions::readOptionsFile(const std::string& filename)
 	regridStepInterval = 123456789;
 	profileStepInterval = 123456789;
 	outputStepInterval = 1;
-	
 
+	rFlameUpdateStepInterval = 10;
+	rFlameUpdateTimeInterval = 0.002;
+	
 	idaRelTol = 1e-5;
 	idaContinuityAbsTol = 1e-6;
 	idaMomentumAbsTol = 1e-6;
@@ -94,9 +96,6 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	terminateForSteadyQdot = false;
 	
-	// Flags
-
-
 	// Read options from the configuration file
 	cfg.lookupValue("paths.inputDir",inputDir);
 	cfg.lookupValue("paths.outputDir",outputDir);
@@ -104,9 +103,9 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("chemistry.mechanismFile",gasMechanismFile);
 	cfg.lookupValue("chemistry.phaseID",gasPhaseID);
 
-	cfg.lookupValue("grid.nPoints",nPoints);
-	cfg.lookupValue("grid.xLeft",xLeft);
-	cfg.lookupValue("grid.xRight",xRight);
+	cfg.lookupValue("InitialCondition.nPoints",nPoints);
+	cfg.lookupValue("InitialCondition.xLeft",xLeft);
+	cfg.lookupValue("InitialCondition.xRight",xRight);
 
 	haveRestartFile = cfg.lookupValue("InitialCondition.file",restartFile);
 	overrideTu = cfg.lookupValue("InitialCondition.Tu",Tu);
@@ -117,8 +116,28 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	cfg.lookupValue("StrainParameters.initial",strainRateInitial);
 	cfg.lookupValue("StrainParameters.final",strainRateFinal);
-	cfg.lookupValue("StrainParameters.start",strainRateT0);
+	cfg.lookupValue("StrainParameters.tStart",strainRateT0);
 	cfg.lookupValue("StrainParameters.dt",strainRateDt);
+
+	if (cfg.lookupValue("CurvatureParameters.rInitial",rFlameInitial) &&
+		cfg.lookupValue("CurvatureParameters.rFinal",rFlameFinal) &&
+		cfg.lookupValue("CurvatureParameters.tStart",rFlameT0) &&
+		cfg.lookupValue("CurvatureParameters.dt",rFlameDt) &&
+		cfg.lookupValue("CurvatureParameters.integralGain",rFlameIntegralGain) &&
+		cfg.lookupValue("CurvatureParameters.derivativeGain",rFlameDerivativeGain) &&
+		cfg.lookupValue("CurvatureParameters.proportionalGain",rFlameProportionalGain)) {
+			cfg.lookupValue("CurvatureParameters.updateTimeInterval",rFlameUpdateTimeInterval);
+			cfg.lookupValue("CurvatureParameters.updateStepInterval",rFlameUpdateStepInterval);
+			flameRadiusControl = true;
+	} else {
+		flameRadiusControl = false;
+	}
+
+	if (cfg.lookupValue("CurvatureParameters.rStag",rStag)) {
+		stagnationRadiusControl = true;
+	} else {
+		stagnationRadiusControl = false;
+	}
 
 	cfg.lookupValue("grid.adaptation.vtol",vtol);
 	cfg.lookupValue("grid.adaptation.dvtol",dvtol);

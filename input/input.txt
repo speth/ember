@@ -1,15 +1,15 @@
 paths:
 {
 	inputDir = "input";
-	outputDir = "output14";
+	outputDir = "output23";
 };
 
 general:
 {
-	fixedBurnedVal = true;
+	fixedBurnedVal = false;
 	fixedLeftLocation = true;
 	unburnedLeft = false;
-	curvedFlame = false;
+	curvedFlame = true;
 	twinFlame = true;
 };
 
@@ -21,19 +21,13 @@ chemistry:
 
 grid:
 {
-	// These are only used when not reading from a restart file
-	nPoints = 40;
-	xLeft = -0.005;
-	xRight = 0.005;
-	
 	adaptation:
 	{
-		//vtol = 0.12;
-		//dvtol = 0.2;
+		// Medium accuracy: vtol = 0.1, dvtol = 0.25
 		vtol = 0.2;
 		dvtol = 0.4;
 		rmTol = 0.7;
-		dampConst = 1e9;
+		dampConst = 3e12;
 		gridMin = 5.0e-6;
 		gridMax = 0.02;
 		uniformityTol = 3;
@@ -51,31 +45,50 @@ grid:
 InitialCondition:
 {
 	// Read Initial profile from a file.
-	//file = "restartB.mat";
+	file = "restartD.mat";
 	
 	// These properties will override parameters read from the file
 	Tu = 300;
-	//reactants = "O2:1.0, N2:3.76, H2:0.4, CO:0.6";
 	fuel = "CO:0.8, H2:0.2";
 	oxidizer = "N2:3.76, O2:1.0";
-	equivalenceRatio = 0.5;
+	equivalenceRatio = 0.6;
 	
 	pressure = 101325;
+	
+	// Generate a grid without a restart file
+	nPoints = 40;
+	xLeft = -0.005;
+	xRight = 0.005;
 };
 
 StrainParameters:
 {
-	initial = 80;
-	final = 80;
-	start = 0;
+	initial = 50;
+	final = 50;
+	tStart = 0;
 	dt = 0.020;
-	list = [200, 175, 150, 125, 100];
+	//list = [200, 175, 150, 125, 100];
+};
+
+CurvatureParameters:
+{
+	rInitial = 0.025;
+	rFinal = 0.030;
+	tStart = .171;	
+	dt = 0.004;
+	integralGain = 100;
+	derivativeGain = 0;
+	proportionalGain = 0.1;
+	updateTimeInterval = 1e-4;
+	updateStepInterval = 55;
+	//	rStag = 0;
 };
 
 times:
 {
 	maxTimestep = 2e-4;
 	
+	// Intervals for regridding and grid adaptation
 	regridTimeInterval = 2e-3;
 	regridStepInterval = 50;
 	
@@ -84,8 +97,8 @@ times:
 	outputTimeInterval = 5e-5;
 		
 	// Output intervals for flame profiles
-	profileStepInterval = 200;
-	profileTimeInterval = 5e-4;
+	profileStepInterval = 50;
+	profileTimeInterval = 1e-4;
 };
 
 integrator:
@@ -117,10 +130,10 @@ outputFiles:
 terminationCondition:
 {
 	// Integrate until a specific time:
-	// tEnd = 0.3;
+	tEnd = 0.2;
 	
 	// Integrate until <measurment> is steady to within <tolerance> for <time>
 	measurement = "Q";
 	tolerance = 0.001;
-	time = 0.02;
+	time = 0.025;
 };

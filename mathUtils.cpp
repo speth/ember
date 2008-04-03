@@ -280,7 +280,7 @@ double mathUtils::splines(const dvector& xIn, const dvector& yIn, const double x
 double mathUtils::integrate(const dvector& x, const dvector& y)
 {
 	if (x.size() != y.size()) {
-		cout << "mathUtils::splineInt: error: xIn and yIn must be the same size." << endl;
+		cout << "mathUtils::integrate: error: xIn and yIn must be the same size." << endl;
 		throw;
 	}
 
@@ -295,6 +295,21 @@ double mathUtils::integrate(const dvector& x, const dvector& y)
 		I += dx*(c[0][i] + dx*(c[1][i]/2 + dx*(c[2][i]/3 + dx*c[3][i]/4)));
 	}
 
+	return I;
+}
+
+double mathUtils::trapz(const dvector& x, const dvector& y)
+{
+	if (x.size() != y.size()) {
+		cout << "mathUtils::trapz: error: x and y must be the same size." << endl;
+		throw;
+	}
+
+	double I = 0;
+	int n = x.size();
+	for (int i=0; i<n-1; i++) {
+		I += 0.5*(y[i+1]+y[i])*(x[i+1]-x[i]);
+	}
 	return I;
 }
 
