@@ -1,16 +1,17 @@
 paths:
 {
 	inputDir = "input";
-	outputDir = "output23";
+	outputDir = "output06";
 };
 
 general:
 {
-	fixedBurnedVal = false;
-	fixedLeftLocation = true;
-	unburnedLeft = false;
-	curvedFlame = true;
-	twinFlame = true;
+	fixedBurnedVal = true;
+	fixedLeftLocation = false;
+	unburnedLeft = true;
+	curvedFlame = false;
+	twinFlame = false;
+	centeredDifferences = true;
 };
 
 chemistry:
@@ -24,10 +25,11 @@ grid:
 	adaptation:
 	{
 		// Medium accuracy: vtol = 0.1, dvtol = 0.25
-		vtol = 0.2;
-		dvtol = 0.4;
+		// Minimal accuracy: vtol = 0.2, dvtol = 0.4
+		vtol = 0.1;
+		dvtol = 0.25;
 		rmTol = 0.7;
-		dampConst = 3e12;
+		dampConst = 3;
 		gridMin = 5.0e-6;
 		gridMax = 0.02;
 		uniformityTol = 3;
@@ -45,7 +47,7 @@ grid:
 InitialCondition:
 {
 	// Read Initial profile from a file.
-	file = "restartD.mat";
+	//file = "restartD.mat";
 	
 	// These properties will override parameters read from the file
 	Tu = 300;
@@ -63,13 +65,14 @@ InitialCondition:
 
 StrainParameters:
 {
-	initial = 50;
-	final = 50;
+	initial = 100;
+	final = 100;
 	tStart = 0;
 	dt = 0.020;
 	//list = [200, 175, 150, 125, 100];
 };
 
+/*
 CurvatureParameters:
 {
 	rInitial = 0.025;
@@ -83,22 +86,23 @@ CurvatureParameters:
 	updateStepInterval = 55;
 	//	rStag = 0;
 };
+*/
 
 times:
 {
 	maxTimestep = 2e-4;
 	
 	// Intervals for regridding and grid adaptation
-	regridTimeInterval = 2e-3;
-	regridStepInterval = 50;
+	regridTimeInterval = 3e-3;
+	regridStepInterval = 60;
 	
 	// Output intervals for integral flame data
 	outputStepInterval = 5;
 	outputTimeInterval = 5e-5;
 		
 	// Output intervals for flame profiles
-	profileStepInterval = 50;
-	profileTimeInterval = 1e-4;
+	profileStepInterval = 500;
+	profileTimeInterval = 2e-3;
 };
 
 integrator:
@@ -130,10 +134,10 @@ outputFiles:
 terminationCondition:
 {
 	// Integrate until a specific time:
-	tEnd = 0.2;
+	//tEnd = 0.2;
 	
 	// Integrate until <measurment> is steady to within <tolerance> for <time>
 	measurement = "Q";
 	tolerance = 0.001;
-	time = 0.025;
+	time = 0.02;
 };

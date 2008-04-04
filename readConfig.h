@@ -20,6 +20,7 @@ public:
 	bool fixedLeftLoc;
 	bool twinFlame;
 	bool curvedFlame;
+	bool centeredDifferences;
 
 	int regridStepInterval;
 	int outputStepInterval;

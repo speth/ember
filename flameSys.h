@@ -164,6 +164,9 @@ public:
 	void update_rVcenter(const double t);
 	double targetFlamePosition(double t); // [m]
 
+	void V2rV(void);
+	void rV2V(void);
+
 private:
 	// Subdivided governing equation components
 	dvector energyUnst, energyDiff, energyConv, energyProd;
@@ -177,7 +180,6 @@ private:
 	int jacBWdot; // Bandwidth of dF/dydot component of Jacobian
 	sdBandMatrix* bandedJacobian;
 	vector<long int> pMat;
-	bool inGetIC;
 
 	// Functions for addressing the subdiagonal, 
 	// diagonal, and superdiagonal blocks of the Jacobian
@@ -186,4 +188,6 @@ private:
 	double& jacC(const int j, const int k1, const int k2);
 
 	int kMomentum, 	kContinuity, kEnergy, kSpecies;
+
+	double centerVol, centerArea;
 };

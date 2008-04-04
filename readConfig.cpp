@@ -46,6 +46,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	curvedFlame = false;
 	fixedLeftLoc = false;
 	twinFlame = false;
+	centeredDifferences = false;
 
 	// Grid	
 	nPoints = 50;
@@ -160,6 +161,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("general.unburnedLeft",unburnedLeft);
 	cfg.lookupValue("general.curvedFlame",curvedFlame);
 	cfg.lookupValue("general.twinFlame",twinFlame);
+	cfg.lookupValue("general.centeredDifferences",centeredDifferences);
 
 	cfg.lookupValue("times.regridTimeInterval",regridTimeInterval);
 	cfg.lookupValue("times.regridStepInterval",regridStepInterval);

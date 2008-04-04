@@ -96,7 +96,7 @@ void flameSolver::run(void)
 		theSolver.t0 = t;
 		int ICflag = -1;
 		int ICcount = 0;
-		while (ICflag!=0 && ICcount < 10) {
+		while (ICflag!=0 && ICcount < 5) {
 			ICcount++;
 			ICflag = theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, theSys.algebraic);
 		}
@@ -263,7 +263,7 @@ void flameSolver::calculateReactantMixture(void)
 		Of += a[mO]*Xf[k];
 		Oo += a[mO]*Xo[k];
 	}
-	double stoichAirFuelRatio = -(Of-2*Cf-Hf)/(Oo-2*Co-Ho);
+	double stoichAirFuelRatio = -(Of-2*Cf-Hf/2)/(Oo-2*Co-Ho/2);
 	options.reactants = Xf*options.equivalenceRatio + stoichAirFuelRatio*Xo;
 	options.reactants /= mathUtils::sum(options.reactants);
 }
