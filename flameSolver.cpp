@@ -235,9 +235,9 @@ void flameSolver::run(void)
 }
 
 void flameSolver::calculateReactantMixture(void)
-{
-	Cantera::IdealGasMix fuel(options.gasMechanismFile,options.gasPhaseID);
-	Cantera::IdealGasMix oxidizer(options.gasMechanismFile,options.gasPhaseID);
+{	
+	Cantera_CXX::IdealGasMix fuel(options.gasMechanismFile,options.gasPhaseID);
+	Cantera_CXX::IdealGasMix oxidizer(options.gasMechanismFile,options.gasPhaseID);
 
 	fuel.setState_TPX(options.Tu, options.pressure, options.fuel);
 	oxidizer.setState_TPX(options.Tu, options.pressure, options.oxidizer);

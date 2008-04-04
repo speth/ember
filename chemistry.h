@@ -13,6 +13,10 @@
 
 #include "mathUtils.h"
 
+#ifdef WIN32
+#define Cantera_CXX Cantera
+#endif
+
 // NOTE: Use of this class requires a slightly modified installation of Cantera
 // gasArray modifies protected members of Transport objects, requiring gasArray
 // to be declared as a friend of Cantera's transport-related classes.

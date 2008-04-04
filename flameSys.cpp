@@ -1113,10 +1113,10 @@ void flameSys::loadInitialProfiles(void)
 }
 
 flameSys::flameSys(void) 
-	: bandedJacobian(NULL)
-	, grid(options)
-	, inGetIC(false)
+	: grid(options)
+	, bandedJacobian(NULL)
 	, flamePosIntegralError(0)
+	, inGetIC(false)
 {
 }
 
