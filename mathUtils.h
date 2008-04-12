@@ -22,12 +22,14 @@ namespace mathUtils
 	double minval(const dvector& v);
 	double range(const dvector& v);
 	double sum(const dvector& v);
+	double mean(const dvector& v);
 
 	// Find the min/max of a subvector
 	double maxval(const dvector& v, int iStart, int iEnd);
 	double minval(const dvector& v, int iStart, int iEnd);
 	double range(const dvector& v, int iStart, int iEnd);
 	double sum(const dvector& v, int iStart, int iEnd);
+	double mean(const dvector& v, int iStart, int iEnd);
 
 	// location of the minimum / maximum
 	int minloc(const dvector& v);
@@ -64,6 +66,7 @@ namespace mathUtils
 
 	// For converting numbers into strings
 	std::string stringify(double x);
+	std::string stringify(double x, int nDigits);
 	std::string stringify(int x);
 };
 

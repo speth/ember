@@ -191,14 +191,6 @@ void flameSolver::run(void)
 					theSys.grid.dampVal[j] = num/abs(theSys.V[j]);
 				}
 				vector<dvector> currentSolution, currentSolutionDot;
-
-				//for (int j=0; j<theSys.nPoints; j++) {
-				//	for (int k=0; k<theSys.nSpec; k++) {
-				//		theSys.Y(k,j) = std::max(theSys.Y(k,j),0.0);
-				//	}
-				//	theSys.gas.setStateMass(theSys.Y,theSys.T);
-				//	theSys.gas.getMassFractions(theSys.Y);
-				//}
 				theSys.rollVectorVector(theSolver.y, currentSolution);
 				theSys.rollVectorVector(theSolver.ydot, currentSolutionDot);
 
@@ -216,8 +208,6 @@ void flameSolver::run(void)
 					// This corrects the drift of the total mass fractions
 					theSys.gas.setStateMass(theSys.Y,theSys.T);
 					theSys.gas.getMassFractions(theSys.Y);
-
-					//integratorTimestep /= 8;
 
 					break; // exit the inner loop and reinitialize the solver for the new problem size
 				}
@@ -278,12 +268,12 @@ bool flameSolver::checkTerminationCondition(void)
 			return false;
 		}
 		int j2 = timeVector.size()-1;
-		double qMean = mathUtils::sum(heatReleaseRate,j1,j2)/(j2-j1);
+		double qMean = mathUtils::mean(heatReleaseRate,j1,j2);
 		double hrrError = 0;
 		for (int j=j1; j<=j2; j++) {
 			hrrError += abs(heatReleaseRate[j]-qMean);
 		}
-		hrrError /= (j2-j1);
+		hrrError /= (j2-j1+1);
 		if (hrrError/qMean < options.terminationTolerance) {
 			cout << "Terminating integration: Heat release rate deviation = " << hrrError/qMean*100 << "%" << endl;
 			return true;

@@ -68,11 +68,17 @@ public:
 	int leftBoundaryConfig;
 
 private:
+	vector<dvector>* yIn;
+	vector<dvector>* ydotIn;
 
 	configOptions& options;
 	int nVars; // number of solution variables at each grid point
 	
 	void removePoint(int jRemove, vector<dvector>& y, vector<dvector>& ydot);
 	void addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot);
-	
+
+	bool removeRight(void);
+	bool removeLeft(void);
+	bool addRight(void);
+	bool addLeft(void);
 };

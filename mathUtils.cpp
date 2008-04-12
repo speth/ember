@@ -42,13 +42,24 @@ double mathUtils::sum(const dvector& v)
 	return val;
 }
 
+double mathUtils::mean(const dvector& v)
+{
+	int n = v.size();
+	if (n==0) { return 0; }
+	double val = 0;
+	for (int i=0; i<n; i++) {
+		val += v[i];
+	}
+	return val/n;
+}
+
 double mathUtils::maxval(const dvector& v, int iStart, int iEnd)
 {
 	int n = v.size();
 	if (n==0) { return 0; }
 	if (iStart < 0 || iEnd > n) { throw; }
 	double val = v[0];
-	for (int i=iStart; i<iEnd; i++) {
+	for (int i=iStart; i<=iEnd; i++) {
 		if (v[i] > val) {
 			val = v[i];
 		}
@@ -62,7 +73,7 @@ double mathUtils::minval(const dvector& v, int iStart, int iEnd)
 	if (n==0) { return 0; }
 	if (iStart < 0 || iEnd > n) { throw; }
 	double val = v[0];
-	for (int i=iStart; i<iEnd; i++) {
+	for (int i=iStart; i<=iEnd; i++) {
 		if (v[i] < val) {
 			val = v[i];
 		}
@@ -76,10 +87,22 @@ double mathUtils::sum(const dvector& v, int iStart, int iEnd)
 	if (n==0) { return 0; }
 	if (iStart < 0 || iEnd > n) { throw; }
 	double val = 0;
-	for (int i=iStart; i<iEnd; i++) {
+	for (int i=iStart; i<=iEnd; i++) {
 		val += v[i];
 	}
 	return val;
+}
+
+double mathUtils::mean(const dvector& v, int iStart, int iEnd)
+{
+	int n = v.size();
+	if (n==0) { return 0; }
+	if (iStart < 0 || iEnd > n) { throw; }
+	double val = 0;
+	for (int i=iStart; i<=iEnd; i++) {
+		val += v[i];
+	}
+	return val/(iEnd-iStart+1);
 }
 
 int mathUtils::maxloc(const dvector& v)
@@ -351,6 +374,16 @@ std::string mathUtils::stringify(int x)
 	os << x;
 	return os.str();
 }
+
+std::string mathUtils::stringify(double x, int nDigits)
+{
+	std::ostringstream os;
+	os.fill('0');
+	os.width(nDigits);
+	os << x;
+	return os.str();
+}
+
 
 std::ostream& operator<<(std::ostream& os, dvector& v)
 {

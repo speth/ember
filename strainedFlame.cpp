@@ -55,6 +55,10 @@ void strainedFlame(const std::string& inputFile)
 	//mainOptions.fileNumberOverride = true;
 
 	if (mainOptions.strainRateList.size()!=0) {
+
+		// integral data
+		dvector Q, eps, Sc, xFlame;
+
 		for (unsigned int i=0; i<mainOptions.strainRateList.size(); i++) {
 
 			// Instantiate a new solver
@@ -73,21 +77,37 @@ void strainedFlame(const std::string& inputFile)
 	
 			// copy data needed for the next run
 			mainOptions.fileNumberOverride = false;
-			std::string restartFile = "prof_eps"+stringify(a);
+			std::string restartFile = "prof_eps"+stringify(a,4);
 			theFlameSolver.theSys.writeStateMatFile(restartFile);
 			mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
 			mainOptions.useRelativeRestartPath = false;
 			mainOptions.haveRestartFile = true;
 
 			// Write the time-series data file for this run
-			matlabFile outFile(mainOptions.outputDir+"/out_eps"+stringify(a)+".mat");
+			matlabFile outFile(mainOptions.outputDir+"/out_eps"+stringify(a,4)+".mat");
 			outFile.writeVector("t",theFlameSolver.timeVector);
 			outFile.writeVector("dt",theFlameSolver.timestepVector);
 			outFile.writeVector("Q",theFlameSolver.heatReleaseRate);
 			outFile.writeVector("Sc",theFlameSolver.consumptionSpeed);
 			outFile.writeVector("xFlame",theFlameSolver.flamePosition);
 			outFile.close();
+
+			// Append and save the integral data for this run
+			int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.theSys.tNow - mainOptions.terminationPeriod));
+			int iEnd = theFlameSolver.timestepVector.size()-1;
+			eps.push_back(a);
+			Q.push_back(mean(theFlameSolver.heatReleaseRate, iStart, iEnd));
+			Sc.push_back(mean(theFlameSolver.consumptionSpeed, iStart, iEnd));
+			xFlame.push_back(mean(theFlameSolver.flamePosition, iStart, iEnd));
+
+			matlabFile dataFile(mainOptions.outputDir+"/integral.mat");
+			dataFile.writeVector("a",eps);
+			dataFile.writeVector("Q",Q);
+			dataFile.writeVector("Sc",Sc);
+			dataFile.writeVector("xFlame",xFlame);
+			dataFile.close();
 		}
+
 	} else {
 		flameSolver theFlameSolver;
 		theFlameSolver.setOptions(mainOptions);
