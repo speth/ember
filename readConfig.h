@@ -67,6 +67,7 @@ public:
 	bool outputAuxiliaryVariables;
 	bool outputTimeDerivatives;
 	bool outputHeatReleaseRate;
+	bool outputResidualComponents;
 
 	bool terminateForSteadyQdot;
 	double terminationTolerance;

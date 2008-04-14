@@ -1386,6 +1386,24 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 		outFile.writeVector("mu",mu);
 	}
 
+	if (options.outputResidualComponents || errorFile) {
+		outFile.writeVector("resEnergyUnst",energyUnst);
+		outFile.writeVector("resEnergyDiff",energyDiff);
+		outFile.writeVector("resEnergyConv",energyConv);
+		outFile.writeVector("resEnergyProd",energyProd);
+		outFile.writeVector("resMomentumUnst",momentumUnst);
+		outFile.writeVector("resMomentumDiff",momentumDiff);
+		outFile.writeVector("resMomentumConv",momentumConv);
+		outFile.writeVector("resMomentumProd",momentumProd);
+		outFile.writeArray2D("resSpeciesUnst",speciesUnst);
+		outFile.writeArray2D("resSpeciesDiff",speciesDiff);
+		outFile.writeArray2D("resSpeciesConv",speciesConv);
+		outFile.writeArray2D("resSpeciesProd",speciesProd);
+		outFile.writeVector("resContinuityUnst",continuityUnst);
+		outFile.writeVector("resContinuityRhov",continuityRhov);
+		outFile.writeVector("resContinuityStrain",continuityStrain);
+	}
+
 	outFile.close();
 	if (incrementFileNumber) {
 		options.outputFileNumber++;

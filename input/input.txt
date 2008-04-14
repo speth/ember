@@ -128,6 +128,7 @@ outputFiles:
 	heatReleaseRate: true;
 	auxiliaryVariables: false;
 	timeDerivatives: false;
+	residualComponents: false;
 	firstFileNumber = 0;
 };
 

@@ -93,6 +93,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	outputAuxiliaryVariables = false;
 	outputTimeDerivatives = false;
 	outputHeatReleaseRate = false;
+	outputResidualComponents = false;
 	outputFileNumber = 0;
 
 	terminateForSteadyQdot = false;
@@ -186,6 +187,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("outputFiles.heatReleaseRate",outputHeatReleaseRate);
 	cfg.lookupValue("outputFiles.auxiliaryVariables",outputAuxiliaryVariables);
 	cfg.lookupValue("outputFiles.timeDerivatives",outputTimeDerivatives);
+	cfg.lookupValue("outputFiles.residualComponents",outputResidualComponents);
 	fileNumberOverride = cfg.lookupValue("outputFiles.firstFileNumber",outputFileNumber);
 
 	cfg.lookupValue("terminationCondition.tolerance",terminationTolerance);
