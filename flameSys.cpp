@@ -54,7 +54,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 			jFick(k,j) = -W[k]*0.5
 				* (rhoD(k,j)/Wmx[j] + rhoD(k,j+1)/Wmx[j+1])
 				* (X(k,j+1)-X(k,j))/grid.hh[j];
-			jSoret(k,j) = 0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
+			jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
 				* (T[j+1]-T[j])/grid.hh[j];
 			sumcpj[j] += cpSpec(k,j)/W[k]*(jFick(k,j) + jSoret(k,j));
 		}
