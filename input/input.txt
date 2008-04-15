@@ -1,7 +1,7 @@
 paths:
 {
 	inputDir = "input";
-	outputDir = "output06";
+	outputDir = "output01";
 };
 
 general:
@@ -65,8 +65,8 @@ InitialCondition:
 
 StrainParameters:
 {
-	initial = 100;
-	final = 100;
+	initial = 200;
+	final = 200;
 	tStart = 0;
 	dt = 0.020;
 	list = [200, 175, 150, 125, 100];

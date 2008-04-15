@@ -340,13 +340,10 @@ void oneDimGrid::addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot
 void oneDimGrid::removePoint(int jRemove, vector<dvector>& y, vector<dvector>& ydot)
 {
 	x.erase(x.begin() + jRemove);
-	dampVal.erase(dampVal.begin() + jRemove);
-
 	vector<dvector>::iterator i;
 	for (i=y.begin(); i!=y.end(); i++) {
 		i->erase(i->begin() + jRemove);
 	}
-
 	for (i=ydot.begin(); i!=ydot.end(); i++) {
 		i->erase(i->begin() + jRemove);
 	}
@@ -411,6 +408,7 @@ bool oneDimGrid::addRight(void)
 			}
 			jj++;
 		}
+		updateBoundaryIndices();
 	}
 
 	return pointAdded;
@@ -486,6 +484,7 @@ bool oneDimGrid::addLeft(void)
 			}
 			jj++;
 		}
+		updateBoundaryIndices();
 	}
 
 	return pointAdded;
@@ -523,6 +522,7 @@ bool oneDimGrid::removeRight(void)
 		cout << "Regrid: Removing point from right side." << endl;
 		removePoint(jj,y,ydot);
 		jj--;
+		updateBoundaryIndices();
 	}
 
 	return pointRemoved;
@@ -565,6 +565,7 @@ bool oneDimGrid::removeLeft(void)
 		cout << "Regrid: Removing point from left side." << endl;
 		removePoint(0,y,ydot);
 		jj--;
+		updateBoundaryIndices();
 	}
 
 	return pointRemoved;

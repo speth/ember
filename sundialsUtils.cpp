@@ -398,8 +398,6 @@ void sundialsIDA::printStats(void)
 	check_flag(&retval, "IDAGetNumSteps", 1);
 	retval = IDAGetNumResEvals(sundialsMem, &nre);
 	check_flag(&retval, "IDAGetNumResEvals", 1);
-	retval = IDAGetNumNonlinSolvIters(sundialsMem, &nni);
-	check_flag(&retval, "IDAGetNumNonlinSolvIters", 1);
 	retval = IDAGetNumErrTestFails(sundialsMem, &netf);
 	check_flag(&retval, "IDAGetNumErrTestFails", 1);
 	retval = IDAGetNumNonlinSolvConvFails(sundialsMem, &ncfn);
@@ -410,19 +408,14 @@ void sundialsIDA::printStats(void)
 	}
 	retval = IDASpilsGetNumJtimesEvals(sundialsMem, &nje);
 	check_flag(&retval, "IDASpilsGetNumJtimesEvals", 1);
-	retval = IDASpilsGetNumLinIters(sundialsMem, &nli);
-	check_flag(&retval, "IDASpilsGetNumLinIters", 1);
-	retval = IDASpilsGetNumResEvals(sundialsMem, &nreLS);
-	check_flag(&retval, "IDASpilsGetNumResEvals", 1);
 	retval = IDASpilsGetNumPrecEvals(sundialsMem, &npe);
 	check_flag(&retval, "IDASpilsGetPrecEvals", 1);
 	retval = IDASpilsGetNumPrecSolves(sundialsMem, &nps);
 	check_flag(&retval, "IDASpilsGetNumPrecSolves", 1);
 
-	printf("\nFinal Run Statistics: \n\n");
+	printf("\nIDA Solver Statistics: \n\n");
 	printf("Number of steps                    = %ld\n", nst);
 	printf("Number of residual evaluations     = %ld\n", nre);
-	printf("Number of nonlinear iterations     = %ld\n", nni);
 	printf("Number of error test failures      = %ld\n", netf);
 	printf("Number of nonlinear conv. failures = %ld\n", ncfn);
 	if (findRoots) {
@@ -484,7 +477,7 @@ void sundialsIDA::setMaxStepSize(double dt)
 int sundialsIDA::f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void *f_data)
 {
 	sdVector y(yIn), ydot(ydotIn), res(resIn);
-	// f_data contains a pointer to the "theODE" object
+	// f_data is a pointer to the "theDAE" object
 	return ((sdDAE*) f_data)->f(t, y, ydot, res);
 }
 
@@ -492,18 +485,18 @@ int sundialsIDA::f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, vo
 int sundialsIDA::g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, void *g_data)
 {
 	sdVector y(yIn), ydot(ydotIn);
-	// g_data contains a pointer to the "theODE" object
+	// g_data is a pointer to the "theDAE" object
 	return ((sdDAE*) g_data)->g(t, y, ydot, gout);
 }
 
-// Jacobian routine. Compute J(t,y) = df/dy. *
+// Jacobian routine. Compute J(t,y) = df/dy.
 int sundialsIDA::Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn, 
 		             N_Vector resIn, realtype c_j, void *jac_data, DenseMat Jin, 
 				     N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
 	sdVector y(yIn), ydot(ydotIn), res(resIn);
 	sdMatrix J(Jin);
-	// jac_data contains a pointer to the "theODE" object
+	// jac_data is a pointer to the "theDAE" object
 	return ((sdDAE*) jac_data)->Jac(t, y, ydot, res, c_j, J);
 }
 
