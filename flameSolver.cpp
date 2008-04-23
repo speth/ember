@@ -194,8 +194,8 @@ void flameSolver::run(void)
 				theSys.rollVectorVector(theSolver.y, currentSolution);
 				theSys.rollVectorVector(theSolver.ydot, currentSolutionDot);
 
-				bool adaptFlag = theSys.grid.adapt(currentSolution, currentSolutionDot);
 				bool regridFlag = theSys.grid.regrid(currentSolution, currentSolutionDot);
+				bool adaptFlag = theSys.grid.adapt(currentSolution, currentSolutionDot);
 
 				if (adaptFlag || regridFlag) {
 					theSys.nPoints = theSys.grid.jj+1;
