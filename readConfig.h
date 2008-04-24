@@ -70,7 +70,8 @@ public:
 	bool outputResidualComponents;
 
 	bool terminateForSteadyQdot;
-	double terminationTolerance;
+	double terminationTolerance; // relative tolerance
+	double terminationAbsTol; // absolute tolerance
 	double terminationPeriod;
 
 	dvector strainRateList;

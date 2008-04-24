@@ -97,6 +97,8 @@ void configOptions::readOptionsFile(const std::string& filename)
 	outputFileNumber = 0;
 
 	terminateForSteadyQdot = false;
+	terminationTolerance = 1e-4;
+	terminationAbsTol = 0.1;
 	
 	// Read options from the configuration file
 	cfg.lookupValue("paths.inputDir",inputDir);
@@ -191,6 +193,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	fileNumberOverride = cfg.lookupValue("outputFiles.firstFileNumber",outputFileNumber);
 
 	cfg.lookupValue("terminationCondition.tolerance",terminationTolerance);
+	cfg.lookupValue("terminationCondition.abstol",terminationAbsTol);
 	cfg.lookupValue("terminationCondition.time",terminationPeriod);
 
 	std::string terminationMeasurement;

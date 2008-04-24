@@ -391,7 +391,7 @@ int sundialsIDA::getRootInfo(void)
 
 void sundialsIDA::printStats(void)
 {
-	long int nst, nni, nje, nre, nreLS, netf, ncfn, nge, nli, npe, nps;
+	long int nst, nje, nre, netf, ncfn, nge, npe, nps;
 	int retval;
 
 	retval = IDAGetNumSteps(sundialsMem, &nst);
@@ -422,7 +422,6 @@ void sundialsIDA::printStats(void)
 		printf("Number of root fn. evaluations     = %ld\n", nge);
 	}
 	printf("Number of J-v Evaluations          = %ld\n", nje);
-	printf("Number of linear iterations        = %ld\n", nli);
 	printf("Number of preconditioner evals.    = %ld\n", npe);
 	printf("Number of preconditioner solves    = %ld\n", nps);
 }

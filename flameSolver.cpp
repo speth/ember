@@ -274,8 +274,11 @@ bool flameSolver::checkTerminationCondition(void)
 			hrrError += abs(heatReleaseRate[j]-qMean);
 		}
 		hrrError /= (j2-j1+1);
-		if (hrrError/qMean < options.terminationTolerance) {
+		if (hrrError/abs(qMean) < options.terminationTolerance) {
 			cout << "Terminating integration: Heat release rate deviation = " << hrrError/qMean*100 << "%" << endl;
+			return true;
+		} else if (hrrError > options.terminationAbsTol) {
+			cout << "Terminating integration: Heat relelase rate deviation less than absolute tolerance." << endl;
 			return true;
 		} else {
 			cout << "Continuing integration: Heat release rate deviation = " << hrrError/qMean*100 << "%" << endl;
