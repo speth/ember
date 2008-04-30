@@ -22,11 +22,16 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 
 	gas.setStateMass(Y,T);
 	//gas.getMoleFractions(X);
-	//gas.getMassFractions(Y);
+	gas.getMassFractions(Y);
 
-	updateTransportProperties();
-	updateThermoProperties();
-	gas.getReactionRates(wDot);
+	try {
+		updateTransportProperties();
+		updateThermoProperties();
+		gas.getReactionRates(wDot);
+	} catch (Cantera::CanteraError) {
+		cout << "Error evaluating thermodynamic properties" << endl;
+		return -1;
+	}
 
 	for (int j=0; j<=jj; j++) {
 		qDot[j] = 0;
@@ -243,6 +248,8 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot, 
 										  sdVector& res, realtype c_j)
 {
+	unrollY(y);
+	unrollYdot(ydot);
 	int j;
 	int jj = nPoints-1;
 	// The constant "800" here has been empirically determined to give the 
