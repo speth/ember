@@ -21,8 +21,8 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	// thermodynamic, transport and kinetic parameters
 
 	gas.setStateMass(Y,T);
-	gas.getMoleFractions(X);
-	gas.getMassFractions(Y);
+	//gas.getMoleFractions(X);
+	//gas.getMassFractions(Y);
 
 	updateTransportProperties();
 	updateThermoProperties();
@@ -51,9 +51,8 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	for (int j=0; j<jj; j++) {
 		sumcpj[j] = 0;
 		for (int k=0; k<nSpec; k++) {
-			jFick(k,j) = -W[k]*0.5
-				* (rhoD(k,j)/Wmx[j] + rhoD(k,j+1)/Wmx[j+1])
-				* (X(k,j+1)-X(k,j))/grid.hh[j];
+			jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1))
+				* (Y(k,j+1)-Y(k,j))/grid.hh[j];
 			jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
 				* (T[j+1]-T[j])/grid.hh[j];
 			sumcpj[j] += cpSpec(k,j)/W[k]*(jFick(k,j) + jSoret(k,j));
@@ -226,7 +225,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	} else if (options.stagnationRadiusControl) {
 		continuityUnst[0] = rV[0] - pow(options.rStag,grid.alpha+1)/((grid.alpha+1)*rhoLeft*a);
 	} else {
-		continuityUnst[0] = drhovdt[0];
+		continuityUnst[0] = dVdt[0];
 	}
 	
 	continuityRhov[0] = continuityStrain[0] = 0;
@@ -371,8 +370,8 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 				jacB(j,kSpecies+k,kSpecies+i) = -dwdY[j](k,i)*W[k] - rho[j]*Wmx[j]/W[i]*dYdt(k,j);
 			}
 			jacB(j,kSpecies+k,kSpecies+k) += c_j*rho[j] +
-				(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))*Wmx[j]/Wmx[j+1]/(grid.hh[j]*grid.hh[j]);
-			jacC(j,kSpecies+k,kSpecies+k) = - (grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))*Wmx[j]/Wmx[j+1]/(grid.hh[j]*grid.hh[j]);
+				(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))/(grid.hh[j]*grid.hh[j]);
+			jacC(j,kSpecies+k,kSpecies+k) = - (grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))/(grid.hh[j]*grid.hh[j]);
 		}
 
 	} else if (grid.leftBoundaryConfig == grid.lbControlVolume) {
@@ -421,10 +420,10 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 					centerVol*rho[j]*Wmx[j]/W[i]*dYdt(k,j);
 			}
 			jacB(j,kSpecies+k,kSpecies+k) += centerVol*rho[j]*c_j
-				+ centerArea*(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))*Wmx[j]/Wmx[j+1]/grid.hh[j] + rVcenter;
+				+ centerArea*(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))/grid.hh[j] + rVcenter;
 
 			// dSpecies/dY_(j+1)
-			jacC(j,kSpecies+k,kSpecies+k) = -centerArea*(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))*Wmx[j]/Wmx[j+1]/grid.hh[j];
+			jacC(j,kSpecies+k,kSpecies+k) = -centerArea*(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))/grid.hh[j];
 		}
 	}
 
@@ -684,7 +683,7 @@ void flameSys::setup(void)
 	T.resize(nPoints);
 	Y.resize(nSpec,nPoints);
 
-	drhovdt.resize(nPoints,0);
+	dVdt.resize(nPoints,0);
 	dUdt.resize(nPoints,0);
 	dTdt.resize(nPoints,0);
 	dYdt.resize(nSpec,nPoints);
@@ -1014,7 +1013,7 @@ flameSys::~flameSys(void)
 void flameSys::unrollYdot(const sdVector& yDot)
 {
 	for (int j=0; j<nPoints; j++) {
-		drhovdt[j] = yDot(nVars*j);
+		dVdt[j] = yDot(nVars*j);
 		dUdt[j] = yDot(nVars*j+1);
 		dTdt[j] = yDot(nVars*j+2);
 		for (int k=0; k<nSpec; k++) {
@@ -1026,7 +1025,7 @@ void flameSys::unrollYdot(const sdVector& yDot)
 void flameSys::rollYdot(sdVector& yDot)
 {
 	for (int j=0; j<nPoints; j++) {
-		yDot(nVars*j) = drhovdt[j];
+		yDot(nVars*j) = dVdt[j];
 		yDot(nVars*j+1) = dUdt[j];
 		yDot(nVars*j+2) = dTdt[j];
 		for (int k=0; k<nSpec; k++) {
@@ -1102,7 +1101,7 @@ void flameSys::unrollVectorVector(const vector<dvector>& v)
 void flameSys::unrollVectorVectorDot(const vector<dvector>& v)
 {
 	for (int j=0; j<nPoints; j++) {
-		drhovdt[j] = v[grid.kContinuity][j];
+		dVdt[j] = v[grid.kContinuity][j];
 		dUdt[j] = v[grid.kMomentum][j];
 		dTdt[j] = v[grid.kEnergy][j];
 	}
@@ -1192,7 +1191,7 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 	} else if (options.stagnationRadiusControl) {
 		rV[0] = pow(options.rStag,grid.alpha+1)/((grid.alpha+1)*rhoLeft*a);
 	} else {
-		drhovdt[0] = 0;
+		dVdt[0] = 0;
 	}
 	
 	// Right boundary values
@@ -1277,8 +1276,14 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 		outfile.writeVector("mUnst",momentumUnst);
 		outfile.writeVector("mDiff",momentumDiff);
 		outfile.writeVector("mConv",momentumConv);
-		outfile.writeVector("mProd",momentumUnst);
-
+		outfile.writeVector("mProd",momentumProd);
+		outfile.writeVector("cUnst",continuityUnst);
+		outfile.writeVector("cStrain",continuityStrain);
+		outfile.writeVector("cRhov",continuityRhov);
+		outfile.writeArray2D("yUnst",speciesUnst);
+		outfile.writeArray2D("yDiff",speciesDiff);
+		outfile.writeArray2D("yConv",speciesConv);
+		outfile.writeArray2D("yProd",speciesProd);
 		outfile.close();
 		return 1;
 	}
@@ -1372,7 +1377,7 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 	if (options.outputTimeDerivatives || errorFile) {
 		outFile.writeVector("dUdt", dUdt);
 		outFile.writeVector("dTdt", dTdt);
-		outFile.writeVector("dVdt", drhovdt);
+		outFile.writeVector("dVdt", dVdt);
 		outFile.writeArray2D("dYdt", dYdt);
 		outFile.writeVector("drhodt",drhodt);
 	}

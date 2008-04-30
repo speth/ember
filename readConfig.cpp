@@ -98,7 +98,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	terminateForSteadyQdot = false;
 	terminationTolerance = 1e-4;
-	terminationAbsTol = 0.1;
+	terminationAbsTol = 0.5;
 	
 	// Read options from the configuration file
 	cfg.lookupValue("paths.inputDir",inputDir);

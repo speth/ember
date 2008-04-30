@@ -98,6 +98,13 @@ void flameSolver::run(void)
 		int ICcount = 0;
 		while (ICflag!=0 && ICcount < 5) {
 			ICcount++;
+
+			// This corrects the drift of the total mass fractions
+			theSys.unrollY(theSolver.y);
+			theSys.gas.setStateMass(theSys.Y,theSys.T);
+			theSys.gas.getMassFractions(theSys.Y);
+			theSys.rollY(theSolver.y);
+
 			ICflag = theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, theSys.algebraic);
 		}
 

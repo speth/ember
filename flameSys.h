@@ -85,7 +85,7 @@ public:
 	Array2D Y; // species mass fractions, Y(k,j)
 	
 	// Time derivatives of state variables:
-	dvector drhovdt;
+	dvector dVdt;
 	dvector dUdt;
 	dvector dTdt;
 	Array2D dYdt;
