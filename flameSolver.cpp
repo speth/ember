@@ -126,7 +126,6 @@ void flameSolver::run(void)
 				flag = theSolver.integrateOneStep();
 			} catch (Cantera::CanteraError) {
 				theSys.writeStateMatFile("errorOutput",true);
-				throw;
 			}
 
 			firstIteration = false;

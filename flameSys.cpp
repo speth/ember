@@ -21,8 +21,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	// thermodynamic, transport and kinetic parameters
 
 	gas.setStateMass(Y,T);
-	//gas.getMoleFractions(X);
-	gas.getMassFractions(Y);
+//	gas.getMassFractions(Y);
 
 	try {
 		updateTransportProperties();
@@ -30,7 +29,9 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 		gas.getReactionRates(wDot);
 	} catch (Cantera::CanteraError) {
 		cout << "Error evaluating thermodynamic properties" << endl;
-		return -1;
+		writeStateMatFile("errorOutput",true);
+		throw;
+//		return -1;
 	}
 
 	for (int j=0; j<=jj; j++) {
@@ -55,14 +56,19 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	// Calculate diffusion mass fluxes, heat flux, enthalpy flux
 	for (int j=0; j<jj; j++) {
 		sumcpj[j] = 0;
+		double jCorr = 0;
 		for (int k=0; k<nSpec; k++) {
 			jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1))
 				* (Y(k,j+1)-Y(k,j))/grid.hh[j];
 			jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
 				* (T[j+1]-T[j])/grid.hh[j];
 			sumcpj[j] += cpSpec(k,j)/W[k]*(jFick(k,j) + jSoret(k,j));
+			jCorr -= jFick(k,j);
 		}
 		qFourier[j] = -0.5*(lambda[j]+lambda[j+1])*(T[j+1]-T[j])/grid.hh[j];
+		for (int k=0; k<nSpec; k++) {
+			jFick(k,j) += Y(k,j)*jCorr; // correction to ensure that sum of mass fractions equals 1
+		}
 	}
 
 	// Left Boundary values for U, T, Y
@@ -1396,6 +1402,8 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 		outFile.writeVector("lambda",lambda);
 		outFile.writeVector("cp",cp);
 		outFile.writeVector("mu",mu);
+		outFile.writeVector("Wmx",Wmx);
+		outFile.writeVector("W",W);
 	}
 
 	if (options.outputResidualComponents || errorFile) {
