@@ -120,6 +120,7 @@ public:
 	// Diffusion mass fluxes
 	Array2D jFick; // Normal diffusion (Fick's Law) [kg/m^2*s]
 	Array2D jSoret; // Soret Effect diffusion [kg/m^2*s]
+	dvector jCorr; // Correction to ensure sum of mass fractions
 	
 	Array2D wDot; // species net production rates [kmol/m^3*s]
 	Array2D hk; // species enthalpies [J/kmol]
@@ -189,5 +190,6 @@ private:
 
 	int kMomentum, 	kContinuity, kEnergy, kSpecies;
 
+	bool inGetIC;
 	double centerVol, centerArea;
 };

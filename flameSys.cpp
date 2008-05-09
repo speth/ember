@@ -56,18 +56,23 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	// Calculate diffusion mass fluxes, heat flux, enthalpy flux
 	for (int j=0; j<jj; j++) {
 		sumcpj[j] = 0;
-		double jCorr = 0;
 		for (int k=0; k<nSpec; k++) {
 			jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1))
 				* (Y(k,j+1)-Y(k,j))/grid.hh[j];
 			jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
 				* (T[j+1]-T[j])/grid.hh[j];
-			sumcpj[j] += cpSpec(k,j)/W[k]*(jFick(k,j) + jSoret(k,j));
-			jCorr -= jFick(k,j);
+			
 		}
 		qFourier[j] = -0.5*(lambda[j]+lambda[j+1])*(T[j+1]-T[j])/grid.hh[j];
+		if (inGetIC) {
+			jCorr[j] = 0;
+			for (int k=0; k<nSpec; k++) {
+				jCorr[j] -= jFick(k,j);
+			}
+		}
 		for (int k=0; k<nSpec; k++) {
-			jFick(k,j) += Y(k,j)*jCorr; // correction to ensure that sum of mass fractions equals 1
+			jFick(k,j) += Y(k,j)*jCorr[j]; // correction to ensure that sum of mass fractions equals 1
+			sumcpj[j] += cpSpec(k,j)/W[k]*(jFick(k,j) + jSoret(k,j));
 		}
 	}
 
@@ -468,8 +473,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 		}
 
 		dTdxCen[j] = T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j];
-
-		
+			
 		for (int k=0; k<nSpec; k++) {
 			// dSpecies/dY
 			for (int i=0; i<nSpec; i++) {
@@ -735,6 +739,7 @@ void flameSys::setup(void)
 	
 	jFick.resize(nSpec,nPoints);
 	jSoret.resize(nSpec,nPoints);
+	jCorr.resize(nPoints);
 	wDot.resize(nSpec,nPoints);
 	hk.resize(nSpec,nPoints);
 	qDot.resize(nPoints);
@@ -1016,6 +1021,7 @@ flameSys::flameSys(void)
 	, bandedJacobian(NULL)
 	, flamePosIntegralError(0)
 {
+	inGetIC = false;
 }
 
 flameSys::~flameSys(void)
@@ -1155,6 +1161,7 @@ void flameSys::printForMatlab(ofstream& file, dvector& v, int index, char* name)
 
 int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::vector<bool>& algebraic)
 {
+	inGetIC = true;
 	sdVector res(N);
 	f(t,y,ydot,res);
 	int jj = nPoints-1;
@@ -1193,7 +1200,7 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 			dYdt(k,0) = -(speciesDiff(k,0)+speciesProd(k,0)+speciesConv(k,0))/(rho[0]*centerVol);
 		}
 	}
-	
+
 	// Continuity equation
 
 	double a = strainRate(t);
@@ -1206,7 +1213,7 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 	} else {
 		dVdt[0] = 0;
 	}
-	
+
 	// Right boundary values
 	if (grid.unburnedLeft && !grid.fixedBurnedVal) {
 		T[jj] = T[jj-1];
@@ -1261,6 +1268,8 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 
 	sdVector resTemp(N);
 	f(t,y,ydot,resTemp);
+	inGetIC = false;
+
 	double resnorm = 0;
 	for (int i=0; i<N; i++) {
 		resnorm += resTemp(i)*resTemp(i);
@@ -1300,8 +1309,6 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 		outfile.close();
 		return 1;
 	}
-
-
 
 	return 0;
 }
