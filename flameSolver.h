@@ -6,6 +6,7 @@ class flameSolver
 {
 public:
 	void setOptions(const configOptions& options);
+	void initialize(void);
 	void run(void);
 
 	void calculateReactantMixture(void);

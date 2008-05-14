@@ -71,7 +71,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 			}
 		}
 		for (int k=0; k<nSpec; k++) {
-			jFick(k,j) += Y(k,j)*jCorr[j]; // correction to ensure that sum of mass fractions equals 1
+			jFick(k,j) += 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]; // correction to ensure that sum of mass fractions equals 1
 			sumcpj[j] += cpSpec(k,j)/W[k]*(jFick(k,j) + jSoret(k,j));
 		}
 	}
@@ -489,14 +489,19 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
 			// dSpeciesk/dYk_j
 			jacB(j,kSpecies+k,kSpecies+k) += rho[j]*c_j  +
-				0.5*grid.rphalf[j]*(rhoD(k,j)+rhoD(k,j+1))/(grid.hh[j]*grid.dlj[j]*grid.r[j]) +
-				0.5*grid.rphalf[j-1]*(rhoD(k,j-1)+rhoD(k,j))/(grid.hh[j-1]*grid.dlj[j]*grid.r[j]);
+				0.5*grid.rphalf[j]*((rhoD(k,j)+rhoD(k,j+1))/grid.hh[j]+jCorr[j])/(grid.dlj[j]*grid.r[j]) +
+				0.5*grid.rphalf[j-1]*((rhoD(k,j-1)+rhoD(k,j))/grid.hh[j-1]-jCorr[j-1])/(grid.dlj[j]*grid.r[j]);
+				
 
 			// dSpeciesk/dYk_j-1
-			jacA(j,kSpecies+k,kSpecies+k) = -0.5*grid.rphalf[j-1]*(rhoD(k,j-1)+rhoD(k,j))/(grid.hh[j-1]*grid.dlj[j]*grid.r[j]);
+			jacA(j,kSpecies+k,kSpecies+k) = -0.5*grid.rphalf[j-1]
+				* ((rhoD(k,j-1)+rhoD(k,j))/grid.hh[j-1]+jCorr[j-1])
+				/ (grid.dlj[j]*grid.r[j]);
 
 			// dSpeciesk/dYk_j+1
-			jacC(j,kSpecies+k,kSpecies+k) = -0.5*grid.rphalf[j]*(rhoD(k,j)+rhoD(k,j+1))/(grid.hh[j]*grid.dlj[j]*grid.r[j]);
+			jacC(j,kSpecies+k,kSpecies+k) = -0.5*grid.rphalf[j]
+				* ((rhoD(k,j)+rhoD(k,j+1))/grid.hh[j]-jCorr[j])
+				/ (grid.dlj[j]*grid.r[j]);
 
 			if (options.centeredDifferences) {
 				jacA(j,kSpecies+k,kSpecies+k) += V[j]*grid.cfm[j];

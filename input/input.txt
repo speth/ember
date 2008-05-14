@@ -140,5 +140,7 @@ terminationCondition:
 	// Integrate until <measurment> is steady to within <tolerance> for <time>
 	measurement = "Q";
 	tolerance = 0.001;
-	time = 0.025;
+	time = 0.04;
+	// timeLow = 0.025;
+	// timeHigh = 0.050;
 };

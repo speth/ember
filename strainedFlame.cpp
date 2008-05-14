@@ -30,8 +30,8 @@ int main(int argc, char** argv)
 	}
 
     try {
-    	strainedFlame(inputFile);
-		//chemistryTest();
+    	//strainedFlame(inputFile);
+		chemistryTest();
 		//matlabioTest();
 		//miscTest();
     }
@@ -71,9 +71,19 @@ void strainedFlame(const std::string& inputFile)
 			theFlameSolver.setOptions(mainOptions);
 			theFlameSolver.calculateReactantMixture();
 
-			// Run the simulation
+			// Low Res Run:
+			theFlameSolver.initialize();
+			theFlameSolver.options.idaRelTol = 1e-3;
+			theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodLow;
 			theFlameSolver.run();
-			cout << "Completed run at strain rate a = " << a << endl;
+			cout << "Completed low-res run at strain rate a = " << a << endl;
+
+			// High Res Run:
+			theFlameSolver.theSys.tStart = theFlameSolver.theSys.tNow;
+			theFlameSolver.options.idaRelTol = mainOptions.idaRelTol;
+			theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodHigh;
+			theFlameSolver.run();
+			cout << "Completed high-res run at strain rate a = " << a << endl;
 	
 			// copy data needed for the next run
 			mainOptions.fileNumberOverride = false;
@@ -112,6 +122,7 @@ void strainedFlame(const std::string& inputFile)
 		flameSolver theFlameSolver;
 		theFlameSolver.setOptions(mainOptions);
 		theFlameSolver.calculateReactantMixture();
+		theFlameSolver.initialize();
 		theFlameSolver.run();
 
 		std::string strainString;
@@ -128,60 +139,70 @@ void strainedFlame(const std::string& inputFile)
 void chemistryTest(void)
 {
 	using namespace Cantera;
-    XML_Node *xc = get_XML_File("gri30.xml");
-    XML_Node * const xs = xc->findNameID("phase", "gri30_mix");
-
-	Cantera::XML_Node* foo = NULL;
-	delete foo;
-
-	int n = 1;
-	clock_t t1, t2;
-	t1 = clock();
-	Cantera::IdealGasPhase thermoBase;
-	Cantera::importPhase(*xs,&thermoBase);
-	vector<Cantera::IdealGasPhase> gas(n,thermoBase);
-	vector<Cantera::GasKinetics*> kin(n);
-	vector<Cantera::Transport*> trans(n);
-	for (int i=0; i<n; i++) {
-		//gas[i] = new Cantera::IdealGasPhase();
-		//Cantera::importPhase(*xs, gas[i]);
-		kin[i] = new Cantera::GasKinetics(&gas[i]);
-		
-		kin[i]->init();
-		Cantera::installReactionArrays(*xs,*kin[i],"gri30_mix");
-		kin[i]->finalize();
-
-		trans[i] = Cantera::newTransportMgr("Mix",&gas[i],1,0);
 	
-	}
-
-	t2 = clock();
-	cout << "separate: " << t2-t1 << endl;
-
-	t1 = clock();
-	gasArray gas2;
-	gas2.mechanismFile = "gri30.xml";
-	gas2.phaseID = "gri30_mix";
-	gas2.initialize();
-	gas2.resize(n);
-	t2 = clock();
-	cout << "gasArray: " << t2-t1 << endl;
-
-	int nSpec = gas[0].nSpecies();
-	dvector dkm(nSpec);
+	Cantera_CXX::IdealGasMix gas("methane_singlestep.cti");
 	
-	dvector y(nSpec);
-	gas[0].setState_TPX(300,101325,"O2:1.0, CH4:0.5");
-	gas[0].getMassFractions(&y[0]);
-	t1 = clock();
-	for (int i=0; i<2000; i++) {
-		y[1] = 0.005*i;
-		gas[0].setMassFractions(&y[0]);
-		//trans[0]->getMixDiffCoeffs(&dkm[0]);
-	}
-
-	t2 = clock();
-	cout << "getMixDiffCoeffs: " << t2-t1 << endl;
+	gas.setState_TPX(300,101325,"N2:3.76, O2:1.0, CH4:0.5");
+	vector<double> wnet(53);
+	gas.getNetProductionRates(&wnet[0]);
+	cout << wnet << endl;
+	return;
+	
+	
+//    XML_Node *xc = get_XML_File("gri30.xml");
+//    XML_Node * const xs = xc->findNameID("phase", "gri30_mix");
+//
+//	Cantera::XML_Node* foo = NULL;
+//	delete foo;
+//
+//	int n = 1;
+//	clock_t t1, t2;
+//	t1 = clock();
+//	Cantera::IdealGasPhase thermoBase;
+//	Cantera::importPhase(*xs,&thermoBase);
+//	vector<Cantera::IdealGasPhase> gas(n,thermoBase);
+//	vector<Cantera::GasKinetics*> kin(n);
+//	vector<Cantera::Transport*> trans(n);
+//	for (int i=0; i<n; i++) {
+//		//gas[i] = new Cantera::IdealGasPhase();
+//		//Cantera::importPhase(*xs, gas[i]);
+//		kin[i] = new Cantera::GasKinetics(&gas[i]);
+//		
+//		kin[i]->init();
+//		Cantera::installReactionArrays(*xs,*kin[i],"gri30_mix");
+//		kin[i]->finalize();
+//
+//		trans[i] = Cantera::newTransportMgr("Mix",&gas[i],1,0);
+//	
+//	}
+//
+//	t2 = clock();
+//	cout << "separate: " << t2-t1 << endl;
+//
+//	t1 = clock();
+//	gasArray gas2;
+//	gas2.mechanismFile = "gri30.xml";
+//	gas2.phaseID = "gri30_mix";
+//	gas2.initialize();
+//	gas2.resize(n);
+//	t2 = clock();
+//	cout << "gasArray: " << t2-t1 << endl;
+//
+//	int nSpec = gas[0].nSpecies();
+//	dvector dkm(nSpec);
+//	
+//	dvector y(nSpec);
+//	gas[0].setState_TPX(300,101325,"O2:1.0, CH4:0.5");
+//	gas[0].getMassFractions(&y[0]);
+//	t1 = clock();
+//	for (int i=0; i<2000; i++) {
+//		y[1] = 0.005*i;
+//		gas[0].setMassFractions(&y[0]);
+//		//trans[0]->getMixDiffCoeffs(&dkm[0]);
+//	}
+//
+//	t2 = clock();
+//	cout << "getMixDiffCoeffs: " << t2-t1 << endl;
 //	cout << "mu = " << trans[0]->viscosity() << endl;
 
 	//Cantera::IdealGasPhase gas;

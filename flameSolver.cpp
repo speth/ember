@@ -5,18 +5,13 @@ void flameSolver::setOptions(const configOptions& theOptions)
 	options = theOptions;
 }
 
-void flameSolver::run(void)
+void flameSolver::initialize(void)
 {
-	clock_t t1, t2;
-	t1 = clock();
 
 	theSys.options = options;
-
 	theSys.copyOptions();
-
 	theSys.gas.initialize();
-	// theSys.gas.testFunction();
-
+	
 	// Initial Conditions for ODE
 	theSys.setup();
 	if (options.haveRestartFile) {
@@ -24,6 +19,12 @@ void flameSolver::run(void)
 	} else {
 		theSys.generateInitialProfiles();
 	}
+}
+
+void flameSolver::run(void)
+{
+	clock_t t1, t2;
+	t1 = clock();
 
 	double integratorTimestep = 0;
 	double t = theSys.tStart;

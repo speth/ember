@@ -99,6 +99,9 @@ void configOptions::readOptionsFile(const std::string& filename)
 	terminateForSteadyQdot = false;
 	terminationTolerance = 1e-4;
 	terminationAbsTol = 0.5;
+	terminationPeriodHigh = 0.1;
+	terminationPeriodLow = 0.04;
+	terminationPeriod = 0.04;
 	
 	// Read options from the configuration file
 	cfg.lookupValue("paths.inputDir",inputDir);
@@ -194,6 +197,8 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	cfg.lookupValue("terminationCondition.tolerance",terminationTolerance);
 	cfg.lookupValue("terminationCondition.abstol",terminationAbsTol);
+	cfg.lookupValue("terminationCondition.timeLow",terminationPeriodLow);
+	cfg.lookupValue("terminationCondition.timeHigh",terminationPeriodHigh);
 	cfg.lookupValue("terminationCondition.time",terminationPeriod);
 
 	std::string terminationMeasurement;

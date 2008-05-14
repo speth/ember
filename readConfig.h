@@ -73,6 +73,8 @@ public:
 	double terminationTolerance; // relative tolerance
 	double terminationAbsTol; // absolute tolerance
 	double terminationPeriod;
+	double terminationPeriodLow;
+	double terminationPeriodHigh;
 
 	dvector strainRateList;
 

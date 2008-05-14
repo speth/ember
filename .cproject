@@ -28,7 +28,8 @@
 <listOptionValue builtIn="false" value="/usr/local/cantera/include"/>
 <listOptionValue builtIn="false" value="/usr/local/matlab/extern/include"/>
 </option>
-<option id="gnu.cpp.compiler.option.other.other.1183985148" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -D&quot;__sync_fetch_and_add(ptr,addend)=_InterlockedExchangeAdd(const_cast&lt;void*&gt;(reinterpret_cast&lt;volatile void*&gt;(ptr)), addend)&quot;" valueType="string"/>
+<option id="gnu.cpp.compiler.option.other.other.1183985148" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -D&quot;__sync_fetch_and_add(ptr,addend)=_InterlockedExchangeAdd(const_cast&lt;void*&gt;(reinterpret_cast&lt;volatile void*&gt;(ptr)), addend)&quot;" valueType="string"/>
+<option id="gnu.cpp.compiler.option.warnings.allwarn.1412310613" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1480131720" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool command="icc" id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1400955621" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
