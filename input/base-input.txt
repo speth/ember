@@ -1,0 +1,134 @@
+paths:
+{
+	inputDir = "input";
+	outputDir = "run/syngas-x0.50-phi0.40";
+};
+
+general:
+{
+	fixedBurnedVal = true;
+	fixedLeftLocation = false;
+	unburnedLeft = true;
+	curvedFlame = false;
+	twinFlame = false;
+	centeredDifferences = true;
+};
+
+chemistry:
+{
+	mechanismFile = "gri30syngas.xml";
+	phaseID = "syngas";
+};
+
+grid:
+{
+	adaptation:
+	{
+		// High accuracy: vtol = 0.08, dvtol = 0.12, dampConst = 7
+		// Medium accuracy: vtol = 0.1, dvtol = 0.25
+		// Minimal accuracy: vtol = 0.2, dvtol = 0.4
+		vtol = 0.08;
+		dvtol = 0.12;
+		rmTol = 0.70;
+		dampConst = 7;
+		gridMin = 3.0e-6;
+		gridMax = 0.04;
+		uniformityTol = 3;
+		absvtol = 1e-8;
+	};
+
+	regridding:
+	{
+		boundaryTol = 5e-5;
+		boundaryTolRm = 1e-5;
+ 		addPointCount = 3;
+	};
+};
+
+InitialCondition:
+{
+	// Read Initial profile from a file.
+	//file = "restartD.mat";
+
+	// These properties will override parameters read from the file
+	Tu = 300;
+	fuel = "CO:0.5, H2:0.5";
+	oxidizer = "N2:3.76, O2:1.0";
+	equivalenceRatio = 0.40;
+
+	pressure = 101325;
+
+	// Generate a grid without a restart file
+	nPoints = 40;
+	xLeft = -0.004;
+	xRight = 0.004;
+};
+
+StrainParameters:
+{
+	initial = 1200;
+	final = 1200;
+	tStart = 0;
+	dt = 0.020;
+	list = [1200, 1000, 800];
+};
+
+times:
+{
+	maxTimestep = 2e-4;
+
+	// Intervals for regridding and grid adaptation
+	regridTimeInterval = 3e-3;
+	regridStepInterval = 50;
+		
+	// Output intervals for integral flame data
+	outputStepInterval = 10;
+	outputTimeInterval = 5e-4;
+
+	// Output intervals for flame profiles
+	profileStepInterval = 100000;
+	profileTimeInterval = 5e0;
+};
+
+integrator:
+{
+	relativeTolerance = 1e-4;
+	continuityAbsTol = 1e-10;
+	momentumAbsTol = 1e-10;
+	energyAbsTol = 1e-8;
+	speciesAbsTol = 1e-13;
+};
+
+debug:
+{
+	adaptation: false;
+	regridding: false;
+	sundials: false;
+	jacobian: false;
+	calcIC: false;
+	timesteps: false;
+	solverStats: false;
+};
+
+outputFiles:
+{
+	heatReleaseRate: true;
+	auxiliaryVariables: true;
+	timeDerivatives: true;
+	residualComponents: true;
+	firstFileNumber = 0;
+	saveProfiles: false;
+};
+
+terminationCondition:
+{
+	// Integrate until a specific time:
+	//tEnd = 0.2;
+		
+	// Integrate until <measurment> is steady to within <tolerance> for <time>
+	measurement = "Q";
+	tolerance = 0.0004;
+	abstol = 0.5;
+	timeLow = 0.025;
+	timeHigh = 0.050;
+};
