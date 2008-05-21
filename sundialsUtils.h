@@ -162,7 +162,7 @@ public:
 	int integrateOneStep(void);
 	void setDAE(sdDAE* newDAE);
 	int getRootInfo(); 
-	void printStats();
+	void printStats(clock_t dt = 0);
 	
 	// Check function return value...
 	//   opt == 0 means SUNDIALS function allocates memory so check if

@@ -10,6 +10,8 @@ public:
 	static bool debugSundials;
 	static bool debugJacobian;
 	static bool debugCalcIC;
+	static bool debugTimesteps;
+	static bool debugSolverStats;
 };
 
 namespace debugType {

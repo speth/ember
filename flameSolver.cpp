@@ -1,4 +1,5 @@
 #include "flameSolver.h"
+#include "debugUtils.h"
 
 void flameSolver::setOptions(const configOptions& theOptions)
 {
@@ -23,7 +24,7 @@ void flameSolver::initialize(void)
 
 void flameSolver::run(void)
 {
-	clock_t t1, t2;
+	clock_t t1, t2, tIDA1, tIDA2;
 	t1 = clock();
 
 	double integratorTimestep = 0;
@@ -58,13 +59,16 @@ void flameSolver::run(void)
 	theSys.tFlameNext = t + options.rFlameUpdateTimeInterval;
 	theSys.rVcenterInitial = theSys.V[0];
 	theSys.rVcenterPrev = theSys.rVcenterNext = theSys.rVcenterInitial;
-	theSys.writeStateMatFile();
+	if (options.outputProfiles) {
+		theSys.writeStateMatFile();
+	}
 	bool firstIteration = true;
 
 	while (t < theSys.tEnd) {
 
 		theSys.setup();
 
+		tIDA1 = clock();
 		// Sundials IDA Solver:
 		sundialsIDA theSolver(theSys.N);
 		theSolver.reltol = options.idaRelTol;
@@ -138,7 +142,9 @@ void flameSolver::run(void)
 				nRegrid++;
 				nProfile++;
 				nFlamePos++;
-				cout << "t = " << t << "  (dt = " << dt << ")" << endl;
+				if (debugParameters::debugTimesteps) {
+					cout << "t = " << t << "  (dt = " << dt << ")" << endl;
+				}
 			} else {
 				cout << "IDA Solver failed at time t = " << t << "  (dt = " << dt << ")" << endl;
 				theSys.writeStateMatFile("errorOutput",true);
@@ -159,7 +165,9 @@ void flameSolver::run(void)
 			}
 
 			if (t > tProfile || nProfile >= options.profileStepInterval) {
-				theSys.writeStateMatFile();
+				if (options.outputProfiles) {
+					theSys.writeStateMatFile();
+				}
 
 				tProfile = t + options.profileTimeInterval;
 				nProfile = 0;
@@ -180,9 +188,12 @@ void flameSolver::run(void)
 				// Periodic check for terminating the integration
 				// (based on steady heat release rate, etc.)
 				if (checkTerminationCondition()) {
-					theSolver.printStats();
-					t2 = clock();
-					theSys.writeStateMatFile();
+
+					t2 = tIDA2 = clock();
+					theSolver.printStats(tIDA2-tIDA1);
+					if (options.outputProfiles) {
+						theSys.writeStateMatFile();
+					}
 					cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
 					return;
 				}
@@ -221,13 +232,15 @@ void flameSolver::run(void)
 
 			}
 		}
-		
-		theSolver.printStats();
+		tIDA2 = clock();
+		theSolver.printStats(tIDA2-tIDA1);
 		
 	}
 
 	t2 = clock();
-	theSys.writeStateMatFile();
+	if (options.outputProfiles) {
+		theSys.writeStateMatFile();
+	}
 	cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
 }
 
@@ -267,13 +280,17 @@ void flameSolver::calculateReactantMixture(void)
 
 bool flameSolver::checkTerminationCondition(void)
 {
+
 	if (options.terminateForSteadyQdot) {
 		int j1 = mathUtils::findLast(timeVector < (theSys.tNow - options.terminationPeriod));
+
 		if (j1 == -1)
 		{
-			cout << "Continuing integration: t < terminationPeriod" << endl;
+			cout << "Continuing integration: t (" << theSys.tNow-timeVector[0] << 
+				") < terminationPeriod (" << options.terminationPeriod << ")" << endl;
 			return false;
 		}
+		
 		int j2 = timeVector.size()-1;
 		double qMean = mathUtils::mean(heatReleaseRate,j1,j2);
 		double hrrError = 0;
@@ -281,14 +298,18 @@ bool flameSolver::checkTerminationCondition(void)
 			hrrError += abs(heatReleaseRate[j]-qMean);
 		}
 		hrrError /= (j2-j1+1);
+
+		cout << "Heat release rate deviation =  " << hrrError/qMean*100 << "%" << endl;
+		cout << "hrrError = " << hrrError << endl;
+		
 		if (hrrError/abs(qMean) < options.terminationTolerance) {
-			cout << "Terminating integration: Heat release rate deviation = " << hrrError/qMean*100 << "%" << endl;
+			cout << "Terminating integration. Heat release deviation less than relative tolerance." << endl;
 			return true;
-		} else if (hrrError > options.terminationAbsTol) {
+		} else if (hrrError < options.terminationAbsTol) {
 			cout << "Terminating integration: Heat relelase rate deviation less than absolute tolerance." << endl;
 			return true;
 		} else {
-			cout << "Continuing integration: Heat release rate deviation = " << hrrError/qMean*100 << "%" << endl;
+			cout << "Continuing integration. t = "<< theSys.tNow-timeVector[0] << endl;
 		}
 
 	}

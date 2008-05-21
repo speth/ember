@@ -95,6 +95,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	outputHeatReleaseRate = false;
 	outputResidualComponents = false;
 	outputFileNumber = 0;
+	outputProfiles = true;
 
 	terminateForSteadyQdot = false;
 	terminationTolerance = 1e-4;
@@ -182,6 +183,8 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("debug.sundials",debugParameters::debugSundials);
 	cfg.lookupValue("debug.jacobian",debugParameters::debugJacobian);
 	cfg.lookupValue("debug.calcIC",debugParameters::debugCalcIC);
+	cfg.lookupValue("debug.timesteps",debugParameters::debugTimesteps);
+	cfg.lookupValue("debug.solverStats",debugParameters::debugSolverStats);
 
 	cfg.lookupValue("integrator.relativeTolerance",idaRelTol);
 	cfg.lookupValue("integrator.continuityAbsTol",idaContinuityAbsTol);
@@ -194,6 +197,8 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("outputFiles.timeDerivatives",outputTimeDerivatives);
 	cfg.lookupValue("outputFiles.residualComponents",outputResidualComponents);
 	fileNumberOverride = cfg.lookupValue("outputFiles.firstFileNumber",outputFileNumber);
+	cfg.lookupValue("outputFiles.saveProfiles",outputProfiles);
+	
 
 	cfg.lookupValue("terminationCondition.tolerance",terminationTolerance);
 	cfg.lookupValue("terminationCondition.abstol",terminationAbsTol);

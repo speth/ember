@@ -1280,7 +1280,10 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 		resnorm += resTemp(i)*resTemp(i);
 	}
 	resnorm = sqrt(resnorm);
-	cout << "Residual norm after IC calculation: " << resnorm << endl;
+	
+	if (debugParameters::debugCalcIC) {
+		cout << "Residual norm after IC calculation: " << resnorm << endl;
+	}
 
 	if (!(resnorm < 1)) {
 		matlabFile outfile("ICmiss.mat");

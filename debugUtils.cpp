@@ -5,6 +5,8 @@ bool debugParameters::debugRegrid = false;
 bool debugParameters::debugSundials = false;
 bool debugParameters::debugJacobian = false;
 bool debugParameters::debugCalcIC = false;
+bool debugParameters::debugTimesteps = true;
+bool debugParameters::debugSolverStats = true;
 
 void debugWrite(debugType::debugType type, std::string message)
 {

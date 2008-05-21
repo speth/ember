@@ -30,8 +30,8 @@ int main(int argc, char** argv)
 	}
 
     try {
-    	//strainedFlame(inputFile);
-		chemistryTest();
+    	strainedFlame(inputFile);
+		//chemistryTest();
 		//matlabioTest();
 		//miscTest();
     }

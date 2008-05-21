@@ -519,7 +519,6 @@ bool oneDimGrid::removeRight(void)
 	}
 
 	if (pointRemoved) {
-		cout << "Regrid: Removing point from right side." << endl;
 		removePoint(jj,y,ydot);
 		jj--;
 		updateBoundaryIndices();
@@ -562,7 +561,6 @@ bool oneDimGrid::removeLeft(void)
 	}
 
 	if (pointRemoved) {
-		cout << "Regrid: Removing point from left side." << endl;
 		removePoint(0,y,ydot);
 		jj--;
 		updateBoundaryIndices();
@@ -586,26 +584,43 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 	bool rightRemoval = false;
 	bool leftRemoval = false;
 
+	int rightRemovalCount = 0;
+	
 	if (!rightAddition) {
 		bool continueRemoval = true;
 		while (continueRemoval) {
 			continueRemoval = removeRight();
 			if (continueRemoval) {
 				rightRemoval = true;
+				rightRemovalCount++;
 			}
 		}
 	}
+	if (rightRemovalCount > 0) {
+		std::string suffix = (rightRemovalCount == 1) ? "" : "s";
+		cout << "Removed " << rightRemovalCount << " point" << suffix << " from the right side. ";
+	}
 
+	int leftRemovalCount = 0;
 	if (!leftAddition) {
 		bool continueRemoval = true;
 		while (continueRemoval) {
 			continueRemoval = removeLeft();
 			if (continueRemoval) {
 				leftRemoval = true;
+				leftRemovalCount++;
 			}
 		}
 	}
-
+	
+	if (leftRemovalCount > 0) {
+		std::string suffix = (leftRemovalCount == 1) ? "" : "s";
+		cout << "Removed " << leftRemovalCount << " point" << suffix << " from the left side.";
+	}
+	if (leftRemovalCount > 0 || rightRemovalCount > 0) {
+		cout << endl;
+	}
+	
 	bool gridUpdated = (leftAddition || rightAddition || leftRemoval || rightRemoval);
 
 	if (gridUpdated) {
