@@ -25,12 +25,14 @@ public:
 	int regridStepInterval;
 	int outputStepInterval;
 	int profileStepInterval;
+	int integratorRestartInterval;
 	double regridTimeInterval;
 	double outputTimeInterval;
 	double profileTimeInterval;
 	double maxTimestep;
 	
 	double idaRelTol;
+	double idaRelTolLow;
 	double idaContinuityAbsTol;
 	double idaMomentumAbsTol;
 	double idaEnergyAbsTol;
@@ -72,10 +74,12 @@ public:
 
 	bool terminateForSteadyQdot;
 	double terminationTolerance; // relative tolerance
+	double terminationToleranceLow;
 	double terminationAbsTol; // absolute tolerance
 	double terminationPeriod;
 	double terminationPeriodLow;
 	double terminationPeriodHigh;
+	double terminationMaxTime;;
 
 	dvector strainRateList;
 

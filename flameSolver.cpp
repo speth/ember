@@ -35,6 +35,7 @@ void flameSolver::run(void)
 	int nOutput = 0;
 	int nProfile = 0;
 	int nFlamePos = 0;
+	int nIntegrate = 0;
 	
 	double tOutput = t;
 	double tRegrid = t;
@@ -142,6 +143,8 @@ void flameSolver::run(void)
 				nRegrid++;
 				nProfile++;
 				nFlamePos++;
+				nIntegrate++;
+
 				if (debugParameters::debugTimesteps) {
 					cout << "t = " << t << "  (dt = " << dt << ")" << endl;
 				}
@@ -216,6 +219,7 @@ void flameSolver::run(void)
 				bool adaptFlag = theSys.grid.adapt(currentSolution, currentSolutionDot);
 
 				if (adaptFlag || regridFlag) {
+				    nIntegrate = 0;
 					theSys.nPoints = theSys.grid.jj+1;
 					cout << "Grid size: " << theSys.nPoints << " points." << endl;
 					theSys.setup();
@@ -230,6 +234,15 @@ void flameSolver::run(void)
 					break; // exit the inner loop and reinitialize the solver for the new problem size
 				}
 
+			}
+
+			if (nIntegrate > options.integratorRestartInterval) {
+			  nIntegrate = 0;
+			  theSys.setup();
+			  theSys.gas.setStateMass(theSys.Y, theSys.T);
+			  theSys.gas.getMassFractions(theSys.Y);
+
+			  break; // exit inner loop and reinitialize the solver
 			}
 		}
 		tIDA2 = clock();
@@ -308,6 +321,9 @@ bool flameSolver::checkTerminationCondition(void)
 		} else if (hrrError < options.terminationAbsTol) {
 			cout << "Terminating integration: Heat relelase rate deviation less than absolute tolerance." << endl;
 			return true;
+		} else if (theSys.tNow-timeVector[0] > options.terminationMaxTime ) {
+		  cout << "Terminating integration: Maximum integration time reached." << endl;
+		  return true;
 		} else {
 			cout << "Continuing integration. t = "<< theSys.tNow-timeVector[0] << endl;
 		}

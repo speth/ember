@@ -29,6 +29,7 @@ if (not defined $inputfile ||
 {
 	print "Usage: All of the following arguments must be supplied:\n" .
 		"\t--if: A valid 1dflameV2 input file\n" .
+		"\t--subdir: subdirectory to store output files\n" .
 		"\t--prefix: A string to use as the prefix for the generated input files\n" .
 		"\t--suffix: A string to use as the suffix for the generated input files\n" .
 		"\t--phimin: The minimum equivalence ratio\n" .
@@ -45,7 +46,7 @@ open(INFILE,"<$inputfile");
 my @lines = <INFILE>;
 
 my $phi = $phimin;
-while ($phi <= $phimax) {
+while ($phi <= $phimax+1e-12) {
 	my $phistr = sprintf  "%4.2f", $phi;
     my $newname = $prefix . $phistr . $suffix;
 	my $dirname = $subdir . "/" . $prefix . $phistr;

@@ -79,12 +79,14 @@ void configOptions::readOptionsFile(const std::string& filename)
 	outputTimeInterval = 1e-5;
 	regridStepInterval = 123456789;
 	profileStepInterval = 123456789;
+	integratorRestartInterval = 123456789;
 	outputStepInterval = 1;
 
 	rFlameUpdateStepInterval = 10;
 	rFlameUpdateTimeInterval = 0.002;
 	
 	idaRelTol = 1e-5;
+	idaRelTolLow = 1e-3;
 	idaContinuityAbsTol = 1e-6;
 	idaMomentumAbsTol = 1e-6;
 	idaEnergyAbsTol = 1e-6;
@@ -99,10 +101,12 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	terminateForSteadyQdot = false;
 	terminationTolerance = 1e-4;
+	terminationToleranceLow = 1e-4;
 	terminationAbsTol = 0.5;
 	terminationPeriodHigh = 0.1;
 	terminationPeriodLow = 0.04;
 	terminationPeriod = 0.04;
+	terminationMaxTime = 2;
 	
 	// Read options from the configuration file
 	cfg.lookupValue("paths.inputDir",inputDir);
@@ -176,6 +180,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("times.outputStepInterval",outputStepInterval);
 	cfg.lookupValue("times.profileTimeInterval",profileTimeInterval);
 	cfg.lookupValue("times.profileStepInterval",profileStepInterval);
+	cfg.lookupValue("times.integratorRestartInterval",integratorRestartInterval);
 	cfg.lookupValue("times.maxTimestep",maxTimestep);
 
 	cfg.lookupValue("debug.adaptation",debugParameters::debugAdapt);
@@ -187,6 +192,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("debug.solverStats",debugParameters::debugSolverStats);
 
 	cfg.lookupValue("integrator.relativeTolerance",idaRelTol);
+	cfg.lookupValue("integrator.relativeToleranceLow",idaRelTolLow);
 	cfg.lookupValue("integrator.continuityAbsTol",idaContinuityAbsTol);
 	cfg.lookupValue("integrator.momentumAbsTol",idaMomentumAbsTol);
 	cfg.lookupValue("integrator.energyAbsTol",idaEnergyAbsTol);
@@ -201,10 +207,12 @@ void configOptions::readOptionsFile(const std::string& filename)
 	
 
 	cfg.lookupValue("terminationCondition.tolerance",terminationTolerance);
+	cfg.lookupValue("terminationCondition.toleranceLow",terminationToleranceLow);
 	cfg.lookupValue("terminationCondition.abstol",terminationAbsTol);
 	cfg.lookupValue("terminationCondition.timeLow",terminationPeriodLow);
 	cfg.lookupValue("terminationCondition.timeHigh",terminationPeriodHigh);
 	cfg.lookupValue("terminationCondition.time",terminationPeriod);
+	cfg.lookupValue("terminationCondition.timeMax",terminationMaxTime);
 
 	std::string terminationMeasurement;
 	cfg.lookupValue("terminationCondition.measurement",terminationMeasurement);
@@ -244,5 +252,9 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	if (regridTimeInterval == 123456789 && regridStepInterval == 123456789) {
 		regridStepInterval = 20;
+	}
+
+	if (integratorRestartInterval == 123456789) {
+	    integratorRestartInterval = 400;
 	}
 }
