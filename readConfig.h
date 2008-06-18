@@ -81,6 +81,9 @@ public:
 	double terminationPeriodHigh;
 	double terminationMaxTime;;
 
+	int errorStopCount;
+	bool stopIfError;
+
 	dvector strainRateList;
 
 	int outputFileNumber; // number of output files written

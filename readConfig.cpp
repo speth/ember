@@ -98,6 +98,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	outputResidualComponents = false;
 	outputFileNumber = 0;
 	outputProfiles = true;
+	errorStopCount = 1;
 
 	terminateForSteadyQdot = false;
 	terminationTolerance = 1e-4;
@@ -213,6 +214,8 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("terminationCondition.timeHigh",terminationPeriodHigh);
 	cfg.lookupValue("terminationCondition.time",terminationPeriod);
 	cfg.lookupValue("terminationCondition.timeMax",terminationMaxTime);
+
+	stopIfError = cfg.lookupValue("general.errorStopCount",errorStopCount);
 
 	std::string terminationMeasurement;
 	cfg.lookupValue("terminationCondition.measurement",terminationMeasurement);

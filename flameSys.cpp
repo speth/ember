@@ -492,7 +492,6 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 				0.5*grid.rphalf[j]*((rhoD(k,j)+rhoD(k,j+1))/grid.hh[j]+jCorr[j])/(grid.dlj[j]*grid.r[j]) +
 				0.5*grid.rphalf[j-1]*((rhoD(k,j-1)+rhoD(k,j))/grid.hh[j-1]-jCorr[j-1])/(grid.dlj[j]*grid.r[j]);
 				
-
 			// dSpeciesk/dYk_j-1
 			jacA(j,kSpecies+k,kSpecies+k) = -0.5*grid.rphalf[j-1]
 				* ((rhoD(k,j-1)+rhoD(k,j))/grid.hh[j-1]+jCorr[j-1])
@@ -956,6 +955,7 @@ void flameSys::loadInitialProfiles(void)
 		inputFilename = options.restartFile;
 	}
 
+	cout << "Reading initial condition from " << inputFilename << endl;
 	matlabFile infile(inputFilename);
 	grid.x = infile.readVector("x");
 	
@@ -1419,6 +1419,8 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 		outFile.writeVector("mu",mu);
 		outFile.writeVector("Wmx",Wmx);
 		outFile.writeVector("W",W);
+		outFile.writeArray2D("jFick", jFick);
+		outFile.writeArray2D("jSoret", jSoret);
 	}
 
 	if (options.outputResidualComponents || errorFile) {
@@ -1442,6 +1444,13 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 	outFile.close();
 	if (incrementFileNumber) {
 		options.outputFileNumber++;
+	}
+
+	if (errorFile && options.stopIfError) {
+	  cout << "Error outputs remaining until termination: " << options.errorStopCount << endl;
+	  if (options.errorStopCount-- <= 0) {
+		throw;
+	  }
 	}
 }
 

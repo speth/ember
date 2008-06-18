@@ -76,6 +76,7 @@ void strainedFlame(const std::string& inputFile)
 			theFlameSolver.options.idaRelTol = mainOptions.idaRelTolLow;
 			theFlameSolver.options.terminationTolerance = mainOptions.terminationToleranceLow;
 			theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodLow;
+			theFlameSolver.theSys.tStart = 0;
 			theFlameSolver.run();
 			cout << "Completed low-res run at strain rate a = " << a << endl;
 			double dtLow = theFlameSolver.theSys.tNow - theFlameSolver.theSys.tStart;
