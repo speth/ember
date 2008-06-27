@@ -446,20 +446,12 @@ bool oneDimGrid::addLeft(void)
 		if (!pointAdded && debugParameters::debugRegrid) {
 			cout << "Regrid: Adding point to force left boundary toward x=0" << endl;
 		}
-		pointAdded = 1;
-	}
-
-	if (abs(x[0]) <= gridMin) {
-		if (pointAdded && debugParameters::debugRegrid) {
-			cout << "Regrid: Cannot add point to the left because x[0] == 0" << endl;
-		}
-		pointAdded = false;
+		pointAdded = true;
 	}
 
 	if (!pointAdded && debugParameters::debugRegrid) {
 		cout << "Regrid: No addition to left." << endl;
 	}
-
 
 	if (pointAdded) {
 		cout << "Regrid: Adding points to left side." << endl;

@@ -24,8 +24,10 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 //	gas.getMassFractions(Y);
 
 	try {
-		updateTransportProperties();
-		updateThermoProperties();
+	    if (!options.steadyOnly || inGetIC) {
+		    updateTransportProperties();
+			updateThermoProperties();
+		}
 		gas.getReactionRates(wDot);
 	} catch (Cantera::CanteraError) {
 		cout << "Error evaluating thermodynamic properties" << endl;
@@ -802,6 +804,7 @@ void flameSys::copyOptions(void)
 
 void flameSys::generateInitialProfiles(void)
 {
+	cout << "Generating initial profiles from given fuel and oxidizer compositions." << endl;
 	grid.x.resize(nPoints);
 	int jm = (grid.ju+grid.jb)/2; // midpoint of the profiles.
 	int jl = jm - 4;

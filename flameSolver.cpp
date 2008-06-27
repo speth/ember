@@ -321,7 +321,7 @@ bool flameSolver::checkTerminationCondition(void)
 		} else if (hrrError < options.terminationAbsTol) {
 			cout << "Terminating integration: Heat relelase rate deviation less than absolute tolerance." << endl;
 			return true;
-		} else if (theSys.tNow-timeVector[0] > options.terminationMaxTime ) {
+		} else if (theSys.tNow-theSys.tStart > options.terminationMaxTime ) {
 		  cout << "Terminating integration: Maximum integration time reached." << endl;
 		  return true;
 		} else {

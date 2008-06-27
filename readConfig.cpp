@@ -47,6 +47,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	fixedLeftLoc = false;
 	twinFlame = false;
 	centeredDifferences = false;
+	steadyOnly = false;
 
 	// Grid	
 	nPoints = 50;
@@ -174,6 +175,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("general.curvedFlame",curvedFlame);
 	cfg.lookupValue("general.twinFlame",twinFlame);
 	cfg.lookupValue("general.centeredDifferences",centeredDifferences);
+	cfg.lookupValue("general.steadyOnly",steadyOnly);
 
 	cfg.lookupValue("times.regridTimeInterval",regridTimeInterval);
 	cfg.lookupValue("times.regridStepInterval",regridStepInterval);

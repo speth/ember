@@ -21,6 +21,7 @@ public:
 	bool twinFlame;
 	bool curvedFlame;
 	bool centeredDifferences;
+	bool steadyOnly;
 
 	int regridStepInterval;
 	int outputStepInterval;

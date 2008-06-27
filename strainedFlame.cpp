@@ -66,21 +66,33 @@ void strainedFlame(const std::string& inputFile)
 
 			// Set the strain rate and other options
 			double a = mainOptions.strainRateList[i];
+			std::string restartFile = "prof_eps"+stringify(a,4);
+			if (boost::filesystem::exists(mainOptions.outputDir+"/"+restartFile+".mat"))
+			{
+				mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
+				mainOptions.useRelativeRestartPath = false;
+				mainOptions.haveRestartFile = true;
+				cout << "Skipping run at strain rate a = " << a << " because the output file \"" << 
+					restartFile << "\" already exists." << endl;
+				continue;
+			}
+			
 			mainOptions.strainRateInitial = a;
 			mainOptions.strainRateFinal = a;
 			theFlameSolver.setOptions(mainOptions);
 			theFlameSolver.calculateReactantMixture();
 
-			// Low Res Run:
-			theFlameSolver.initialize();
+// 			// Low Res Run:
+			cout << "Begining low-res run at strain rate a = " << a << endl;
+ 			theFlameSolver.initialize();
 			theFlameSolver.options.idaRelTol = mainOptions.idaRelTolLow;
-			theFlameSolver.options.terminationTolerance = mainOptions.terminationToleranceLow;
-			theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodLow;
-			theFlameSolver.theSys.tStart = 0;
-			theFlameSolver.run();
-			cout << "Completed low-res run at strain rate a = " << a << endl;
-			double dtLow = theFlameSolver.theSys.tNow - theFlameSolver.theSys.tStart;
-
+ 			theFlameSolver.options.terminationTolerance = mainOptions.terminationToleranceLow;
+ 			theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodLow;
+ 			theFlameSolver.theSys.tStart = 0;
+ 			theFlameSolver.run();
+ 			cout << "Completed low-res run at strain rate a = " << a << endl;
+ 			double dtLow = theFlameSolver.theSys.tNow - theFlameSolver.theSys.tStart;
+			
 			// High Res Run:
 			theFlameSolver.theSys.tStart = theFlameSolver.theSys.tNow;
 			theFlameSolver.options.idaRelTol = mainOptions.idaRelTol;
@@ -88,10 +100,10 @@ void strainedFlame(const std::string& inputFile)
 			theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodHigh + dtLow;
 			theFlameSolver.run();
 			cout << "Completed high-res run at strain rate a = " << a << endl;
-	
+
 			// copy data needed for the next run
 			mainOptions.fileNumberOverride = false;
-			std::string restartFile = "prof_eps"+stringify(a,4);
+
 			theFlameSolver.theSys.writeStateMatFile(restartFile);
 			mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
 			mainOptions.useRelativeRestartPath = false;
