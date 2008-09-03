@@ -67,65 +67,83 @@ void strainedFlame(const std::string& inputFile)
 			// Set the strain rate and other options
 			double a = mainOptions.strainRateList[i];
 			std::string restartFile = "prof_eps"+stringify(a,4);
-			if (boost::filesystem::exists(mainOptions.outputDir+"/"+restartFile+".mat"))
+			std::string historyFile = "out_eps"+stringify(a,4);
+			if (boost::filesystem::exists(mainOptions.outputDir+"/"+restartFile+".mat") &&
+				boost::filesystem::exists(mainOptions.outputDir+"/"+historyFile+".mat"))
 			{
 				mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
 				mainOptions.useRelativeRestartPath = false;
 				mainOptions.haveRestartFile = true;
 				cout << "Skipping run at strain rate a = " << a << " because the output file \"" << 
 					restartFile << "\" already exists." << endl;
-				continue;
+				
+				matlabFile oldOutFile(mainOptions.outputDir+"/"+historyFile+".mat");
+				dvector oldTime = oldOutFile.readVector("t");
+				dvector oldQ = oldOutFile.readVector("Q");
+				dvector oldSc = oldOutFile.readVector("Sc");
+				dvector oldXflame = oldOutFile.readVector("xFlame");
+				double tEnd = *(oldTime.rbegin());
+				
+				// Append the integral data from the old run
+				int iStart = findFirst(oldTime > tEnd - mainOptions.terminationPeriod);
+				int iEnd = oldTime.size()-1;
+				eps.push_back(a);
+				Q.push_back(mean(oldQ, iStart, iEnd));
+				Sc.push_back(mean(oldSc, iStart, iEnd));
+				xFlame.push_back(mean(oldXflame, iStart, iEnd));
+				oldOutFile.close();
+			} else {
+				
+				mainOptions.strainRateInitial = a;
+				mainOptions.strainRateFinal = a;
+				theFlameSolver.setOptions(mainOptions);
+				theFlameSolver.calculateReactantMixture();
+	
+				// Low Res Run:
+				cout << "Begining low-res run at strain rate a = " << a << endl;
+	 			theFlameSolver.initialize();
+				theFlameSolver.options.idaRelTol = mainOptions.idaRelTolLow;
+	 			theFlameSolver.options.terminationTolerance = mainOptions.terminationToleranceLow;
+	 			theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodLow;
+	 			theFlameSolver.theSys.tStart = 0;
+	 			theFlameSolver.run();
+	 			cout << "Completed low-res run at strain rate a = " << a << endl;
+	 			double dtLow = theFlameSolver.theSys.tNow - theFlameSolver.theSys.tStart;
+				
+				// High Res Run:
+				theFlameSolver.theSys.tStart = theFlameSolver.theSys.tNow;
+				theFlameSolver.options.idaRelTol = mainOptions.idaRelTol;
+				theFlameSolver.options.terminationTolerance = mainOptions.terminationTolerance;
+				theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodHigh + dtLow;
+				theFlameSolver.run();
+				cout << "Completed high-res run at strain rate a = " << a << endl;
+	
+				// copy data needed for the next run
+				mainOptions.fileNumberOverride = false;
+	
+				theFlameSolver.theSys.writeStateMatFile(restartFile);
+				mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
+				mainOptions.useRelativeRestartPath = false;
+				mainOptions.haveRestartFile = true;
+	
+				// Write the time-series data file for this run
+				matlabFile outFile(mainOptions.outputDir+"/out_eps"+stringify(a,4)+".mat");
+				outFile.writeVector("t",theFlameSolver.timeVector);
+				outFile.writeVector("dt",theFlameSolver.timestepVector);
+				outFile.writeVector("Q",theFlameSolver.heatReleaseRate);
+				outFile.writeVector("Sc",theFlameSolver.consumptionSpeed);
+				outFile.writeVector("xFlame",theFlameSolver.flamePosition);
+				outFile.close();
+	
+				// Append and save the integral data for this run
+				int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.theSys.tNow - mainOptions.terminationPeriod));
+				int iEnd = theFlameSolver.timestepVector.size()-1;
+				eps.push_back(a);
+				Q.push_back(mean(theFlameSolver.heatReleaseRate, iStart, iEnd));
+				Sc.push_back(mean(theFlameSolver.consumptionSpeed, iStart, iEnd));
+				xFlame.push_back(mean(theFlameSolver.flamePosition, iStart, iEnd));
+
 			}
-			
-			mainOptions.strainRateInitial = a;
-			mainOptions.strainRateFinal = a;
-			theFlameSolver.setOptions(mainOptions);
-			theFlameSolver.calculateReactantMixture();
-
-// 			// Low Res Run:
-			cout << "Begining low-res run at strain rate a = " << a << endl;
- 			theFlameSolver.initialize();
-			theFlameSolver.options.idaRelTol = mainOptions.idaRelTolLow;
- 			theFlameSolver.options.terminationTolerance = mainOptions.terminationToleranceLow;
- 			theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodLow;
- 			theFlameSolver.theSys.tStart = 0;
- 			theFlameSolver.run();
- 			cout << "Completed low-res run at strain rate a = " << a << endl;
- 			double dtLow = theFlameSolver.theSys.tNow - theFlameSolver.theSys.tStart;
-			
-			// High Res Run:
-			theFlameSolver.theSys.tStart = theFlameSolver.theSys.tNow;
-			theFlameSolver.options.idaRelTol = mainOptions.idaRelTol;
-			theFlameSolver.options.terminationTolerance = mainOptions.terminationTolerance;
-			theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodHigh + dtLow;
-			theFlameSolver.run();
-			cout << "Completed high-res run at strain rate a = " << a << endl;
-
-			// copy data needed for the next run
-			mainOptions.fileNumberOverride = false;
-
-			theFlameSolver.theSys.writeStateMatFile(restartFile);
-			mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
-			mainOptions.useRelativeRestartPath = false;
-			mainOptions.haveRestartFile = true;
-
-			// Write the time-series data file for this run
-			matlabFile outFile(mainOptions.outputDir+"/out_eps"+stringify(a,4)+".mat");
-			outFile.writeVector("t",theFlameSolver.timeVector);
-			outFile.writeVector("dt",theFlameSolver.timestepVector);
-			outFile.writeVector("Q",theFlameSolver.heatReleaseRate);
-			outFile.writeVector("Sc",theFlameSolver.consumptionSpeed);
-			outFile.writeVector("xFlame",theFlameSolver.flamePosition);
-			outFile.close();
-
-			// Append and save the integral data for this run
-			int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.theSys.tNow - mainOptions.terminationPeriod));
-			int iEnd = theFlameSolver.timestepVector.size()-1;
-			eps.push_back(a);
-			Q.push_back(mean(theFlameSolver.heatReleaseRate, iStart, iEnd));
-			Sc.push_back(mean(theFlameSolver.consumptionSpeed, iStart, iEnd));
-			xFlame.push_back(mean(theFlameSolver.flamePosition, iStart, iEnd));
-
 			matlabFile dataFile(mainOptions.outputDir+"/integral.mat");
 			dataFile.writeVector("a",eps);
 			dataFile.writeVector("Q",Q);
