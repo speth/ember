@@ -1289,6 +1289,7 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 	}
 
 	if (!(resnorm < 1)) {
+	  if (debugParameters::debugCalcIC) {
 		matlabFile outfile("ICmiss.mat");
 		dvector resVec(N);
 		dvector yVec(N);
@@ -1318,6 +1319,7 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 		outfile.writeArray2D("yConv",speciesConv);
 		outfile.writeArray2D("yProd",speciesProd);
 		outfile.close();
+	  }
 		return 1;
 	}
 

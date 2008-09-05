@@ -12,6 +12,7 @@ general:
 	curvedFlame = false;
 	twinFlame = false;
 	centeredDifferences = true;
+	steadyOnly = false;
 };
 
 chemistry:
@@ -69,7 +70,7 @@ StrainParameters:
 	final = 200;
 	tStart = 0;
 	dt = 0.020;
-	list = [200, 175, 150, 125, 100];
+//	list = [200, 175, 150, 125, 100];
 };
 
 /*
@@ -130,6 +131,7 @@ outputFiles:
 	timeDerivatives: false;
 	residualComponents: false;
 	firstFileNumber = 0;
+	saveProfiles: true;
 };
 
 terminationCondition:
@@ -139,7 +141,8 @@ terminationCondition:
 	
 	// Integrate until <measurment> is steady to within <tolerance> for <time>
 	measurement = "Q";
-	tolerance = 0.001;
+	tolerance = 0.0005;
+	absTol = 0.5;
 	time = 0.04;
 	// timeLow = 0.025;
 	// timeHigh = 0.050;
