@@ -20,35 +20,37 @@ print "Simultaneous tasks: $nProcs\n";
 
 while ($#commands >= 0 && $runningProcs < $nProcs) {
     my $cmd = shift @commands;
-	chomp $cmd;
+    chomp $cmd;
     $runningProcs++;
     sleep(1);
     my $pid = fork();
     push @pids, $pid;
     if (not defined $pid) {
-		print "Failure!\n";
+	print "Failure!\n";
     } elsif ($pid == 0) {
-		print "executing command \"" . $cmd . "\"\n";
-	exec($cmd);
-		print "completed command \"" . $cmd . "\"\n";
+	print "executing command \"" . $cmd . "\"\n";
+	system($cmd);
+	print "completed command \"" . $cmd . "\"\n";
+	exit;
     }
 }
 
 
 foreach my $oldpid (@pids) {
-	wait();
-	sleep(1);
+    wait();
+    sleep(1);
     if ($#commands >= 0) {
-		my $cmd = shift @commands;
-		chomp $cmd;
-		my $pid = fork();
-		push @pids, $pid;
-		if (not defined $pid) {
-			print "Failure!\n";
-		} elsif ($pid == 0) {
-			print "executing command \"" . $cmd . "\"\n";
-			exec($cmd);
-			print "completed command \"" . $cmd . "\"\n";
-		}    
-	}
+	my $cmd = shift @commands;
+	chomp $cmd;
+	my $pid = fork();
+	push @pids, $pid;
+	if (not defined $pid) {
+	    print "Failure!\n";
+	} elsif ($pid == 0) {
+	    print "executing command \"" . $cmd . "\"\n";
+	    system($cmd);
+	    print "completed command \"" . $cmd . "\"\n";
+	    exit;
+	}    
+    }
 }
