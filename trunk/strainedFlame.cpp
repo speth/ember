@@ -41,14 +41,14 @@ int main(int argc, char** argv)
 		cout << "Error in config file \"" << inputFile << "\": ";
 		cout << err.getError() << " on line " << err.getLine() << endl;
 	}
-    
+
 	return 0;
 }
 
-void strainedFlame(const std::string& inputFile) 
+void strainedFlame(const std::string& inputFile)
 {
     cout << "**** strainedFlame (1dflame Version 2.0) ****\n" << std::endl;
-	
+
 	configOptions mainOptions;
 	mainOptions.readOptionsFile(inputFile);
 	//mainOptions.outputFileNumber = 0;
@@ -74,16 +74,16 @@ void strainedFlame(const std::string& inputFile)
 				mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
 				mainOptions.useRelativeRestartPath = false;
 				mainOptions.haveRestartFile = true;
-				cout << "Skipping run at strain rate a = " << a << " because the output file \"" << 
+				cout << "Skipping run at strain rate a = " << a << " because the output file \"" <<
 					restartFile << "\" already exists." << endl;
-				
+
 				matlabFile oldOutFile(mainOptions.outputDir+"/"+historyFile+".mat");
 				dvector oldTime = oldOutFile.readVector("t");
 				dvector oldQ = oldOutFile.readVector("Q");
 				dvector oldSc = oldOutFile.readVector("Sc");
 				dvector oldXflame = oldOutFile.readVector("xFlame");
 				double tEnd = *(oldTime.rbegin());
-				
+
 				// Append the integral data from the old run
 				int iStart = findFirst(oldTime > tEnd - mainOptions.terminationPeriod);
 				int iEnd = oldTime.size()-1;
@@ -93,12 +93,12 @@ void strainedFlame(const std::string& inputFile)
 				xFlame.push_back(mean(oldXflame, iStart, iEnd));
 				oldOutFile.close();
 			} else {
-				
+
 				mainOptions.strainRateInitial = a;
 				mainOptions.strainRateFinal = a;
 				theFlameSolver.setOptions(mainOptions);
 				theFlameSolver.calculateReactantMixture();
-	
+
 				// Low Res Run:
 				cout << "Begining low-res run at strain rate a = " << a << endl;
 	 			theFlameSolver.initialize();
@@ -109,7 +109,7 @@ void strainedFlame(const std::string& inputFile)
 	 			theFlameSolver.run();
 	 			cout << "Completed low-res run at strain rate a = " << a << endl;
 	 			double dtLow = theFlameSolver.theSys.tNow - theFlameSolver.theSys.tStart;
-				
+
 				// High Res Run:
 				theFlameSolver.theSys.tStart = theFlameSolver.theSys.tNow;
 				theFlameSolver.options.idaRelTol = mainOptions.idaRelTol;
@@ -117,15 +117,15 @@ void strainedFlame(const std::string& inputFile)
 				theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodHigh + dtLow;
 				theFlameSolver.run();
 				cout << "Completed high-res run at strain rate a = " << a << endl;
-	
+
 				// copy data needed for the next run
 				mainOptions.fileNumberOverride = false;
-	
+
 				theFlameSolver.theSys.writeStateMatFile(restartFile);
 				mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
 				mainOptions.useRelativeRestartPath = false;
 				mainOptions.haveRestartFile = true;
-	
+
 				// Write the time-series data file for this run
 				matlabFile outFile(mainOptions.outputDir+"/out_eps"+stringify(a,4)+".mat");
 				outFile.writeVector("t",theFlameSolver.timeVector);
@@ -134,7 +134,7 @@ void strainedFlame(const std::string& inputFile)
 				outFile.writeVector("Sc",theFlameSolver.consumptionSpeed);
 				outFile.writeVector("xFlame",theFlameSolver.flamePosition);
 				outFile.close();
-	
+
 				// Append and save the integral data for this run
 				int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.theSys.tNow - mainOptions.terminationPeriod));
 				int iEnd = theFlameSolver.timestepVector.size()-1;
@@ -173,16 +173,16 @@ void strainedFlame(const std::string& inputFile)
 void chemistryTest(void)
 {
 	using namespace Cantera;
-	
+
 	Cantera_CXX::IdealGasMix gas("methane_singlestep.cti");
-	
+
 	gas.setState_TPX(300,101325,"N2:3.76, O2:1.0, CH4:0.5");
 	vector<double> wnet(53);
 	gas.getNetProductionRates(&wnet[0]);
 	cout << wnet << endl;
 	return;
-	
-	
+
+
 //    XML_Node *xc = get_XML_File("gri30.xml");
 //    XML_Node * const xs = xc->findNameID("phase", "gri30_mix");
 //
@@ -201,13 +201,13 @@ void chemistryTest(void)
 //		//gas[i] = new Cantera::IdealGasPhase();
 //		//Cantera::importPhase(*xs, gas[i]);
 //		kin[i] = new Cantera::GasKinetics(&gas[i]);
-//		
+//
 //		kin[i]->init();
 //		Cantera::installReactionArrays(*xs,*kin[i],"gri30_mix");
 //		kin[i]->finalize();
 //
 //		trans[i] = Cantera::newTransportMgr("Mix",&gas[i],1,0);
-//	
+//
 //	}
 //
 //	t2 = clock();
@@ -224,7 +224,7 @@ void chemistryTest(void)
 //
 //	int nSpec = gas[0].nSpecies();
 //	dvector dkm(nSpec);
-//	
+//
 //	dvector y(nSpec);
 //	gas[0].setState_TPX(300,101325,"O2:1.0, CH4:0.5");
 //	gas[0].getMassFractions(&y[0]);
@@ -262,7 +262,7 @@ void chemistryTest(void)
 	//dvector wdot0(n), wdot1(n);
 
 	//theGas[0].getNetProductionRates(&wdot0[0]);
-	//	
+	//
 	//cout << wdot0 << endl;
 	//cout << wdot1 << endl;
 
@@ -276,7 +276,7 @@ void matlabioTest(void)
 	Array2D foo;
 	for (int i=0; i<n*m; i++) {
 		x[i] = 2*i + 100;
-		
+
 	}
 
 	n = 5, m=20;
@@ -292,11 +292,11 @@ void matlabioTest(void)
 	matlabFile outFile("output/test.mat");
 	outFile.writeVector("hellofriend",x);
 	outFile.writeArray2D("hugstiem",foo);
-	
+
 
 	dvector hi = outFile.readVector("hellofriend");
 	Array2D bar = outFile.readArray2D("hugstiem");
-	cout << hi << endl;	
+	cout << hi << endl;
 
 	outFile.close();
 }

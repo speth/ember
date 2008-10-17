@@ -12,7 +12,7 @@ void flameSolver::initialize(void)
 	theSys.options = options;
 	theSys.copyOptions();
 	theSys.gas.initialize();
-	
+
 	// Initial Conditions for ODE
 	theSys.setup();
 	if (options.haveRestartFile) {
@@ -36,7 +36,7 @@ void flameSolver::run(void)
 	int nProfile = 0;
 	int nFlamePos = 0;
 	int nIntegrate = 0;
-	
+
 	double tOutput = t;
 	double tRegrid = t;
 	double tProfile = t;
@@ -119,7 +119,7 @@ void flameSolver::run(void)
 
 		theSolver.initialize();
 		theSolver.setMaxStepSize(options.maxTimestep);
-		
+
 		if (integratorTimestep != 0) {
 			theSolver.setInitialStepSize(integratorTimestep);
 		}
@@ -154,7 +154,7 @@ void flameSolver::run(void)
 				integratorTimestep = 0;
 				break;
 			}
-			
+
 			if (t > tOutput || nOutput >= options.outputStepInterval) {
 				// Save the time-series data
 				timeVector.push_back(t);
@@ -176,7 +176,7 @@ void flameSolver::run(void)
 				nProfile = 0;
 			}
 
-			if (options.flameRadiusControl && 
+			if (options.flameRadiusControl &&
 				(t > tFlamePos || nFlamePos > options.rFlameUpdateStepInterval)) {
 				theSys.update_rVcenter(t);
 
@@ -212,8 +212,8 @@ void flameSolver::run(void)
 					theSys.grid.dampVal[j] = num/abs(theSys.V[j]);
 				}
 				vector<dvector> currentSolution, currentSolutionDot;
-				theSys.rollVectorVector(theSolver.y, currentSolution);
-				theSys.rollVectorVector(theSolver.ydot, currentSolutionDot);
+				theSys.rollVectorVector(theSolver.y, theSys.qDot, currentSolution);
+				theSys.rollVectorVector(theSolver.ydot, theSys.qDot*0, currentSolutionDot);
 
 				bool regridFlag = theSys.grid.regrid(currentSolution, currentSolutionDot);
 				bool adaptFlag = theSys.grid.adapt(currentSolution, currentSolutionDot);
@@ -247,7 +247,7 @@ void flameSolver::run(void)
 		}
 		tIDA2 = clock();
 		theSolver.printStats(tIDA2-tIDA1);
-		
+
 	}
 
 	t2 = clock();
@@ -258,7 +258,7 @@ void flameSolver::run(void)
 }
 
 void flameSolver::calculateReactantMixture(void)
-{	
+{
 	Cantera_CXX::IdealGasMix fuel(options.gasMechanismFile,options.gasPhaseID);
 	Cantera_CXX::IdealGasMix oxidizer(options.gasMechanismFile,options.gasPhaseID);
 
@@ -299,11 +299,11 @@ bool flameSolver::checkTerminationCondition(void)
 
 		if (j1 == -1)
 		{
-			cout << "Continuing integration: t (" << theSys.tNow-timeVector[0] << 
+			cout << "Continuing integration: t (" << theSys.tNow-timeVector[0] <<
 				") < terminationPeriod (" << options.terminationPeriod << ")" << endl;
 			return false;
 		}
-		
+
 		int j2 = timeVector.size()-1;
 		double qMean = mathUtils::mean(heatReleaseRate,j1,j2);
 		double hrrError = 0;
@@ -314,7 +314,7 @@ bool flameSolver::checkTerminationCondition(void)
 
 		cout << "Heat release rate deviation =  " << hrrError/qMean*100 << "%" << endl;
 		cout << "hrrError = " << hrrError << endl;
-		
+
 		if (hrrError/abs(qMean) < options.terminationTolerance) {
 			cout << "Terminating integration. Heat release deviation less than relative tolerance." << endl;
 			return true;

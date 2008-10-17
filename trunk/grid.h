@@ -17,6 +17,7 @@ public:
 	int kContinuity; // index into solutionState of the continuity equation
 	int kEnergy; // index into solutionState of the Energy equation
 	int kSpecies; // index into solutionState of the first species equation
+	int kQdot; // index into solutionState of the heat release rate
 
 	// Parameters for controlling internal grid points:
 	double vtol; // relative solution variable tolerance for point insertion
@@ -45,8 +46,8 @@ public:
 
 	int jZero; // index of the stagnation point
 
-	// Update the grid based on the solutionState, and adjust it to fit 
-	// on the new grid. Each element of the solutionState is a vector 
+	// Update the grid based on the solutionState, and adjust it to fit
+	// on the new grid. Each element of the solutionState is a vector
 	// containing the value of a solution variable at each grid point.
 	// Return value is true if the grid has been modified
 	// adapt inserts and removes points within the problem domain
@@ -73,7 +74,7 @@ private:
 
 	configOptions& options;
 	int nVars; // number of solution variables at each grid point
-	
+
 	void removePoint(int jRemove, vector<dvector>& y, vector<dvector>& ydot);
 	void addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot);
 

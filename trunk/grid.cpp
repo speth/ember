@@ -59,7 +59,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 	// The insertion of the grid points is performed first. For each
 	// component of the solution vector:
 	// 1. Find its range and the range of its derivative.
-	// 2. Apply four criteria and and find where insertions are 
+	// 2. Apply four criteria and and find where insertions are
 	//    needed. the criteria for a component f(j)
 	//    a. |f[j+1]-f[j]| < vtol*range(f)
 	//    b. |dfdy[j+1]-dfdy[j] | < dvtol*range(dfdy)
@@ -112,7 +112,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 			}
 
 			// Apply grid point addition criteria:
-			
+
 			// resolution of v
 			if (abs(v[j+1]-v[j]) > vtol*vRange) {
 				insert = true;
@@ -131,11 +131,11 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 				}
 			}
 		}
-		
+
 		// Left uniformity
 		if (j!=0 && hh[j]/hh[j-1] > uniformityTol) {
 			insert = true;
-			if (debugParameters::debugAdapt) { 
+			if (debugParameters::debugAdapt) {
 				cout << "Adapt: left uniformity wants grid point j = " << j;
 				cout << " hh(j)/hh(j-1) = " << hh[j]/hh[j-1] << " > " << uniformityTol << endl;
 			}
@@ -167,7 +167,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 				cout << " hh(j) = " << hh[j] << " > " << dampConst*dampVal[j] << endl;
 			}
 		}
-		
+
 		// Enforce minimum grid size
 		if (insert && hh[j] < 2*gridMin) {
 			insert = false;
@@ -295,7 +295,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 			j++;
 		}
 	}
-	
+
 	if (removalIndices.size() != 0) {
 		cout << "Grid points removed at j = ";
 		for (unsigned int i=0; i<removalIndices.size()-1; i++) {
@@ -318,7 +318,7 @@ void oneDimGrid::addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot
 {
   	dvector::iterator iter;
 	double xInsert = 0.5*(x[jInsert+1]+x[jInsert]);
-	
+
 	dampVal.insert(dampVal.begin()+jInsert+1, mathUtils::splines(x,dampVal, xInsert));
 
 	vector<dvector>::iterator i;
@@ -371,7 +371,7 @@ bool oneDimGrid::addRight(void)
 
 	// check flatness of temperature, velocity and species profiles at the boundary
 	for (int k=0; k<nVars; k++) {
-		if (k == kContinuity) {
+		if (k == kContinuity || k == kQdot) {
 			continue;
 		}
 
@@ -426,19 +426,21 @@ bool oneDimGrid::addLeft(void)
 	int djMom = (jb==1) ? 2 : 1;
 
 	bool pointAdded = false;
-	for (int k=0; k<nVars; k++) {
-		if (k==kContinuity) {
-			continue;
-		}
-
-		int dj = (k==kMomentum) ? djMom : djOther;
-		if (abs(y[k][dj]-y[k][0])/range(y[k]) > boundaryTol && range(y[k]) > absvtol) {
-			if (!pointAdded && debugParameters::debugRegrid) {
-				cout << "Regrid: Flatness of component " << k << " requires left addition: ";
-				cout << abs(y[k][dj]-y[k][0])/range(y[k]) << " > " << boundaryTol << endl;
+	if (!options.fixedLeftLoc) {
+		for (int k=0; k<nVars; k++) {
+			if (k==kContinuity || k==kQdot) {
+				continue;
 			}
-			pointAdded = true;
-			break;
+
+			int dj = (k==kMomentum) ? djMom : djOther;
+			if (abs(y[k][dj]-y[k][0])/range(y[k]) > boundaryTol && range(y[k]) > absvtol) {
+				if (!pointAdded && debugParameters::debugRegrid) {
+					cout << "Regrid: Flatness of component " << k << " requires left addition: ";
+					cout << abs(y[k][dj]-y[k][0])/range(y[k]) << " > " << boundaryTol << endl;
+				}
+				pointAdded = true;
+				break;
+			}
 		}
 	}
 
@@ -488,15 +490,15 @@ bool oneDimGrid::removeRight(void)
 	vector<dvector>& ydot = *ydotIn;
 
 	// *** Criteria for removal from the right (j==jj) ***
-	
-	// Comparison point for flatness criteria, depending on 
+
+	// Comparison point for flatness criteria, depending on
 	// zero-gradient or fixed value boundary condition
 	int djMom = (jb==jj) ? 3 : 2;
 	int djOther = (jb==jj && !fixedBurnedVal) ? 3 : 2;
 
 	bool pointRemoved = true; // assume removal
 	for (int k=0; k<nVars; k++) {
-		if (k==kContinuity) {
+		if (k==kContinuity || k==kQdot) {
 			continue; // no flatness criterion for continuity equation
 		}
 		int dj = (k==kMomentum) ? djMom : djOther;
@@ -527,7 +529,7 @@ bool oneDimGrid::removeLeft(void)
 	// *** Criteria for removal from the left (j==1) ***
 	int djMom = (jb==1) ? 3 : 2;
 	int djOther = (jb==1 && !fixedBurnedVal) ? 3 : 2;
-	
+
 	// Don't remove points if the location of the left boundary is fixed
 	bool pointRemoved = true; // assume removal
 	if (options.fixedLeftLoc) {
@@ -539,7 +541,7 @@ bool oneDimGrid::removeLeft(void)
 
 	for (int k=0; k<nVars; k++) {
 		int dj = (k==kMomentum) ? djMom : djOther;
-		if (k==kContinuity) {
+		if (k==kContinuity || k==kQdot) {
 			continue;
 		}
 
@@ -565,6 +567,8 @@ bool oneDimGrid::removeLeft(void)
 bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 {
 	nVars = y.size();
+	kQdot = nVars-1;
+
 	jj = y[0].size()-1;
 
 	yIn = &y;
@@ -577,7 +581,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 	bool leftRemoval = false;
 
 	int rightRemovalCount = 0;
-	
+
 	if (!rightAddition) {
 		bool continueRemoval = true;
 		while (continueRemoval) {
@@ -604,7 +608,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 			}
 		}
 	}
-	
+
 	if (leftRemovalCount > 0) {
 		std::string suffix = (leftRemovalCount == 1) ? "" : "s";
 		cout << "Removed " << leftRemovalCount << " point" << suffix << " from the left side.";
@@ -612,7 +616,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 	if (leftRemovalCount > 0 || rightRemovalCount > 0) {
 		cout << endl;
 	}
-	
+
 	bool gridUpdated = (leftAddition || rightAddition || leftRemoval || rightRemoval);
 
 	if (gridUpdated) {

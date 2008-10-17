@@ -28,7 +28,7 @@
 <listOptionValue builtIn="false" value="/usr/local/cantera/include"/>
 <listOptionValue builtIn="false" value="/usr/local/matlab/extern/include"/>
 </option>
-<option id="gnu.cpp.compiler.option.other.other.1183985148" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -D&quot;__sync_fetch_and_add(ptr,addend)=_InterlockedExchangeAdd(const_cast&lt;void*&gt;(reinterpret_cast&lt;volatile void*&gt;(ptr)), addend)&quot;" valueType="string"/>
+<option id="gnu.cpp.compiler.option.other.other.1183985148" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="" valueType="string"/>
 <option id="gnu.cpp.compiler.option.warnings.allwarn.1412310613" name="All warnings (-Wall)" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1480131720" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
@@ -64,13 +64,13 @@
 <listOptionValue builtIn="false" value="sundials_nvecserial"/>
 <listOptionValue builtIn="false" value="clib"/>
 <listOptionValue builtIn="false" value="ctbase"/>
-<listOptionValue builtIn="false" value="ctlapack"/>
-<listOptionValue builtIn="false" value="ctblas"/>
 <listOptionValue builtIn="false" value="ctmath"/>
 <listOptionValue builtIn="false" value="converters"/>
 <listOptionValue builtIn="false" value="tpx"/>
 <listOptionValue builtIn="false" value="ctf2c"/>
 <listOptionValue builtIn="false" value="ctcxx"/>
+<listOptionValue builtIn="false" value="lapack"/>
+<listOptionValue builtIn="false" value="blas"/>
 </option>
 <option id="gnu.cpp.link.option.paths.43547539" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 <listOptionValue builtIn="false" value="/usr/local/matlab/bin/glnxa64"/>
@@ -92,6 +92,7 @@
 
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
+
 
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
@@ -508,7 +509,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cconfiguration>
 <cconfiguration id="cdt.managedbuild.config.gnu.exe.release.837257934">
 <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.exe.release.837257934" moduleId="org.eclipse.cdt.core.settings" name="Release">
@@ -536,7 +536,7 @@
 <listOptionValue builtIn="false" value="/usr/local/matlab/extern/include"/>
 </option>
 <option id="gnu.cpp.compiler.option.warnings.allwarn.361186297" name="All warnings (-Wall)" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
-<option id="gnu.cpp.compiler.option.other.other.59530765" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -D&quot;__sync_fetch_and_add(ptr,addend)=_InterlockedExchangeAdd(const_cast&lt;void*&gt;(reinterpret_cast&lt;volatile void*&gt;(ptr)), addend)&quot;" valueType="string"/>
+<option id="gnu.cpp.compiler.option.other.other.59530765" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1301370737" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool command="icc" id="cdt.managedbuild.tool.gnu.c.compiler.exe.release.1044771833" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.release">
@@ -572,13 +572,13 @@
 <listOptionValue builtIn="false" value="sundials_nvecserial"/>
 <listOptionValue builtIn="false" value="clib"/>
 <listOptionValue builtIn="false" value="ctbase"/>
-<listOptionValue builtIn="false" value="ctlapack"/>
-<listOptionValue builtIn="false" value="ctblas"/>
 <listOptionValue builtIn="false" value="ctmath"/>
 <listOptionValue builtIn="false" value="converters"/>
 <listOptionValue builtIn="false" value="tpx"/>
 <listOptionValue builtIn="false" value="ctf2c"/>
 <listOptionValue builtIn="false" value="ctcxx"/>
+<listOptionValue builtIn="false" value="lapack"/>
+<listOptionValue builtIn="false" value="blas"/>
 </option>
 <option id="gnu.cpp.link.option.paths.100505220" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 <listOptionValue builtIn="false" value="/usr/local/cantera/lib"/>
@@ -600,6 +600,7 @@
 
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+
 
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
@@ -1016,7 +1017,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cconfiguration>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">

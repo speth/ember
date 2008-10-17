@@ -9,24 +9,24 @@
 using Cantera::Array2D;
 using std::string;
 
-class flameSys : public sdDAE 
+class flameSys : public sdDAE
 {
 public:
 	flameSys(void);
 	~flameSys(void);
-	
+
 	// the functions for solving the ODE
 	int f(realtype t, sdVector& y, sdVector& ydot, sdVector& res);
 
-	//int JvProd(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn, 
+	//int JvProd(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
 	//		   sdVector& vIn, sdVector& JvIn, realtype c_j);
 
-	int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn, 
+	int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn,
 		                    sdVector& resIn, realtype c_j);
 
 	int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
 						    sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta);
-	
+
 	// Finds a consistent solution for the DAE to begin the integration
 	int getInitialCondition(double t, sdVector& y, sdVector& ydot, vector<bool>& algebraic);
 
@@ -49,11 +49,11 @@ public:
 	dvector Yu, Yb, Yleft, Yright;
 
 	void setup(void);
-	
+
 	void generateInitialProfiles(void);
 	void loadInitialProfiles(void);
 	void copyOptions(void);
-	
+
 	// Utility functions
 	void unrollY(const sdVector& y);
 	void unrollYdot(const sdVector& yDot);
@@ -62,7 +62,7 @@ public:
 	void rollResiduals(sdVector& res);
 
 	// Utility functions for adaptation & regridding
-	void rollVectorVector(const sdVector& y, vector<dvector>& v);
+	void rollVectorVector(const sdVector& y, const dvector& qdot, vector<dvector>& v);
 	void unrollVectorVector(const vector<dvector>& v);
 	void unrollVectorVectorDot(const vector<dvector>& v);
 
@@ -83,7 +83,7 @@ public:
 	dvector U; // normalized tangential velocity (u/u_inf) [non-dim]
 	dvector T; // temperature [K]
 	Array2D Y; // species mass fractions, Y(k,j)
-	
+
 	// Time derivatives of state variables:
 	dvector dVdt;
 	dvector dUdt;
@@ -99,13 +99,13 @@ public:
 	// Auxillary variables:
 	dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
 	dvector rho; // density [kg/m^3]
-	dvector drhodt; 
+	dvector drhodt;
 	Array2D X; // species mole fractions, X(k,j)
 	Array2D dXdx;
 	dvector W; // species molecular weights [kg/kmol]
 	dvector Wmx; // mixture molecular weight [kg/kmol]
 	dvector sumcpj; // for enthalpy flux term [W/m^2*K]
-	
+
 	dvector mu; // viscosity [Pa*s]
 
 	dvector lambda; // thermal conductivity [W/m*K]
@@ -121,7 +121,7 @@ public:
 	Array2D jFick; // Normal diffusion (Fick's Law) [kg/m^2*s]
 	Array2D jSoret; // Soret Effect diffusion [kg/m^2*s]
 	dvector jCorr; // Correction to ensure sum of mass fractions
-	
+
 	Array2D wDot; // species net production rates [kmol/m^3*s]
 	Array2D hk; // species enthalpies [J/kmol]
 	dvector qDot; // heat release rate per unit volume [W/m^3]
@@ -130,8 +130,8 @@ public:
 	oneDimGrid grid;
 
 	// Strain rate parameters:
-	// The strain rate is constant at a=strainRateInitial until 
-	// t=strainRateT0, after which it increases linearly to a=strainRateFinal 
+	// The strain rate is constant at a=strainRateInitial until
+	// t=strainRateT0, after which it increases linearly to a=strainRateFinal
 	// at t=strainRateT0+strainRateDt, after which it remains constant.
 	double strainRateInitial, strainRateFinal; // [1/s]
 	double strainRateDt; // [s]
@@ -158,7 +158,7 @@ public:
 	double getHeatReleaseRate(void); // [W/m^2]
 	double getConsumptionSpeed(void); // [m/s]
 	double getFlamePosition(void); // [m]
-	
+
 	double strainRate(const double t); // [1/s]
 	double dStrainRatedt(const double t); // [1/s^2]
 
@@ -174,15 +174,15 @@ private:
 	dvector momentumUnst, momentumDiff, momentumConv, momentumProd;
 	Array2D speciesUnst, speciesDiff, speciesConv, speciesProd;
 	dvector continuityUnst, continuityRhov, continuityStrain;
-	
+
 	// Jacobian data
-	int jacBW; // Bandwidth of the Jacobian (number of filled blocks per row, 
+	int jacBW; // Bandwidth of the Jacobian (number of filled blocks per row,
 			   // dependent on the order of the finite difference stencil)
 	int jacBWdot; // Bandwidth of dF/dydot component of Jacobian
 	sdBandMatrix* bandedJacobian;
 	vector<long int> pMat;
 
-	// Functions for addressing the subdiagonal, 
+	// Functions for addressing the subdiagonal,
 	// diagonal, and superdiagonal blocks of the Jacobian
 	double& jacA(const int j, const int k1, const int k2);
 	double& jacB(const int j, const int k1, const int k2);
