@@ -5,7 +5,7 @@
 #include "sundialsUtils.h"
 #include "flameSolver.h"
 #include "libconfig.h++"
-//#include <omp.h>
+#include <omp.h>
 
 using namespace mathUtils;
 
@@ -17,10 +17,6 @@ int main(int argc, char** argv)
 	if (!python_cmd) {
 		putenv("PYTHON_CMD=python");
 	}
-
-	//int nProcs = omp_get_num_procs();
-	//cout << "Detected " << nProcs << " processors." << endl;
-	//omp_set_num_threads(nProcs);
 
 	std::string inputFile;
 	if (argc > 1) {
@@ -53,6 +49,14 @@ void strainedFlame(const std::string& inputFile)
 	mainOptions.readOptionsFile(inputFile);
 	//mainOptions.outputFileNumber = 0;
 	//mainOptions.fileNumberOverride = true;
+
+	int nProcs = omp_get_num_procs();
+	std::string procStr = (nProcs==1) ? " core." : " cores.";
+	cout << "Detected " << nProcs << procStr;
+	nProcs = min(mainOptions.numberOfThreads,nProcs);
+	procStr = (nProcs==1) ? " core." : " cores.";
+	cout << " Running on " << nProcs << procStr << endl;
+	omp_set_num_threads(nProcs);
 
 	if (mainOptions.strainRateList.size()!=0) {
 
@@ -265,40 +269,38 @@ void chemistryTest(void)
 	//
 	//cout << wdot0 << endl;
 	//cout << wdot1 << endl;
-
-	int blargh = 0;
 }
 
 void matlabioTest(void)
 {
-	int n = 2, m=20;
-	dvector x(n*m);
-	Array2D foo;
-	for (int i=0; i<n*m; i++) {
-		x[i] = 2*i + 100;
-
-	}
-
-	n = 5, m=20;
-	foo.resize(n,m);
-	for (int i=0; i<n; i++) {
-		for (int j=0; j<m; j++) {
-			foo(i,j) = i+100*j;
-		}
-	}
-	boost::filesystem::remove_all("output");
-	boost::filesystem::create_directory("output");
-
-	matlabFile outFile("output/test.mat");
-	outFile.writeVector("hellofriend",x);
-	outFile.writeArray2D("hugstiem",foo);
-
-
-	dvector hi = outFile.readVector("hellofriend");
-	Array2D bar = outFile.readArray2D("hugstiem");
-	cout << hi << endl;
-
-	outFile.close();
+//	int n = 2, m=20;
+//	dvector x(n*m);
+//	Array2D foo;
+//	for (int i=0; i<n*m; i++) {
+//		x[i] = 2*i + 100;
+//
+//	}
+//
+//	n = 5, m=20;
+//	foo.resize(n,m);
+//	for (int i=0; i<n; i++) {
+//		for (int j=0; j<m; j++) {
+//			foo(i,j) = i+100*j;
+//		}
+//	}
+//	boost::filesystem::remove_all("output");
+//	boost::filesystem::create_directory("output");
+//
+//	matlabFile outFile("output/test.mat");
+//	outFile.writeVector("hellofriend",x);
+//	outFile.writeArray2D("hugstiem",foo);
+//
+//
+//	dvector hi = outFile.readVector("hellofriend");
+//	Array2D bar = outFile.readArray2D("hugstiem");
+//	cout << hi << endl;
+//
+//	outFile.close();
 }
 
 void miscTest(void)

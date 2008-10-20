@@ -68,7 +68,7 @@ namespace mathUtils
 	std::string stringify(double x);
 	std::string stringify(double x, int nDigits);
 	std::string stringify(int x);
-};
+}
 
 std::ostream& operator<<(std::ostream& os, dvector& v);
 std::ostream& operator<<(std::ostream& os, vector<bool>& v);

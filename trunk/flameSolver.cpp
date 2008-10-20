@@ -63,7 +63,6 @@ void flameSolver::run(void)
 	if (options.outputProfiles) {
 		theSys.writeStateMatFile();
 	}
-	bool firstIteration = true;
 
 	while (t < theSys.tEnd) {
 
@@ -120,7 +119,7 @@ void flameSolver::run(void)
 		theSolver.initialize();
 		theSolver.setMaxStepSize(options.maxTimestep);
 
-		if (integratorTimestep != 0) {
+		if (integratorTimestep <= 0.0) {
 			theSolver.setInitialStepSize(integratorTimestep);
 		}
 
@@ -134,7 +133,6 @@ void flameSolver::run(void)
 				theSys.writeStateMatFile("errorOutput",true);
 			}
 
-			firstIteration = false;
 			dt = integratorTimestep = theSolver.getStepSize();
 			t = theSys.tPrev = theSolver.tInt;
 

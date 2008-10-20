@@ -18,7 +18,7 @@ gasArray::~gasArray()
 
 	delete m_kineticsBase;
 	delete m_transportBase;
-	
+
 	resize(0);
 }
 
@@ -67,14 +67,14 @@ void gasArray::resize(unsigned int n)
 	nSpec = m_thermoBase.nSpecies();
 }
 
-void gasArray::initialize(void) 
+void gasArray::initialize(void)
 {
 	// XML Information File
 	if (!boost::filesystem::exists(mechanismFile)) {
-		cout << "Error: Cantera input file \"" << mechanismFile << "\" not found." << endl; 
+		cout << "Error: Cantera input file \"" << mechanismFile << "\" not found." << endl;
 		throw;
 	}
-	
+
 	rootXmlNode = Cantera::get_XML_File(mechanismFile);
 	phaseXmlNode = rootXmlNode->findNameID("phase",phaseID);
 
@@ -147,8 +147,9 @@ void gasArray::getMolecularWeights(dvector& W)
 	}
 }
 
-void gasArray::getViscosity(dvector& mu) 
+void gasArray::getViscosity(dvector& mu)
 {
+	#pragma omp parallel for
 	for (int j=0; j<nPoints; j++) {
 		mu[j] = m_transport[j]->viscosity();
 	}
@@ -156,6 +157,7 @@ void gasArray::getViscosity(dvector& mu)
 
 void gasArray::getThermalConductivity(dvector& lambda)
 {
+	#pragma omp parallel for
 	for (int j=0; j<nPoints; j++) {
 		lambda[j] = m_transport[j]->thermalConductivity();
 	}
@@ -163,6 +165,7 @@ void gasArray::getThermalConductivity(dvector& lambda)
 
 void gasArray::getDiffusionCoefficients(Cantera::Array2D& Dkm)
 {
+	#pragma omp parallel for
 	for (int j=0; j<nPoints; j++) {
 		m_transport[j]->getMixDiffCoeffs(&Dkm(0,j));
 	}
@@ -170,6 +173,7 @@ void gasArray::getDiffusionCoefficients(Cantera::Array2D& Dkm)
 
 void gasArray::getWeightedDiffusionCoefficients(Cantera::Array2D& rhoD)
 {
+	#pragma omp parallel for
 	for (int j=0; j<nPoints; j++) {
 		m_transport[j]->getMixDiffCoeffs(&rhoD(0,j));
 		double rho = m_thermo[j]->density();
@@ -181,6 +185,7 @@ void gasArray::getWeightedDiffusionCoefficients(Cantera::Array2D& rhoD)
 
 void gasArray::getThermalDiffusionCoefficients(Cantera::Array2D& Dkt)
 {
+	#pragma omp parallel for
 	for (int j=0; j<nPoints; j++) {
 		m_transport[j]->getThermalDiffCoeffs(&Dkt(0,j));
 	}
@@ -209,6 +214,7 @@ void gasArray::getEnthalpies(Cantera::Array2D& hk)
 
 void gasArray::getReactionRates(Cantera::Array2D& wDot)
 {
+	#pragma omp parallel for
 	for (int j=0; j<nPoints; j++) {
 		m_kinetics[j]->getNetProductionRates(&wDot(0,j));
 	}
@@ -288,7 +294,7 @@ void gasArray::testFunction(void)
 
 	cout << trans1->viscosity() << endl;
 	cout << trans2->viscosity() << endl;
-		
+
 	delete kin1;
 	delete kin2;
 

@@ -31,7 +31,7 @@ public:
 	double outputTimeInterval;
 	double profileTimeInterval;
 	double maxTimestep;
-	
+
 	double idaRelTol;
 	double idaRelTolLow;
 	double idaContinuityAbsTol;
@@ -80,7 +80,7 @@ public:
 	double terminationPeriod;
 	double terminationPeriodLow;
 	double terminationPeriodHigh;
-	double terminationMaxTime;;
+	double terminationMaxTime;
 
 	int errorStopCount;
 	bool stopIfError;
@@ -100,4 +100,6 @@ public:
 
 	bool stagnationRadiusControl;
 	double rStag;
+
+	int numberOfThreads;
 };

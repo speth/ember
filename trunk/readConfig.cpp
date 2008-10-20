@@ -42,14 +42,14 @@ void configOptions::readOptionsFile(const std::string& filename)
 	strainRateFinal = 100;
 	strainRateDt = 1e-3;
 	strainRateT0 = 0;
-	
+
 	curvedFlame = false;
 	fixedLeftLoc = false;
 	twinFlame = false;
 	centeredDifferences = false;
 	steadyOnly = false;
 
-	// Grid	
+	// Grid
 	nPoints = 50;
 	xLeft = -0.05;
 	xRight = 0.05;
@@ -62,7 +62,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	gridMax = 0.2;
 	uniformityTol = 2.7;
 	absvtol = 1e-10;
-	
+
 	boundaryTol = 2e-5;
 	boundaryTolRm = 5e-6;
 
@@ -85,7 +85,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	rFlameUpdateStepInterval = 10;
 	rFlameUpdateTimeInterval = 0.002;
-	
+
 	idaRelTol = 1e-5;
 	idaRelTolLow = 1e-3;
 	idaContinuityAbsTol = 1e-6;
@@ -109,11 +109,13 @@ void configOptions::readOptionsFile(const std::string& filename)
 	terminationPeriodLow = 0.04;
 	terminationPeriod = 0.04;
 	terminationMaxTime = 2;
-	
+
+	numberOfThreads = 1;
+
 	// Read options from the configuration file
 	cfg.lookupValue("paths.inputDir",inputDir);
 	cfg.lookupValue("paths.outputDir",outputDir);
-	
+
 	cfg.lookupValue("chemistry.mechanismFile",gasMechanismFile);
 	cfg.lookupValue("chemistry.phaseID",gasPhaseID);
 
@@ -161,7 +163,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("grid.adaptation.gridMax",gridMax);
 	cfg.lookupValue("grid.adaptation.uniformityTol",uniformityTol);
 	cfg.lookupValue("grid.adaptation.absvtol",absvtol);
-	
+
 	cfg.lookupValue("grid.regridding.boundaryTol",boundaryTol);
 	cfg.lookupValue("grid.regridding.boundaryTolRm",boundaryTolRm);
 	cfg.lookupValue("grid.regridding.addPointCount",addPointCount);
@@ -207,7 +209,6 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("outputFiles.residualComponents",outputResidualComponents);
 	fileNumberOverride = cfg.lookupValue("outputFiles.firstFileNumber",outputFileNumber);
 	cfg.lookupValue("outputFiles.saveProfiles",outputProfiles);
-	
 
 	cfg.lookupValue("terminationCondition.tolerance",terminationTolerance);
 	cfg.lookupValue("terminationCondition.toleranceLow",terminationToleranceLow);
@@ -230,6 +231,8 @@ void configOptions::readOptionsFile(const std::string& filename)
 			strainRateList.push_back(strainSetting[i]);
 		}
 	}
+
+	cfg.lookupValue("general.numberOfThreads",numberOfThreads);
 
 	if (haveRestartFile) {
 		haveRestartFile = boost::filesystem::exists(inputDir + "/" + restartFile);

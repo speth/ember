@@ -535,8 +535,8 @@
 <listOptionValue builtIn="false" value="/usr/local/cantera/include"/>
 <listOptionValue builtIn="false" value="/usr/local/matlab/extern/include"/>
 </option>
-<option id="gnu.cpp.compiler.option.warnings.allwarn.361186297" name="All warnings (-Wall)" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
-<option id="gnu.cpp.compiler.option.other.other.59530765" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
+<option id="gnu.cpp.compiler.option.warnings.allwarn.361186297" name="All warnings (-Wall)" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="true" valueType="boolean"/>
+<option id="gnu.cpp.compiler.option.other.other.59530765" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -openmp -wd981,1782,383,869,1572" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1301370737" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool command="icc" id="cdt.managedbuild.tool.gnu.c.compiler.exe.release.1044771833" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.release">
@@ -585,6 +585,7 @@
 <listOptionValue builtIn="false" value="/usr/local/lib"/>
 <listOptionValue builtIn="false" value="/usr/local/matlab/bin/glnxa64"/>
 </option>
+<option id="gnu.cpp.link.option.flags.1835624832" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="-openmp" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.693037794" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 <additionalInput kind="additionalinput" paths="$(LIBS)"/>

@@ -20,6 +20,6 @@ namespace debugType {
 		regridding,
 		sundials
 	};
-};
+}
 
 void debugWrite(debugType::debugType type, std::string message);
