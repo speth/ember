@@ -7,6 +7,7 @@ bool debugParameters::debugJacobian = false;
 bool debugParameters::debugCalcIC = false;
 bool debugParameters::debugTimesteps = true;
 bool debugParameters::debugSolverStats = true;
+bool debugParameters::debugPerformanceStats = true;
 
 void debugWrite(debugType::debugType type, std::string message)
 {

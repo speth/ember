@@ -195,6 +195,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("debug.calcIC",debugParameters::debugCalcIC);
 	cfg.lookupValue("debug.timesteps",debugParameters::debugTimesteps);
 	cfg.lookupValue("debug.solverStats",debugParameters::debugSolverStats);
+	cfg.lookupValue("debug.performanceStats",debugParameters::debugPerformanceStats);
 
 	cfg.lookupValue("integrator.relativeTolerance",idaRelTol);
 	cfg.lookupValue("integrator.relativeToleranceLow",idaRelTolLow);

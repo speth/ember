@@ -11,6 +11,7 @@ CPP_SRCS += \
 ../grid.cpp \
 ../mathUtils.cpp \
 ../matlabFile.cpp \
+../perfTimer.cpp \
 ../readConfig.cpp \
 ../strainedFlame.cpp \
 ../sundialsUtils.cpp 
@@ -23,6 +24,7 @@ OBJS += \
 ./grid.o \
 ./mathUtils.o \
 ./matlabFile.o \
+./perfTimer.o \
 ./readConfig.o \
 ./strainedFlame.o \
 ./sundialsUtils.o 
@@ -35,6 +37,7 @@ CPP_DEPS += \
 ./grid.d \
 ./mathUtils.d \
 ./matlabFile.d \
+./perfTimer.d \
 ./readConfig.d \
 ./strainedFlame.d \
 ./sundialsUtils.d 

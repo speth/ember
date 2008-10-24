@@ -5,6 +5,7 @@
 #include "chemistry.h"
 #include "grid.h"
 #include "readConfig.h"
+#include "perfTimer.h"
 
 using Cantera::Array2D;
 using std::string;
@@ -168,6 +169,9 @@ public:
 	void V2rV(void);
 	void rV2V(void);
 
+	void printPerformanceStats(void);
+	void printPerfString(const std::string& label, const perfTimer& T) const;
+
 private:
 	// Subdivided governing equation components
 	dvector energyUnst, energyDiff, energyConv, energyProd;
@@ -192,4 +196,8 @@ private:
 
 	bool inGetIC;
 	double centerVol, centerArea;
+
+	// Performance Timers
+	perfTimer perfTimerResFunc, perfTimerPrecondSetup, perfTimerPrecondSolve, perfTimerTransportProps;
+	perfTimer perfTimerRxnRates, perfTimerSetup, perfTimerLU;
 };

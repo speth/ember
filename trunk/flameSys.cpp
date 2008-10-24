@@ -25,10 +25,14 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 
 	try {
 	    if (!options.steadyOnly || inGetIC) {
+	    	perfTimerTransportProps.start();
 		    updateTransportProperties();
 			updateThermoProperties();
+			perfTimerTransportProps.stop();
 		}
+	    perfTimerRxnRates.start();
 		gas.getReactionRates(wDot);
+		perfTimerRxnRates.stop();
 	} catch (Cantera::CanteraError) {
 		cout << "Error evaluating thermodynamic properties" << endl;
 		writeStateMatFile("errorOutput",true);
@@ -36,6 +40,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 //		return -1;
 	}
 
+	perfTimerResFunc.start();
 	for (int j=0; j<=jj; j++) {
 		qDot[j] = 0;
 		for (int k=0; k<nSpec; k++) {
@@ -255,12 +260,14 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	}
 
 	rollResiduals(res);
+	perfTimerResFunc.stop();
 	return 0;
 }
 
 int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 										  sdVector& res, realtype c_j)
 {
+	perfTimerPrecondSetup.start();
 	unrollY(y);
 	unrollYdot(ydot);
 	int j;
@@ -287,8 +294,14 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 	Array2D dwdT(nSpec,nPoints);
 	Array2D wDot2(nSpec,nPoints);
 
+	perfTimerPrecondSetup.stop();
+	perfTimerRxnRates.start();
+
 	gas.setStateMass(Y,TplusdT);
 	gas.getReactionRates(wDot2);
+
+	perfTimerRxnRates.stop();
+	perfTimerPrecondSetup.resume();
 
 	for (j=0; j<nPoints; j++) {
 		for (int k=0; k<nSpec; k++) {
@@ -305,8 +318,15 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 		for (j=0; j<nPoints; j++) {
 			YplusdY(k,j) = (abs(Y(k,j)) > eps) ? Y(k,j)*(1+eps) : eps;
 		}
+		perfTimerPrecondSetup.stop();
+		perfTimerRxnRates.start();
+
 		gas.setStateMass(YplusdY,T);
 		gas.getReactionRates(wDot2);
+
+		perfTimerRxnRates.stop();
+		perfTimerPrecondSetup.resume();
+
 		for (j=0; j<nPoints; j++) {
 			for (int i=0; i<nSpec; i++) {
 				dwdY[j](i,k) = (wDot2(i,j)-wDot(i,j))/(YplusdY(k,j)-Y(k,j));
@@ -314,6 +334,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 			}
 		}
 	}
+
 
 	// J = dF/dy + c_j*dF/dydot
 	j=0;
@@ -655,7 +676,12 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 		jacA(j,kContinuity,kContinuity) = - grid.r[j]/grid.hh[j-1]/grid.rphalf[j-1];
 	}
 
+	perfTimerPrecondSetup.stop();
+
+	perfTimerLU.start();
 	long int iError = BandGBTRF(bandedJacobian->forSundials(),&pMat[0]);
+	perfTimerLU.stop();
+
 
 	if (iError!=0) {
 		cout << "Error in LU factorization: i = " << iError << endl;
@@ -673,6 +699,8 @@ int flameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn,
 										  sdVector& resIn, sdVector& rhs,
 										  sdVector& outVec, realtype c_j, realtype delta)
 {
+	perfTimerPrecondSolve.start();
+
 	dvector xVec(N);
 	for (int i=0; i<N; i++) {
 		xVec[i] = rhs(i);
@@ -684,11 +712,14 @@ int flameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn,
 		outVec(i) = xVec[i];
 	}
 
+	perfTimerPrecondSolve.stop();
+
 	return 0;
 }
 
 void flameSys::setup(void)
 {
+	perfTimerSetup.start();
 	int nPointsOld = T.size();
 
 	if (nPoints == nPointsOld) {
@@ -757,6 +788,7 @@ void flameSys::setup(void)
 	pMat.resize(N);
 	grid.jj = nPoints-1;
 	grid.updateBoundaryIndices();
+	perfTimerSetup.stop();
 }
 
 void flameSys::copyOptions(void)
@@ -1173,9 +1205,11 @@ void flameSys::printForMatlab(ofstream& file, dvector& v, int index, char* name)
 
 int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::vector<bool>& algebraic)
 {
+
 	inGetIC = true;
 	sdVector res(N);
 	f(t,y,ydot,res);
+
 	int jj = nPoints-1;
 
 	// Left boundary values
@@ -1264,6 +1298,7 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
 	rV2V();
 	rollY(y);
 	rollYdot(ydot);
+
 	f(t,y,ydot,res);
 
 	// Intermediate points
@@ -1612,4 +1647,22 @@ void flameSys::update_rVcenter(const double t)
 		rhou*a*options.rFlameProportionalGain*( (rFlameTarget-rFlameActual) +
 		flamePosDerivativeError*options.rFlameDerivativeGain +
 		flamePosIntegralError*options.rFlameIntegralGain);
+}
+
+void flameSys::printPerformanceStats(void)
+{
+	cout << endl << " **Performance Stats**:  time  (call count)" << endl;
+	printPerfString("         General Setup: ", perfTimerSetup);
+	printPerfString("  Preconditioner Setup: ", perfTimerPrecondSetup);
+	printPerfString("  Factorizing Jacobian: ", perfTimerLU);
+	printPerfString("  Preconditioner Solve: ", perfTimerPrecondSolve);
+	printPerfString("   Residual Evaluation: ", perfTimerResFunc);
+	printPerfString("        Reaction Rates: ", perfTimerRxnRates);
+	printPerfString("  Transport Properties: ", perfTimerTransportProps);
+	cout << endl;
+}
+
+void flameSys::printPerfString(const std::string& label, const perfTimer& T) const
+{
+	cout << label << mathUtils::stringify(T.getTime(),6) << " (" << T.getCallCount() << ")" << endl;
 }

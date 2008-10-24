@@ -47,9 +47,8 @@ void strainedFlame(const std::string& inputFile)
 
 	configOptions mainOptions;
 	mainOptions.readOptionsFile(inputFile);
-	//mainOptions.outputFileNumber = 0;
-	//mainOptions.fileNumberOverride = true;
 
+	// OpenMP Configuration
 	int nProcs = omp_get_num_procs();
 	std::string procStr = (nProcs==1) ? " core." : " cores.";
 	cout << "Detected " << nProcs << procStr;
@@ -57,6 +56,8 @@ void strainedFlame(const std::string& inputFile)
 	procStr = (nProcs==1) ? " core." : " cores.";
 	cout << " Running on " << nProcs << procStr << endl;
 	omp_set_num_threads(nProcs);
+
+	// Performance Counters
 
 	if (mainOptions.strainRateList.size()!=0) {
 

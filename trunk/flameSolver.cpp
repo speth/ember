@@ -146,6 +146,7 @@ void flameSolver::run(void)
 				if (debugParameters::debugTimesteps) {
 					cout << "t = " << t << "  (dt = " << dt << ")" << endl;
 				}
+
 			} else {
 				cout << "IDA Solver failed at time t = " << t << "  (dt = " << dt << ")" << endl;
 				theSys.writeStateMatFile("errorOutput",true);
@@ -245,6 +246,9 @@ void flameSolver::run(void)
 		}
 		tIDA2 = clock();
 		theSolver.printStats(tIDA2-tIDA1);
+		if (debugParameters::debugPerformanceStats) {
+			theSys.printPerformanceStats();
+		}
 
 	}
 
