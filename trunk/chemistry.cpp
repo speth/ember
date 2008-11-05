@@ -5,7 +5,8 @@ gasArray::gasArray()
 	: rootXmlNode(NULL)
 	, phaseXmlNode(NULL)
 	, m_kineticsBase(NULL)
-	, m_transportBase(NULL)
+	, m_MultiTransportBase(NULL)
+	, m_MixTransportBase(NULL)
 {
 }
 
@@ -17,7 +18,8 @@ gasArray::~gasArray()
 //	delete rootXmlNode; // this deletes all child nodes as well
 
 	delete m_kineticsBase;
-	delete m_transportBase;
+	delete m_MultiTransportBase;
+	delete m_MixTransportBase;
 
 	resize(0);
 }
@@ -35,12 +37,16 @@ void gasArray::resize(unsigned int n)
 			Cantera::installReactionArrays(*phaseXmlNode, **m_kinetics.rbegin(), phaseID);
 			(**m_kinetics.rbegin()).finalize();
 
-			//**m_kinetics.rbegin() = *m_kineticsBase;
-			//(**m_kinetics.rbegin()).m_thermo[0] = *m_thermo.rbegin();
+			if (usingMultiTransport) {
+				m_MultiTransport.insert(m_MultiTransport.end(), new Cantera::MultiTransport);
+				(**m_MultiTransport.rbegin()) = *m_MultiTransportBase;
+				(**m_MultiTransport.rbegin()).m_thermo = *m_thermo.rbegin();
+			} else {
+				m_MixTransport.insert(m_MixTransport.end(), new Cantera::MixTransport);
+				(**m_MixTransport.rbegin()) = *m_MixTransportBase;
+				(**m_MixTransport.rbegin()).m_thermo = *m_thermo.rbegin();
 
-			m_transport.insert(m_transport.end(), new Cantera::MultiTransport);
-			(**m_transport.rbegin()) = *m_transportBase;
-			(**m_transport.rbegin()).m_thermo = *m_thermo.rbegin();
+			}
 		}
 
 	} else if (2*n < m_thermo.size()) {
@@ -57,18 +63,29 @@ void gasArray::resize(unsigned int n)
 		}
 		m_thermo.erase(m_thermo.begin()+n,m_thermo.end());
 
-		vector<Cantera::MultiTransport*>::iterator iter3;
-		for (iter3=m_transport.begin()+n; iter3!=m_transport.end(); iter3++) {
-			delete *iter3;
+		if (usingMultiTransport) {
+			vector<Cantera::MultiTransport*>::iterator iter3;
+			for (iter3=m_MultiTransport.begin()+n; iter3!=m_MultiTransport.end(); iter3++) {
+				delete *iter3;
+			}
+			m_MultiTransport.erase(m_MultiTransport.begin()+n,m_MultiTransport.end());
+		} else {
+			vector<Cantera::MixTransport*>::iterator iter3;
+			for (iter3=m_MixTransport.begin()+n; iter3!=m_MixTransport.end(); iter3++) {
+				delete *iter3;
+			}
+			m_MixTransport.erase(m_MixTransport.begin()+n,m_MixTransport.end());
+
 		}
-		m_transport.erase(m_transport.begin()+n,m_transport.end());
 	}
 	nPoints = n;
 	nSpec = m_thermoBase.nSpecies();
 }
 
-void gasArray::initialize(void)
+void gasArray::initialize(bool multiTransportFlag)
 {
+	usingMultiTransport = multiTransportFlag;
+
 	// XML Information File
 	if (!boost::filesystem::exists(mechanismFile)) {
 		cout << "Error: Cantera input file \"" << mechanismFile << "\" not found." << endl;
@@ -88,9 +105,14 @@ void gasArray::initialize(void)
 	m_kineticsBase->finalize();
 
 	// Initialize the default transport properties object
-	m_transportBase = new Cantera::MultiTransport;
 	Cantera::TransportFactory* transFac = Cantera::TransportFactory::factory();
-	transFac->initTransport(m_transportBase,&m_thermoBase);
+	if (usingMultiTransport) {
+		m_MultiTransportBase = new Cantera::MultiTransport;
+		transFac->initTransport(m_MultiTransportBase,&m_thermoBase);
+	} else {
+		m_MixTransportBase = new Cantera::MixTransport;
+		transFac->initTransport(m_MixTransportBase,&m_thermoBase);
+	}
 	transFac->deleteFactory();
 }
 
@@ -149,45 +171,85 @@ void gasArray::getMolecularWeights(dvector& W)
 
 void gasArray::getViscosity(dvector& mu)
 {
-	#pragma omp parallel for
-	for (int j=0; j<nPoints; j++) {
-		mu[j] = m_transport[j]->viscosity();
+	if (usingMultiTransport) {
+		#pragma omp parallel for
+		for (int j=0; j<nPoints; j++) {
+			mu[j] = m_MultiTransport[j]->viscosity();
+		}
+	} else {
+		#pragma omp parallel for
+		for (int j=0; j<nPoints; j++) {
+			mu[j] = m_MixTransport[j]->viscosity();
+		}
 	}
 }
 
 void gasArray::getThermalConductivity(dvector& lambda)
 {
-	#pragma omp parallel for
-	for (int j=0; j<nPoints; j++) {
-		lambda[j] = m_transport[j]->thermalConductivity();
+	if (usingMultiTransport) {
+		#pragma omp parallel for
+		for (int j=0; j<nPoints; j++) {
+			lambda[j] = m_MultiTransport[j]->thermalConductivity();
+		}
+	} else {
+		#pragma omp parallel for
+		for (int j=0; j<nPoints; j++) {
+			lambda[j] = m_MixTransport[j]->thermalConductivity();
+		}
 	}
+
 }
 
 void gasArray::getDiffusionCoefficients(Cantera::Array2D& Dkm)
 {
-	#pragma omp parallel for
-	for (int j=0; j<nPoints; j++) {
-		m_transport[j]->getMixDiffCoeffs(&Dkm(0,j));
+	if (usingMultiTransport) {
+		#pragma omp parallel for
+		for (int j=0; j<nPoints; j++) {
+			m_MultiTransport[j]->getMixDiffCoeffs(&Dkm(0,j));
+		}
+	} else {
+		#pragma omp parallel for
+		for (int j=0; j<nPoints; j++) {
+			m_MixTransport[j]->getMixDiffCoeffs(&Dkm(0,j));
+		}
 	}
 }
 
 void gasArray::getWeightedDiffusionCoefficients(Cantera::Array2D& rhoD)
 {
-	#pragma omp parallel for
-	for (int j=0; j<nPoints; j++) {
-		m_transport[j]->getMixDiffCoeffs(&rhoD(0,j));
-		double rho = m_thermo[j]->density();
-		for (int k=0; k<nSpec; k++) {
-			rhoD(k,j) *= rho;
+	if (usingMultiTransport) {
+		#pragma omp parallel for
+		for (int j=0; j<nPoints; j++) {
+			m_MultiTransport[j]->getMixDiffCoeffs(&rhoD(0,j));
+			double rho = m_thermo[j]->density();
+			for (int k=0; k<nSpec; k++) {
+				rhoD(k,j) *= rho;
+			}
+		}
+	} else {
+		#pragma omp parallel for
+		for (int j=0; j<nPoints; j++) {
+			m_MixTransport[j]->getMixDiffCoeffs(&rhoD(0,j));
+			double rho = m_thermo[j]->density();
+			for (int k=0; k<nSpec; k++) {
+				rhoD(k,j) *= rho;
+			}
 		}
 	}
 }
 
 void gasArray::getThermalDiffusionCoefficients(Cantera::Array2D& Dkt)
 {
-	#pragma omp parallel for
-	for (int j=0; j<nPoints; j++) {
-		m_transport[j]->getThermalDiffCoeffs(&Dkt(0,j));
+	if (usingMultiTransport) {
+		#pragma omp parallel for
+		for (int j=0; j<nPoints; j++) {
+			m_MultiTransport[j]->getThermalDiffCoeffs(&Dkt(0,j));
+		}
+	} else {
+		#pragma omp parallel for
+		for (int j=0; j<nPoints; j++) {
+			m_MixTransport[j]->getThermalDiffCoeffs(&Dkt(0,j));
+		}
 	}
 }
 
@@ -235,67 +297,12 @@ Cantera::GasKinetics& gasArray::kinetics(unsigned int i) const
 	return *m_kinetics[i];
 }
 
-Cantera::MultiTransport& gasArray::trans(unsigned int i) const
+Cantera::MultiTransport& gasArray::multiTrans(unsigned int i) const
 {
-	return *m_transport[i];
+	return *m_MultiTransport[i];
 }
 
-void gasArray::testFunction(void)
+Cantera::MixTransport& gasArray::mixTrans(unsigned int i) const
 {
-	Cantera::IdealGasPhase thermo1;
-	Cantera::IdealGasPhase thermo2;
-
-	Cantera::GasKinetics* kin1 = new Cantera::GasKinetics;
-	Cantera::GasKinetics* kin2 = new Cantera::GasKinetics;
-
-	Cantera::importPhase(*phaseXmlNode, &thermo1);
-	Cantera::importPhase(*phaseXmlNode, &thermo2);
-
-	kin1->addPhase(thermo1);
-	kin2->addPhase(thermo1);
-
-	kin1->init();
-	kin2->init();
-
-	Cantera::installReactionArrays(*phaseXmlNode,*kin1,phaseID);
-	Cantera::installReactionArrays(*phaseXmlNode,*kin2,phaseID);
-
-	kin1->finalize();
-	kin2->finalize();
-
-	kin2->m_thermo[0] = &thermo2;
-
-
-	dvector wdot1(thermo1.nSpecies()), wdot2(thermo2.nSpecies());
-
-	Cantera::MultiTransport* trans1 = new Cantera::MultiTransport();
-	Cantera::MultiTransport* trans2 = new Cantera::MultiTransport();
-
-	Cantera::TransportFactory* transFac = Cantera::TransportFactory::factory();
-	transFac->initTransport(trans1,&thermo1);
-	*trans2 = *trans1;
-	trans2->m_thermo = &thermo2;
-
-
-	thermo1.setState_TPX(300,101325,"O2:1.0, H2:0.5");
-	thermo2.setState_TPX(300,101325,"AR:1.0");
-
-	kin1->getNetProductionRates(&wdot1[0]);
-	kin2->getNetProductionRates(&wdot2[0]);
-
-	cout << wdot1 << endl;
-	cout << wdot2 << endl;
-
-	cout << trans1->viscosity() << endl;
-	cout << trans2->viscosity() << endl;
-
-	thermo1.setState_TPX(300,101325,"AR:1.0");
-	thermo2.setState_TPX(300,101325,"O2:1.0, H2:0.5");
-
-	cout << trans1->viscosity() << endl;
-	cout << trans2->viscosity() << endl;
-
-	delete kin1;
-	delete kin2;
-
+	return *m_MixTransport[i];
 }

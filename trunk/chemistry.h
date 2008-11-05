@@ -26,9 +26,9 @@
 //
 // class gasArray;
 //
-// And, as the first line of class Transport, class MixTransport and 
+// And, as the first line of class Transport, class MixTransport and
 // class MultiTransport, add the friend declaration (before "public:")
-// 
+//
 // friend class ::gasArray;
 //
 
@@ -40,10 +40,12 @@ public:
 	std::string mechanismFile;
 	std::string phaseID;
 	double pressure; // thermodynamic pressure
-	
-	void initialize(void);
+
+	bool usingMultiTransport;
+
+	void initialize(bool multiTransportFlag);
 	void resize(unsigned int n);
-	
+
 	void setStateMass(Cantera::Array2D& Y, dvector& T);
 	void setStateMole(Cantera::Array2D& X, dvector& T);
 
@@ -58,19 +60,18 @@ public:
 	void getDiffusionCoefficients(Cantera::Array2D& Dkm);
 	void getWeightedDiffusionCoefficients(Cantera::Array2D& rhoD);
 	void getThermalDiffusionCoefficients(Cantera::Array2D& Dkt);
-	
+
 	void getSpecificHeatCapacity(dvector& cp);
 	void getSpecificHeatCapacities(Cantera::Array2D& cpSpec);
 	void getEnthalpies(Cantera::Array2D& hk);
-	
+
 	void getReactionRates(Cantera::Array2D& wDot);
 
 	Cantera::IdealGasPhase& operator[](unsigned int i) const;
 	Cantera::IdealGasPhase& thermo(unsigned int i) const;
 	Cantera::GasKinetics& kinetics(unsigned int i) const;
-	Cantera::MultiTransport& trans(unsigned int i) const;
-
-	void testFunction(void);
+	Cantera::MultiTransport& multiTrans(unsigned int i) const;
+	Cantera::MixTransport& mixTrans(unsigned int i) const;
 
 private:
 	Cantera::XML_Node* rootXmlNode;
@@ -81,10 +82,12 @@ private:
 
 	vector<Cantera::IdealGasPhase*> m_thermo;
 	vector<Cantera::GasKinetics*> m_kinetics;
-	vector<Cantera::MultiTransport*> m_transport;
+	vector<Cantera::MultiTransport*> m_MultiTransport;
+	vector<Cantera::MixTransport*> m_MixTransport;
 
 	// Default objects
 	Cantera::IdealGasPhase m_thermoBase;
 	Cantera::GasKinetics* m_kineticsBase;
-	Cantera::MultiTransport* m_transportBase;
+	Cantera::MultiTransport* m_MultiTransportBase;
+	Cantera::MixTransport* m_MixTransportBase;
 };

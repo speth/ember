@@ -11,7 +11,7 @@ void flameSolver::initialize(void)
 
 	theSys.options = options;
 	theSys.copyOptions();
-	theSys.gas.initialize();
+	theSys.gas.initialize(options.usingMultiTransport);
 
 	// Initial Conditions for ODE
 	theSys.setup();

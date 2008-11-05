@@ -41,6 +41,8 @@ public:
 
 	std::string gasMechanismFile;
 	std::string gasPhaseID;
+	bool usingMultiTransport;
+
 	std::string fuel;
 	std::string oxidizer;
 	double equivalenceRatio;

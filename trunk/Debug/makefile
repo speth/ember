@@ -43,7 +43,7 @@ all: 1dflameV2
 1dflameV2: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	icc -L/usr/local/matlab/bin/glnxa64 -L/usr/local/lib -L/usr/local/cantera/lib -o"1dflameV2" $(OBJS) $(USER_OBJS) $(LIBS)
+	icpc -L/usr/local/cantera/lib -L/usr/local/lib -L/usr/local/matlab/bin/glnxa64 -openmp -o"1dflameV2" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

@@ -27,6 +27,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	// Chemistry
 	gasMechanismFile = "gri30.xml";
 	gasPhaseID = "gri30_multi";
+	std::string transportModel = "Multi";
 
 	// Initial Conditions
 	restartFile = "";
@@ -118,6 +119,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	cfg.lookupValue("chemistry.mechanismFile",gasMechanismFile);
 	cfg.lookupValue("chemistry.phaseID",gasPhaseID);
+	cfg.lookupValue("chemistry.transportModel",transportModel);
 
 	cfg.lookupValue("InitialCondition.nPoints",nPoints);
 	cfg.lookupValue("InitialCondition.xLeft",xLeft);
@@ -245,6 +247,15 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	if (boost::filesystem::exists(inputDir + "/" + gasMechanismFile)) {
 		gasMechanismFile = inputDir + "/" + gasMechanismFile;
+	}
+
+	if (transportModel=="Multi") {
+		usingMultiTransport = true;
+	} else if (transportModel=="Mix") {
+		usingMultiTransport = false;
+	} else {
+		cout << "Error: Invalid Transport Model specified (general.transportModel)." << endl;
+		throw;
 	}
 
 	gridAlpha = (curvedFlame) ? 1 : 0;
