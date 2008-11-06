@@ -28,6 +28,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	gasMechanismFile = "gri30.xml";
 	gasPhaseID = "gri30_multi";
 	std::string transportModel = "Multi";
+	singleCanteraObject = false;
 
 	// Initial Conditions
 	restartFile = "";
@@ -120,6 +121,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("chemistry.mechanismFile",gasMechanismFile);
 	cfg.lookupValue("chemistry.phaseID",gasPhaseID);
 	cfg.lookupValue("chemistry.transportModel",transportModel);
+	cfg.lookupValue("chemistry.singleCanteraObject",singleCanteraObject);
 
 	cfg.lookupValue("InitialCondition.nPoints",nPoints);
 	cfg.lookupValue("InitialCondition.xLeft",xLeft);

@@ -151,6 +151,7 @@ public:
 
 	// Cantera data
 	gasArray gas;
+	simpleGasArray simpleGas;
 
 	// Miscellaneous options
 	configOptions options;

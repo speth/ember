@@ -29,7 +29,7 @@ void gasArray::resize(unsigned int n)
 	if (n > m_thermo.size()) {
 		// insert elements into the arrays
 		while (m_thermo.size() != n) {
-			m_thermo.insert(m_thermo.end(),new Cantera::IdealGasPhase);
+			m_thermo.insert(m_thermo.end(), new Cantera::IdealGasPhase);
 			**m_thermo.rbegin() = m_thermoBase;
 
 			m_kinetics.insert(m_kinetics.end(), new Cantera::GasKinetics(*m_thermo.rbegin()));
@@ -79,7 +79,6 @@ void gasArray::resize(unsigned int n)
 		}
 	}
 	nPoints = n;
-	nSpec = m_thermoBase.nSpecies();
 }
 
 void gasArray::initialize(bool multiTransportFlag)
@@ -114,23 +113,29 @@ void gasArray::initialize(bool multiTransportFlag)
 		transFac->initTransport(m_MixTransportBase,&m_thermoBase);
 	}
 	transFac->deleteFactory();
+
+	nSpec = m_thermoBase.nSpecies();
 }
 
-void gasArray::setStateMass(Cantera::Array2D& Y, dvector& T)
+void gasArray::setStateMass(Cantera::Array2D& Y_in, dvector& T_in)
 {
 	dvector Yj(nSpec);
 	for (int j=0; j<nPoints; j++) {
 		for (int k=0; k<nSpec; k++) {
-			Yj[k] = max(Y(k,j),0.0);
+			Yj[k] = max(Y_in(k,j),0.0);
 		}
-		m_thermo[j]->setState_TPY(T[j], pressure, &Yj[0]);
+		m_thermo[j]->setState_TPY(T_in[j], pressure, &Yj[0]);
 	}
 }
 
 void gasArray::setStateMole(Cantera::Array2D& X, dvector& T)
 {
+	dvector Xj(nSpec);
 	for (int j=0; j<nPoints; j++) {
-		m_thermo[j]->setState_TPX(T[j], pressure, &X(0,j));
+		for (int k=0; k<nSpec; k++) {
+			Xj[k] = max(X(k,j),0.0);
+		}
+		m_thermo[j]->setState_TPX(T[j], pressure, &Xj[0]);
 	}
 }
 
@@ -305,4 +310,285 @@ Cantera::MultiTransport& gasArray::multiTrans(unsigned int i) const
 Cantera::MixTransport& gasArray::mixTrans(unsigned int i) const
 {
 	return *m_MixTransport[i];
+}
+
+simpleGasArray::simpleGasArray()
+	: rootXmlNode(NULL)
+	, phaseXmlNode(NULL)
+	, kinetics(NULL)
+	, multiTransport(NULL)
+	, mixTransport(NULL)
+{
+}
+
+simpleGasArray::~simpleGasArray()
+{
+	Cantera::close_XML_File(mechanismFile);
+	//phaseXmlNode->unlock();
+	//rootXmlNode->unlock();
+//	delete rootXmlNode; // this deletes all child nodes as well
+
+	delete kinetics;
+	delete multiTransport;
+	delete mixTransport;
+
+	resize(0);
+}
+
+void simpleGasArray::resize(unsigned int n)
+{
+	Y.resize(nSpec,n);
+	T.resize(n);
+	nPoints = n;
+}
+
+void simpleGasArray::initialize(bool multiTransportFlag)
+{
+	usingMultiTransport = multiTransportFlag;
+
+	// XML Information File
+	if (!boost::filesystem::exists(mechanismFile)) {
+		cout << "Error: Cantera input file \"" << mechanismFile << "\" not found." << endl;
+		throw;
+	}
+
+	rootXmlNode = Cantera::get_XML_File(mechanismFile);
+	phaseXmlNode = rootXmlNode->findNameID("phase", phaseID);
+
+	// Initialize the default thermodynamic properties object
+	Cantera::importPhase(*phaseXmlNode, &thermo);
+
+	// Initialize the default chemical kinetics object
+	kinetics = new Cantera::GasKinetics(&thermo);
+	kinetics->init();
+	Cantera::installReactionArrays(*phaseXmlNode, *kinetics, phaseID);
+	kinetics->finalize();
+
+	// Initialize the default transport properties object
+	Cantera::TransportFactory* transFac = Cantera::TransportFactory::factory();
+	if (usingMultiTransport) {
+		multiTransport = dynamic_cast<Cantera::MultiTransport*>(transFac->newTransport("Multi",&thermo));
+		transFac->initTransport(multiTransport, &thermo);
+	} else {
+		mixTransport = dynamic_cast<Cantera::MixTransport*>(transFac->newTransport("Mix",&thermo));
+		transFac->initTransport(mixTransport, &thermo);
+	}
+	transFac->deleteFactory();
+
+	nSpec = thermo.nSpecies();
+}
+
+void simpleGasArray::setStateMass(Array2D& Y_in, dvector& T_in)
+{
+	for (int j=0; j<nPoints; j++) {
+		for (int k=0; k<nSpec; k++) {
+			Y(k,j) = max(Y_in(k,j),0.0);
+		}
+		T[j] = T_in[j];
+	}
+}
+
+void simpleGasArray::setStateMole(Array2D& X, dvector& T_in)
+{
+	dvector Xj(nSpec);
+	for (int j=0; j<nPoints; j++) {
+		for (int k=0; k<nSpec; k++) {
+			Xj[k] = max(X(k,j),0.0);
+		}
+		thermo.setState_TPX(T[j], pressure, &Xj[0]);
+		thermo.getMassFractions(&Y(0,j));
+		T[j] = T_in[j];
+	}
+}
+
+void simpleGasArray::getMoleFractions(Array2D& X)
+{
+	for (int j=0; j<nPoints; j++) {
+		thermo.setMoleFractions(&Y(0,j));
+		thermo.getMoleFractions(&X(0,j));
+	}
+}
+
+void simpleGasArray::getMassFractions(Array2D& Y_out)
+{
+	Y_out = Y;
+}
+
+void simpleGasArray::getDensity(dvector& rho)
+{
+	for (int j=0; j<nPoints; j++) {
+		thermo.setState_TPY(T[j], pressure, &Y(0,j));
+		rho[j] = thermo.density();
+	}
+}
+
+void simpleGasArray::getMixtureMolecularWeight(dvector& Wmx)
+{
+	for (int j=0; j<nPoints; j++) {
+		thermo.setState_TPY(T[j], pressure, &Y(0,j));
+		Wmx[j] = thermo.meanMolecularWeight();
+	}
+}
+
+void simpleGasArray::getMolecularWeights(dvector& W)
+{
+	for (int k=0; k<nSpec; k++) {
+		W[k] = thermo.molecularWeight(k);
+	}
+}
+
+void simpleGasArray::getViscosity(dvector& mu)
+{
+	if (usingMultiTransport) {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			mu[j] = multiTransport->viscosity();
+		}
+	} else {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			mu[j] = mixTransport->viscosity();
+		}
+	}
+}
+
+void simpleGasArray::getThermalConductivity(dvector& lambda)
+{
+	if (usingMultiTransport) {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			lambda[j] = multiTransport->thermalConductivity();
+		}
+	} else {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			lambda[j] = mixTransport->thermalConductivity();
+		}
+	}
+}
+
+void simpleGasArray::getDiffusionCoefficients(Array2D& Dkm)
+{
+	if (usingMultiTransport) {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			multiTransport->getMixDiffCoeffs(&Dkm(0,j));
+		}
+	} else {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			mixTransport->getMixDiffCoeffs(&Dkm(0,j));
+		}
+	}
+}
+
+void simpleGasArray::getWeightedDiffusionCoefficients(Array2D& rhoD)
+{
+	if (usingMultiTransport) {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			multiTransport->getMixDiffCoeffs(&rhoD(0,j));
+			double rho = thermo.density();
+			for (int k=0; k<nSpec; k++) {
+				rhoD(k,j) *= rho;
+			}
+		}
+	} else {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			mixTransport->getMixDiffCoeffs(&rhoD(0,j));
+			double rho = thermo.density();
+			for (int k=0; k<nSpec; k++) {
+				rhoD(k,j) *= rho;
+			}
+		}
+	}
+}
+
+void simpleGasArray::getThermalDiffusionCoefficients(Array2D& Dkt)
+{
+	if (usingMultiTransport) {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			multiTransport->getThermalDiffCoeffs(&Dkt(0,j));
+		}
+	} else {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			mixTransport->getThermalDiffCoeffs(&Dkt(0,j));
+		}
+	}
+}
+
+void simpleGasArray::getSpecificHeatCapacity(dvector& cp)
+{
+	for (int j=0; j<nPoints; j++) {
+		thermo.setState_TPY(T[j], pressure, &Y(0,j));
+		cp[j] = thermo.cp_mass();
+	}
+}
+
+void simpleGasArray::getSpecificHeatCapacities(Array2D& cpSpec)
+{
+	for (int j=0; j<nPoints; j++) {
+		thermo.setState_TPY(T[j], pressure, &Y(0,j));
+		thermo.getPartialMolarCp(&cpSpec(0,j));
+	}
+}
+
+void simpleGasArray::getEnthalpies(Array2D& hk)
+{
+	for (int j=0; j<nPoints; j++) {
+		thermo.setState_TPY(T[j], pressure, &Y(0,j));
+		thermo.getPartialMolarEnthalpies(&hk(0,j));
+	}
+}
+
+void simpleGasArray::getReactionRates(Array2D& wDot)
+{
+	for (int j=0; j<nPoints; j++) {
+		thermo.setState_TPY(T[j], pressure, &Y(0,j));
+		kinetics->getNetProductionRates(&wDot(0,j));
+	}
+}
+
+void simpleGasArray::getTransportProperties(dvector& mu, dvector& lambda, Array2D& rhoD, Array2D& Dkt)
+{
+	if (usingMultiTransport) {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			mu[j] = multiTransport->viscosity();
+			lambda[j] = multiTransport->thermalConductivity();
+			multiTransport->getMixDiffCoeffs(&rhoD(0,j));
+			double rho = thermo.density();
+			for (int k=0; k<nSpec; k++) {
+				rhoD(k,j) *= rho;
+			}
+			multiTransport->getThermalDiffCoeffs(&Dkt(0,j));
+		}
+	} else {
+		for (int j=0; j<nPoints; j++) {
+			thermo.setState_TPY(T[j], pressure, &Y(0,j));
+			mu[j] = mixTransport->viscosity();
+			lambda[j] = mixTransport->thermalConductivity();
+			mixTransport->getMixDiffCoeffs(&rhoD(0,j));
+			double rho = thermo.density();
+			for (int k=0; k<nSpec; k++) {
+				rhoD(k,j) *= rho;
+			}
+			mixTransport->getThermalDiffCoeffs(&Dkt(0,j));
+		}
+	}
+}
+
+void simpleGasArray::getThermoProperties(dvector& rho, dvector& Wmx, dvector& cp, Array2D& cpSpec, Array2D& hk)
+{
+	for (int j=0; j<nPoints; j++) {
+		thermo.setState_TPY(T[j], pressure, &Y(0,j));
+		rho[j] = thermo.density();
+		Wmx[j] = thermo.meanMolecularWeight();
+		cp[j] = thermo.cp_mass();
+		thermo.getPartialMolarCp(&cpSpec(0,j));
+		thermo.getPartialMolarEnthalpies(&hk(0,j));
+	}
 }

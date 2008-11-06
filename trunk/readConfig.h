@@ -42,6 +42,7 @@ public:
 	std::string gasMechanismFile;
 	std::string gasPhaseID;
 	bool usingMultiTransport;
+	bool singleCanteraObject;
 
 	std::string fuel;
 	std::string oxidizer;

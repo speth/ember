@@ -40,8 +40,9 @@ public:
 	std::string mechanismFile;
 	std::string phaseID;
 	double pressure; // thermodynamic pressure
+	int nSpec;
 
-	bool usingMultiTransport;
+	bool usingMultiTransport; // use multicomponent transport model? (vs. mixture-averaged)
 
 	void initialize(bool multiTransportFlag);
 	void resize(unsigned int n);
@@ -78,7 +79,6 @@ private:
 	Cantera::XML_Node* phaseXmlNode;
 
 	int nPoints;
-	int nSpec;
 
 	vector<Cantera::IdealGasPhase*> m_thermo;
 	vector<Cantera::GasKinetics*> m_kinetics;
@@ -91,3 +91,62 @@ private:
 	Cantera::MultiTransport* m_MultiTransportBase;
 	Cantera::MixTransport* m_MixTransportBase;
 };
+
+// Like class GasArray, but this one only uses a single set of Cantera objects,
+// and relies on iteratively setting the state and calculating the desired property
+// at each point.
+class simpleGasArray
+{
+public:
+	simpleGasArray();
+	~simpleGasArray();
+
+	std::string mechanismFile;
+	std::string phaseID;
+	double pressure; // thermodynamic pressure
+	int nSpec; // number of species
+
+	bool usingMultiTransport; // use multicomponent transport model? (vs. mixture-averaged)
+
+	void initialize(bool multiTransportFlag);
+	void resize(unsigned int n);
+
+	void setStateMass(Array2D& Y, dvector& T);
+	void setStateMole(Array2D& X, dvector& T);
+
+	void getMoleFractions(Array2D& X);
+	void getMassFractions(Array2D& Y);
+	void getDensity(dvector& rho);
+	void getMixtureMolecularWeight(dvector& Wmx);
+	void getMolecularWeights(dvector& W);
+
+	void getViscosity(dvector& mu);
+	void getThermalConductivity(dvector& lambda);
+	void getDiffusionCoefficients(Array2D& Dkm);
+	void getWeightedDiffusionCoefficients(Array2D& rhoD);
+	void getThermalDiffusionCoefficients(Array2D& Dkt);
+
+	void getSpecificHeatCapacity(dvector& cp);
+	void getSpecificHeatCapacities(Array2D& cpSpec);
+	void getEnthalpies(Array2D& hk);
+
+	void getReactionRates(Array2D& wDot);
+
+	void getTransportProperties(dvector& mu, dvector& lambda, Array2D& rhoD, Array2D& Dkt);
+	void getThermoProperties(dvector& rho, dvector& Wmx, dvector& cp, Array2D& cpSpec, Array2D& hk);
+
+	Cantera::IdealGasPhase thermo;
+
+private:
+	Cantera::XML_Node* rootXmlNode;
+	Cantera::XML_Node* phaseXmlNode;
+
+	int nPoints;
+	Array2D Y;
+	dvector T;
+
+	Cantera::GasKinetics* kinetics;
+	Cantera::MultiTransport* multiTransport;
+	Cantera::MixTransport* mixTransport;
+};
+
