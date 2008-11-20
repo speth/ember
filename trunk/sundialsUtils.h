@@ -37,7 +37,7 @@ private:
 std::ostream& operator<<(std::ostream& os, const sdVector& v);
 
 // wrapper class for Sundials DenseMat
-class sdMatrix 
+class sdMatrix
 {
 public:
 	sdMatrix(unsigned int n, unsigned int m);
@@ -63,7 +63,7 @@ public:
 	realtype& operator()(long int i, long int j);
 	realtype& operator()(long int i, long int j) const;
 	BandMat& forSundials(void) {return M;}
-	
+
 private:
 	BandMat M;
 	bool alloc;
@@ -87,25 +87,25 @@ public:
 	void initialize(void);
 	int integrateToTime(realtype t);
 	void setODE(sdODE* newODE);
-	int getRootInfo(); 
+	int getRootInfo();
 	void printStats();
-	
+
 	// Check function return value...
 	//   opt == 0 means SUNDIALS function allocates memory so check if
 	//            returned NULL pointer
 	//   opt == 1 means SUNDIALS function returns a flag so check if
 	//            flag >= 0
 	//   opt == 2 means function allocates memory so check if returned
-	//            NULL pointer 
+	//            NULL pointer
 	static int check_flag(void *flagvalue, char *funcname, int opt);
-	
+
 	realtype reltol;
 	sdVector abstol;
-	
+
 	int linearMultistepMethod; // CV_ADAMS for non-stiff problems, CV_BDF for stiff problems
 	int nonlinearSolverMethod; // CV_FUNCTIONAL for non-stiff problems, CV_NEWTON for stiff problems
 	bool findRoots; // Specify whether or not to use the function g for rootfinding
-	
+
 	realtype t0; // initial time
 	realtype tInt; // time reached by integrator
 	sdVector y0;
@@ -119,7 +119,7 @@ private:
 	static int Jac(long int N, DenseMat Jin, realtype t,
 	               N_Vector yIn, N_Vector fy, void *jac_data,
 	               N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-	
+
 	sdODE* theODE;
 	void *sundialsMem;
 	int flag;
@@ -136,10 +136,10 @@ public:
 	virtual int Jac(realtype t, sdVector& y, sdVector& ydot, sdVector& res,
 			        realtype c_j, sdMatrix& J) {return -1;}
 
-	virtual int JvProd(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn, 
+	virtual int JvProd(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
 					   sdVector& vIn, sdVector& JvIn, realtype c_j) {return -1;}
 
-	virtual int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn, 
+	virtual int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn,
 		                            sdVector& resIn, realtype c_j) {return -1;}
 
 	virtual int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn,
@@ -161,27 +161,28 @@ public:
 	int integrateToTime(realtype t);
 	int integrateOneStep(void);
 	void setDAE(sdDAE* newDAE);
-	int getRootInfo(); 
+	int getRootInfo();
 	void printStats(clock_t dt = 0);
-	
+
 	// Check function return value...
 	//   opt == 0 means SUNDIALS function allocates memory so check if
 	//            returned NULL pointer
 	//   opt == 1 means SUNDIALS function returns a flag so check if
 	//            flag >= 0
 	//   opt == 2 means function allocates memory so check if returned
-	//            NULL pointer 
+	//            NULL pointer
 	static int check_flag(void *flagvalue, char *funcname, int opt);
 
 	double getStepSize(void);
 	void setInitialStepSize(double dt);
 	void setMaxStepSize(double dt);
-	
+
 	realtype reltol;
 	sdVector abstol;
-	
+
 	bool findRoots; // Specify whether or not to use the function g for rootfinding
 	bool calcIC;
+	bool imposeConstraints;
 
 	realtype t0; // initial time
 	realtype tInt; // time reached by integrator
@@ -192,7 +193,8 @@ public:
 
 	// elements are 1.0 for differential variables, 0.0 for algebraic
 	// Needs to be set only if using the solver's IC finder (calcIC==true)
-	sdVector componentId; 
+	sdVector componentId;
+	sdVector constraints;
 
 	std::vector<int> rootsFound;
 	unsigned int nRoots;
@@ -201,18 +203,18 @@ private:
 	static int f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void *f_data); // f(y) = res
 	static int g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, void *g_data);
 
-	static int Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn, 
-		           N_Vector res, realtype c_j, void* jac_data, DenseMat Jin, 
+	static int Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn,
+		           N_Vector res, realtype c_j, void* jac_data, DenseMat Jin,
 				   N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 	static int JvProd(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn,
 					  N_Vector vIn, N_Vector JvIn, realtype c_j, void* jac_data,
 					  N_Vector tmp1, N_Vector tmp2);
 
-	static int preconditionerSetup(realtype t, N_Vector yIn, N_Vector ydotIn, 
-		                           N_Vector resIn, realtype c_j, void* p_data, 
+	static int preconditionerSetup(realtype t, N_Vector yIn, N_Vector ydotIn,
+		                           N_Vector resIn, realtype c_j, void* p_data,
 								   N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-	
+
 	static int preconditionerSolve(realtype t, N_Vector yIn, N_Vector ydotIn,
 								   N_Vector resIn, N_Vector rhs, N_Vector outVec,
 								   realtype c_j, realtype delta, void* p_data,

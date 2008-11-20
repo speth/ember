@@ -404,14 +404,18 @@ void simpleGasArray::setStateMole(Array2D& X, dvector& T_in)
 void simpleGasArray::getMoleFractions(Array2D& X)
 {
 	for (int j=0; j<nPoints; j++) {
-		thermo.setMoleFractions(&Y(0,j));
+		thermo.setMassFractions(&Y(0,j));
 		thermo.getMoleFractions(&X(0,j));
 	}
 }
 
 void simpleGasArray::getMassFractions(Array2D& Y_out)
 {
-	Y_out = Y;
+	for (int j=0; j<nPoints; j++) {
+		for (int k=0; k<nSpec; k++) {
+			Y_out(k,j) = Y(k,j);
+		}
+	}
 }
 
 void simpleGasArray::getDensity(dvector& rho)

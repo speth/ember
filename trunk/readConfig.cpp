@@ -94,6 +94,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	idaMomentumAbsTol = 1e-6;
 	idaEnergyAbsTol = 1e-6;
 	idaSpeciesAbsTol = 1e-10;
+	enforceNonnegativeSpecies = false;
 
 	outputAuxiliaryVariables = false;
 	outputTimeDerivatives = false;
@@ -207,6 +208,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("integrator.momentumAbsTol",idaMomentumAbsTol);
 	cfg.lookupValue("integrator.energyAbsTol",idaEnergyAbsTol);
 	cfg.lookupValue("integrator.speciesAbsTol",idaSpeciesAbsTol);
+	cfg.lookupValue("integrator.enforceNonnegativeSpecies",enforceNonnegativeSpecies);
 
 	cfg.lookupValue("outputFiles.heatReleaseRate",outputHeatReleaseRate);
 	cfg.lookupValue("outputFiles.auxiliaryVariables",outputAuxiliaryVariables);

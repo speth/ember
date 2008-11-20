@@ -85,6 +85,12 @@ void flameSolver::run(void)
 		theSolver.nRoots = 0;
 		theSolver.findRoots = false;
 
+		if (options.enforceNonnegativeSpecies) {
+			theSolver.imposeConstraints = true;
+			theSys.updateConstraints(theSolver.constraints);
+		}
+
+
 		int N = theSys.nVars;
 		// Initial condition:
 		theSys.rollY(theSolver.y);
@@ -257,13 +263,7 @@ void flameSolver::run(void)
 			if (nIntegrate > options.integratorRestartInterval) {
 			  nIntegrate = 0;
 			  theSys.setup();
-			  if (options.singleCanteraObject) {
-				  theSys.simpleGas.setStateMass(theSys.Y, theSys.T);
-				  theSys.simpleGas.getMassFractions(theSys.Y);
-			  } else {
-				  theSys.gas.setStateMass(theSys.Y, theSys.T);
-				  theSys.gas.getMassFractions(theSys.Y);
-			  }
+
 
 			  break; // exit inner loop and reinitialize the solver
 			}

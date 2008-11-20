@@ -23,8 +23,8 @@ sundialsCVODE::~sundialsCVODE(void)
 
 void sundialsCVODE::initialize(void)
 {
-	
-	
+
+
 	sundialsMem = CVodeCreate(linearMultistepMethod, nonlinearSolverMethod);
 	if (check_flag((void *)sundialsMem, "CVodeCreate", 0)) {
 		throw;
@@ -133,7 +133,7 @@ int sundialsCVODE::check_flag(void *flagvalue, char *funcname, int opt)
   return(0);
 }
 
-// f routine. Compute function f(t,y). 
+// f routine. Compute function f(t,y).
 int sundialsCVODE::f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data)
 {
 	sdVector y(yIn);
@@ -142,7 +142,7 @@ int sundialsCVODE::f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data)
 	return ((sdODE*) f_data)->f(t, y, ydot);
 }
 
-// g routine. Compute functions g_i(t,y) for i = 0,1. 
+// g routine. Compute functions g_i(t,y) for i = 0,1.
 int sundialsCVODE::g(realtype t, N_Vector yIn, realtype *gout, void *g_data)
 {
 	sdVector y(yIn);
@@ -168,7 +168,7 @@ void sundialsCVODE::setODE(sdODE* newODE)
 }
 
 
-sdVector::sdVector(unsigned int N) 
+sdVector::sdVector(unsigned int N)
 {
 	alloc = true;
 	v = N_VNew_Serial(N);
@@ -176,7 +176,7 @@ sdVector::sdVector(unsigned int N)
 	if (sundialsCVODE::check_flag((void *)v, "N_VNew_Serial", 0)) throw;
 }
 
-sdVector::sdVector(N_Vector other) 
+sdVector::sdVector(N_Vector other)
 {
 	alloc = false;
 	v = other;
@@ -190,14 +190,14 @@ sdVector::sdVector(const sdVector& other)
 	n = other.n;
 }
 
-sdVector::~sdVector(void) 
+sdVector::~sdVector(void)
 {
 	if (alloc) {
 		N_VDestroy_Serial(v);
 	}
 }
 
-realtype& sdVector::operator() (unsigned int i) 
+realtype& sdVector::operator() (unsigned int i)
 {
 	return NV_Ith_S(v,i);
 }
@@ -222,7 +222,7 @@ sdMatrix::sdMatrix(unsigned int n, unsigned int m)
 	M = DenseAllocMat(n,m);
 }
 
-sdMatrix::sdMatrix(DenseMat other) 
+sdMatrix::sdMatrix(DenseMat other)
 {
 	alloc = false;
 	M = other;
@@ -240,7 +240,7 @@ sdMatrix::~sdMatrix(void) {
 	}
 }
 
-realtype& sdMatrix::operator() (unsigned int i, unsigned int j) 
+realtype& sdMatrix::operator() (unsigned int i, unsigned int j)
 {
 	return DENSE_ELEM(M,i,j);
 }
@@ -258,7 +258,7 @@ sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower, long 
 	M = BandAllocMat(N,bwUpper,bwLower,storeUpper);
 }
 
-sdBandMatrix::sdBandMatrix(BandMat other) 
+sdBandMatrix::sdBandMatrix(BandMat other)
 {
 	alloc = false;
 	M = other;
@@ -295,11 +295,13 @@ sundialsIDA::sundialsIDA(unsigned int n)
 	, y0(n)
 	, ydot0(n)
 	, componentId(n)
+	, constraints(n)
 {
 	nEq = n;
 	sundialsMem = NULL;
 	findRoots = false;
 	nRoots = 0;
+	imposeConstraints = false;
 }
 
 sundialsIDA::~sundialsIDA(void)
@@ -337,10 +339,17 @@ void sundialsIDA::initialize(void)
 		}
 	}
 
-	// Call IDASpgmr to specify the IDASpgmr dense linear solver
+	// Call IDASpbcg to specify the IDASpbcg dense linear solver
 	flag = IDASpbcg(sundialsMem, 0);
 	if (check_flag(&flag, "IDASpbcg", 1)) {
 		throw;
+	}
+
+	if (imposeConstraints) {
+		flag = IDASetConstraints(sundialsMem, constraints.forSundials());
+		if (check_flag(&flag, "IDASetConstraints", 1)) {
+			throw;
+		}
 	}
 
 	// this seems to work better using the default J-v function rather than specifying our own...
@@ -414,7 +423,7 @@ void sundialsIDA::printStats(clock_t dt)
 		check_flag(&retval, "IDASpilsGetPrecEvals", 1);
 		retval = IDASpilsGetNumPrecSolves(sundialsMem, &nps);
 		check_flag(&retval, "IDASpilsGetNumPrecSolves", 1);
-	
+
 		printf("\nIDA Solver Statistics: \n\n");
 		printf("Number of steps                    = %ld\n", nst);
 		printf("Number of residual evaluations     = %ld\n", nre);
@@ -431,7 +440,7 @@ void sundialsIDA::printStats(clock_t dt)
 		if (dt == 0) {
 			cout << "IDA solver took " << nst << " steps." << endl << endl;
 		} else {
-			cout << "IDA solver took " << nst << " steps in " 
+			cout << "IDA solver took " << nst << " steps in "
 				<< ((double) dt)/CLOCKS_PER_SEC << " seconds." << endl << endl;
 		}
 	}
@@ -443,23 +452,23 @@ int sundialsIDA::check_flag(void *flagvalue, char *funcname, int opt)
   int *errflag;
   /* Check if SUNDIALS function returned NULL pointer - no memory allocated */
   if (opt == 0 && flagvalue == NULL) {
-    fprintf(stderr, 
-            "\nSUNDIALS_ERROR: %s() failed - returned NULL pointer\n\n", 
+    fprintf(stderr,
+            "\nSUNDIALS_ERROR: %s() failed - returned NULL pointer\n\n",
             funcname);
     return 1;
   } else if (opt == 1) {
     /* Check if flag < 0 */
     errflag = (int *) flagvalue;
     if (*errflag < 0) {
-      fprintf(stderr, 
-              "\nSUNDIALS_ERROR: %s() failed with flag = %d\n\n", 
+      fprintf(stderr,
+              "\nSUNDIALS_ERROR: %s() failed with flag = %d\n\n",
               funcname, *errflag);
-      return(1); 
+      return(1);
     }
   } else if (opt == 2 && flagvalue == NULL) {
     /* Check if function returned NULL pointer - no memory allocated */
-    fprintf(stderr, 
-            "\nMEMORY_ERROR: %s() failed - returned NULL pointer\n\n", 
+    fprintf(stderr,
+            "\nMEMORY_ERROR: %s() failed - returned NULL pointer\n\n",
             funcname);
     return 1;
   }
@@ -501,8 +510,8 @@ int sundialsIDA::g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, vo
 }
 
 // Jacobian routine. Compute J(t,y) = df/dy.
-int sundialsIDA::Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn, 
-		             N_Vector resIn, realtype c_j, void *jac_data, DenseMat Jin, 
+int sundialsIDA::Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn,
+		             N_Vector resIn, realtype c_j, void *jac_data, DenseMat Jin,
 				     N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
 	sdVector y(yIn), ydot(ydotIn), res(resIn);
@@ -520,7 +529,7 @@ int sundialsIDA::JvProd(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resI
 }
 
 int sundialsIDA::preconditionerSetup(realtype t, N_Vector yIn, N_Vector ydotIn,
-									 N_Vector resIn, realtype c_j, void* p_data, 
+									 N_Vector resIn, realtype c_j, void* p_data,
 									 N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
 	sdVector y(yIn), ydot(ydotIn), res(resIn);

@@ -1667,6 +1667,18 @@ void flameSys::updateAlgebraicComponents(void)
 
 }
 
+void flameSys::updateConstraints(sdVector& constraints)
+{
+	for (int j=0; j<nPoints; j++) {
+		constraints(nVars*j+kContinuity) = 0; // V: no constraint
+		constraints(nVars*j+kMomentum) = 0; // U: no constraint
+		constraints(nVars*j+kEnergy) = 1.0; // T >= 0
+		for (int k=0; k<nSpec; k++) {
+			constraints(nVars*j+kSpecies+k) = 1.0; // Y >= 0
+		}
+	}
+}
+
 void flameSys::updateLeftBC(void)
 {
 	// Boundary condition for left edge of domain

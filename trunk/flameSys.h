@@ -149,6 +149,9 @@ public:
 	vector<bool> algebraic;
 	void updateAlgebraicComponents(void);
 
+	// Constrained solution variables (species mass fractions)
+	void updateConstraints(sdVector& constraints);
+
 	// Cantera data
 	gasArray gas;
 	simpleGasArray simpleGas;

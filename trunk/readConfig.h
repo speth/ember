@@ -38,6 +38,7 @@ public:
 	double idaMomentumAbsTol;
 	double idaEnergyAbsTol;
 	double idaSpeciesAbsTol;
+	bool enforceNonnegativeSpecies;
 
 	std::string gasMechanismFile;
 	std::string gasPhaseID;

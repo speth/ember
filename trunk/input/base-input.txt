@@ -11,13 +11,16 @@ general:
 	unburnedLeft = true;
 	curvedFlame = false;
 	twinFlame = false;
-	centeredDifferences = false;
+	centeredDifferences = true;
+	steadyOnly = true;
+	numberOfThreads = 1;
 };
 
 chemistry:
 {
 	mechanismFile = "gri30syngas.xml";
 	phaseID = "syngas";
+	singleCanteraObject = true;
 };
 
 grid:
@@ -101,6 +104,7 @@ integrator:
 	momentumAbsTol = 1e-10;
 	energyAbsTol = 1e-8;
 	speciesAbsTol = 1e-13;
+	enforceNonnegativeSpecies = false;
 };
 
 debug:
