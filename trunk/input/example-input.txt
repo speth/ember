@@ -1,7 +1,7 @@
 paths:
 {
 	inputDir = "input";
-	outputDir = "run/syngas-x0.50-phi0.40";
+	outputDir = "run/syngas-T300-x0.60-phi0.40";
 };
 
 general:
@@ -13,14 +13,12 @@ general:
 	twinFlame = false;
 	centeredDifferences = true;
 	steadyOnly = true;
-	numberOfThreads = 1;
 };
 
 chemistry:
 {
 	mechanismFile = "gri30syngas.xml";
 	phaseID = "syngas";
-	singleCanteraObject = true;
 };
 
 grid:
@@ -30,13 +28,13 @@ grid:
 		// High accuracy: vtol = 0.08, dvtol = 0.12, dampConst = 7
 		// Medium accuracy: vtol = 0.1, dvtol = 0.25
 		// Minimal accuracy: vtol = 0.2, dvtol = 0.4
-		vtol = 0.07;
+		vtol = 0.06;
 		dvtol = 0.10;
-		rmTol = 0.67;
-		dampConst = 100;
-		gridMin = 3.0e-6;
-		gridMax = 0.04;
-		uniformityTol = 3;
+		rmTol = 0.50;
+		dampConst = 2.5;
+		gridMin = 1.0e-6;
+		gridMax = 0.001;
+		uniformityTol = 3.5;
 		absvtol = 1e-8;
 	};
 
@@ -55,7 +53,7 @@ InitialCondition:
 
 	// These properties will override parameters read from the file
 	Tu = 300;
-	fuel = "CO:0.5, H2:0.5";
+	fuel = "CO:0.60, H2:0.40";
 	oxidizer = "N2:3.76, O2:1.0";
 	equivalenceRatio = 0.40;
 
@@ -69,16 +67,20 @@ InitialCondition:
 
 StrainParameters:
 {
-	initial = 1200;
-	final = 1200;
+	initial = 600;
+	final = 600;
 	tStart = 0;
 	dt = 0.020;
-	list = [5120, 2560, 1280, 640, 320, 160, 80, 40, 20, 10];
+//	list = [9216, 7680, 6144, 4608, 3840, 3072, 2304, 1920, 1536,
+//		    1152, 960, 768, 576, 480, 384, 288, 240, 192, 144,
+//			120, 96, 72, 60, 48, 36, 30, 24, 18, 15, 12];
+//	list = [6144, 3072, 1536, 768, 384, 192, 96, 48, 24, 12];
+
 };
 
 times:
 {
-	maxTimestep = 5e-4;
+	maxTimestep = 1e-3;
 
 	// Intervals for regridding and grid adaptation
 	regridTimeInterval = 5e-3;
@@ -89,7 +91,7 @@ times:
 	outputTimeInterval = 1e-3;
 
 	// Output intervals for flame profiles
-	profileStepInterval = 100000;
+	profileStepInterval = 1000;
 	profileTimeInterval = 5e0;
 
 	// Preventative integrator restart
@@ -98,13 +100,12 @@ times:
 
 integrator:
 {
-	relativeTolerance = 1e-4;
+	relativeTolerance = 2e-5;
 	relativeToleranceLow = 1e-2;
 	continuityAbsTol = 1e-10;
 	momentumAbsTol = 1e-10;
 	energyAbsTol = 1e-8;
-	speciesAbsTol = 1e-13;
-	enforceNonnegativeSpecies = false;
+	speciesAbsTol = 1e-14;
 };
 
 debug:
@@ -125,7 +126,7 @@ outputFiles:
 	timeDerivatives: true;
 	residualComponents: true;
 	firstFileNumber = 0;
-	saveProfiles: false;
+	saveProfiles: true;
 };
 
 terminationCondition:
@@ -135,10 +136,10 @@ terminationCondition:
 		
 	// Integrate until <measurment> is steady to within <tolerance> for <time>
 	measurement = "Q";
-	tolerance = 1e-4;
-	toleranceLow = 4e-4;
+	tolerance = 4e-4;
+	toleranceLow = 5e-3;
 	abstol = 0.5;
-	timeLow = 0.025;
+	timeLow = 0.020;
 	timeHigh = 0.050;
-	timeMax = 2.0;
+	timeMax = 0.8;
 };
