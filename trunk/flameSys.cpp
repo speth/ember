@@ -256,6 +256,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 	} else if (options.stagnationRadiusControl) {
 		continuityUnst[0] = rV[0] - pow(options.rStag,grid.alpha+1)/((grid.alpha+1)*rhoLeft*a);
 	} else {
+		rVcenter = 0.0;
 		continuityUnst[0] = dVdt[0];
 	}
 
@@ -1686,7 +1687,7 @@ void flameSys::updateLeftBC(void)
 		grid.leftBoundaryConfig = grid.lbFixedVal;
 	} else if (grid.x[0] != 0) {
 		grid.leftBoundaryConfig = grid.lbZeroGradNonCenter;
-	} else if (rV[0] <= 0) {
+	} else if (rV[0] <= 0 || rVcenter==0) {
 		grid.leftBoundaryConfig = grid.lbZeroGradCenter;
 	} else {
 		grid.leftBoundaryConfig = grid.lbControlVolume;
