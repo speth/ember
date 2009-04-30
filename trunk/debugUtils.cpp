@@ -8,6 +8,7 @@ bool debugParameters::debugCalcIC = false;
 bool debugParameters::debugTimesteps = true;
 bool debugParameters::debugSolverStats = true;
 bool debugParameters::debugPerformanceStats = true;
+bool debugParameters::debugFlameRadiusControl = false;
 
 void debugWrite(debugType::debugType type, std::string message)
 {

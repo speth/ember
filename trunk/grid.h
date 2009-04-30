@@ -27,6 +27,7 @@ public:
 	double uniformityTol; // maximum ratio of adjacent grid point separation distances
 	double gridMin, gridMax; // minimum and maximum grid point separation
 	double dampConst; // relative allowable numerical damping
+    double centerGridMin; // minimum separation of center grid points for curved flames
 
 	// Parameters for controlling exterior grid points:
 	bool fixedBurnedVal;

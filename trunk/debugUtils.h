@@ -13,6 +13,7 @@ public:
 	static bool debugTimesteps;
 	static bool debugSolverStats;
 	static bool debugPerformanceStats;
+    static bool debugFlameRadiusControl;
 };
 
 namespace debugType {

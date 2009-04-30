@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 
 void strainedFlame(const std::string& inputFile)
 {
-    cout << "**** strainedFlame (1dflame Version 2.0) ****\n" << std::endl;
+    cout << "**** strainedFlame (1dflame Version 2.0a) ****\n" << std::endl;
 
 	configOptions mainOptions;
 	mainOptions.readOptionsFile(inputFile);
@@ -52,6 +52,7 @@ void strainedFlame(const std::string& inputFile)
 	int nProcs = omp_get_num_procs();
 	std::string procStr = (nProcs==1) ? " core." : " cores.";
 	cout << "Detected " << nProcs << procStr;
+    cout << " Want to run on " << mainOptions.numberOfThreads << " procs." ;
 	nProcs = min(mainOptions.numberOfThreads,nProcs);
 	procStr = (nProcs==1) ? " core." : " cores.";
 	cout << " Running on " << nProcs << procStr << endl;

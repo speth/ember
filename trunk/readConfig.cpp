@@ -60,10 +60,11 @@ void configOptions::readOptionsFile(const std::string& filename)
 	dvtol = 0.4;
 	rmTol = 0.67;
 	dampConst = 5000;
-	gridMin = 2.0e-4;
+	gridMin = 1.0e-5;
 	gridMax = 0.2;
 	uniformityTol = 2.7;
 	absvtol = 1e-10;
+    centerGridMin = 10*gridMin;
 
 	boundaryTol = 2e-5;
 	boundaryTolRm = 5e-6;
@@ -140,6 +141,8 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("StrainParameters.tStart",strainRateT0);
 	cfg.lookupValue("StrainParameters.dt",strainRateDt);
 
+    cfg.lookupValue("CurvatureParameters.centerGridMin",centerGridMin);
+
 	if (cfg.lookupValue("CurvatureParameters.rInitial",rFlameInitial) &&
 		cfg.lookupValue("CurvatureParameters.rFinal",rFlameFinal) &&
 		cfg.lookupValue("CurvatureParameters.tStart",rFlameT0) &&
@@ -201,6 +204,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("debug.timesteps",debugParameters::debugTimesteps);
 	cfg.lookupValue("debug.solverStats",debugParameters::debugSolverStats);
 	cfg.lookupValue("debug.performanceStats",debugParameters::debugPerformanceStats);
+    cfg.lookupValue("debug.flameRadiusControl",debugParameters::debugFlameRadiusControl);
 
 	cfg.lookupValue("integrator.relativeTolerance",idaRelTol);
 	cfg.lookupValue("integrator.relativeToleranceLow",idaRelTolLow);
