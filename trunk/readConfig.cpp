@@ -28,7 +28,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	gasMechanismFile = "gri30.xml";
 	gasPhaseID = "gri30_multi";
 	std::string transportModel = "Multi";
-	singleCanteraObject = false;
+	singleCanteraObject = true;
 
 	// Initial Conditions
 	restartFile = "";
@@ -86,8 +86,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 	integratorRestartInterval = 123456789;
 	outputStepInterval = 1;
 
-	rFlameUpdateStepInterval = 10;
-	rFlameUpdateTimeInterval = 0.002;
+    rStag = 0;
 
 	idaRelTol = 1e-5;
 	idaRelTolLow = 1e-3;
@@ -143,24 +142,22 @@ void configOptions::readOptionsFile(const std::string& filename)
 
     cfg.lookupValue("CurvatureParameters.centerGridMin",centerGridMin);
 
+    if (cfg.lookupValue("CurvatureParameters.rStag",rStag)) {
+        stagnationRadiusControl = true;
+    } else {
+        stagnationRadiusControl = false;
+    }
+
 	if (cfg.lookupValue("CurvatureParameters.rInitial",rFlameInitial) &&
 		cfg.lookupValue("CurvatureParameters.rFinal",rFlameFinal) &&
 		cfg.lookupValue("CurvatureParameters.tStart",rFlameT0) &&
 		cfg.lookupValue("CurvatureParameters.dt",rFlameDt) &&
 		cfg.lookupValue("CurvatureParameters.integralGain",rFlameIntegralGain) &&
-		cfg.lookupValue("CurvatureParameters.derivativeGain",rFlameDerivativeGain) &&
 		cfg.lookupValue("CurvatureParameters.proportionalGain",rFlameProportionalGain)) {
-			cfg.lookupValue("CurvatureParameters.updateTimeInterval",rFlameUpdateTimeInterval);
-			cfg.lookupValue("CurvatureParameters.updateStepInterval",rFlameUpdateStepInterval);
 			flameRadiusControl = true;
+            stagnationRadiusControl = true;
 	} else {
 		flameRadiusControl = false;
-	}
-
-	if (cfg.lookupValue("CurvatureParameters.rStag",rStag)) {
-		stagnationRadiusControl = true;
-	} else {
-		stagnationRadiusControl = false;
 	}
 
 	cfg.lookupValue("grid.adaptation.vtol",vtol);
@@ -244,6 +241,9 @@ void configOptions::readOptionsFile(const std::string& filename)
 	}
 
 	cfg.lookupValue("general.numberOfThreads",numberOfThreads);
+    if (numberOfThreads > 1) {
+        singleCanteraObject = false;
+    }
 
 	if (haveRestartFile) {
 		haveRestartFile = boost::filesystem::exists(inputDir + "/" + restartFile);

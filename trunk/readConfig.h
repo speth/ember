@@ -101,8 +101,6 @@ public:
 	double rFlameDt, rFlameT0;
 	double rFlameIntegralGain;
 	double rFlameProportionalGain;
-	double rFlameDerivativeGain;
-	double rFlameUpdateStepInterval, rFlameUpdateTimeInterval;
 
 	bool stagnationRadiusControl;
 	double rStag;

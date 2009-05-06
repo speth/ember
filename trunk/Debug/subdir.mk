@@ -47,7 +47,7 @@ CPP_DEPS += \
 %.o: ../%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	icc -I/usr/local/cantera/include -I/usr/local/matlab/extern/include -O0 -g3 -Wall -c -fmessage-length=0 -openmp -wd981,1782,383,869,1572 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
+	icc -I/usr/local/cantera/include -I/opt/matlab_r2007a/extern/include -O0 -g3 -Wall -c -fmessage-length=0 -openmp -wd981,1782,383,869,1572 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

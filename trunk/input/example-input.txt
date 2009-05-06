@@ -19,19 +19,20 @@ chemistry:
 {
 	mechanismFile = "gri30syngas.xml";
 	phaseID = "syngas";
+    singleCanteraObject = true;
 };
 
 grid:
 {
 	adaptation:
 	{
-		// High accuracy: vtol = 0.08, dvtol = 0.12, dampConst = 7
+		// High accuracy: vtol = 0.08, dvtol = 0.12
 		// Medium accuracy: vtol = 0.1, dvtol = 0.25
 		// Minimal accuracy: vtol = 0.2, dvtol = 0.4
 		vtol = 0.06;
 		dvtol = 0.10;
 		rmTol = 0.50;
-		dampConst = 2.5;
+		dampConst = 5; // empirically determined optimum
 		gridMin = 1.0e-6;
 		gridMax = 0.001;
 		uniformityTol = 3.5;
@@ -78,6 +79,24 @@ StrainParameters:
 
 };
 
+// Curvature at prescribed flame radius
+//CurvatureParameters:
+//{
+//    rInitial = 0.0025;
+//    rFinal = 0.0025;
+//    dt = 0.01;
+//    tStart = 0;
+//    proportionalGain = 10;
+//    integralGain = 400;
+//	centerGridMin = 1e-5;
+//};
+
+// Curvature at fixed nominal stagnation radius
+//CurvatureParameters:
+//{
+//    rStag = 0.02;
+//};
+
 times:
 {
 	maxTimestep = 1e-3;
@@ -117,6 +136,7 @@ debug:
 	calcIC: false;
 	timesteps: false;
 	solverStats: false;
+    flameRadiusControl: false;
 };
 
 outputFiles:

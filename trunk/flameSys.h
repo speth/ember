@@ -139,10 +139,10 @@ public:
 	double strainRateT0; // [s]
 
 	double rVcenter; // mass flux at centerline [kg/m^2 or kg/m*rad*s]
-	double rVcenterInitial;
-	double rVcenterPrev, rVcenterNext;
+	//double rVcenterInitial;
+	//double rVcenterPrev, rVcenterNext;
 	double tFlamePrev, tFlameNext;
-	double rFlamePrev, rFlameTarget, rFlameActual;
+	double rFlameTarget, rFlameActual;
 	double flamePosIntegralError;
 
 	 // Algebraic components of state, for IC calculation
@@ -167,7 +167,7 @@ public:
 	double strainRate(const double t); // [1/s]
 	double dStrainRatedt(const double t); // [1/s^2]
 
-	void update_rVcenter(const double t);
+	void update_rStag(const double t);
 	double targetFlamePosition(double t); // [m]
 
 	void V2rV(void);

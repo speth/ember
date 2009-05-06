@@ -249,12 +249,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
     }
 
     // Continuity Equation
-
-    if (options.flameRadiusControl) {
-//        rVcenter = rVcenterPrev + (rVcenterNext-rVcenterPrev)/(tFlameNext-tFlamePrev)*(t-tFlamePrev);
-        rVcenter = rVcenterNext;
-        continuityUnst[0] = rV[0] - rVcenter;
-    } else if (options.stagnationRadiusControl) {
+    if (options.stagnationRadiusControl) {
       if (grid.alpha == 1) {
           continuityUnst[0] = rV[0] - rhoLeft*a*options.rStag*abs(options.rStag)/2;
       } else {
@@ -676,7 +671,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
     }
 
     // Continuity Equation
-    if (options.stagnationRadiusControl || options.flameRadiusControl) {
+    if (options.stagnationRadiusControl) {
         jacB(0,kContinuity,kContinuity) = 1;
     } else {
         jacB(0,kContinuity,kContinuity) = c_j;
@@ -1351,9 +1346,7 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
     double a = strainRate(t);
 
     // Left boundary value
-    if (options.flameRadiusControl) {
-        rV[0] = rVcenter;
-    } else if (options.stagnationRadiusControl) {
+    if (options.stagnationRadiusControl) {
       if (grid.alpha == 1) {
           rV[0] = rhoLeft*a*options.rStag*abs(options.rStag)/2;
       } else {
@@ -1622,8 +1615,7 @@ void flameSys::updateAlgebraicComponents(void)
     int jj = nPoints-1;
     algebraic.resize(N);
 
-    algebraic[0] = options.stagnationRadiusControl
-        || options.flameRadiusControl; // continuity
+    algebraic[0] = options.stagnationRadiusControl; // continuity
 
     if (grid.leftBoundaryConfig == grid.lbFixedVal) {
         algebraic[1] = !grid.unburnedLeft; // momentum
@@ -1744,36 +1736,20 @@ double flameSys::targetFlamePosition(double t)
         : options.rFlameInitial + (options.rFlameFinal-options.rFlameInitial)*(t-options.rFlameT0)/options.rFlameDt;
 }
 
-void flameSys::update_rVcenter(const double t)
+void flameSys::update_rStag(const double t)
 {
     rFlameActual = getFlamePosition();
     rFlameTarget = targetFlamePosition(t);
     flamePosIntegralError += (rFlameTarget-rFlameActual)*(t-tFlamePrev);
-    double flamePosDerivativeError = (t > tFlamePrev) ? -(rFlameActual-rFlamePrev)/(t-tFlamePrev) : 0;
-
-    rVcenterPrev = rVcenterPrev + (rVcenterNext-rVcenterPrev)/(tFlameNext-tFlamePrev)*(t-tFlamePrev);
-
-    rFlamePrev = rFlameActual;
     tFlamePrev = t;
-    tFlameNext = t + options.rFlameUpdateTimeInterval;
-    double a = strainRate(t);
 
-    double rStagControlled = options.rFlameProportionalGain*( (rFlameTarget-rFlameActual) +
-                             flamePosDerivativeError*options.rFlameDerivativeGain +
-                             flamePosIntegralError*options.rFlameIntegralGain);
-
-      if (grid.alpha == 1) {
-          rVcenter = rVcenterNext = rhoLeft*a*rStagControlled*abs(rStagControlled)/2;
-      } else {
-          rVcenter = rVcenterNext = rhoLeft*a*rStagControlled;
-      }
-
-
+    options.rStag = options.rFlameProportionalGain * 
+        ( (rFlameTarget-rFlameActual) + flamePosIntegralError*options.rFlameIntegralGain );
+   
     if (debugParameters::debugFlameRadiusControl) {
-        cout << "rFlameControl: " << "rFlameActual = " << rFlameActual << "   rFlameTarget = " << rFlameTarget << endl;
-        cout << "rFlameControl: init = " << rVcenterInitial << "P = " <<  options.rFlameProportionalGain*(rFlameTarget-rFlameActual);
-        cout << "    D = " << options.rFlameProportionalGain*flamePosDerivativeError*options.rFlameDerivativeGain;
-        cout << "    I = " << options.rFlameProportionalGain*flamePosIntegralError*options.rFlameIntegralGain << endl;
+        cout << "rFlameControl: " << "rFlame = " << rFlameActual << "   Target = " << rFlameTarget << "   rStag = " << options.rStag;
+        cout << "   P = " <<  options.rFlameProportionalGain*(rFlameTarget-rFlameActual);
+        cout << "   I = " << options.rFlameProportionalGain*flamePosIntegralError*options.rFlameIntegralGain << endl;
     }
 }
 

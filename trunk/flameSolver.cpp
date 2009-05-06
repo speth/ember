@@ -1,5 +1,6 @@
 #include "flameSolver.h"
 #include "debugUtils.h"
+#include "perfTimer.h"
 
 void flameSolver::setOptions(const configOptions& theOptions)
 {
@@ -8,7 +9,6 @@ void flameSolver::setOptions(const configOptions& theOptions)
 
 void flameSolver::initialize(void)
 {
-
 	theSys.options = options;
 	theSys.copyOptions();
 	if (options.singleCanteraObject) {
@@ -28,8 +28,9 @@ void flameSolver::initialize(void)
 
 void flameSolver::run(void)
 {
-	clock_t t1, t2, tIDA1, tIDA2;
-	t1 = clock();
+	clock_t tIDA1, tIDA2;
+    perfTimer runTime;
+    runTime.start();
 
 	double integratorTimestep = 0;
 	double t = theSys.tStart;
@@ -44,7 +45,7 @@ void flameSolver::run(void)
 	double tOutput = t;
 	double tRegrid = t;
 	double tProfile = t;
-	double tFlamePos = t;
+	//double tFlamePos = t;
 
 	theSys.grid.updateValues();
 
@@ -67,9 +68,9 @@ void flameSolver::run(void)
 
 	// Flame position (radius) control:
 	theSys.tFlamePrev = t;
-	theSys.tFlameNext = t + options.rFlameUpdateTimeInterval;
-	theSys.rVcenterInitial = theSys.V[0];
-	theSys.rVcenterPrev = theSys.rVcenterNext = theSys.rVcenterInitial;
+//	theSys.tFlameNext = t + options.rFlameUpdateTimeInterval;
+	//theSys.rVcenterInitial = theSys.V[0];
+	//theSys.rVcenterPrev = theSys.rVcenterNext = theSys.rVcenterInitial;
 	if (options.outputProfiles) {
 		theSys.writeStateMatFile();
 	}
@@ -109,8 +110,10 @@ void flameSolver::run(void)
 
 		theSys.updateLeftBC();
 
-		theSys.update_rVcenter(t);
-		tFlamePos = t + options.rFlameUpdateTimeInterval;
+        if (options.flameRadiusControl) {
+    		theSys.update_rStag(t);
+        }
+		//tFlamePos = t + options.rFlameUpdateTimeInterval;
 		nFlamePos = 0;
 
 		theSys.updateAlgebraicComponents();
@@ -196,14 +199,6 @@ void flameSolver::run(void)
 				nProfile = 0;
 			}
 
-			if (options.flameRadiusControl &&
-				(t > tFlamePos || nFlamePos > options.rFlameUpdateStepInterval)) {
-				theSys.update_rVcenter(t);
-
-				tFlamePos = t + options.rFlameUpdateTimeInterval;
-				nFlamePos = 0;
-			}
-
 			if (t > tRegrid || nRegrid >= options.regridStepInterval) {
 				tRegrid = t + options.regridTimeInterval;
 				nRegrid = 0;
@@ -212,12 +207,12 @@ void flameSolver::run(void)
 				// (based on steady heat release rate, etc.)
 				if (checkTerminationCondition()) {
 
-					t2 = tIDA2 = clock();
+					tIDA2 = clock();
 					theSolver.printStats(tIDA2-tIDA1);
 					if (options.outputProfiles) {
 						theSys.writeStateMatFile();
 					}
-					cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
+                    cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
 					return;
 				}
 
@@ -276,11 +271,11 @@ void flameSolver::run(void)
 
 	}
 
-	t2 = clock();
 	if (options.outputProfiles) {
 		theSys.writeStateMatFile();
 	}
-	cout << "Runtime: " << ((double)(t2-t1))/CLOCKS_PER_SEC << " seconds." << endl;
+    runTime.stop();
+    cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
 }
 
 void flameSolver::calculateReactantMixture(void)

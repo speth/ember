@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 
 void strainedFlame(const std::string& inputFile)
 {
-    cout << "**** strainedFlame (1dflame Version 2.0a) ****\n" << std::endl;
+    cout << "**** strainedFlame (1dflame Version 2.0.70-1) ****\n" << std::endl;
 
 	configOptions mainOptions;
 	mainOptions.readOptionsFile(inputFile);
@@ -106,7 +106,7 @@ void strainedFlame(const std::string& inputFile)
 				theFlameSolver.calculateReactantMixture();
 
 				// Low Res Run:
-				cout << "Begining low-res run at strain rate a = " << a << endl;
+				cout << "Beginning low-res run at strain rate a = " << a << endl;
 	 			theFlameSolver.initialize();
 				theFlameSolver.options.idaRelTol = mainOptions.idaRelTolLow;
 	 			theFlameSolver.options.terminationTolerance = mainOptions.terminationToleranceLow;
