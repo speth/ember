@@ -1,6 +1,7 @@
 #include "flameSolver.h"
 #include "debugUtils.h"
 #include "perfTimer.h"
+#include "matlabFile.h"
 
 void flameSolver::setOptions(const configOptions& theOptions)
 {
@@ -41,6 +42,7 @@ void flameSolver::run(void)
 	int nProfile = 0;
 	int nFlamePos = 0;
 	int nIntegrate = 0;
+    int outputCount = 0;
 
 	double tOutput = t;
 	double tRegrid = t;
@@ -86,11 +88,12 @@ void flameSolver::run(void)
 		theSolver.nRoots = 0;
 		theSolver.findRoots = false;
 
+		cout << "DBG: reltol = " << theSolver.reltol << endl;
+
 		if (options.enforceNonnegativeSpecies) {
 			theSolver.imposeConstraints = true;
 			theSys.updateConstraints(theSolver.constraints);
 		}
-
 
 		int N = theSys.nVars;
 		// Initial condition:
@@ -188,6 +191,18 @@ void flameSolver::run(void)
 
 				tOutput = t + options.outputTimeInterval;
 				nOutput = 0;
+                outputCount++;
+
+                if (outputCount % (options.outputStepInterval*100) == 0) {
+                    matlabFile outFile(options.outputDir+"/outNow.mat");
+                    outFile.writeVector("t",timeVector);
+                    outFile.writeVector("dt",timestepVector);
+                    outFile.writeVector("Q",heatReleaseRate);
+                    outFile.writeVector("Sc",consumptionSpeed);
+                    outFile.writeVector("xFlame",flamePosition);
+                    outFile.close();
+                    theSys.writeStateMatFile("profNow");
+                }
 			}
 
 			if (t > tProfile || nProfile >= options.profileStepInterval) {

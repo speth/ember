@@ -43,7 +43,10 @@ int main(int argc, char** argv)
 
 void strainedFlame(const std::string& inputFile)
 {
-    cout << "**** strainedFlame (1dflame Version 2.0.70-1) ****\n" << std::endl;
+    // This version string is automatically updated during the build process
+    std::string REVISION = "71";
+    std::string BUILDDATE = "2009-05-07 18:32:39";
+    cout << "**** strainedFlame (1Dflame Version 2.0." << REVISION << ")  [" << BUILDDATE << "] ****\n" << std::endl;
 
 	configOptions mainOptions;
 	mainOptions.readOptionsFile(inputFile);
@@ -174,6 +177,14 @@ void strainedFlame(const std::string& inputFile)
 		outFile.writeVector("xFlame",theFlameSolver.flamePosition);
 		outFile.close();
 	}
+
+    // Cleanup
+    if (boost::filesystem::exists(mainOptions.outputDir+"/profNow.mat")) {
+        boost::filesystem::remove(mainOptions.outputDir+"/profNow.mat");
+    }
+    if (boost::filesystem::exists(mainOptions.outputDir+"/outNow.mat")) {
+        boost::filesystem::remove(mainOptions.outputDir+"/outNow.mat");
+    }
 }
 
 void chemistryTest(void)

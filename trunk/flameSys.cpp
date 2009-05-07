@@ -155,7 +155,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 
         momentumUnst[0] = centerVol*rho[0]*dUdt[0];
         momentumDiff[0] = -centerArea*0.5*(mu[0]+mu[1])*(U[1]-U[0])/grid.hh[0];
-        momentumProd[0] = centerVol*dadt*(rho[0]*U[0]-rhou)/a + (rho[0]*U[0]*U[0]-rhou)*a;
+        momentumProd[0] = centerVol*(dadt*(rho[0]*U[0]-rhou)/a + (rho[0]*U[0]*U[0]-rhou)*a);
         momentumConv[0] = -rV[0]*(Uleft-U[0]);
 
         for (int k=0; k<nSpec; k++) {
@@ -257,7 +257,6 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
       }
         
     } else {
-        rVcenter = 0.0;
         continuityUnst[0] = dVdt[0];
     }
 
@@ -440,35 +439,35 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
         double centerArea = pow(grid.x[1],grid.alpha+1);
 
         // dEnergy/dT_j
-        jacB(j,kEnergy,kEnergy) = c_j*centerVol*rho[j] - centerVol*rho[j]/T[j] +
-            centerArea*(grid.alpha+1)*(lambda[j]+lambda[j+1])/(grid.hh[j]*cp[j]) +
+        jacB(j,kEnergy,kEnergy) = c_j*centerVol*rho[j] - centerVol*rho[j]/T[j]*dTdt[j] +
+            centerArea*0.5*(lambda[j]+lambda[j+1])/(grid.hh[j]*cp[j]) +
             centerVol*dwhdT[j]/cp[j] + rV[0];
 
         // dEnergy/dT_(j+1)
-        jacC(j,kEnergy,kEnergy) = -centerArea*(grid.alpha+1)*(lambda[j]+lambda[j+1])/(grid.hh[j]*cp[j]);
+        jacC(j,kEnergy,kEnergy) = -centerArea*0.5*(lambda[j]+lambda[j+1])/(grid.hh[j]*cp[j]);
 
         // dEnergy/dY
         for (int k=0; k<nSpec; k++) {
-            jacB(j,kEnergy,kSpecies+k) = hdwdY(k,j)/cp[j] - rho[j]*Wmx[j]/W[k]*dTdt[j];
+            jacB(j,kEnergy,kSpecies+k) = -centerVol*hdwdY(k,j)/cp[j] - centerVol*rho[j]*Wmx[j]/W[k]*dTdt[j];
         }
 
         // dMomentum/dT
-        jacB(j,kMomentum,kEnergy) = -rho[j]/T[j] *
-            (centerVol*dUdt[j] - U[j]*dadt/a + U[j]*U[j]*a);
+        jacB(j,kMomentum,kEnergy) = -rho[j]/T[j] * 
+            centerVol*(dUdt[j] + U[j]*dadt/a + U[j]*U[j]*a);
 
         // dMomentum/dY
         for (int k=0; k<nSpec; k++) {
             jacB(j,kMomentum,kSpecies+k) = -rho[j]*Wmx[j]/W[k] *
-                (centerVol*dUdt[j] - U[j]*dadt/a + U[j]*U[j]*a);
+                centerVol*(dUdt[j] + U[j]*dadt/a + U[j]*U[j]*a);
         }
 
         // dMomentum/dU_j
         jacB(j,kMomentum,kMomentum) = centerVol*rho[j]*c_j
             + centerVol*rho[j]*dadt/a + centerVol*2*rho[j]*U[j]*a
-            + centerArea*(grid.alpha+1)*(mu[j]+mu[j+1])/grid.hh[j] + rV[0];
+            + centerArea*0.5*(mu[j]+mu[j+1])/grid.hh[j] + rV[0];
 
         // dMomentum/dU_j+1
-        jacC(j,kMomentum,kMomentum) = -centerArea*(grid.alpha+1)*(mu[j]+mu[j+1])/grid.hh[j];
+        jacC(j,kMomentum,kMomentum) = -centerArea*0.5*(mu[j]+mu[j+1])/grid.hh[j];
 
         for (int k=0; k<nSpec; k++) {
             // dSpecies/dT
@@ -481,10 +480,10 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
                     centerVol*rho[j]*Wmx[j]/W[i]*dYdt(k,j);
             }
             jacB(j,kSpecies+k,kSpecies+k) += centerVol*rho[j]*c_j
-                + centerArea*(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))/grid.hh[j] + rVcenter;
+                + centerArea*0.5*(rhoD(k,j)+rhoD(k,j+1))/grid.hh[j] + rV[0];
 
             // dSpecies/dY_(j+1)
-            jacC(j,kSpecies+k,kSpecies+k) = -centerArea*(grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))/grid.hh[j];
+            jacC(j,kSpecies+k,kSpecies+k) = -centerArea*0.5*(rhoD(k,j)+rhoD(k,j+1))/grid.hh[j];
         }
     }
 
@@ -917,6 +916,7 @@ void flameSys::generateInitialProfiles(void)
         gas[jm].getMassFractions(&Y(0,jm));
 
     }
+    Ub = sqrt(rhou/rhob);
 
     if (options.unburnedLeft) {
         rhoLeft = rhou;
@@ -1423,17 +1423,35 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
         cout << "Residual norm after IC calculation: " << resnorm << endl;
     }
 
+//    if (resnorm > 0.004) {
+//        resnorm = 100;
+//    }
+
+    dvector resVec(N);
+    dvector yVec(N);
+    dvector ydotVec(N);
+    for (int i=0; i<N; i++) {
+        resVec[i] = resTemp(i);
+        yVec[i] = y(i);
+        ydotVec[i] = ydot(i);
+    }
+
     if (!(resnorm < 1)) {
       if (debugParameters::debugCalcIC) {
-        matlabFile outfile("ICmiss.mat");
-        dvector resVec(N);
-        dvector yVec(N);
-        dvector ydotVec(N);
-        for (int i=0; i<N; i++) {
-            resVec[i] = resTemp(i);
-            yVec[i] = y(i);
-            ydotVec[i] = ydot(i);
-        }
+        writeStateMatFile("errorOutput",true);
+        matlabFile outfile(options.outputDir+"/ICmiss.mat");
+        outfile.writeScalar("rhoLeft",rhoLeft);
+        outfile.writeScalar("a",a);
+        outfile.writeScalar("rStag",options.rStag);
+        outfile.writeScalar("rFlameActual",rFlameActual);
+        outfile.writeScalar("rFlameTarget",rFlameTarget);
+        outfile.writeScalar("flamePosIntegralError",flamePosIntegralError);
+        outfile.writeScalar("tFlamePrev",tFlamePrev);
+        outfile.writeScalar("t",t);
+        outfile.writeScalar("Pgain",options.rFlameProportionalGain);
+        outfile.writeScalar("Igain",options.rFlameIntegralGain);
+        
+        
         outfile.writeVector("x",grid.x);
         outfile.writeVector("y",yVec);
         outfile.writeVector("ydot",ydotVec);
@@ -1453,11 +1471,22 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
         outfile.writeArray2D("yDiff",speciesDiff);
         outfile.writeArray2D("yConv",speciesConv);
         outfile.writeArray2D("yProd",speciesProd);
+        outfile.writeArray2D("Y",Y);
+        outfile.writeVector("T",T);
+        outfile.writeVector("U",U);
+        outfile.writeVector("V",V);
+        outfile.writeVector("rV",rV);
+        outfile.writeArray2D("dYdt",dYdt);
+        outfile.writeVector("dTdt",dTdt);
+        outfile.writeVector("dUdt",dUdt);
         outfile.close();
       }
+      cout << "dying in a fire." << endl;
+      throw;
         return 1;
     }
 
+//    throw;
     return 0;
 }
 
@@ -1505,7 +1534,7 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
     bool incrementFileNumber = false;
 
     if (fileNameStr.length() == 0) {
-    // Determine the name of the output file (outXXXXXX.mat)
+        // Determine the name of the output file (outXXXXXX.mat)
         incrementFileNumber = true;
         fileName << options.outputDir << "/prof";
         fileName.flags(ios_base::right);
@@ -1690,7 +1719,7 @@ void flameSys::updateLeftBC(void)
         grid.leftBoundaryConfig = grid.lbFixedVal;
     } else if (grid.x[0] != 0) {
         grid.leftBoundaryConfig = grid.lbZeroGradNonCenter;
-    } else if (rV[0] <= 0 || rVcenter==0) {
+    } else if (rV[0] <= 0) {
         grid.leftBoundaryConfig = grid.lbZeroGradCenter;
     } else {
         grid.leftBoundaryConfig = grid.lbControlVolume;

@@ -40,7 +40,7 @@ endif
 all: 1dflameV2
 
 # Tool invocations
-1dflameV2: $(OBJS) $(USER_OBJS)
+1dflameV2: version $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
 	icpc -L/opt/matlab_r2007a/bin/glnxa64 -openmp -o"1dflameV2" $(OBJS) $(USER_OBJS) $(LIBS)
@@ -51,6 +51,10 @@ all: 1dflameV2
 clean:
 	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) 1dflameV2
 	-@echo ' '
+
+version:
+	@echo 'Updating version string...'
+	./updateVersionString.sh
 
 .PHONY: all clean dependents
 .SECONDARY:
