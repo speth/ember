@@ -70,9 +70,6 @@ void flameSolver::run(void)
 
 	// Flame position (radius) control:
 	theSys.tFlamePrev = t;
-//	theSys.tFlameNext = t + options.rFlameUpdateTimeInterval;
-	//theSys.rVcenterInitial = theSys.V[0];
-	//theSys.rVcenterPrev = theSys.rVcenterNext = theSys.rVcenterInitial;
 	if (options.outputProfiles) {
 		theSys.writeStateMatFile();
 	}
@@ -87,8 +84,6 @@ void flameSolver::run(void)
 		theSolver.reltol = options.idaRelTol;
 		theSolver.nRoots = 0;
 		theSolver.findRoots = false;
-
-		cout << "DBG: reltol = " << theSolver.reltol << endl;
 
 		if (options.enforceNonnegativeSpecies) {
 			theSolver.imposeConstraints = true;
@@ -116,11 +111,11 @@ void flameSolver::run(void)
         if (options.flameRadiusControl) {
     		theSys.update_rStag(t);
         }
-		//tFlamePos = t + options.rFlameUpdateTimeInterval;
 		nFlamePos = 0;
 
 		theSys.updateAlgebraicComponents();
 		theSolver.t0 = t;
+
 		int ICflag = -1;
 		int ICcount = 0;
 		while (ICflag!=0 && ICcount < 5) {
@@ -227,6 +222,7 @@ void flameSolver::run(void)
 					if (options.outputProfiles) {
 						theSys.writeStateMatFile();
 					}
+					runTime.stop();
                     cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
 					return;
 				}

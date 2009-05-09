@@ -25,13 +25,12 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
     } else {
         gas.setStateMass(Y,T);
     }
-//    gas.getMassFractions(Y);
 
     try {
+        updateThermoProperties();
         if (!options.steadyOnly || inGetIC) {
             perfTimerTransportProps.start();
             updateTransportProperties();
-            updateThermoProperties();
             perfTimerTransportProps.stop();
         }
         perfTimerRxnRates.start();
@@ -255,7 +254,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
       } else {
           continuityUnst[0] = rV[0] - rhoLeft*a*options.rStag;
       }
-        
+
     } else {
         continuityUnst[0] = dVdt[0];
     }
@@ -295,8 +294,8 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
     for (j=0; j<nPoints; j++) {
         TplusdT[j] = T[j]*(1+eps);
-        UplusdU[j] = (abs(U[j]) > eps) ? U[j]*(1+eps) : eps;
-        VplusdV[j] = (abs(V[j]) > eps) ? V[j]*(1+eps) : eps;
+        UplusdU[j] = (abs(U[j]) > eps/2) ? U[j]*(1+eps) : eps;
+        VplusdV[j] = (abs(V[j]) > eps/2) ? V[j]*(1+eps) : eps;
     }
 
     dvector dwhdT(nPoints,0);
@@ -330,7 +329,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
     for (int k=0; k<nSpec; k++) {
         YplusdY = Y;
         for (j=0; j<nPoints; j++) {
-            YplusdY(k,j) = (abs(Y(k,j)) > eps) ? Y(k,j)*(1+eps) : eps;
+            YplusdY(k,j) = (abs(Y(k,j)) > eps/2) ? Y(k,j)*(1+eps) : eps;
         }
         perfTimerPrecondSetup.stop();
         perfTimerRxnRates.start();
@@ -349,7 +348,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
         for (j=0; j<nPoints; j++) {
             for (int i=0; i<nSpec; i++) {
                 dwdY[j](i,k) = (wDot2(i,j)-wDot(i,j))/(YplusdY(k,j)-Y(k,j));
-                hdwdY(k,j) += hk(k,j)*dwdY[j](i,k);
+                hdwdY(k,j) += hk(i,j)*dwdY[j](i,k);
             }
         }
     }
@@ -399,8 +398,8 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
         // dEnergy/dY
         for (int k=0; k<nSpec; k++) {
-            jacB(j,kEnergy,kSpecies+k) = -rho[j]*Wmx[j]/W[k]*dTdt[j] -
-                hdwdY(k,j)/cp[j];
+            jacB(j,kEnergy,kSpecies+k) = rho[j]*(W[k]-Wmx[j])/(W[k]*(1-Y(k,j)))*dTdt[j] +
+                hdwdY(k,j)/cp[j]*0;
         }
 
         // dMomentum/dT
@@ -409,7 +408,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
         // dMomentum/dY
         for (int k=0; k<nSpec; k++) {
-            jacB(j,kMomentum,kSpecies+k) = -rho[j]*Wmx[j]/W[k] *
+            jacB(j,kMomentum,kSpecies+k) = rho[j]*(W[k]-Wmx[j])/(W[k]*(1-Y(k,j))) *
                 (dUdt[j] + U[j]*dadt/a + a*U[j]*U[j]);
         }
 
@@ -427,7 +426,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
             //dSpecies/dY_j
             for (int i=0; i<nSpec; i++) {
-                jacB(j,kSpecies+k,kSpecies+i) = -dwdY[j](k,i)*W[k] - rho[j]*Wmx[j]/W[i]*dYdt(k,j);
+                jacB(j,kSpecies+k,kSpecies+i) = -dwdY[j](k,i)*W[k] + rho[j]*(W[i]-Wmx[j])/(W[i]*(1-Y(i,j)))*dYdt(k,j);
             }
             jacB(j,kSpecies+k,kSpecies+k) += c_j*rho[j] +
                 (grid.alpha+1)*(rhoD(k,j)+rhoD(k,j+1))/(grid.hh[j]*grid.hh[j]);
@@ -448,16 +447,16 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
         // dEnergy/dY
         for (int k=0; k<nSpec; k++) {
-            jacB(j,kEnergy,kSpecies+k) = -centerVol*hdwdY(k,j)/cp[j] - centerVol*rho[j]*Wmx[j]/W[k]*dTdt[j];
+            jacB(j,kEnergy,kSpecies+k) = centerVol*hdwdY(k,j)/cp[j] + centerVol*rho[j]*(W[k]-Wmx[j])/(W[k]*(1-Y(k,j)))*dTdt[j];
         }
 
         // dMomentum/dT
-        jacB(j,kMomentum,kEnergy) = -rho[j]/T[j] * 
+        jacB(j,kMomentum,kEnergy) = -rho[j]/T[j] *
             centerVol*(dUdt[j] + U[j]*dadt/a + U[j]*U[j]*a);
 
         // dMomentum/dY
         for (int k=0; k<nSpec; k++) {
-            jacB(j,kMomentum,kSpecies+k) = -rho[j]*Wmx[j]/W[k] *
+            jacB(j,kMomentum,kSpecies+k) = rho[j]*(W[k]-Wmx[j])/(W[k]*(1-Y(k,j))) *
                 centerVol*(dUdt[j] + U[j]*dadt/a + U[j]*U[j]*a);
         }
 
@@ -477,7 +476,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
             // dSpecies/dY_j
             for (int i=0; i<nSpec; i++) {
                 jacB(j,kSpecies+k,kSpecies+i) = -centerVol*dwdY[j](k,i)*W[k] -
-                    centerVol*rho[j]*Wmx[j]/W[i]*dYdt(k,j);
+                    centerVol*rho[j]*(W[i]-Wmx[j])/(W[i]*(1-Y(i,j)))*dYdt(k,j);
             }
             jacB(j,kSpecies+k,kSpecies+k) += centerVol*rho[j]*c_j
                 + centerArea*0.5*(rhoD(k,j)+rhoD(k,j+1))/grid.hh[j] + rV[0];
@@ -519,8 +518,8 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
         for (int k=0; k<nSpec; k++) {
             // dSpecies/dY
             for (int i=0; i<nSpec; i++) {
-                jacB(j,kSpecies+k,kSpecies+i) = -dwdY[j](k,i)*W[k] -
-                    rho[j]*Wmx[j]/W[i]*dYdt(k,j);
+                jacB(j,kSpecies+k,kSpecies+i) = -dwdY[j](k,i)*W[k] +
+                    rho[j]*(W[i]-Wmx[j])/(W[i]*(1-Y(i,j)))*dYdt(k,j);
             }
 
             // dSpecies/dT
@@ -561,28 +560,29 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
         // dEnergy/dY
         for (int k=0; k<nSpec; k++) {
-            jacB(j,kEnergy,kSpecies+k) = hdwdY(k,j)/cp[j] - rho[j]*Wmx[j]/W[k]*dTdt[j];
+            jacB(j,kEnergy,kSpecies+k) = hdwdY(k,j)/cp[j] + rho[j]*(W[k]-Wmx[j])/(W[k]*(1-Y(k,j)))*dTdt[j];
 
             // Enthalpy flux term
-            jacA(j,kEnergy,kSpecies+k) -= 0.25*dTdxCen[j]*cpSpec(k,j)*Wmx[j]/W[k]*(rhoD(k,j)/Wmx[j]+rhoD(k,j-1)/Wmx[j-1])/cp[j]/grid.hh[j-1];
-            jacB(j,kEnergy,kSpecies+k) += 0.25*dTdxCen[j]*cpSpec(k,j)*Wmx[j]/W[k]*(rhoD(k,j)/Wmx[j]+rhoD(k,j-1)/Wmx[j-1])/cp[j]/grid.hh[j-1];
-            jacB(j,kEnergy,kSpecies+k) -= 0.25*dTdxCen[j]*cpSpec(k,j)*Wmx[j]/W[k]*(rhoD(k,j)/Wmx[j]+rhoD(k,j+1)/Wmx[j+1])/cp[j]/grid.hh[j];
-            jacC(j,kEnergy,kSpecies+k) += 0.25*dTdxCen[j]*cpSpec(k,j)*Wmx[j]/W[k]*(rhoD(k,j)/Wmx[j]+rhoD(k,j+1)/Wmx[j+1])/cp[j]/grid.hh[j];
+            jacA(j,kEnergy,kSpecies+k) += 0.25*dTdxCen[j]*cpSpec(k,j)/W[k]*(rhoD(k,j)+rhoD(k,j-1))/cp[j]/grid.hh[j-1];
+            jacB(j,kEnergy,kSpecies+k) -= 0.25*dTdxCen[j]*cpSpec(k,j)/W[k]*(rhoD(k,j)+rhoD(k,j-1))/cp[j]/grid.hh[j-1];
+            jacB(j,kEnergy,kSpecies+k) += 0.25*dTdxCen[j]*cpSpec(k,j)/W[k]*(rhoD(k,j)+rhoD(k,j+1))/cp[j]/grid.hh[j];
+            jacC(j,kEnergy,kSpecies+k) -= 0.25*dTdxCen[j]*cpSpec(k,j)/W[k]*(rhoD(k,j)+rhoD(k,j+1))/cp[j]/grid.hh[j];
         }
 
         // dEnergy/dT_j
         jacB(j,kEnergy,kEnergy) = rho[j]*c_j - rho[j]/T[j]*dTdt[j] +
             (0.5*grid.rphalf[j]*(lambda[j]+lambda[j+1])/grid.hh[j] +
             0.5*grid.rphalf[j-1]*(lambda[j-1]+lambda[j])/grid.hh[j-1])/(grid.dlj[j]*cp[j]*grid.r[j]) +
-            dwhdT[j]/cp[j] + sumcpj[j]*grid.cf[j]/cp[j];
+            dwhdT[j]/cp[j] + 0.5*(sumcpj[j]+sumcpj[j-1])*grid.cf[j]/cp[j];
+
 
         // dEnergy/dT_j-1
         jacA(j,kEnergy,kEnergy) = -0.5*grid.rphalf[j-1]*(lambda[j-1]+lambda[j])/(grid.hh[j-1]*grid.dlj[j]*cp[j]*grid.r[j]) +
-            sumcpj[j]*grid.cfm[j]/cp[j];
+            0.5*(sumcpj[j]+sumcpj[j+1])*grid.cfm[j]/cp[j];
 
         // dEnergy/dT_j+1
         jacC(j,kEnergy,kEnergy) = -0.5*grid.rphalf[j]*(lambda[j]+lambda[j+1])/(grid.hh[j]*grid.dlj[j]*cp[j]*grid.r[j]) +
-            sumcpj[j]*grid.cfp[j]/cp[j];
+            0.5*(sumcpj[j]+sumcpj[j-1])*grid.cfp[j]/cp[j];
 
         if (options.centeredDifferences) {
             jacA(j,kEnergy,kEnergy) += V[j]*grid.cfm[j];
@@ -603,7 +603,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
         // dMomentum/dY
         for (int k=0; k<nSpec; k++) {
-            jacB(j,kMomentum,kSpecies+k) = -rho[j]*Wmx[j]/W[k] *
+            jacB(j,kMomentum,kSpecies+k) =  rho[j]*(W[k]-Wmx[j])/(W[k]*(1-Y(k,j))) *
                 (dUdt[j] + a*U[j]*U[j] + U[j]*dadt/a);
         }
 
@@ -677,9 +677,15 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
     }
 
     for (j=1; j<=jj; j++) {
+        double sumdYkWk = 0;
+        for (int k=0; k<nSpec; k++) {
+            sumdYkWk += dYdt(k,j)/W[k];
+        }
+
         for (int k=0; k<nSpec; k++) {
             // dContinuity/dY
-            jacB(j,kContinuity,kSpecies+k) = -rho[j]*Wmx[j]/W[k]*(c_j + U[j]*a);
+            jacB(j,kContinuity,kSpecies+k) = rho[j]*(W[k]-Wmx[j])/(W[k]*(1-Y(k,j)))*(U[j]*a - dTdt[j]/T[j] - 2*Wmx[j]*sumdYkWk) -
+                c_j*rho[j]*Wmx[j]/W[k];
         }
 
         // dContinuity/dT
@@ -692,24 +698,24 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
         jacB(j,kContinuity,kContinuity) = grid.r[j]/grid.hh[j-1]/grid.rphalf[j-1];
 
         // dContinuity/dV_(j-1)
-        jacA(j,kContinuity,kContinuity) = - grid.r[j]/grid.hh[j-1]/grid.rphalf[j-1];
+        jacA(j,kContinuity,kContinuity) = - grid.r[j-1]/grid.hh[j-1]/grid.rphalf[j-1];
     }
 
     perfTimerPrecondSetup.stop();
 
-    perfTimerLU.start();
-    long int iError = BandGBTRF(bandedJacobian->forSundials(),&pMat[0]);
-    perfTimerLU.stop();
+    if (!inTestPreconditioner) {
+        perfTimerLU.start();
+        long int iError = BandGBTRF(bandedJacobian->forSundials(),&pMat[0]);
+        perfTimerLU.stop();
 
-
-    if (iError!=0) {
-        cout << "Error in LU factorization: i = " << iError << endl;
-        debugParameters::debugJacobian = true;
-        return 1;
-    } else {
-        debugParameters::debugJacobian = false;
+        if (iError!=0) {
+            cout << "Error in LU factorization: i = " << iError << endl;
+            debugParameters::debugJacobian = true;
+            return 1;
+        } else {
+            debugParameters::debugJacobian = false;
+        }
     }
-
     return 0;
 }
 
@@ -806,7 +812,7 @@ void flameSys::setup(void)
     qDot.resize(nPoints);
 
     delete bandedJacobian;
-    bandedJacobian = new sdBandMatrix(N,nVars+2,nVars+2,2*nVars+4);
+    bandedJacobian = new sdBandMatrix(N,2*nVars+1,2*nVars+1,4*nVars+2);
     BandZero(bandedJacobian->forSundials());
 
     pMat.resize(N);
@@ -1148,6 +1154,7 @@ flameSys::flameSys(void)
     , flamePosIntegralError(0)
 {
     inGetIC = false;
+    inTestPreconditioner = false;
 }
 
 flameSys::~flameSys(void)
@@ -1450,8 +1457,7 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
         outfile.writeScalar("t",t);
         outfile.writeScalar("Pgain",options.rFlameProportionalGain);
         outfile.writeScalar("Igain",options.rFlameIntegralGain);
-        
-        
+
         outfile.writeVector("x",grid.x);
         outfile.writeVector("y",yVec);
         outfile.writeVector("ydot",ydotVec);
@@ -1772,9 +1778,9 @@ void flameSys::update_rStag(const double t)
     flamePosIntegralError += (rFlameTarget-rFlameActual)*(t-tFlamePrev);
     tFlamePrev = t;
 
-    options.rStag = options.rFlameProportionalGain * 
+    options.rStag = options.rFlameProportionalGain *
         ( (rFlameTarget-rFlameActual) + flamePosIntegralError*options.rFlameIntegralGain );
-   
+
     if (debugParameters::debugFlameRadiusControl) {
         cout << "rFlameControl: " << "rFlame = " << rFlameActual << "   Target = " << rFlameTarget << "   rStag = " << options.rStag;
         cout << "   P = " <<  options.rFlameProportionalGain*(rFlameTarget-rFlameActual);
@@ -1798,4 +1804,105 @@ void flameSys::printPerformanceStats(void)
 void flameSys::printPerfString(const std::string& label, const perfTimer& T) const
 {
     cout << label << mathUtils::stringify(T.getTime(),6) << " (" << T.getCallCount() << ")" << endl;
+}
+
+void flameSys::testPreconditioner(void)
+{
+    // This function computes a handful of Jacobian elements,
+    // both using the analytic Jacobian function and numerically
+    // by evaluating (f(y+dy)-f(y))/dy. Since the latter method
+    // would take too long normally, we only look at 3 points: j=1, j=jj/2 and j=jj
+
+    int jj = nPoints - 1;
+
+    try {
+        updateThermoProperties();
+        updateTransportProperties();
+        if (options.singleCanteraObject) {
+            simpleGas.getReactionRates(wDot);
+        } else {
+            gas.getReactionRates(wDot);
+        }
+    } catch (Cantera::CanteraError) {
+        cout << "Error evaluating thermodynamic properties" << endl;
+        writeStateMatFile("errorOutput",true);
+        throw;
+    }
+
+	inTestPreconditioner = true;
+    sdVector y(N), ypdy(N), yDot(N), res1(N), res2(N);
+    rollY(y);
+    rollYdot(yDot);
+    f(tNow, y, yDot, res1);
+
+    // First, evaluate using the usual preconditioner function:
+    preconditionerSetup(tNow, y, yDot, res1, 0);
+
+    int j2 = jj/2;
+    Array2D firstBlock1(nVars,2*nVars), secondBlock1(nVars,3*nVars), thirdBlock1(nVars,2*nVars);
+    for (int k=0; k<nVars; k++) {
+        for (int i=0; i<nVars; i++) {
+            firstBlock1(k,i) = jacB(0,k,i);
+            firstBlock1(k,i+nVars) = jacC(0,k,i);
+
+            secondBlock1(k,i) = jacA(j2,k,i);
+            secondBlock1(k,i+nVars) = jacB(j2,k,i);
+            secondBlock1(k,i+2*nVars) = jacC(j2,k,i);
+
+            thirdBlock1(k,i) = jacA(jj,k,i);
+            thirdBlock1(k,i+nVars) = jacB(jj,k,i);
+        }
+    }
+
+    // Now by finite differences:
+    double eps = sqrt(DBL_EPSILON)*800;
+    Array2D firstBlock2(nVars,2*nVars), secondBlock2(nVars,3*nVars), thirdBlock2(nVars,2*nVars);
+    //Array2D firstBlock2(nVars,2*nVars), secondBlock2(nVars,N), thirdBlock2(nVars,N);
+    for (int i=0; i<2*nVars; i++) {
+        for (int k=0; k<N; k++) {
+            ypdy(k) = y(k);
+        }
+        ypdy(i) = (abs(y(i)) > eps/2) ? y(i)*(1+eps) : eps;
+        f(tNow, ypdy, yDot, res2);
+        for (int k=0; k<nVars; k++) {
+            firstBlock2(k,i) = (res2(k)-res1(k))/(ypdy(i)-y(i));
+        }
+    }
+
+    for (int i=0; i<3*nVars; i++) {
+        for (int k=0; k<N; k++) {
+            ypdy(k) = y(k);
+        }
+        int iMod = i + (j2-1)*nVars;
+        ypdy(iMod) = (abs(y(iMod)) > eps/2) ? y(iMod)*(1+eps) : eps;
+        f(tNow, ypdy, yDot, res2);
+        for (int k=0; k<nVars; k++) {
+            secondBlock2(k,i) = (res2(k+j2*nVars)-res1(k+j2*nVars))/(ypdy(iMod)-y(iMod));
+        }
+    }
+
+    for (int i=0; i<2*nVars; i++) {
+        for (int k=0; k<N; k++) {
+            ypdy(k) = y(k);
+        }
+        int iMod = i + (jj-1)*nVars;
+        ypdy(iMod) = (abs(y(iMod)) > eps/2) ? y(iMod)*(1+eps) : eps;
+        f(tNow, ypdy, yDot, res2);
+        for (int k=0; k<nVars; k++) {
+            thirdBlock2(k,i) = (res2(k+jj*nVars)-res1(k+jj*nVars))/(ypdy(iMod)-y(iMod));
+        }
+    }
+
+    // And then save the results:
+    matlabFile jacobianFile(options.outputDir+"/jacobianComparison.mat");
+    jacobianFile.writeArray2D("aFirst",firstBlock1);
+    jacobianFile.writeArray2D("aMiddle",secondBlock1);
+    jacobianFile.writeArray2D("aEnd",thirdBlock1);
+    jacobianFile.writeArray2D("nFirst",firstBlock2);
+    jacobianFile.writeArray2D("nMiddle",secondBlock2);
+    jacobianFile.writeArray2D("nEnd",thirdBlock2);
+    jacobianFile.close();
+
+    cout << "Wrote output file: " << options.outputDir+"/jacobianComparison.mat" << endl;
+    inTestPreconditioner = false;
 }

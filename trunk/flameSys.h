@@ -74,6 +74,9 @@ public:
 	void printForMatlab(ofstream& file, dvector& v, int index, char* name);
 	void writeStateMatFile(const std::string fileName="", bool errorFile=false);
 
+    // For debugging purposes
+    void testPreconditioner(void);
+
 	// these should be read-only:
 	int N; // total problem size;
 	int nVars; // Number of solution variables at each point
@@ -198,7 +201,7 @@ private:
 
 	int kMomentum, 	kContinuity, kEnergy, kSpecies;
 
-	bool inGetIC;
+	bool inGetIC, inTestPreconditioner;
 	double centerVol, centerArea;
 
 	// Performance Timers
