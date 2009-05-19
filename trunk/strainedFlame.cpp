@@ -44,8 +44,8 @@ int main(int argc, char** argv)
 void strainedFlame(const std::string& inputFile)
 {
     // This version string is automatically updated during the build process
-    std::string REVISION = "72";
-    std::string BUILDDATE = "2009-05-09 16:49:51";
+    std::string REVISION = "73";
+    std::string BUILDDATE = "2009-05-18 20:38:27";
     cout << "**** strainedFlame (1Dflame Version 2.0." << REVISION << ")  [" << BUILDDATE << "] ****\n" << std::endl;
 
 	configOptions mainOptions;

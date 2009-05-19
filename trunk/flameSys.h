@@ -76,6 +76,7 @@ public:
 
     // For debugging purposes
     void testPreconditioner(void);
+    void debugFailedTimestep(const sdVector& y, const sdVector& abstol, double reltol);
 
 	// these should be read-only:
 	int N; // total problem size;
@@ -170,7 +171,7 @@ public:
 	double strainRate(const double t); // [1/s]
 	double dStrainRatedt(const double t); // [1/s^2]
 
-	void update_rStag(const double t);
+	void update_rStag(const double t, const bool updateIntError);
 	double targetFlamePosition(double t); // [m]
 
 	void V2rV(void);
@@ -203,6 +204,8 @@ private:
 
 	bool inGetIC, inTestPreconditioner;
 	double centerVol, centerArea;
+
+	int ICfileNumber;
 
 	// Performance Timers
 	perfTimer perfTimerResFunc, perfTimerPrecondSetup, perfTimerPrecondSolve, perfTimerTransportProps;

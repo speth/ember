@@ -176,6 +176,7 @@ public:
 	double getStepSize(void);
 	void setInitialStepSize(double dt);
 	void setMaxStepSize(double dt);
+	int getLastOrder(void);
 
 	realtype reltol;
 	sdVector abstol;

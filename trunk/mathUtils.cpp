@@ -248,6 +248,49 @@ vector<dvector> mathUtils::computeSplines(const dvector& xIn, const dvector& yIn
 	return c;
 }
 
+dvector mathUtils::interp1(const dvector& xIn, const dvector& yIn, const dvector& xOut)
+{
+    if (xIn.size() != yIn.size()) {
+        cout << "mathUtils::interp1: error: xIn and yIn must be the same size." << endl;
+        throw;
+    }
+    int nOut = xOut.size();
+    int nIn = xIn.size();
+
+    dvector yOut(nOut);
+
+    for (int i=0; i<nOut; i++) {
+        int j = findFirst(xIn >= xOut[i]) - 1;
+        if (j == -1) {
+            j = 0;
+        } else if (j == -2) {
+            j = nIn-1;
+        }
+        yOut[i] = yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut[i]-xIn[j]); 
+    }
+
+    return yOut;
+}
+
+double mathUtils::interp1(const dvector& xIn, const dvector& yIn, const double xOut)
+{
+    if (xIn.size() != yIn.size()) {
+        cout << "mathUtils::interp1: error: xIn and yIn must be the same size." << endl;
+        throw;
+    }
+
+    int nIn = xIn.size();
+
+    int j = findFirst(xIn >= xOut) - 1;
+    if (j == -1) {
+        j = 0;
+    } else if (j == -2) {
+        j = nIn-1;
+    }
+    return yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut-xIn[j]); 
+}
+
+
 dvector mathUtils::splines(const dvector& xIn, const dvector& yIn, const dvector& xOut)
 {
 	if (xIn.size() != yIn.size()) {
@@ -384,6 +427,19 @@ std::string mathUtils::stringify(double x, int nDigits)
 	return os.str();
 }
 
+int mathUtils::sign(const double x)
+{
+    return (x > 0) ? 1 :
+           (x < 0) ? -1
+                   : 0;
+}
+
+int mathUtils::sign(const int x)
+{
+    return (x > 0) ? 1 :
+           (x < 0) ? -1
+                   : 0;
+}
 
 std::ostream& operator<<(std::ostream& os, dvector& v)
 {
@@ -709,5 +765,4 @@ vector<bool> operator||(const vector<bool>& v1, const vector<bool>& v2)
 		out[i] = v1[i] || v2[i];
 	}
 	return out;
-}
-
+} 

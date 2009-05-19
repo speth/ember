@@ -4,6 +4,7 @@
 using std::cout;
 using std::endl;
 using namespace mathUtils;
+using std::max; using std::min;
 
 oneDimGrid::oneDimGrid(configOptions& theOptions)
     : options(theOptions)
@@ -30,7 +31,6 @@ void oneDimGrid::updateValues()
         rphalf[j] =  pow(0.5*(x[j]+x[j+1]),alpha);
         r[j] = pow(x[j],alpha);
     }
-    hh[jj-1] = hh[jj-2];
     r[jj] = pow(x[jj],alpha);
 
     for (unsigned int j=1; j<x.size()-1; j++) {
@@ -50,7 +50,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 {
     // This function takes the unadapted solution vector y, analyzes it,
     // and returns an updated solution vector. It tries to remove
-    // unnescessary grid points located in the regions of small gradients,
+    // unnecessary grid points located in the regions of small gradients,
     // insert new grid points in the regions of large gradients, and,
     // at the same time maintain relative uniformity of the grid.
 
@@ -62,7 +62,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
     // 2. Apply four criteria and and find where insertions are
     //    needed. the criteria for a component f(j)
     //    a. |f[j+1]-f[j]| < vtol*range(f)
-    //    b. |dfdy[j+1]-dfdy[j] | < dvtol*range(dfdy)
+    //    b. |dfdy[j+1]-dfdy[j]| < dvtol*range(dfdy)
     //    c. 1/uniformityTol < hh[j]/hh[j-1] < uniformityTol
     // 3. If any of these criteria is not satisfied, a grid point j
     //    is inserted.
@@ -81,7 +81,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
     std::vector<int> insertionIndicies;
     std::vector<int> removalIndices;
 
-    bool gridUpdated = false; // flag if adaption has occured
+    bool gridUpdated = false; // flag if adaption has occurred
 
     // *** Grid point insertion algorithm
 
@@ -126,9 +126,28 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             if (j!=0 && j!=jj-1 && abs(dv[j+1]-dv[j]) > dvtol*dvRange) {
                 insert = true;
                 if (debugParameters::debugAdapt) {
-                    cout << "Adapt: dv resolution wants grid point j = " << j << ", k = " << k;
+                    cout << "Adapt: dv resolution (global) wants grid point j = " << j << ", k = " << k;
                     cout << " |dv(j+1)-dv(j)|/vrange = " << abs(dv[j+1]-dv[j])/dvRange << " > " << dvtol << endl;
                 }
+            }
+
+        }
+
+        // Damping of high-frequency numerical error
+        if (hh[j] > dampConst*dampVal[j]) {
+            insert = true;
+            if (debugParameters::debugAdapt) {
+                cout << "Adapt: damping criterion wants a grid point j = " << j;
+                cout << " hh(j) = " << hh[j] << " > " << dampConst*dampVal[j] << endl;
+            }
+        }
+
+        // Maximum grid size
+        if (hh[j] > gridMax) {
+            insert = true;
+            if (debugParameters::debugAdapt) {
+                cout << "Adapt: Maximum grid size criterion wants a grid point j = " << j;
+                cout << " hh(j) = " << hh[j] << " > " << gridMax << endl;
             }
         }
 
@@ -150,21 +169,12 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             }
         }
 
-        // Maximum grid size
-        if (hh[j] > gridMax) {
-            insert = true;
+        // Special minimum grid size for flames pinned at x=0
+        if (x[0]==0.0 && x[j] < centerGridMin) {
+            insert = false;
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: Maximum grid size criterion wants a grid point j = " << j;
-                cout << " hh(j) = " << hh[j] << " > " << gridMax << endl;
-            }
-        }
-
-        // Damping of high-frequency numerical error
-        if (hh[j] > dampConst*dampVal[j]) {
-            insert = true;
-            if (debugParameters::debugAdapt) {
-                cout << "Adapt: damping criterion wants a grid point j = " << j;
-                cout << " hh(j) = " << hh[j] << " > " << dampConst*dampVal[j] << endl;
+                cout << "Adapt: grid point addition canceled by minimum center grid size j = " << j;
+                cout << " hh(j) = " << hh[j] << " < " << 2*centerGridMin << endl;
             }
         }
 
@@ -172,17 +182,8 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         if (insert && hh[j] < 2*gridMin) {
             insert = false;
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: grid point addition cancelled by minimum grid size j = " << j;
+                cout << "Adapt: grid point addition canceled by minimum grid size j = " << j;
                 cout << " hh(j) = " << hh[j] << " < " << 2*gridMin << endl;
-            }
-        }
-        
-        // Special minimum grid size for flames pinned at x=0
-        if (j==1 && x[0]==0.0 && hh[j] < 2*centerGridMin) {
-            insert = false;
-            if (debugParameters::debugAdapt) {
-                cout << "Adapt: grid point addition cancelled by minimum center grid size j = " << j;
-                cout << " hh(j) = " << hh[j] << " < " << 2*centerGridMin << endl;
             }
         }
 
@@ -213,11 +214,15 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
     while (j < jj) {
         updateValues();
 
-        // Assume removal, then look for a conditon which prevents removal
+        // Assume removal, then look for a condition which prevents removal
         bool remove = true;
 
         // Consider tolerances each variable v in the solution y
         for (int k=0; k<nVars; k++) {
+
+            if (k==kContinuity) {
+                continue;
+            }
 
             dvector& v = y[k];
             for (int i=1; i<jj; i++) {
@@ -226,8 +231,9 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
             double vRange = mathUtils::range(v);
             double dvRange = mathUtils::range(dv,1,jj-1);
+
             if (vRange < absvtol) {
-                continue; // ignore minor componenents
+                continue; // Ignore minor species
             }
 
             // Apply grid point removal criteria:
@@ -251,6 +257,15 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             }
         }
 
+        // Damping of high-frequency numerical error
+        if (hh[j]+hh[j-1] >= rmTol*dampConst*dampVal[j]) {
+            if (debugParameters::debugAdapt) {
+                cout << "Adapt: no removal - damping criterion. j = " << j;
+                cout << " hh(j)+hh(j-1) = " << hh[j]+hh[j-1] << " > " << dampConst*dampVal[j] << endl;
+            }
+            remove = false;
+        }
+
         // Enforce maximum grid size
         if (hh[j]+hh[j-1] > gridMax) {
             if (debugParameters::debugAdapt) {
@@ -260,20 +275,11 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             remove = false;
         }
 
-        // Damping of high-frequency numerical error
-        if (hh[j]+hh[j-1] >= rmTol*dampConst*dampVal[j]) {
-            if (debugParameters::debugAdapt) {
-                cout << "Adapt: no removal - damping criterion. j = " << j;
-                cout << "hh(j) = " << hh[j] << " > " << dampConst*dampVal[j] << endl;
-            }
-            remove = false;
-        }
-
         // Enforce left uniformity
         if (j>=2 && hh[j]+hh[j-1] > uniformityTol*hh[j-2]) {
             if (debugParameters::debugAdapt) {
                 cout << "Adapt: no removal - left uniformity. j = " << j;
-                cout << "(hh(j)+hh(j-1))/hh(j-2) = " << (hh[j]+hh[j-1])/hh[j-2] << " > " << uniformityTol << endl;
+                cout << " (hh(j)+hh(j-1))/hh(j-2) = " << (hh[j]+hh[j-1])/hh[j-2] << " > " << uniformityTol << endl;
             }
             remove = false;
         }
@@ -282,7 +288,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         if (j<=jj-2 && hh[j]+hh[j-1] > uniformityTol*hh[j+1]) {
             if (debugParameters::debugAdapt) {
                 cout << "Adapt: no removal - right uniformity. j = " << j;
-                cout << "(hh(j)+hh(j-1))/hh(j+1) = " << (hh[j]+hh[j-1])/hh[j+1] << " > " << uniformityTol << endl;
+                cout << " (hh(j)+hh(j-1))/hh(j+1) = " << (hh[j]+hh[j-1])/hh[j+1] << " > " << uniformityTol << endl;
             }
             remove = false;
         }
@@ -294,6 +300,13 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             remove = false;
         }
 
+        // Special fixd grid for flames pinned at x=0
+        if (x[0]==0.0 && x[j] < centerGridMin) {
+            if (debugParameters::debugAdapt) {
+                cout << "Adapt: no removal - fixed grid near r = 0." << endl; 
+            }
+            remove = false;
+        }
 
         if (remove) {
             removalIndices.push_back(j);
@@ -320,7 +333,6 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
     }
 
     return gridUpdated;
-
 }
 
 void oneDimGrid::addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot)
@@ -385,10 +397,11 @@ bool oneDimGrid::addRight(void)
         }
 
         int dj = (k == kMomentum) ? djMom : djOther;
-        if (abs(y[k][jj]-y[k][jj-dj])/range(y[k]) > boundaryTol && range(y[k]) > absvtol ) {
+        double ymax = maxval(y[k]);
+        if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTol && ymax > absvtol ) {
             if (!pointAdded && debugParameters::debugRegrid) {
                 cout << "Regrid: Flatness of component " << k << " requires right addition: ";
-                cout << abs(y[k][jj]-y[k][jj-dj])/mathUtils::range(y[k]) << " > " << boundaryTol << endl;
+                cout << abs(y[k][jj]-y[k][jj-dj])/ymax << " > " << boundaryTol << endl;
             }
             pointAdded = true;
             break;
@@ -441,11 +454,12 @@ bool oneDimGrid::addLeft(void)
                 continue;
             }
 
+            double ymax = maxval(y[k]);
             int dj = (k==kMomentum) ? djMom : djOther;
-            if (abs(y[k][dj]-y[k][0])/range(y[k]) > boundaryTol && range(y[k]) > absvtol) {
+            if (abs(y[k][dj]-y[k][0])/ymax > boundaryTol && ymax > absvtol) {
                 if (!pointAdded && debugParameters::debugRegrid) {
                     cout << "Regrid: Flatness of component " << k << " requires left addition: ";
-                    cout << abs(y[k][dj]-y[k][0])/range(y[k]) << " > " << boundaryTol << endl;
+                    cout << abs(y[k][dj]-y[k][0])/ymax << " > " << boundaryTol << endl;
                 }
                 pointAdded = true;
                 break;
@@ -511,10 +525,11 @@ bool oneDimGrid::removeRight(void)
             continue; // no flatness criterion for continuity equation
         }
         int dj = (k==kMomentum) ? djMom : djOther;
-        if (abs(y[k][jj]-y[k][jj-dj])/range(y[k]) > boundaryTolRm && range(y[k]) > absvtol) {
+        double ymax = maxval(y[k]);
+        if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTolRm && ymax > absvtol) {
             if (pointRemoved && debugParameters::debugRegrid) {
                 cout << "Regrid: Right removal prevented by component " << k << " flatness: ";
-                cout << abs(y[k][jj]-y[k][jj-dj])/range(y[k]) << " > " << boundaryTolRm << endl;
+                cout << abs(y[k][jj]-y[k][jj-dj])/ymax << " > " << boundaryTolRm << endl;
             }
             pointRemoved = false;
             break;
@@ -554,10 +569,11 @@ bool oneDimGrid::removeLeft(void)
             continue;
         }
 
-        if (abs(y[k][dj]-y[k][0])/range(y[k]) > boundaryTolRm && range(y[k]) > absvtol) {
+        double ymax = maxval(y[k]);
+        if (abs(y[k][dj]-y[k][0])/ymax > boundaryTolRm && ymax > absvtol) {
             if (pointRemoved && debugParameters::debugRegrid) {
                 cout << "Regrid: Left removal prevented component " << k << " flatness requirement: ";
-                cout << abs(y[k][dj]-y[k][0])/range(y[k]) << " > " << boundaryTolRm << endl;
+                cout << abs(y[k][dj]-y[k][0])/ymax << " > " << boundaryTolRm << endl;
             }
             pointRemoved = false;
         }

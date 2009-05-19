@@ -493,6 +493,13 @@ void sundialsIDA::setMaxStepSize(double dt)
 	IDASetMaxStep(sundialsMem, dt);
 }
 
+int sundialsIDA::getLastOrder(void)
+{
+    int order;
+    IDAGetLastOrder(sundialsMem, &order);
+    return order;
+}
+
 // f routine. Compute function f(t,y,y') = res
 int sundialsIDA::f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void *f_data)
 {

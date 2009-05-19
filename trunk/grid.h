@@ -1,7 +1,7 @@
 #pragma once
 
-#include "mathUtils.h"
 #include "readConfig.h"
+
 
 class oneDimGrid
 {
@@ -21,7 +21,7 @@ public:
 
 	// Parameters for controlling internal grid points:
 	double vtol; // relative solution variable tolerance for point insertion
-	double dvtol; // derivative solution variable tolerance for point insertion
+	double dvtol; // global derivative solution variable tolerance for point insertion
 	double absvtol; // absolute tolerance (ignore components with range smaller than this)
 	double rmTol; // relative grid point removal tolerance
 	double uniformityTol; // maximum ratio of adjacent grid point separation distances

@@ -51,6 +51,10 @@ namespace mathUtils
 	// Internal function for splines
 	vector<dvector> computeSplines(const dvector& xIn, const dvector& yIn);
 
+    // Linear interpolation
+    dvector interp1(const dvector& xIn, const dvector& yIn, const dvector& xOut);
+    double interp1(const dvector& xIn, const dvector& yIn, const double xOut);
+
 	// Cubic Spline interpolation
 	dvector splines(const dvector& xIn, const dvector& yIn, const dvector& xOut);
 	double splines(const dvector& xIn, const dvector& yIn, const double xOut);
@@ -68,6 +72,11 @@ namespace mathUtils
 	std::string stringify(double x);
 	std::string stringify(double x, int nDigits);
 	std::string stringify(int x);
+    
+    // Sign: why this isn't defined in cmath, I'll never know
+    int sign(const double x);
+    int sign(const int x);
+    
 }
 
 std::ostream& operator<<(std::ostream& os, dvector& v);

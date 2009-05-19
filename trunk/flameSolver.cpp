@@ -40,18 +40,15 @@ void flameSolver::run(void)
 	int nRegrid = 0;
 	int nOutput = 0;
 	int nProfile = 0;
-	int nFlamePos = 0;
 	int nIntegrate = 0;
     int outputCount = 0;
 
 	double tOutput = t;
 	double tRegrid = t;
 	double tProfile = t;
-	//double tFlamePos = t;
 
 	theSys.grid.updateValues();
 
-	// Get the initial value for rFlameActual:
 	if (options.singleCanteraObject) {
 		theSys.simpleGas.setStateMass(theSys.Y,theSys.T);
 		theSys.simpleGas.getReactionRates(theSys.wDot);
@@ -68,8 +65,8 @@ void flameSolver::run(void)
 		}
 	}
 
-	// Flame position (radius) control:
 	theSys.tFlamePrev = t;
+
 	if (options.outputProfiles) {
 		theSys.writeStateMatFile();
 	}
@@ -84,6 +81,7 @@ void flameSolver::run(void)
 		theSolver.reltol = options.idaRelTol;
 		theSolver.nRoots = 0;
 		theSolver.findRoots = false;
+        theSolver.t0 = theSolver.tInt = t;
 
 		if (options.enforceNonnegativeSpecies) {
 			theSolver.imposeConstraints = true;
@@ -106,15 +104,8 @@ void flameSolver::run(void)
 			theSolver.ydot(j) = 0;
 		}
 
-		theSys.updateLeftBC();
-
-        if (options.flameRadiusControl) {
-    		theSys.update_rStag(t);
-        }
-		nFlamePos = 0;
-
+        theSys.updateLeftBC();
 		theSys.updateAlgebraicComponents();
-		theSolver.t0 = t;
 
 		int ICflag = -1;
 		int ICcount = 0;
@@ -133,6 +124,15 @@ void flameSolver::run(void)
 			theSys.rollY(theSolver.y);
 
 			ICflag = theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, theSys.algebraic);
+
+			if (ICflag != 0) {
+			    theSys.debugFailedTimestep(theSolver.y, theSolver.abstol, theSolver.reltol);
+			}
+
+			if (ICflag == 100) {
+	            theSys.writeStateMatFile("errorOutput",true);
+			    throw;
+			}
 		}
 
 		theSolver.setDAE(&theSys);
@@ -145,12 +145,12 @@ void flameSolver::run(void)
 			theSolver.setInitialStepSize(integratorTimestep);
 		}
 
-		int flag;
+		int IDAflag;
 
 		while (t < theSys.tEnd) {
 
 			try {
-				flag = theSolver.integrateOneStep();
+				IDAflag = theSolver.integrateOneStep();
 			} catch (Cantera::CanteraError) {
 				theSys.writeStateMatFile("errorOutput",true);
 			}
@@ -158,19 +158,23 @@ void flameSolver::run(void)
 			dt = integratorTimestep = theSolver.getStepSize();
 			t = theSys.tPrev = theSolver.tInt;
 
-			if (flag == CV_SUCCESS) {
+			if (IDAflag == CV_SUCCESS) {
 				nOutput++;
 				nRegrid++;
 				nProfile++;
-				nFlamePos++;
 				nIntegrate++;
 
 				if (debugParameters::debugTimesteps) {
-					cout << "t = " << t << "  (dt = " << dt << ")" << endl;
+				    int order = theSolver.getLastOrder();
+					cout << "t = " << t << "  (dt = " << dt << ") [" << order << "]" << endl;
 				}
+                if (options.flameRadiusControl) {
+                    theSys.update_rStag(t, true);
+                }
 
 			} else {
 				cout << "IDA Solver failed at time t = " << t << "  (dt = " << dt << ")" << endl;
+                theSys.debugFailedTimestep(theSolver.y, theSolver.abstol, theSolver.reltol);
 				theSys.writeStateMatFile("errorOutput",true);
 				integratorTimestep = 0;
 				break;
@@ -202,6 +206,8 @@ void flameSolver::run(void)
 
 			if (t > tProfile || nProfile >= options.profileStepInterval) {
 				if (options.outputProfiles) {
+                    sdVector resTemp(theSys.N);
+                    theSys.f(t, theSolver.y, theSolver.ydot, resTemp); 
 					theSys.writeStateMatFile();
 				}
 
@@ -210,7 +216,10 @@ void flameSolver::run(void)
 			}
 
 			if (t > tRegrid || nRegrid >= options.regridStepInterval) {
-				tRegrid = t + options.regridTimeInterval;
+                sdVector resTemp(theSys.N); // DEBUG
+                theSys.f(t, theSolver.y, theSolver.ydot, resTemp); // DEBUG 
+                theSys.writeStateMatFile(); // DEBUG
+			    tRegrid = t + options.regridTimeInterval;
 				nRegrid = 0;
 
 				// Periodic check for terminating the integration
@@ -235,7 +244,7 @@ void flameSolver::run(void)
 						num = min(num,theSys.rhoD(k,j));
 					}
 
-					theSys.grid.dampVal[j] = num/abs(theSys.V[j]);
+					theSys.grid.dampVal[j] = sqrt(num/(theSys.rho[j]*theSys.strainRate(t)));
 				}
 				vector<dvector> currentSolution, currentSolutionDot;
 				theSys.rollVectorVector(theSolver.y, theSys.qDot, currentSolution);
@@ -261,6 +270,11 @@ void flameSolver::run(void)
 						theSys.gas.setStateMass(theSys.Y,theSys.T);
 						theSys.gas.getMassFractions(theSys.Y);
 					}
+
+//                    sdVector resTemp2(theSys.N);
+//                    theSys.f(t, theSolver.y, theSolver.ydot, resTemp2); // DEBUG 
+                    theSys.writeStateMatFile(); // DEBUG
+
 					break; // exit the inner loop and reinitialize the solver for the new problem size
 				}
 
@@ -269,7 +283,6 @@ void flameSolver::run(void)
 			if (nIntegrate > options.integratorRestartInterval) {
 			  nIntegrate = 0;
 			  theSys.setup();
-
 
 			  break; // exit inner loop and reinitialize the solver
 			}
@@ -291,6 +304,9 @@ void flameSolver::run(void)
 
 void flameSolver::calculateReactantMixture(void)
 {
+    // Calculate the composition of the reactant mixture from compositions of
+    // the fuel and oxidizer mixtures and the equivalence ratio.
+
 	Cantera_CXX::IdealGasMix fuel(options.gasMechanismFile,options.gasPhaseID);
 	Cantera_CXX::IdealGasMix oxidizer(options.gasMechanismFile,options.gasPhaseID);
 

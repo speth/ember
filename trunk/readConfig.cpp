@@ -60,11 +60,11 @@ void configOptions::readOptionsFile(const std::string& filename)
 	dvtol = 0.4;
 	rmTol = 0.67;
 	dampConst = 5000;
-	gridMin = 1.0e-5;
+	gridMin = 1.0e-6;
 	gridMax = 0.2;
 	uniformityTol = 2.7;
 	absvtol = 1e-10;
-    centerGridMin = 10*gridMin;
+    centerGridMin = 100*gridMin;
 
 	boundaryTol = 2e-5;
 	boundaryTolRm = 5e-6;
