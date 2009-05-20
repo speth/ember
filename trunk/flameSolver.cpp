@@ -112,7 +112,7 @@ void flameSolver::run(void)
 		while (ICflag!=0 && ICcount < 5) {
 			ICcount++;
 
-			// This corrects the drift of the total mass fractions
+			// This corrects the drift of the total mass fractions (??)
 			theSys.unrollY(theSolver.y);
 			if (options.singleCanteraObject) {
 				theSys.simpleGas.setStateMass(theSys.Y,theSys.T);
@@ -157,6 +157,11 @@ void flameSolver::run(void)
 
 			dt = integratorTimestep = theSolver.getStepSize();
 			t = theSys.tPrev = theSolver.tInt;
+
+//            if (t >= 0.0014022) {
+//                theSys.testPreconditioner();
+//                throw;
+//            }
 
 			if (IDAflag == CV_SUCCESS) {
 				nOutput++;
@@ -216,9 +221,9 @@ void flameSolver::run(void)
 			}
 
 			if (t > tRegrid || nRegrid >= options.regridStepInterval) {
-                sdVector resTemp(theSys.N); // DEBUG
-                theSys.f(t, theSolver.y, theSolver.ydot, resTemp); // DEBUG 
-                theSys.writeStateMatFile(); // DEBUG
+//                sdVector resTemp(theSys.N); // DEBUG
+//                theSys.f(t, theSolver.y, theSolver.ydot, resTemp); // DEBUG 
+//                theSys.writeStateMatFile(); // DEBUG
 			    tRegrid = t + options.regridTimeInterval;
 				nRegrid = 0;
 
@@ -273,7 +278,7 @@ void flameSolver::run(void)
 
 //                    sdVector resTemp2(theSys.N);
 //                    theSys.f(t, theSolver.y, theSolver.ydot, resTemp2); // DEBUG 
-                    theSys.writeStateMatFile(); // DEBUG
+//                    theSys.writeStateMatFile(); // DEBUG
 
 					break; // exit the inner loop and reinitialize the solver for the new problem size
 				}

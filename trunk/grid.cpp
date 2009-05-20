@@ -77,6 +77,13 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
     nVars = y.size();
     jj = y[0].size()-1;
 
+    vtol.resize(nVars);
+    dvtol.resize(nVars);
+    for (int k=0; k<nVars; k++) {
+        vtol[k] =  (k == kContinuity) ? options.vtolCont  : options.vtol;
+        dvtol[k] = (k == kContinuity) ? options.dvtolCont : options.dvtol;
+    }
+
     // Used for informational purposes only
     std::vector<int> insertionIndicies;
     std::vector<int> removalIndices;
@@ -96,9 +103,10 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         // Consider tolerances for each variable v in the solution y
         for (int k=0; k<nVars; k++) {
 
-            if (k==kContinuity) {
-                continue;
-            }
+//            if (k==kContinuity) {
+//                continue;
+//            }
+
             dvector& v = y[k];
             for (int i=1; i<jj; i++) {
                 dv[i] = cfp[i]*v[i+1] + cf[i]*v[i] + cfm[i]*v[i-1];
@@ -114,20 +122,20 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             // Apply grid point addition criteria:
 
             // resolution of v
-            if (abs(v[j+1]-v[j]) > vtol*vRange) {
+            if (abs(v[j+1]-v[j]) > vtol[k]*vRange) {
                 insert = true;
                 if (debugParameters::debugAdapt) {
                     cout << "Adapt: v resolution wants grid point j = " << j << ", k = " << k;
-                    cout << " |v(j+1)-v(j)|/vrange = " << abs(v[j+1]-v[j])/vRange << " > " << vtol << endl;
+                    cout << " |v(j+1)-v(j)|/vrange = " << abs(v[j+1]-v[j])/vRange << " > " << vtol[k] << endl;
                 }
             }
 
             // resolution of dv
-            if (j!=0 && j!=jj-1 && abs(dv[j+1]-dv[j]) > dvtol*dvRange) {
+            if (j!=0 && j!=jj-1 && abs(dv[j+1]-dv[j]) > dvtol[k]*dvRange) {
                 insert = true;
                 if (debugParameters::debugAdapt) {
                     cout << "Adapt: dv resolution (global) wants grid point j = " << j << ", k = " << k;
-                    cout << " |dv(j+1)-dv(j)|/vrange = " << abs(dv[j+1]-dv[j])/dvRange << " > " << dvtol << endl;
+                    cout << " |dv(j+1)-dv(j)|/vrange = " << abs(dv[j+1]-dv[j])/dvRange << " > " << dvtol[k] << endl;
                 }
             }
 
@@ -170,7 +178,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         }
 
         // Special minimum grid size for flames pinned at x=0
-        if (x[0]==0.0 && x[j] < centerGridMin) {
+        if (leftBoundaryConfig == lbControlVolume && x[j] < centerGridMin) {
             insert = false;
             if (debugParameters::debugAdapt) {
                 cout << "Adapt: grid point addition canceled by minimum center grid size j = " << j;
@@ -220,9 +228,9 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         // Consider tolerances each variable v in the solution y
         for (int k=0; k<nVars; k++) {
 
-            if (k==kContinuity) {
-                continue;
-            }
+//            if (k==kContinuity) {
+//                continue;
+//            }
 
             dvector& v = y[k];
             for (int i=1; i<jj; i++) {
@@ -239,19 +247,19 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             // Apply grid point removal criteria:
 
             // resolution of v
-            if (abs(v[j+1]-v[j-1]) > rmTol*vtol*vRange) {
+            if (abs(v[j+1]-v[j-1]) > rmTol*vtol[k]*vRange) {
                 if (debugParameters::debugAdapt) {
                     cout << "Adapt: no removal - v res. j = " << j << ", k = " << k;
-                    cout << " |v(j+1)-v(j-1)|/vtrange = " << abs(v[j+1]-v[j-1])/vRange << " > " << vtol*rmTol << endl;
+                    cout << " |v(j+1)-v(j-1)|/vtrange = " << abs(v[j+1]-v[j-1])/vRange << " > " << vtol[k]*rmTol << endl;
                 }
                 remove = false;
             }
 
             // resolution of dv
-            if (j!=2 && j!=jj-1 && abs(dv[j+1]-dv[j-1]) > rmTol*dvtol*dvRange) {
+            if (j!=2 && j!=jj-1 && abs(dv[j+1]-dv[j-1]) > rmTol*dvtol[k]*dvRange) {
                 if (debugParameters::debugAdapt) {
                     cout << "Adapt: no removal - dv res. j = " << j << ", k = " << k;
-                    cout << " |dv(j+1)-dv(j-1)|/dvrange = " << abs(dv[j+1]-dv[j-1])/dvRange << " > " << dvtol*rmTol << endl;
+                    cout << " |dv(j+1)-dv(j-1)|/dvrange = " << abs(dv[j+1]-dv[j-1])/dvRange << " > " << dvtol[k]*rmTol << endl;
                 }
                 remove = false;
             }
@@ -293,17 +301,10 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             remove = false;
         }
 
-        if (j==jZero) {
-            if (debugParameters::debugAdapt) {
-                cout << "Adapt: no removal - not allowed to remove jZero" << endl;
-            }
-            remove = false;
-        }
-
         // Special fixd grid for flames pinned at x=0
-        if (x[0]==0.0 && x[j] < centerGridMin) {
+        if (leftBoundaryConfig == lbControlVolume && x[j] < centerGridMin) {
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: no removal - fixed grid near r = 0." << endl; 
+                cout << "Adapt: no removal - fixed grid near r = 0." << endl;
             }
             remove = false;
         }
@@ -329,7 +330,6 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
     if (gridUpdated) {
         updateValues();
         updateBoundaryIndices();
-        update_jZero(y[kContinuity]);
     }
 
     return gridUpdated;
@@ -467,9 +467,9 @@ bool oneDimGrid::addLeft(void)
         }
     }
 
-    if (options.fixedLeftLoc && x[0]!=0.0) {
+    if (options.fixedLeftLoc && leftBoundaryConfig != lbControlVolume) {
         if (!pointAdded && debugParameters::debugRegrid) {
-            cout << "Regrid: Adding point to force left boundary toward x=0" << endl;
+            cout << "Regrid: Adding point to force left boundary toward x = 0" << endl;
         }
         pointAdded = true;
     }
@@ -484,7 +484,7 @@ bool oneDimGrid::addLeft(void)
         for (int i=0; i<addPointCount; i++) {
             double xLeft = x[0]-hh[0];
             if (options.twinFlame || options.curvedFlame) {
-                xLeft = std::max(xLeft,0.0e0);
+                xLeft = std::max(xLeft,options.centerGridMin);
             }
             x.insert(x.begin(),xLeft);
 
@@ -647,15 +647,9 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
     if (gridUpdated) {
         updateValues();
         updateBoundaryIndices();
-        update_jZero(y[kContinuity]);
     }
 
     return gridUpdated;
-}
-
-void oneDimGrid::update_jZero(dvector& V)
-{
-    jZero = mathUtils::minloc(mathUtils::abs(V));
 }
 
 void oneDimGrid::updateBoundaryIndices(void) {

@@ -58,7 +58,11 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	vtol = 0.04;
 	dvtol = 0.4;
-	rmTol = 0.67;
+    
+    vtolCont = 1; // effectively disabled
+    dvtolCont = 1;
+	
+    rmTol = 0.67;
 	dampConst = 5000;
 	gridMin = 1.0e-6;
 	gridMax = 0.2;
@@ -162,6 +166,14 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	cfg.lookupValue("grid.adaptation.vtol",vtol);
 	cfg.lookupValue("grid.adaptation.dvtol",dvtol);
+
+    if (!cfg.lookupValue("grid.adaptation.vtolCont",vtolCont)) {
+        vtolCont = vtol;
+    }
+    
+    if (!cfg.lookupValue("grid.adaptation.dvtolCont",dvtolCont)) {
+        dvtolCont = dvtol;
+    }
 	cfg.lookupValue("grid.adaptation.rmTol",rmTol);
 	cfg.lookupValue("grid.adaptation.dampConst",dampConst);
 	cfg.lookupValue("grid.adaptation.gridMin",gridMin);

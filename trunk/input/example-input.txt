@@ -31,11 +31,13 @@ grid:
 		// Minimal accuracy: vtol = 0.2, dvtol = 0.4
 		vtol = 0.06;
 		dvtol = 0.10;
+        vtolCont = 0.12;
+        dvtolCont = 0.20;
 		rmTol = 0.50;
-		dampConst = 5; // empirically determined optimum
+		dampConst = 0.5;
 		gridMin = 1.0e-6;
 		gridMax = 0.001;
-		uniformityTol = 3.5;
+		uniformityTol = 2.5;
 		absvtol = 1e-8;
 	};
 
@@ -87,8 +89,8 @@ StrainParameters:
 //    dt = 0.01;
 //    tStart = 0;
 //    proportionalGain = 10;
-//    integralGain = 400;
-//	centerGridMin = 1e-5;
+//    integralGain = 800;
+//	  centerGridMin = 2e-4;
 //};
 
 // Curvature at fixed nominal stagnation radius

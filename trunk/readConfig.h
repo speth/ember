@@ -59,7 +59,7 @@ public:
 	int nPoints;
 	double xLeft, xRight;
 
-	double vtol, dvtol, rmTol, dampConst, gridMin, gridMax;
+	double vtol, dvtol, vtolCont, dvtolCont, rmTol, dampConst, gridMin, gridMax;
 	double uniformityTol, absvtol;
 	double boundaryTol, boundaryTolRm;
 

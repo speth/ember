@@ -20,8 +20,8 @@ public:
 	int kQdot; // index into solutionState of the heat release rate
 
 	// Parameters for controlling internal grid points:
-	double vtol; // relative solution variable tolerance for point insertion
-	double dvtol; // global derivative solution variable tolerance for point insertion
+	dvector vtol; // relative solution variable tolerance for point insertion
+	dvector dvtol; // global derivative solution variable tolerance for point insertion
 	double absvtol; // absolute tolerance (ignore components with range smaller than this)
 	double rmTol; // relative grid point removal tolerance
 	double uniformityTol; // maximum ratio of adjacent grid point separation distances
@@ -32,6 +32,7 @@ public:
 	// Parameters for controlling exterior grid points:
 	bool fixedBurnedVal;
 	bool unburnedLeft;
+
 	double boundaryTol;
 	double boundaryTolRm;
 	int addPointCount; // number of points to add when regridding
@@ -45,8 +46,6 @@ public:
 	dvector r;
 	int jj; // number of grid points
 
-	int jZero; // index of the stagnation point
-
 	// Update the grid based on the solutionState, and adjust it to fit
 	// on the new grid. Each element of the solutionState is a vector
 	// containing the value of a solution variable at each grid point.
@@ -56,14 +55,12 @@ public:
 	bool adapt(vector<dvector>& y, vector<dvector>& ydot);
 	bool regrid(vector<dvector>& y, vector<dvector>& ydot);
 	void updateValues(void);
-	void update_jZero(dvector& V);
 
 	void updateBoundaryIndices(void);
 
 	enum leftBoundaryConfigOptions {
 		lbFixedVal,
 		lbZeroGradNonCenter,
-		lbZeroGradCenter,
 		lbControlVolume
 	};
 

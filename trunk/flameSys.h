@@ -143,8 +143,6 @@ public:
 	double strainRateT0; // [s]
 
 	double rVcenter; // mass flux at centerline [kg/m^2 or kg/m*rad*s]
-	//double rVcenterInitial;
-	//double rVcenterPrev, rVcenterNext;
 	double tFlamePrev, tFlameNext;
 	double rFlameTarget, rFlameActual;
 	double flamePosIntegralError;
