@@ -12,13 +12,15 @@ void flameSolver::initialize(void)
 {
 	theSys.options = options;
 	theSys.copyOptions();
+
+	// Cantera initialization
 	if (options.singleCanteraObject) {
 		theSys.simpleGas.initialize(options.usingMultiTransport);
 	} else {
 		theSys.gas.initialize(options.usingMultiTransport);
 	}
 
-	// Initial Conditions for ODE
+	// Initial Conditions
 	theSys.setup();
 	if (options.haveRestartFile) {
 		theSys.loadInitialProfiles();
@@ -37,15 +39,16 @@ void flameSolver::run(void)
 	double t = theSys.tStart;
 	double dt;
 
-	int nRegrid = 0;
-	int nOutput = 0;
-	int nProfile = 0;
-	int nIntegrate = 0;
-    int outputCount = 0;
+	int nRegrid = 0; // number of time steps since regridding/adaptation
+	int nOutput = 0; // number of time steps since storing integral flame parameters
+	int nProfile = 0; // number of time steps since saving flame profiles
+	int nIntegrate = 0; // number of time steps since restarting integrator
+	int nTerminate = 1; // number of steps since last checking termination condition
+    int nCurrentState = 0; // number of time steps since profNow.mat and outNow.mat were written
 
-	double tOutput = t;
-	double tRegrid = t;
-	double tProfile = t;
+	double tOutput = t; // time of last integral flame parameters output
+	double tRegrid = t; // time of last regridding
+	double tProfile = t; // time of last profile output
 
 	theSys.grid.updateValues();
 
@@ -73,10 +76,14 @@ void flameSolver::run(void)
 
 	while (t < theSys.tEnd) {
 
-		theSys.setup();
+        theSys.setup();
+
+        // **************************************
+        // *** Set up the Sundials IDA solver ***
+        // **************************************
 
 		tIDA1 = clock();
-		// Sundials IDA Solver:
+
 		sundialsIDA theSolver(theSys.N);
 		theSolver.reltol = options.idaRelTol;
 		theSolver.nRoots = 0;
@@ -89,7 +96,7 @@ void flameSolver::run(void)
 		}
 
 		int N = theSys.nVars;
-		// Initial condition:
+
 		theSys.rollY(theSolver.y);
 		for (int j=0; j<theSys.nPoints; j++) {
 			theSolver.abstol(N*j) = options.idaContinuityAbsTol;
@@ -100,19 +107,32 @@ void flameSolver::run(void)
 			}
 		}
 
+		theSys.reltol = theSolver.reltol;
+		theSys.abstol = &theSolver.abstol;
+
 		for (int j=0; j<theSys.N; j++) {
 			theSolver.ydot(j) = 0;
 		}
 
         theSys.updateLeftBC();
-		theSys.updateAlgebraicComponents();
+        theSolver.setDAE(&theSys);
+        theSolver.calcIC = false;
 
+        // ******************************************
+        // *** Get a consistent initial condition ***
+        // ******************************************
+
+		theSys.updateAlgebraicComponents();
+        if (options.flameRadiusControl) {
+            theSys.update_rStag(t, true);
+        }
 		int ICflag = -1;
 		int ICcount = 0;
+
 		while (ICflag!=0 && ICcount < 5) {
 			ICcount++;
 
-			// This corrects the drift of the total mass fractions (??)
+			// This corrects the drift of the total mass fractions
 			theSys.unrollY(theSolver.y);
 			if (options.singleCanteraObject) {
 				theSys.simpleGas.setStateMass(theSys.Y,theSys.T);
@@ -122,33 +142,34 @@ void flameSolver::run(void)
 			    theSys.gas.getMassFractions(theSys.Y);
 			}
 			theSys.rollY(theSolver.y);
-
 			ICflag = theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, theSys.algebraic);
-
-			if (ICflag != 0) {
-			    theSys.debugFailedTimestep(theSolver.y, theSolver.abstol, theSolver.reltol);
-			}
-
-			if (ICflag == 100) {
-	            theSys.writeStateMatFile("errorOutput",true);
-			    throw;
-			}
+		}
+        if (ICflag != 0) {
+            theSys.debugFailedTimestep(theSolver.y);
+        }
+		if (ICflag == 100) {
+            //theSys.writeStateMatFile("errorOutput",true);
+		    theSys.writeStateMatFile("",true);
+            throw;
 		}
 
-		theSolver.setDAE(&theSys);
-		theSolver.calcIC = false;
+		// *** Final preparation of IDA solver
+        theSolver.initialize();
+        theSolver.disableErrorOutput();
+        theSolver.setMaxStepSize(options.maxTimestep);
 
-		theSolver.initialize();
-		theSolver.setMaxStepSize(options.maxTimestep);
+        if (integratorTimestep == 0.0) {
+            theSolver.setInitialStepSize(1e-9);
+        }
 
-		if (integratorTimestep <= 0.0) {
-			theSolver.setInitialStepSize(integratorTimestep);
-		}
+		// ************************************************************
+		// *** Integrate until the termination condition is reached ***
+		// ************************************************************
 
 		int IDAflag;
 
 		while (t < theSys.tEnd) {
-
+		    // *** Take a time step
 			try {
 				IDAflag = theSolver.integrateOneStep();
 			} catch (Cantera::CanteraError) {
@@ -158,16 +179,13 @@ void flameSolver::run(void)
 			dt = integratorTimestep = theSolver.getStepSize();
 			t = theSys.tPrev = theSolver.tInt;
 
-//            if (t >= 0.0014022) {
-//                theSys.testPreconditioner();
-//                throw;
-//            }
-
+			// *** See if it worked
 			if (IDAflag == CV_SUCCESS) {
 				nOutput++;
 				nRegrid++;
 				nProfile++;
 				nIntegrate++;
+				nTerminate++;
 
 				if (debugParameters::debugTimesteps) {
 				    int order = theSolver.getLastOrder();
@@ -179,14 +197,14 @@ void flameSolver::run(void)
 
 			} else {
 				cout << "IDA Solver failed at time t = " << t << "  (dt = " << dt << ")" << endl;
-                theSys.debugFailedTimestep(theSolver.y, theSolver.abstol, theSolver.reltol);
+				theSys.debugFailedTimestep(theSolver.y);
 				theSys.writeStateMatFile("errorOutput",true);
 				integratorTimestep = 0;
 				break;
 			}
 
+            // *** Save the time-series data (out.mat)
 			if (t > tOutput || nOutput >= options.outputStepInterval) {
-				// Save the time-series data
 				timeVector.push_back(t);
 				timestepVector.push_back(dt);
 				heatReleaseRate.push_back(theSys.getHeatReleaseRate());
@@ -195,24 +213,42 @@ void flameSolver::run(void)
 
 				tOutput = t + options.outputTimeInterval;
 				nOutput = 0;
-                outputCount++;
-
-                if (outputCount % (options.outputStepInterval*100) == 0) {
-                    matlabFile outFile(options.outputDir+"/outNow.mat");
-                    outFile.writeVector("t",timeVector);
-                    outFile.writeVector("dt",timestepVector);
-                    outFile.writeVector("Q",heatReleaseRate);
-                    outFile.writeVector("Sc",consumptionSpeed);
-                    outFile.writeVector("xFlame",flamePosition);
-                    outFile.close();
-                    theSys.writeStateMatFile("profNow");
-                }
 			}
 
+			// *** Periodic check for terminating the integration
+			//     (based on steady heat release rate, etc.)
+			if (nTerminate >= options.terminateStepInterval) {
+                nTerminate = 0;
+			    if (checkTerminationCondition()) {
+                    tIDA2 = clock();
+                    theSolver.printStats(tIDA2-tIDA1);
+                    if (options.outputProfiles) {
+                        theSys.writeStateMatFile();
+                    }
+                    runTime.stop();
+                    cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
+                    return;
+			    }
+			}
+
+			// *** Save the current integral and profile data
+			//     in files that are automatically overwritten.
+            if (nCurrentState >= options.currentStateStepInterval) {
+                matlabFile outFile(options.outputDir+"/outNow.mat");
+                outFile.writeVector("t",timeVector);
+                outFile.writeVector("dt",timestepVector);
+                outFile.writeVector("Q",heatReleaseRate);
+                outFile.writeVector("Sc",consumptionSpeed);
+                outFile.writeVector("xFlame",flamePosition);
+                outFile.close();
+                theSys.writeStateMatFile("profNow");
+            }
+
+            // *** Save flame profiles
 			if (t > tProfile || nProfile >= options.profileStepInterval) {
 				if (options.outputProfiles) {
                     sdVector resTemp(theSys.N);
-                    theSys.f(t, theSolver.y, theSolver.ydot, resTemp); 
+                    theSys.f(t, theSolver.y, theSolver.ydot, resTemp);
 					theSys.writeStateMatFile();
 				}
 
@@ -220,44 +256,28 @@ void flameSolver::run(void)
 				nProfile = 0;
 			}
 
+            // *** Adapt the grid if necessary
 			if (t > tRegrid || nRegrid >= options.regridStepInterval) {
-//                sdVector resTemp(theSys.N); // DEBUG
-//                theSys.f(t, theSolver.y, theSolver.ydot, resTemp); // DEBUG 
-//                theSys.writeStateMatFile(); // DEBUG
 			    tRegrid = t + options.regridTimeInterval;
 				nRegrid = 0;
 
-				// Periodic check for terminating the integration
-				// (based on steady heat release rate, etc.)
-				if (checkTerminationCondition()) {
-
-					tIDA2 = clock();
-					theSolver.printStats(tIDA2-tIDA1);
-					if (options.outputProfiles) {
-						theSys.writeStateMatFile();
-					}
-					runTime.stop();
-                    cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
-					return;
-				}
-
-				// Adapt the grid if necessary
-
- 				for (int j=0; j<theSys.nPoints; j++) {
+				// dampVal sets a limit on the maximum grid size
+				for (int j=0; j<theSys.nPoints; j++) {
 					double num = min(theSys.mu[j],theSys.lambda[j]/theSys.cp[j]);
 					for (int k=0; k<theSys.nSpec; k++) {
 						num = min(num,theSys.rhoD(k,j));
 					}
-
 					theSys.grid.dampVal[j] = sqrt(num/(theSys.rho[j]*theSys.strainRate(t)));
 				}
-				vector<dvector> currentSolution, currentSolutionDot;
+
+ 				vector<dvector> currentSolution, currentSolutionDot;
 				theSys.rollVectorVector(theSolver.y, theSys.qDot, currentSolution);
 				theSys.rollVectorVector(theSolver.ydot, theSys.qDot*0, currentSolutionDot);
 
 				bool regridFlag = theSys.grid.regrid(currentSolution, currentSolutionDot);
 				bool adaptFlag = theSys.grid.adapt(currentSolution, currentSolutionDot);
 
+				// Perform updates that are necessary if the grid has changed
 				if (adaptFlag || regridFlag) {
 				    nIntegrate = 0;
 					theSys.nPoints = theSys.grid.jj+1;
@@ -267,7 +287,7 @@ void flameSolver::run(void)
 					theSys.unrollVectorVector(currentSolution);
 					theSys.unrollVectorVectorDot(currentSolutionDot);
 
-					// This corrects the drift of the total mass fractions
+					// Correct the drift of the total mass fractions
 					if (options.singleCanteraObject) {
 						theSys.simpleGas.setStateMass(theSys.Y,theSys.T);
 						theSys.simpleGas.getMassFractions(theSys.Y);
@@ -276,22 +296,20 @@ void flameSolver::run(void)
 						theSys.gas.getMassFractions(theSys.Y);
 					}
 
-//                    sdVector resTemp2(theSys.N);
-//                    theSys.f(t, theSolver.y, theSolver.ydot, resTemp2); // DEBUG 
-//                    theSys.writeStateMatFile(); // DEBUG
-
-					break; // exit the inner loop and reinitialize the solver for the new problem size
+					// exit the inner loop to reinitialize the integrator for the new problem size
+					break;
 				}
-
 			}
 
 			if (nIntegrate > options.integratorRestartInterval) {
 			  nIntegrate = 0;
-			  theSys.setup();
 
-			  break; // exit inner loop and reinitialize the solver
+			  // exit inner loop to reinitialize the integrator
+			  break;
 			}
 		}
+
+		// *** This is the end for the current instance of the IDA solver
 		tIDA2 = clock();
 		theSolver.printStats(tIDA2-tIDA1);
 		if (debugParameters::debugPerformanceStats) {
@@ -300,6 +318,7 @@ void flameSolver::run(void)
 
 	}
 
+	// *** Integration has reached the termination condition
 	if (options.outputProfiles) {
 		theSys.writeStateMatFile();
 	}
@@ -369,10 +388,12 @@ bool flameSolver::checkTerminationCondition(void)
 		cout << "hrrError = " << hrrError << endl;
 
 		if (hrrError/abs(qMean) < options.terminationTolerance) {
-			cout << "Terminating integration. Heat release deviation less than relative tolerance." << endl;
+			cout << "Terminating integration: ";
+			cout << "Heat release deviation less than relative tolerance." << endl;
 			return true;
 		} else if (hrrError < options.terminationAbsTol) {
-			cout << "Terminating integration: Heat relelase rate deviation less than absolute tolerance." << endl;
+			cout << "Terminating integration: ";
+			cout << "Heat release rate deviation less than absolute tolerance." << endl;
 			return true;
 		} else if (theSys.tNow-theSys.tStart > options.terminationMaxTime ) {
 		  cout << "Terminating integration: Maximum integration time reached." << endl;

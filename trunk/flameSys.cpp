@@ -17,8 +17,14 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 
     int jj = nPoints-1;
 
-    // Update the thermodynamic state, and evaluate the
-    // thermodynamic, transport and kinetic parameters
+    // *********************************
+    // *** Physical Property Updates ***
+    // *********************************
+
+    // Update the thermodynamic state, and evaluate the thermodynamic, transport and kinetic
+    // parameters. Because the transport property evaluations are particularly expensive,
+    // these are only done at integrator restart points as part of the initial condition
+    // calculations (inGetIC = true) or if specifically requested (options.steadyOnly = false).
 
     if (options.singleCanteraObject) {
         simpleGas.setStateMass(Y,T);
@@ -44,8 +50,11 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
         cout << "Error evaluating thermodynamic properties" << endl;
         writeStateMatFile("errorOutput",true);
         throw;
-//        return -1;
     }
+
+    // *****************************
+    // *** Update auxiliary data ***
+    // *****************************
 
     perfTimerResFunc.start();
     for (int j=0; j<=jj; j++) {
@@ -55,7 +64,6 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
         }
     }
 
-    // Update auxiliary data:
     for (int j=0; j<=jj; j++) {
         double sum = 0;
         for (int k=0; k<nSpec; k++) {
@@ -71,7 +79,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
         update_rStag(t, false);
     }
 
-    // Calculate diffusion mass fluxes, heat flux, enthalpy flux
+    // *** Calculate diffusion mass fluxes, heat flux, enthalpy flux
     for (int j=0; j<jj; j++) {
         sumcpj[j] = 0;
         for (int k=0; k<nSpec; k++) {
@@ -94,7 +102,10 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
         }
     }
 
-    // Left Boundary values for U, T, Y
+    // ****************************************
+    // *** Left Boundary values for U, T, Y ***
+    // ****************************************
+
     if (grid.leftBoundaryConfig == grid.lbFixedVal) {
         // Fixed values for T, Y
 
@@ -128,6 +139,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
         }
 
     } else if (grid.leftBoundaryConfig == grid.lbControlVolume) {
+        // Left boundary corresponds to centerline or symmetry plane
         centerVol = pow(grid.x[0],grid.alpha+1)/(grid.alpha+1);
         centerArea = pow(grid.x[0],grid.alpha);
         double rVzero = (rV[0] > 0) ? rV[0] : 0;
@@ -153,7 +165,10 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
         }
     }
 
-    // Intermediate points for U, T, Y
+    // ***************************************
+    // *** Intermediate points for U, T, Y ***
+    // ***************************************
+
     for (int j=1; j<jj; j++) {
         if (options.centeredDifferences) {
             // First derivative for convective terms: centered difference
@@ -179,23 +194,24 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
             }
         }
 
+        // The enthalpy flux term always uses centered differences
         dTdxCen[j] = T[j-1]*grid.cfm[j] + T[j]*grid.cf[j] + T[j+1]*grid.cfp[j];
 
-        // Momentum Equation
+        // *** Momentum Equation
         momentumUnst[j] = rho[j]*dUdt[j];
         momentumConv[j] = V[j]*dUdx[j];
         momentumDiff[j] = -0.5*( grid.rphalf[j]*(mu[j]+mu[j+1])*(U[j+1]-U[j])/grid.hh[j] -
             grid.rphalf[j-1]*(mu[j-1]+mu[j])*(U[j]-U[j-1])/grid.hh[j-1])/(grid.dlj[j]*grid.r[j]);
         momentumProd[j] = dadt*(rho[j]*U[j]-rhou)/a + (rho[j]*U[j]*U[j]-rhou)*a;
 
-        // Energy Equation
+        // *** Energy Equation
         energyUnst[j] = rho[j]*dTdt[j];
         energyConv[j] = V[j]*dTdx[j];
         energyDiff[j] = 0.5*(sumcpj[j]+sumcpj[j-1])*dTdxCen[j]/cp[j] +
             (grid.rphalf[j]*qFourier[j] - grid.rphalf[j-1]*qFourier[j-1])/(grid.dlj[j]*cp[j]*grid.r[j]);
         energyProd[j] = -qDot[j]/cp[j];
 
-        // Species Equations
+        // *** Species Equations
         for (int k=0; k<nSpec; k++) {
             speciesUnst(k,j) = rho[j]*dYdt(k,j);
             speciesConv(k,j) = V[j]*dYdx(k,j);
@@ -205,7 +221,11 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
         }
     }
 
-    // Right boundary values for T, Y
+    // *****************************
+    // *** Right boundary values ***
+    // *****************************
+
+    // *** Right boundary values for T and Y
     if (grid.unburnedLeft && !grid.fixedBurnedVal) {
         // zero gradient condition
         energyDiff[jj] = (T[jj]-T[jj-1])/grid.hh[jj-1];
@@ -226,7 +246,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
         }
     }
 
-    // Right boundary values for U
+    // *** Right boundary values for U
     if (grid.unburnedLeft) {
         momentumDiff[jj] = (U[jj]-U[jj-1])/grid.hh[jj-1];
         momentumProd[jj] = momentumConv[jj] = momentumUnst[jj] = 0;
@@ -235,26 +255,34 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
         momentumDiff[jj] = momentumProd[jj] = momentumConv[jj] = 0;
     }
 
-    // Continuity Equation
+    // ***************************
+    // *** Continuity Equation ***
+    // ***************************
+
+    // *** Left boundary value
     if (options.stagnationRadiusControl) {
-      if (grid.alpha == 1) {
+        // Boundary value for V depends on rStag
+        if (grid.alpha == 1) {
           continuityUnst[0] = rV[0] - 0.5*rhoLeft*a*(options.rStag*abs(options.rStag)-grid.x[0]*grid.x[0]);
       } else {
           continuityUnst[0] = rV[0] - rhoLeft*a*(options.rStag-grid.x[0]);
       }
 
     } else {
+        // Boundary value for V is fixed
         continuityUnst[0] = dVdt[0];
     }
 
     continuityRhov[0] = continuityStrain[0] = 0;
 
+    // *** Intermediate points
     for (int j=1; j<=jj; j++) {
         continuityRhov[j] = (rV[j]-rV[j-1])/(grid.hh[j-1]*grid.rphalf[j-1]);
         continuityUnst[j] = drhodt[j];
         continuityStrain[j] = rho[j]*U[j]*a;
     }
 
+    // *** Combine the residual components
     rollResiduals(res);
     perfTimerResFunc.stop();
     return 0;
@@ -268,8 +296,8 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
     unrollYdot(ydot);
     int j;
     int jj = nPoints-1;
-    // The constant "800" here has been empirically determined to give the
-    // best performance for typical test cases. This value can have
+    // The constant "800" here has been empirically determined to give
+    // good performance for typical test cases. This value can have
     // a substantial impact on the convergence rate of the solver.
     double eps = sqrt(DBL_EPSILON)*800;
 
@@ -278,6 +306,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
     double a = strainRate(t);
     double dadt = dStrainRatedt(t);
 
+    // *** Derivatives of reaction rate with respect to temperature
     dvector TplusdT(nPoints);
 
     for (j=0; j<nPoints; j++) {
@@ -309,6 +338,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
         }
     }
 
+    // *** Derivatives of reaction rate with respect to species
     vector<Array2D> dwdY(nPoints, Array2D(nSpec,nSpec));
     Array2D hdwdY(nSpec,nPoints,0);
     Array2D YplusdY(nSpec,nPoints);
@@ -338,10 +368,12 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
             }
         }
     }
+    // ********************************
+    // *** J = dF/dy + c_j*dF/dydot ***
+    // ********************************
 
-    // J = dF/dy + c_j*dF/dydot
+    // *** Left Boundary values for U, T, Y
     j=0;
-    // Left Boundary values for U, T, Y
     if (grid.leftBoundaryConfig == grid.lbFixedVal) {
         // Fixed values for T, Y
         jacB(j,kEnergy,kEnergy) = c_j;
@@ -372,7 +404,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
         }
 
     } else if (grid.leftBoundaryConfig == grid.lbControlVolume) {
-
+        // Left boundary corresponds to centerline or symmetry plane
         centerVol = pow(grid.x[0],grid.alpha+1)/(grid.alpha+1);
         centerArea = pow(grid.x[0],grid.alpha);
         double rVzero, drVzero;
@@ -437,7 +469,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
     }
 
-    // Intermediate points for U, T, Y
+    // *** Intermediate points for U, T, Y
     for (j=1; j<jj; j++) {
 
         if (options.centeredDifferences) {
@@ -592,8 +624,8 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
         jacB(j,kMomentum,kContinuity) = dUdx[j];
     }
 
+    // *** Right boundary values for T, Y
     j = jj;
-    // Right boundary values for T, Y
     if (grid.unburnedLeft && !grid.fixedBurnedVal) {
         // zero gradient condition
         jacA(j,kEnergy,kEnergy) = -1/grid.hh[j-1];
@@ -610,7 +642,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
         }
     }
 
-    // Right boundary values for U
+    // *** Right boundary values for U
     if (grid.unburnedLeft) {
         // zero gradient
         jacA(j,kMomentum,kMomentum) = -1/grid.hh[j-1];
@@ -620,9 +652,9 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
         jacB(j,kMomentum,kMomentum) = c_j;
     }
 
-    // Continuity Equation
+    // *** Continuity Equation
     if (options.stagnationRadiusControl) {
-        jacB(0,kContinuity,kContinuity) = grid.x[0];
+        jacB(0,kContinuity,kContinuity) = pow(grid.x[0],grid.alpha);
     } else {
         jacB(0,kContinuity,kContinuity) = c_j;
     }
@@ -654,6 +686,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
 
     perfTimerPrecondSetup.stop();
 
+    // *** Get LU Factorization of the Jacobian
     if (!inTestPreconditioner) {
         perfTimerLU.start();
         long int iError = BandGBTRF(bandedJacobian->forSundials(),&pMat[0]);
@@ -675,18 +708,16 @@ int flameSys::preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn,
                                           sdVector& resIn, sdVector& rhs,
                                           sdVector& outVec, realtype c_j, realtype delta)
 {
+    // Calculate J^-1*v
     perfTimerPrecondSolve.start();
 
-    dvector xVec(N);
+
+    double* x = N_VGetArrayPointer(outVec.forSundials());
     for (int i=0; i<N; i++) {
-        xVec[i] = rhs(i);
+        x[i] = rhs(i);
     }
 
-    BandGBTRS(bandedJacobian->forSundials(),&pMat[0],&xVec[0]);
-
-    for (int i=0; i<N; i++) {
-        outVec(i) = xVec[i];
-    }
+    BandGBTRS(bandedJacobian->forSundials(),&pMat[0],x);
 
     perfTimerPrecondSolve.stop();
 
@@ -1553,7 +1584,7 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
     }
 
     if (resnorm > 1.0e0) {
-        cout << "IC calculation failed!." << endl;
+        // cout << "IC calculation failed!." << endl;
         if (resnorm > 1.0e3) {
             return 100;
         } else {
@@ -1610,7 +1641,11 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
     if (fileNameStr.length() == 0) {
         // Determine the name of the output file (outXXXXXX.mat)
         incrementFileNumber = true;
-        fileName << options.outputDir << "/prof";
+        if (errorFile) {
+            fileName << options.outputDir << "/error";
+        } else {
+            fileName << options.outputDir << "/prof";
+        }
         fileName.flags(ios_base::right);
         fileName.fill('0');
         fileName.width(6);
@@ -1830,12 +1865,33 @@ double& flameSys::jacC(const int j, const int k1, const int k2)
 
 double flameSys::getHeatReleaseRate(void)
 {
-    return mathUtils::integrate(grid.x, qDot);
+    if (options.twinFlame || options.curvedFlame) {
+        dvector qDotFull(nPoints+1), xFull(nPoints+1);
+        qDotFull[0] = qDot[0]; xFull[0] = 0;
+        for (int j=0; j<nPoints; j++) {
+            qDotFull[j+1] = qDot[j];
+            xFull[j+1] = grid.x[j];
+        }
+        return mathUtils::trapz(xFull,qDotFull);
+    } else {
+        return mathUtils::integrate(grid.x, qDot);
+    }
 }
 
 double flameSys::getConsumptionSpeed(void)
 {
-    double QoverCp = mathUtils::integrate(grid.x,qDot/cp);
+    double QoverCp;
+    if (options.twinFlame || options.curvedFlame) {
+        dvector qcp(nPoints+1), xFull(nPoints+1);
+        qcp[0] = qDot[0]/cp[0]; xFull[0] = 0;
+        for (int j=0; j<nPoints; j++) {
+            qcp[j+1] = qDot[j]/cp[j];
+            xFull[j+1] = grid.x[j];
+        }
+        QoverCp = mathUtils::integrate(xFull,qcp);
+    } else {
+        QoverCp = mathUtils::integrate(grid.x,qDot/cp);
+    }
     double rhouDeltaT = rho[grid.ju]*(T[grid.jb]-T[grid.ju]);
     return QoverCp/rhouDeltaT;
 }
@@ -2001,13 +2057,13 @@ void flameSys::testPreconditioner(void)
     inTestPreconditioner = false;
 }
 
-void flameSys::debugFailedTimestep(const sdVector& y, const sdVector& abstol, double reltol)
+void flameSys::debugFailedTimestep(const sdVector& y)
 {
     sdVector res(N);
     rollResiduals(res);
     dvector nRes(N);
     for (int i=0; i<N; i++) {
-        nRes[i] = abs(res(i))/(reltol*abs(y(i))+abstol(i));
+        nRes[i] = abs(res(i))/(reltol*abs(y(i))+(*abstol)(i));
     }
     cout << "Largest normalized residual components:" << endl;
     for (int i=0; i<10; i++) {

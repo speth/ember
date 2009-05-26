@@ -76,7 +76,7 @@ public:
 
     // For debugging purposes
     void testPreconditioner(void);
-    void debugFailedTimestep(const sdVector& y, const sdVector& abstol, double reltol);
+    void debugFailedTimestep(const sdVector& y);
 
 	// these should be read-only:
 	int N; // total problem size;
@@ -101,7 +101,7 @@ public:
 	Array2D dYdx; // upwinded
 	dvector dTdxCen; // centered difference
 
-	// Auxillary variables:
+	// Auxiliary variables:
 	dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
 	dvector rho; // density [kg/m^3]
 	dvector drhodt;
@@ -153,6 +153,10 @@ public:
 
 	// Constrained solution variables (species mass fractions)
 	void updateConstraints(sdVector& constraints);
+
+	// Sundials solver parameters
+	sdVector* abstol;
+	double reltol;
 
 	// Cantera data
 	gasArray gas;

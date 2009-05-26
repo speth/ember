@@ -1,6 +1,7 @@
 #include "sundialsUtils.h"
 #include "debugUtils.h"
 #include <iostream>
+#include "mathUtils.h" // debug
 
 using std::cout;
 using std::endl;
@@ -302,6 +303,7 @@ sundialsIDA::sundialsIDA(unsigned int n)
 	findRoots = false;
 	nRoots = 0;
 	imposeConstraints = false;
+	calcIC = false;
 }
 
 sundialsIDA::~sundialsIDA(void)
@@ -498,6 +500,11 @@ int sundialsIDA::getLastOrder(void)
     int order;
     IDAGetLastOrder(sundialsMem, &order);
     return order;
+}
+
+void sundialsIDA::disableErrorOutput(void)
+{
+    IDASetErrFile(sundialsMem, NULL);
 }
 
 // f routine. Compute function f(t,y,y') = res

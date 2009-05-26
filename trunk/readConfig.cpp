@@ -58,10 +58,10 @@ void configOptions::readOptionsFile(const std::string& filename)
 
 	vtol = 0.04;
 	dvtol = 0.4;
-    
+
     vtolCont = 1; // effectively disabled
     dvtolCont = 1;
-	
+
     rmTol = 0.67;
 	dampConst = 5000;
 	gridMin = 1.0e-6;
@@ -88,7 +88,9 @@ void configOptions::readOptionsFile(const std::string& filename)
 	regridStepInterval = 123456789;
 	profileStepInterval = 123456789;
 	integratorRestartInterval = 123456789;
+	currentStateStepInterval = 2000;
 	outputStepInterval = 1;
+	terminateStepInterval = 20;
 
     rStag = 0;
 
@@ -170,7 +172,7 @@ void configOptions::readOptionsFile(const std::string& filename)
     if (!cfg.lookupValue("grid.adaptation.vtolCont",vtolCont)) {
         vtolCont = vtol;
     }
-    
+
     if (!cfg.lookupValue("grid.adaptation.dvtolCont",dvtolCont)) {
         dvtolCont = dvtol;
     }
@@ -202,6 +204,9 @@ void configOptions::readOptionsFile(const std::string& filename)
 	cfg.lookupValue("times.outputStepInterval",outputStepInterval);
 	cfg.lookupValue("times.profileTimeInterval",profileTimeInterval);
 	cfg.lookupValue("times.profileStepInterval",profileStepInterval);
+	cfg.lookupValue("times.currentStateStepInterval",currentStateStepInterval);
+	cfg.lookupValue("times.terminateStepInterval",terminateStepInterval);
+
 	cfg.lookupValue("times.integratorRestartInterval",integratorRestartInterval);
 	cfg.lookupValue("times.maxTimestep",maxTimestep);
 

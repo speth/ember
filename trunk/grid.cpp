@@ -9,6 +9,7 @@ using std::max; using std::min;
 oneDimGrid::oneDimGrid(configOptions& theOptions)
     : options(theOptions)
 {
+    leftBoundaryConfig = -1;
 }
 
 void oneDimGrid::updateValues()
@@ -103,10 +104,6 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         // Consider tolerances for each variable v in the solution y
         for (int k=0; k<nVars; k++) {
 
-//            if (k==kContinuity) {
-//                continue;
-//            }
-
             dvector& v = y[k];
             for (int i=1; i<jj; i++) {
                 dv[i] = cfp[i]*v[i+1] + cf[i]*v[i] + cfm[i]*v[i-1];
@@ -126,7 +123,8 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
                 insert = true;
                 if (debugParameters::debugAdapt) {
                     cout << "Adapt: v resolution wants grid point j = " << j << ", k = " << k;
-                    cout << " |v(j+1)-v(j)|/vrange = " << abs(v[j+1]-v[j])/vRange << " > " << vtol[k] << endl;
+                    cout << " |v(j+1)-v(j)|/vrange = "
+                        << abs(v[j+1]-v[j])/vRange << " > " << vtol[k] << endl;
                 }
             }
 
@@ -135,7 +133,8 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
                 insert = true;
                 if (debugParameters::debugAdapt) {
                     cout << "Adapt: dv resolution (global) wants grid point j = " << j << ", k = " << k;
-                    cout << " |dv(j+1)-dv(j)|/vrange = " << abs(dv[j+1]-dv[j])/dvRange << " > " << dvtol[k] << endl;
+                    cout << " |dv(j+1)-dv(j)|/vrange = "
+                        << abs(dv[j+1]-dv[j])/dvRange << " > " << dvtol[k] << endl;
                 }
             }
 
@@ -228,10 +227,6 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         // Consider tolerances each variable v in the solution y
         for (int k=0; k<nVars; k++) {
 
-//            if (k==kContinuity) {
-//                continue;
-//            }
-
             dvector& v = y[k];
             for (int i=1; i<jj; i++) {
                 dv[i] = cfp[i]*v[i+1] + cf[i]*v[i] + cfm[i]*v[i-1];
@@ -250,7 +245,8 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             if (abs(v[j+1]-v[j-1]) > rmTol*vtol[k]*vRange) {
                 if (debugParameters::debugAdapt) {
                     cout << "Adapt: no removal - v res. j = " << j << ", k = " << k;
-                    cout << " |v(j+1)-v(j-1)|/vtrange = " << abs(v[j+1]-v[j-1])/vRange << " > " << vtol[k]*rmTol << endl;
+                    cout << " |v(j+1)-v(j-1)|/vtrange = "
+                        << abs(v[j+1]-v[j-1])/vRange << " > " << vtol[k]*rmTol << endl;
                 }
                 remove = false;
             }
@@ -259,7 +255,8 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             if (j!=2 && j!=jj-1 && abs(dv[j+1]-dv[j-1]) > rmTol*dvtol[k]*dvRange) {
                 if (debugParameters::debugAdapt) {
                     cout << "Adapt: no removal - dv res. j = " << j << ", k = " << k;
-                    cout << " |dv(j+1)-dv(j-1)|/dvrange = " << abs(dv[j+1]-dv[j-1])/dvRange << " > " << dvtol[k]*rmTol << endl;
+                    cout << " |dv(j+1)-dv(j-1)|/dvrange = "
+                        << abs(dv[j+1]-dv[j-1])/dvRange << " > " << dvtol[k]*rmTol << endl;
                 }
                 remove = false;
             }
@@ -287,7 +284,8 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         if (j>=2 && hh[j]+hh[j-1] > uniformityTol*hh[j-2]) {
             if (debugParameters::debugAdapt) {
                 cout << "Adapt: no removal - left uniformity. j = " << j;
-                cout << " (hh(j)+hh(j-1))/hh(j-2) = " << (hh[j]+hh[j-1])/hh[j-2] << " > " << uniformityTol << endl;
+                cout << " (hh(j)+hh(j-1))/hh(j-2) = "
+                    << (hh[j]+hh[j-1])/hh[j-2] << " > " << uniformityTol << endl;
             }
             remove = false;
         }
@@ -296,12 +294,13 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         if (j<=jj-2 && hh[j]+hh[j-1] > uniformityTol*hh[j+1]) {
             if (debugParameters::debugAdapt) {
                 cout << "Adapt: no removal - right uniformity. j = " << j;
-                cout << " (hh(j)+hh(j-1))/hh(j+1) = " << (hh[j]+hh[j-1])/hh[j+1] << " > " << uniformityTol << endl;
+                cout << " (hh(j)+hh(j-1))/hh(j+1) = "
+                    << (hh[j]+hh[j-1])/hh[j+1] << " > " << uniformityTol << endl;
             }
             remove = false;
         }
 
-        // Special fixd grid for flames pinned at x=0
+        // Special fixed grid for flames pinned at x=0
         if (leftBoundaryConfig == lbControlVolume && x[j] < centerGridMin) {
             if (debugParameters::debugAdapt) {
                 cout << "Adapt: no removal - fixed grid near r = 0." << endl;
@@ -375,7 +374,7 @@ bool oneDimGrid::addRight(void)
     vector<dvector>& y = *yIn;
     vector<dvector>& ydot = *ydotIn;
 
-// *** Criteria for addition to right (j==jj) ***
+    // *** Criteria for addition to right (j==jj) ***
 
     // Pick the comparison point for the grid flatness criterion,
     // depending on whether a zero-gradient condition is being enforced
@@ -421,7 +420,8 @@ bool oneDimGrid::addRight(void)
                 if (k==kContinuity) {
                     // linear extrapolation for V
                     y[k].push_back(y[k][jj] + (y[k][jj]-y[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
-                    ydot[k].push_back(ydot[k][jj] + (ydot[k][jj]-ydot[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
+                    ydot[k].push_back(
+                        ydot[k][jj] + (ydot[k][jj]-ydot[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
                 } else {
                     // keep constant boundary value
                     y[k].push_back(y[k][jj]);
@@ -442,7 +442,7 @@ bool oneDimGrid::addLeft(void)
     vector<dvector>& y = *yIn;
     vector<dvector>& ydot = *ydotIn;
 
-    // *** Criteria for addition to the left (j=1) ***
+    // *** Criteria for addition to the left (j==0) ***
 
     int djOther = (jb==1 && !fixedBurnedVal) ? 2 : 1;
     int djMom = (jb==1) ? 2 : 1;
@@ -492,7 +492,8 @@ bool oneDimGrid::addLeft(void)
                 if (k==kContinuity) {
                     // linear extrapolation
                     y[k].insert(y[k].begin(),y[k][0] + (y[k][1]-y[k][0])*(x[0]-x[1])/(x[2]-x[1]));
-                    ydot[k].insert(ydot[k].begin(),ydot[k][0] + (ydot[k][1]-ydot[k][0])*(x[1]-x[0])/(x[2]-x[1]));
+                    ydot[k].insert(
+                        ydot[k].begin(),ydot[k][0] + (ydot[k][1]-ydot[k][0])*(x[1]-x[0])/(x[2]-x[1]));
                 } else {
                     // keep constant boundary value
                     y[k].insert(y[k].begin(),y[k][0]);
@@ -550,7 +551,7 @@ bool oneDimGrid::removeLeft(void)
     vector<dvector>& y = *yIn;
     vector<dvector>& ydot = *ydotIn;
 
-    // *** Criteria for removal from the left (j==1) ***
+    // *** Criteria for removal from the left (j==0) ***
     int djMom = (jb==1) ? 3 : 2;
     int djOther = (jb==1 && !fixedBurnedVal) ? 3 : 2;
 

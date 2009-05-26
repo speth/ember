@@ -44,10 +44,11 @@ int main(int argc, char** argv)
 void strainedFlame(const std::string& inputFile)
 {
     // This version string is automatically updated during the build process
-    std::string REVISION = "74";
-    std::string BUILDDATE = "2009-05-20 17:38:33";
+    std::string REVISION = "75";
+    std::string BUILDDATE = "2009-05-26 00:54:32";
     cout << "**** strainedFlame (1Dflame Version 2.0." << REVISION << ")  [" << BUILDDATE << "] ****\n" << std::endl;
 
+    // Read configuration from inputFile
 	configOptions mainOptions;
 	mainOptions.readOptionsFile(inputFile);
 
@@ -55,32 +56,33 @@ void strainedFlame(const std::string& inputFile)
 	int nProcs = omp_get_num_procs();
 	std::string procStr = (nProcs==1) ? " core." : " cores.";
 	cout << "Detected " << nProcs << procStr;
-    cout << " Want to run on " << mainOptions.numberOfThreads << " procs." ;
 	nProcs = min(mainOptions.numberOfThreads,nProcs);
 	procStr = (nProcs==1) ? " core." : " cores.";
 	cout << " Running on " << nProcs << procStr << endl;
 	omp_set_num_threads(nProcs);
 
-	// Performance Counters
 
 	if (mainOptions.strainRateList.size()!=0) {
+	    // *** For each strain rate in strainRateList, run until steady-state is reached,
+	    //     and save profiles and integral flame properties for each case.
 
-		// integral data
+	    // integral data
 		dvector Q, eps, Sc, xFlame;
 
 		for (unsigned int i=0; i<mainOptions.strainRateList.size(); i++) {
-
-			// Instantiate a new solver
-			flameSolver theFlameSolver;
-
-			// Set the strain rate and other options
+			// Set the strain rate for this run
 			double a = mainOptions.strainRateList[i];
+
+			// Determine the correct name for the output generated in this run
 			std::string restartFile = "prof_eps"+stringify(a,4);
 			std::string historyFile = "out_eps"+stringify(a,4);
+
 			if (boost::filesystem::exists(mainOptions.outputDir+"/"+restartFile+".mat") &&
 				boost::filesystem::exists(mainOptions.outputDir+"/"+historyFile+".mat"))
 			{
-				mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
+			    // If the output files already exist, we simply retrieve the integral flame
+			    // properties from the existing profiles and advance to the next strain rate.
+			    mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
 				mainOptions.useRelativeRestartPath = false;
 				mainOptions.haveRestartFile = true;
 				cout << "Skipping run at strain rate a = " << a << " because the output file \"" <<
@@ -102,6 +104,9 @@ void strainedFlame(const std::string& inputFile)
 				xFlame.push_back(mean(oldXflame, iStart, iEnd));
 				oldOutFile.close();
 			} else {
+
+	            // Instantiate a new solver
+	            flameSolver theFlameSolver;
 
 				mainOptions.strainRateInitial = a;
 				mainOptions.strainRateFinal = a;
@@ -127,9 +132,8 @@ void strainedFlame(const std::string& inputFile)
 				theFlameSolver.run();
 				cout << "Completed high-res run at strain rate a = " << a << endl;
 
-				// copy data needed for the next run
+				// Write data needed for the next run
 				mainOptions.fileNumberOverride = false;
-
 				theFlameSolver.theSys.writeStateMatFile(restartFile);
 				mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
 				mainOptions.useRelativeRestartPath = false;
@@ -153,6 +157,7 @@ void strainedFlame(const std::string& inputFile)
 				xFlame.push_back(mean(theFlameSolver.flamePosition, iStart, iEnd));
 
 			}
+
 			matlabFile dataFile(mainOptions.outputDir+"/integral.mat");
 			dataFile.writeVector("a",eps);
 			dataFile.writeVector("Q",Q);
@@ -162,6 +167,7 @@ void strainedFlame(const std::string& inputFile)
 		}
 
 	} else {
+	    // No strain rate list was provided - run a single case.
 		flameSolver theFlameSolver;
 		theFlameSolver.setOptions(mainOptions);
 		theFlameSolver.calculateReactantMixture();
@@ -282,38 +288,6 @@ void chemistryTest(void)
 	//
 	//cout << wdot0 << endl;
 	//cout << wdot1 << endl;
-}
-
-void matlabioTest(void)
-{
-//	int n = 2, m=20;
-//	dvector x(n*m);
-//	Array2D foo;
-//	for (int i=0; i<n*m; i++) {
-//		x[i] = 2*i + 100;
-//
-//	}
-//
-//	n = 5, m=20;
-//	foo.resize(n,m);
-//	for (int i=0; i<n; i++) {
-//		for (int j=0; j<m; j++) {
-//			foo(i,j) = i+100*j;
-//		}
-//	}
-//	boost::filesystem::remove_all("output");
-//	boost::filesystem::create_directory("output");
-//
-//	matlabFile outFile("output/test.mat");
-//	outFile.writeVector("hellofriend",x);
-//	outFile.writeArray2D("hugstiem",foo);
-//
-//
-//	dvector hi = outFile.readVector("hellofriend");
-//	Array2D bar = outFile.readArray2D("hugstiem");
-//	cout << hi << endl;
-//
-//	outFile.close();
 }
 
 void miscTest(void)

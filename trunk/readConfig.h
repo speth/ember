@@ -26,6 +26,8 @@ public:
 	int regridStepInterval;
 	int outputStepInterval;
 	int profileStepInterval;
+	int currentStateStepInterval; // number of time steps before updating profNow.mat and outNow.mat
+	int terminateStepInterval;
 	int integratorRestartInterval;
 	double regridTimeInterval;
 	double outputTimeInterval;
