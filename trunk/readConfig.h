@@ -98,14 +98,14 @@ public:
 
     double centerGridMin;
 
-    bool flameRadiusControl;
-    double rFlameInitial, rFlameFinal;
-    double rFlameDt, rFlameT0;
-    double rFlameIntegralGain;
-    double rFlameProportionalGain;
+    bool xFlameControl;
+    double xFlameInitial, xFlameFinal;
+    double xFlameDt, xFlameT0;
+    double xFlameIntegralGain;
+    double xFlameProportionalGain;
 
-    bool stagnationRadiusControl;
-    double rStag;
+    bool xStagControl;
+    double xStag;
 
     int numberOfThreads;
 };

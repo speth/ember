@@ -123,8 +123,23 @@ void flameSolver::run(void)
         // ******************************************
 
         theSys.updateAlgebraicComponents();
-        if (options.flameRadiusControl) {
-            theSys.update_rStag(t, true);
+        if (options.xFlameControl) {
+            if (options.singleCanteraObject) {
+                theSys.simpleGas.setStateMass(theSys.Y,theSys.T);
+                theSys.simpleGas.getReactionRates(theSys.wDot);
+            } else {
+                theSys.gas.setStateMass(theSys.Y,theSys.T);
+                theSys.gas.getReactionRates(theSys.wDot);
+            }
+            theSys.updateThermoProperties();
+
+            for (int j=0; j<=theSys.nPoints-1; j++) {
+                theSys.qDot[j] = 0;
+                for (int k=0; k<theSys.nSpec; k++) {
+                    theSys.qDot[j] -= theSys.wDot(k,j)*theSys.hk(k,j);
+                }
+            }
+            theSys.update_xStag(t, true);
         }
         int ICflag = -1;
         int ICcount = 0;
@@ -190,8 +205,8 @@ void flameSolver::run(void)
                     int order = theSolver.getLastOrder();
                     cout << "t = " << t << "  (dt = " << dt << ") [" << order << "]" << endl;
                 }
-                if (options.flameRadiusControl) {
-                    theSys.update_rStag(t, true);
+                if (options.xFlameControl) {
+                    theSys.update_xStag(t, true);
                 }
 
             } else {

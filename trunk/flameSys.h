@@ -105,8 +105,6 @@ public:
     dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
     dvector rho; // density [kg/m^3]
     dvector drhodt;
-    Array2D X; // species mole fractions, X(k,j)
-    Array2D dXdx;
     dvector W; // species molecular weights [kg/kmol]
     dvector Wmx; // mixture molecular weight [kg/kmol]
     dvector sumcpj; // for enthalpy flux term [W/m^2*K]
@@ -154,7 +152,7 @@ public:
 
     double rVcenter; // mass flux at centerline [kg/m^2 or kg/m*rad*s]
     double tFlamePrev, tFlameNext;
-    double rFlameTarget, rFlameActual;
+    double xFlameTarget, xFlameActual;
     double flamePosIntegralError;
 
      // Algebraic components of state, for IC calculation
@@ -183,7 +181,7 @@ public:
     double strainRate(const double t); // [1/s]
     double dStrainRatedt(const double t); // [1/s^2]
 
-    void update_rStag(const double t, const bool updateIntError);
+    void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); // [m]
 
     void V2rV(void);

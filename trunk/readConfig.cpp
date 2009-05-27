@@ -92,7 +92,7 @@ void configOptions::readOptionsFile(const std::string& filename)
     outputStepInterval = 1;
     terminateStepInterval = 20;
 
-    rStag = 0;
+    xStag = 0;
 
     idaRelTol = 1e-5;
     idaRelTolLow = 1e-3;
@@ -146,24 +146,24 @@ void configOptions::readOptionsFile(const std::string& filename)
     cfg.lookupValue("StrainParameters.tStart",strainRateT0);
     cfg.lookupValue("StrainParameters.dt",strainRateDt);
 
-    cfg.lookupValue("CurvatureParameters.centerGridMin",centerGridMin);
+    cfg.lookupValue("grid.centerGridMin",centerGridMin);
 
-    if (cfg.lookupValue("CurvatureParameters.rStag",rStag)) {
-        stagnationRadiusControl = true;
+    if (cfg.lookupValue("positionControl.xStag",xStag)) {
+        xStagControl = true;
     } else {
-        stagnationRadiusControl = false;
+        xStagControl = false;
     }
 
-    if (cfg.lookupValue("CurvatureParameters.rInitial",rFlameInitial) &&
-        cfg.lookupValue("CurvatureParameters.rFinal",rFlameFinal) &&
-        cfg.lookupValue("CurvatureParameters.tStart",rFlameT0) &&
-        cfg.lookupValue("CurvatureParameters.dt",rFlameDt) &&
-        cfg.lookupValue("CurvatureParameters.integralGain",rFlameIntegralGain) &&
-        cfg.lookupValue("CurvatureParameters.proportionalGain",rFlameProportionalGain)) {
-            flameRadiusControl = true;
-            stagnationRadiusControl = true;
+    if (cfg.lookupValue("positionControl.xInitial",xFlameInitial) &&
+        cfg.lookupValue("positionControl.xFinal",xFlameFinal) &&
+        cfg.lookupValue("positionControl.tStart",xFlameT0) &&
+        cfg.lookupValue("positionControl.dt",xFlameDt) &&
+        cfg.lookupValue("positionControl.integralGain",xFlameIntegralGain) &&
+        cfg.lookupValue("positionControl.proportionalGain",xFlameProportionalGain)) {
+            xFlameControl = true;
+            xStagControl = true;
     } else {
-        flameRadiusControl = false;
+        xFlameControl = false;
     }
 
     cfg.lookupValue("grid.adaptation.vtol",vtol);

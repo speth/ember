@@ -75,8 +75,8 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
     double a = strainRate(t);
     double dadt = dStrainRatedt(t);
 
-    if (options.flameRadiusControl && !inGetIC && !inTestPreconditioner) {
-        update_rStag(t, false);
+    if (options.xFlameControl && !inGetIC && !inTestPreconditioner) {
+        update_xStag(t, false);
     }
 
     // *** Calculate diffusion mass fluxes, heat flux, enthalpy flux
@@ -262,12 +262,12 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
     // ***************************
 
     // *** Left boundary value
-    if (options.stagnationRadiusControl) {
+    if (options.xStagControl) {
         // Boundary value for V depends on rStag
         if (alpha == 1) {
-          continuityUnst[0] = rV[0] - 0.5*rhoLeft*a*(options.rStag*abs(options.rStag)-x[0]*x[0]);
+          continuityUnst[0] = rV[0] - 0.5*rhoLeft*a*(options.xStag*abs(options.xStag)-x[0]*x[0]);
       } else {
-          continuityUnst[0] = rV[0] - rhoLeft*a*(options.rStag-x[0]);
+          continuityUnst[0] = rV[0] - rhoLeft*a*(options.xStag-x[0]);
       }
 
     } else {
@@ -663,7 +663,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
     }
 
     // *** Continuity Equation
-    if (options.stagnationRadiusControl) {
+    if (options.xStagControl) {
         jacB(0,kContinuity,kContinuity) = pow(x[0],alpha);
     } else {
         jacB(0,kContinuity,kContinuity) = c_j;
@@ -790,8 +790,6 @@ void flameSys::setup(void)
     cpSpec.resize(nSpec,nPoints);
     qFourier.resize(nPoints);
 
-    X.resize(nSpec,nPoints);
-    dXdx.resize(nSpec,nPoints);
     rhoD.resize(nSpec,nPoints);
     Dkt.resize(nSpec,nPoints);
     sumcpj.resize(nPoints);
@@ -1021,11 +1019,9 @@ void flameSys::generateInitialProfiles(void)
 
     if (options.singleCanteraObject) {
         simpleGas.setStateMass(Y,T);
-        simpleGas.getMoleFractions(X);
         simpleGas.getMolecularWeights(W);
     } else {
         gas.setStateMass(Y,T);
-        gas.getMoleFractions(X);
         gas.getMolecularWeights(W);
     }
 
@@ -1033,7 +1029,6 @@ void flameSys::generateInitialProfiles(void)
 
 void flameSys::loadInitialProfiles(void)
 {
-
     std::string inputFilename;
     if (options.useRelativeRestartPath) {
         inputFilename = options.inputDir + "/" + options.restartFile;
@@ -1144,14 +1139,14 @@ void flameSys::loadInitialProfiles(void)
     V2rV();
     updateLeftBC();
 
-    if (grid.leftBoundaryConfig == grid.lbControlVolume && options.flameRadiusControl) {
+    if (grid.leftBoundaryConfig == grid.lbControlVolume && options.xFlameControl) {
         if (alpha == 0) {
-            options.rStag = V[0]/(rhoLeft*options.strainRateInitial);
+            options.xStag = V[0]/(rhoLeft*options.strainRateInitial);
         } else {
             double tmp = pow(x[0],2) + 2*rV[0]/(rhoLeft*options.strainRateInitial);
-            options.rStag = sign(tmp)*sqrt(abs(tmp));
+            options.xStag = sign(tmp)*sqrt(abs(tmp));
         }
-        flamePosIntegralError = options.rStag/(options.rFlameProportionalGain*options.rFlameIntegralGain);
+        flamePosIntegralError = options.xStag/(options.xFlameProportionalGain*options.xFlameIntegralGain);
     }
 }
 
@@ -1334,7 +1329,6 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
         fileName << ICfileNumber << ".mat";
 
         cout << "Writing IC file: " << fileName.str() << endl;
-        //cout << "DBG: grid.leftBoundaryConfig" << grid.leftBoundaryConfig << endl;
 
         // Erase the existing file and create a new one
         if (boost::filesystem::exists(fileName.str())) {
@@ -1352,14 +1346,14 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
         matlabFile outfile(fileName.str());
 
         outfile.writeScalar("rhoLeft",rhoLeft);
-        outfile.writeScalar("rStag",options.rStag);
-        outfile.writeScalar("rFlameActual",rFlameActual);
-        outfile.writeScalar("rFlameTarget",rFlameTarget);
+        outfile.writeScalar("rStag",options.xStag);
+        outfile.writeScalar("rFlameActual",xFlameActual);
+        outfile.writeScalar("rFlameTarget",xFlameTarget);
         outfile.writeScalar("flamePosIntegralError",flamePosIntegralError);
         outfile.writeScalar("tFlamePrev",tFlamePrev);
         outfile.writeScalar("t",t);
-        outfile.writeScalar("Pgain",options.rFlameProportionalGain);
-        outfile.writeScalar("Igain",options.rFlameIntegralGain);
+        outfile.writeScalar("Pgain",options.xFlameProportionalGain);
+        outfile.writeScalar("Igain",options.xFlameIntegralGain);
 
         outfile.writeVector("x",x);
         outfile.writeVector("y",yVec);
@@ -1401,11 +1395,11 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
     double a = strainRate(t);
     double dadt = dStrainRatedt(t);
 
-    if (options.stagnationRadiusControl) {
+    if (options.xStagControl) {
       if (alpha == 1) {
-          rV[0] = 0.5*rhoLeft*a*(options.rStag*abs(options.rStag)-x[0]*x[0]);
+          rV[0] = 0.5*rhoLeft*a*(options.xStag*abs(options.xStag)-x[0]*x[0]);
       } else {
-          rV[0] = rhoLeft*a*(options.rStag-x[0]);
+          rV[0] = rhoLeft*a*(options.xStag-x[0]);
       }
     } else {
         dVdt[0] = 0;
@@ -1556,14 +1550,14 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot, std::ve
         //writeStateMatFile("errorOutput",true);
         outfile.writeScalar("rhoLeft",rhoLeft);
         outfile.writeScalar("a",a);
-        outfile.writeScalar("rStag",options.rStag);
-        outfile.writeScalar("rFlameActual",rFlameActual);
-        outfile.writeScalar("rFlameTarget",rFlameTarget);
+        outfile.writeScalar("rStag",options.xStag);
+        outfile.writeScalar("rFlameActual",xFlameActual);
+        outfile.writeScalar("rFlameTarget",xFlameTarget);
         outfile.writeScalar("flamePosIntegralError",flamePosIntegralError);
         outfile.writeScalar("tFlamePrev",tFlamePrev);
         outfile.writeScalar("t",t);
-        outfile.writeScalar("Pgain",options.rFlameProportionalGain);
-        outfile.writeScalar("Igain",options.rFlameIntegralGain);
+        outfile.writeScalar("Pgain",options.xFlameProportionalGain);
+        outfile.writeScalar("Igain",options.xFlameIntegralGain);
 
         outfile.writeVector("x",x);
         outfile.writeVector("y",yVec);
@@ -1785,7 +1779,7 @@ void flameSys::updateAlgebraicComponents(void)
     int jj = nPoints-1;
     algebraic.resize(N);
 
-    algebraic[0] = options.stagnationRadiusControl; // continuity
+    algebraic[0] = options.xStagControl; // continuity
 
     if (grid.leftBoundaryConfig == grid.lbFixedVal) {
         algebraic[1] = !grid.unburnedLeft; // momentum
@@ -1930,27 +1924,27 @@ double flameSys::getFlamePosition(void)
 
 double flameSys::targetFlamePosition(double t)
 {
-    return (t <= options.rFlameT0) ? options.rFlameInitial
-        :  (t >= options.rFlameT0+options.rFlameDt) ? options.rFlameFinal
-        : options.rFlameInitial + (options.rFlameFinal-options.rFlameInitial)*(t-options.rFlameT0)/options.rFlameDt;
+    return (t <= options.xFlameT0) ? options.xFlameInitial
+        :  (t >= options.xFlameT0+options.xFlameDt) ? options.xFlameFinal
+        : options.xFlameInitial + (options.xFlameFinal-options.xFlameInitial)*(t-options.xFlameT0)/options.xFlameDt;
 }
 
-void flameSys::update_rStag(const double t, const bool updateIntError)
+void flameSys::update_xStag(const double t, const bool updateIntError)
 {
-    rFlameActual = getFlamePosition();
-    rFlameTarget = targetFlamePosition(t);
+    xFlameActual = getFlamePosition();
+    xFlameTarget = targetFlamePosition(t);
     if (updateIntError) {
-        flamePosIntegralError += (rFlameTarget-rFlameActual)*(t-tFlamePrev);
+        flamePosIntegralError += (xFlameTarget-xFlameActual)*(t-tFlamePrev);
         tFlamePrev = t;
     }
 
-    options.rStag = options.rFlameProportionalGain *
-        ( (rFlameTarget-rFlameActual) + (flamePosIntegralError + (rFlameTarget-rFlameActual)*(t-tFlamePrev))*options.rFlameIntegralGain );
+    options.xStag = options.xFlameProportionalGain *
+        ( (xFlameTarget-xFlameActual) + (flamePosIntegralError + (xFlameTarget-xFlameActual)*(t-tFlamePrev))*options.xFlameIntegralGain );
 
     if (debugParameters::debugFlameRadiusControl) {
-        cout << "rFlameControl: " << "rF = " << rFlameActual << "   rStag = " << options.rStag;
-        cout << "   P = " <<  options.rFlameProportionalGain*(rFlameTarget-rFlameActual);
-        cout << "   I = " << options.rFlameProportionalGain*flamePosIntegralError*options.rFlameIntegralGain;
+        cout << "rFlameControl: " << "rF = " << xFlameActual << "   rStag = " << options.xStag;
+        cout << "   P = " <<  options.xFlameProportionalGain*(xFlameTarget-xFlameActual);
+        cout << "   I = " << options.xFlameProportionalGain*flamePosIntegralError*options.xFlameIntegralGain;
         cout << "  dt = " << t-tFlamePrev << endl;
     }
 }
