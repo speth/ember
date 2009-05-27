@@ -28,7 +28,6 @@ void configOptions::readOptionsFile(const std::string& filename)
     gasMechanismFile = "gri30.xml";
     gasPhaseID = "gri30_multi";
     std::string transportModel = "Multi";
-    singleCanteraObject = true;
 
     // Initial Conditions
     restartFile = "";
@@ -128,7 +127,6 @@ void configOptions::readOptionsFile(const std::string& filename)
     cfg.lookupValue("chemistry.mechanismFile",gasMechanismFile);
     cfg.lookupValue("chemistry.phaseID",gasPhaseID);
     cfg.lookupValue("chemistry.transportModel",transportModel);
-    cfg.lookupValue("chemistry.singleCanteraObject",singleCanteraObject);
 
     cfg.lookupValue("InitialCondition.nPoints",nPoints);
     cfg.lookupValue("InitialCondition.xLeft",xLeft);
@@ -255,11 +253,6 @@ void configOptions::readOptionsFile(const std::string& filename)
         for (int i=0; i<strainCount; i++) {
             strainRateList.push_back(strainSetting[i]);
         }
-    }
-
-    cfg.lookupValue("general.numberOfThreads",numberOfThreads);
-    if (numberOfThreads > 1) {
-        singleCanteraObject = false;
     }
 
     if (haveRestartFile) {

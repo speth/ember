@@ -26,12 +26,8 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
     // these are only done at integrator restart points as part of the initial condition
     // calculations (inGetIC = true) or if specifically requested (options.steadyOnly = false).
 
-    if (options.singleCanteraObject) {
-        simpleGas.setStateMass(Y,T);
-    } else {
-        gas.setStateMass(Y,T);
-    }
-
+    gas.setStateMass(Y,T);
+    
     try {
         updateThermoProperties();
         if (!options.steadyOnly || inGetIC) {
@@ -40,11 +36,8 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
             perfTimerTransportProps.stop();
         }
         perfTimerRxnRates.start();
-        if (options.singleCanteraObject) {
-            simpleGas.getReactionRates(wDot);
-        } else {
-            gas.getReactionRates(wDot);
-        }
+        gas.getReactionRates(wDot);
+
         perfTimerRxnRates.stop();
     } catch (Cantera::CanteraError) {
         cout << "Error evaluating thermodynamic properties" << endl;
@@ -322,13 +315,8 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
     perfTimerPrecondSetup.stop();
     perfTimerRxnRates.start();
 
-    if (options.singleCanteraObject) {
-        simpleGas.setStateMass(Y,TplusdT);
-        simpleGas.getReactionRates(wDot2);
-    } else {
-        gas.setStateMass(Y,TplusdT);
-        gas.getReactionRates(wDot2);
-    }
+    gas.setStateMass(Y,TplusdT);
+    gas.getReactionRates(wDot2);
 
     perfTimerRxnRates.stop();
     perfTimerPrecondSetup.resume();
@@ -352,13 +340,8 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
         perfTimerPrecondSetup.stop();
         perfTimerRxnRates.start();
 
-        if (options.singleCanteraObject) {
-            simpleGas.setStateMass(YplusdY,T);
-            simpleGas.getReactionRates(wDot2);
-        } else {
-            gas.setStateMass(YplusdY,T);
-            gas.getReactionRates(wDot2);
-        }
+        gas.setStateMass(YplusdY,T);
+        gas.getReactionRates(wDot2);
 
         perfTimerRxnRates.stop();
         perfTimerPrecondSetup.resume();
@@ -743,13 +726,8 @@ void flameSys::setup(void)
         return; // nothing to do
     }
 
-    if (options.singleCanteraObject) {
-        simpleGas.resize(nPoints);
-        nSpec = simpleGas.nSpec;
-    } else {
-        gas.resize(nPoints);
-        nSpec = gas.nSpec;
-    }
+    gas.resize(nPoints);
+    nSpec = gas.nSpec;
 
     nVars = 3+nSpec;
     N = nVars*nPoints;
@@ -821,15 +799,10 @@ void flameSys::copyOptions(void)
     tStart = options.tStart;
     tEnd = options.tEnd;
 
-    if (options.singleCanteraObject) {
-        simpleGas.mechanismFile = options.gasMechanismFile;
-        simpleGas.phaseID = options.gasPhaseID;
-        simpleGas.pressure = options.pressure;
-    } else {
-        gas.mechanismFile = options.gasMechanismFile;
-        gas.phaseID = options.gasPhaseID;
-        gas.pressure = options.pressure;
-    }
+    gas.mechanismFile = options.gasMechanismFile;
+    gas.phaseID = options.gasPhaseID;
+    gas.pressure = options.pressure;
+
     nPoints = options.nPoints;
     grid.unburnedLeft = options.unburnedLeft;
 
@@ -864,45 +837,25 @@ void flameSys::generateInitialProfiles(void)
     double a = strainRate(tStart);
 
     Tu = options.Tu;
-    if (options.singleCanteraObject) {
-        // Reactants
-        simpleGas.thermo.setState_TPX(Tu,simpleGas.pressure,&options.reactants[0]);
-        rhou = simpleGas.thermo.density();
-        simpleGas.thermo.getMassFractions(&Yu[0]);
-        simpleGas.thermo.getMassFractions(&Y(0,grid.ju));
 
-        // Products
-        simpleGas.thermo.setState_TPX(Tu,simpleGas.pressure,&options.reactants[0]);
-        Cantera::equilibrate(simpleGas.thermo,"HP");
-        Tb = simpleGas.thermo.temperature();
-        rhob = simpleGas.thermo.density();
-        simpleGas.thermo.getMassFractions(&Yb[0]);
-        simpleGas.thermo.getMassFractions(&Y(0,grid.jb));
+    // Reactants
+    gas.thermo.setState_TPX(Tu,gas.pressure,&options.reactants[0]);
+    rhou = gas.thermo.density();
+    gas.thermo.getMassFractions(&Yu[0]);
+    gas.thermo.getMassFractions(&Y(0,grid.ju));
 
-        // Diluent in the middle
-        simpleGas.thermo.setState_TPY(Tu,simpleGas.pressure,options.oxidizer);
-        simpleGas.thermo.getMassFractions(&Y(0,jm));
+    // Products
+    gas.thermo.setState_TPX(Tu,gas.pressure,&options.reactants[0]);
+    Cantera::equilibrate(gas.thermo,"HP");
+    Tb = gas.thermo.temperature();
+    rhob = gas.thermo.density();
+    gas.thermo.getMassFractions(&Yb[0]);
+    gas.thermo.getMassFractions(&Y(0,grid.jb));
 
-    } else {
-        // Reactants
-        gas[grid.ju].setState_TPX(Tu,gas.pressure,&options.reactants[0]);
-        rhou = gas[grid.ju].density();
-        gas[grid.ju].getMassFractions(&Yu[0]);
-        gas[grid.ju].getMassFractions(&Y(0,grid.ju));
+    // Diluent in the middle
+    gas.thermo.setState_TPY(Tu,gas.pressure,options.oxidizer);
+    gas.thermo.getMassFractions(&Y(0,jm));
 
-        // Products
-        gas[grid.jb].setState_TPX(Tu,gas.pressure,&options.reactants[0]);
-        Cantera::equilibrate(gas[grid.jb],"HP");
-        Tb = gas[grid.jb].temperature();
-        rhob = gas[grid.jb].density();
-        gas[grid.jb].getMassFractions(&Yb[0]);
-        gas[grid.jb].getMassFractions(&Y(0,grid.jb));
-
-        // Diluent in the center to delay ignition
-        gas[jm].setState_TPY(Tu,gas.pressure,options.oxidizer);
-        gas[jm].getMassFractions(&Y(0,jm));
-
-    }
     Ub = a*sqrt(rhou/rhob);
 
     if (options.unburnedLeft) {
@@ -985,18 +938,10 @@ void flameSys::generateInitialProfiles(void)
     }
 
     // Grid and initial profiles of T, U and V
-    if (options.singleCanteraObject) {
-        for (int j=0; j<nPoints; j++) {
-            simpleGas.thermo.setState_TPY(T[j],simpleGas.pressure,&Y(0,j));
-            rho[j] = simpleGas.thermo.density();
-            U[j] = a*sqrt(rhou/rho[j]);
-        }
-    } else {
-        for (int j=0; j<nPoints; j++) {
-            gas[j].setState_TPY(T[j],gas.pressure,&Y(0,j));
-            rho[j] = gas[j].density();
-            U[j] = a*sqrt(rhou/rho[j]);
-        }
+    for (int j=0; j<nPoints; j++) {
+        gas.thermo.setState_TPY(T[j],gas.pressure,&Y(0,j));
+        rho[j] = gas.thermo.density();
+        U[j] = a*sqrt(rhou/rho[j]);
     }
 
     for (int i=0; i<2; i++) {
@@ -1017,14 +962,8 @@ void flameSys::generateInitialProfiles(void)
         V[j] = V[j+1] + rho[j]*U[j]*(x[j+1]-x[j]);
     }
 
-    if (options.singleCanteraObject) {
-        simpleGas.setStateMass(Y,T);
-        simpleGas.getMolecularWeights(W);
-    } else {
-        gas.setStateMass(Y,T);
-        gas.getMolecularWeights(W);
-    }
-
+    gas.setStateMass(Y,T);
+    gas.getMolecularWeights(W);
 }
 
 void flameSys::loadInitialProfiles(void)
@@ -1068,44 +1007,26 @@ void flameSys::loadInitialProfiles(void)
     }
 
     if (options.overrideReactants) {
-        if (options.singleCanteraObject) {
-            simpleGas.thermo.setState_TPX(Tu,simpleGas.pressure,&options.reactants[0]);
-            simpleGas.thermo.getMassFractions(&Y(0,grid.ju));
-            simpleGas.thermo.setState_TPX(Tu,simpleGas.pressure,&options.reactants[0]);
-            Cantera::equilibrate(simpleGas.thermo,"HP");
-            simpleGas.thermo.getMassFractions(&Y(0,grid.jb));
-            T[grid.jb] = simpleGas.thermo.temperature();
-        } else {
-            gas.thermo(grid.ju).setState_TPX(Tu,gas.pressure,&options.reactants[0]);
-            gas.thermo(grid.ju).getMassFractions(&Y(0,grid.ju));
-            gas.thermo(grid.jb).setState_TPX(Tu,gas.pressure,&options.reactants[0]);
-            Cantera::equilibrate(gas.thermo(grid.jb),"HP");
-            gas.thermo(grid.jb).getMassFractions(&Y(0,grid.jb));
-            T[grid.jb] = gas.thermo(grid.jb).temperature();
-        }
+        gas.thermo.setState_TPX(Tu,gas.pressure,&options.reactants[0]);
+        gas.thermo.getMassFractions(&Y(0,grid.ju));
+        gas.thermo.setState_TPX(Tu,gas.pressure,&options.reactants[0]);
+        Cantera::equilibrate(gas.thermo,"HP");
+        gas.thermo.getMassFractions(&Y(0,grid.jb));
+        T[grid.jb] = gas.thermo.temperature();
     }
     Tb = T[grid.jb];
 
-    if (options.singleCanteraObject) {
-        simpleGas.setStateMass(Y,T);
-        simpleGas.getMolecularWeights(W);
-        simpleGas.getDensity(rho);
-        rhou = rho[grid.ju];
-        rhob = rho[grid.jb];
-        Yu.resize(nSpec); Yb.resize(nSpec);
-        for (int k=0; k<nSpec; k++) {
-            Yu[k] = Y(k,grid.ju);
-            Yb[k] = Y(k,grid.jb);
-        }
-    } else {
-        gas.setStateMass(Y,T);
-        gas.getMolecularWeights(W);
-        rhou = gas.thermo(grid.ju).density();
-        rhob = gas.thermo(grid.jb).density();
-        Yu.resize(nSpec); Yb.resize(nSpec);
-        gas[grid.ju].getMassFractions(&Yu[0]);
-        gas[grid.jb].getMassFractions(&Yb[0]);
+    gas.setStateMass(Y,T);
+    gas.getMolecularWeights(W);
+    gas.getDensity(rho);
+    rhou = rho[grid.ju];
+    rhob = rho[grid.jb];
+    Yu.resize(nSpec); Yb.resize(nSpec);
+    for (int k=0; k<nSpec; k++) {
+        Yu[k] = Y(k,grid.ju);
+        Yb[k] = Y(k,grid.jb);
     }
+
     Ub = a*sqrt(rhou/rhob);
 
     if (options.unburnedLeft) {
@@ -1283,27 +1204,12 @@ void flameSys::unrollVectorVectorDot(const vector<dvector>& v)
 
 void flameSys::updateTransportProperties(void)
 {
-    if (options.singleCanteraObject) {
-        simpleGas.getTransportProperties(mu, lambda, rhoD, Dkt);
-    } else {
-        gas.getViscosity(mu);
-        gas.getThermalConductivity(lambda);
-        gas.getWeightedDiffusionCoefficients(rhoD);
-        gas.getThermalDiffusionCoefficients(Dkt);
-    }
+    gas.getTransportProperties(mu, lambda, rhoD, Dkt);
 }
 
 void flameSys::updateThermoProperties(void)
 {
-    if (options.singleCanteraObject) {
-        simpleGas.getThermoProperties(rho, Wmx, cp, cpSpec, hk);
-    } else {
-        gas.getDensity(rho);
-        gas.getSpecificHeatCapacity(cp);
-        gas.getSpecificHeatCapacities(cpSpec);
-        gas.getEnthalpies(hk);
-        gas.getMixtureMolecularWeight(Wmx);
-    }
+    gas.getThermoProperties(rho, Wmx, cp, cpSpec, hk);
 }
 
 void flameSys::printForMatlab(ofstream& file, dvector& v, int index, char* name)
@@ -1979,11 +1885,7 @@ void flameSys::testPreconditioner(void)
     try {
         updateThermoProperties();
         updateTransportProperties();
-        if (options.singleCanteraObject) {
-            simpleGas.getReactionRates(wDot);
-        } else {
-            gas.getReactionRates(wDot);
-        }
+        gas.getReactionRates(wDot);
     } catch (Cantera::CanteraError) {
         cout << "Error evaluating thermodynamic properties" << endl;
         writeStateMatFile("errorOutput",true);

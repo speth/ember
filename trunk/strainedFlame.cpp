@@ -5,7 +5,6 @@
 #include "sundialsUtils.h"
 #include "flameSolver.h"
 #include "libconfig.h++"
-#include <omp.h>
 
 using namespace mathUtils;
 
@@ -42,22 +41,13 @@ int main(int argc, char** argv)
 void strainedFlame(const std::string& inputFile)
 {
     // This version string is automatically updated during the build process
-    std::string REVISION = "78";
-    std::string BUILDDATE = "2009-05-27 14:36:08";
+    std::string REVISION = "79";
+    std::string BUILDDATE = "2009-05-27 14:59:29";
     cout << "**** strainedFlame (1Dflame Version 2.1." << REVISION << ")  [" << BUILDDATE << "] ****\n" << std::endl;
 
     // Read configuration from inputFile
     configOptions mainOptions;
     mainOptions.readOptionsFile(inputFile);
-
-    // OpenMP Configuration
-    int nProcs = omp_get_num_procs();
-    std::string procStr = (nProcs==1) ? " core." : " cores.";
-    cout << "Detected " << nProcs << procStr;
-    nProcs = min(mainOptions.numberOfThreads,nProcs);
-    procStr = (nProcs==1) ? " core." : " cores.";
-    cout << " Running on " << nProcs << procStr << endl;
-    omp_set_num_threads(nProcs);
 
     if (mainOptions.strainRateList.size()!=0) {
         // *** For each strain rate in strainRateList, run until steady-state is reached,

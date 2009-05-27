@@ -14,11 +14,7 @@ void flameSolver::initialize(void)
     theSys.copyOptions();
 
     // Cantera initialization
-    if (options.singleCanteraObject) {
-        theSys.simpleGas.initialize(options.usingMultiTransport);
-    } else {
-        theSys.gas.initialize(options.usingMultiTransport);
-    }
+    theSys.gas.initialize(options.usingMultiTransport);
 
     // Initial Conditions
     theSys.setup();
@@ -52,13 +48,8 @@ void flameSolver::run(void)
 
     theSys.grid.updateValues();
 
-    if (options.singleCanteraObject) {
-        theSys.simpleGas.setStateMass(theSys.Y,theSys.T);
-        theSys.simpleGas.getReactionRates(theSys.wDot);
-    } else {
-        theSys.gas.setStateMass(theSys.Y,theSys.T);
-        theSys.gas.getReactionRates(theSys.wDot);
-    }
+    theSys.gas.setStateMass(theSys.Y,theSys.T);
+    theSys.gas.getReactionRates(theSys.wDot);
     theSys.updateThermoProperties();
 
     for (int j=0; j<=theSys.nPoints-1; j++) {
@@ -124,13 +115,8 @@ void flameSolver::run(void)
 
         theSys.updateAlgebraicComponents();
         if (options.xFlameControl) {
-            if (options.singleCanteraObject) {
-                theSys.simpleGas.setStateMass(theSys.Y,theSys.T);
-                theSys.simpleGas.getReactionRates(theSys.wDot);
-            } else {
-                theSys.gas.setStateMass(theSys.Y,theSys.T);
-                theSys.gas.getReactionRates(theSys.wDot);
-            }
+            theSys.gas.setStateMass(theSys.Y,theSys.T);
+            theSys.gas.getReactionRates(theSys.wDot);
             theSys.updateThermoProperties();
 
             for (int j=0; j<=theSys.nPoints-1; j++) {
@@ -149,13 +135,8 @@ void flameSolver::run(void)
 
             // This corrects the drift of the total mass fractions
             theSys.unrollY(theSolver.y);
-            if (options.singleCanteraObject) {
-                theSys.simpleGas.setStateMass(theSys.Y,theSys.T);
-                theSys.simpleGas.getMassFractions(theSys.Y);
-            } else {
-                theSys.gas.setStateMass(theSys.Y,theSys.T);
-                theSys.gas.getMassFractions(theSys.Y);
-            }
+            theSys.gas.setStateMass(theSys.Y,theSys.T);
+            theSys.gas.getMassFractions(theSys.Y);
             theSys.rollY(theSolver.y);
             ICflag = theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, theSys.algebraic);
         }
@@ -302,13 +283,8 @@ void flameSolver::run(void)
                     theSys.unrollVectorVectorDot(currentSolutionDot);
 
                     // Correct the drift of the total mass fractions
-                    if (options.singleCanteraObject) {
-                        theSys.simpleGas.setStateMass(theSys.Y,theSys.T);
-                        theSys.simpleGas.getMassFractions(theSys.Y);
-                    } else {
-                        theSys.gas.setStateMass(theSys.Y,theSys.T);
-                        theSys.gas.getMassFractions(theSys.Y);
-                    }
+                    theSys.gas.setStateMass(theSys.Y,theSys.T);
+                    theSys.gas.getMassFractions(theSys.Y);
 
                     // exit the inner loop to reinitialize the integrator for the new problem size
                     break;

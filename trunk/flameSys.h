@@ -167,8 +167,7 @@ public:
     double reltol;
 
     // Cantera data
-    gasArray gas;
-    simpleGasArray simpleGas;
+    canteraGas gas;
 
     // Miscellaneous options
     configOptions options;

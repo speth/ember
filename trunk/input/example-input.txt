@@ -19,7 +19,6 @@ chemistry:
 {
     mechanismFile = "gri30syngas.xml";
     phaseID = "syngas";
-    singleCanteraObject = true;
 };
 
 grid:
