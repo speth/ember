@@ -19,9 +19,7 @@ void oneDimGrid::updateValues()
     cfm.resize(jj);
     cf.resize(jj);
     cfp.resize(jj);
-    csm.resize(jj);
-    cs.resize(jj);
-    csp.resize(jj);
+
     dlj.resize(jj);
     rphalf.resize(jj);
     r.resize(jj+1);
@@ -38,10 +36,6 @@ void oneDimGrid::updateValues()
         cfp[j] = hh[j-1]/(hh[j]*(hh[j]+hh[j-1]));
         cf[j] = (hh[j]-hh[j-1])/(hh[j]*hh[j-1]);
         cfm[j] = -hh[j]/(hh[j-1]*(hh[j]+hh[j-1]));
-
-        csp[j] = 2/(hh[j]*(hh[j]+hh[j-1]));
-        cs[j] = -2/(hh[j]*hh[j-1]);
-        csm[j] = 2/(hh[j-1]*(hh[j]+hh[j-1]));
 
         dlj[j]= 0.5 * (x[j+1]-x[j-1]);
     }
