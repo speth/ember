@@ -148,7 +148,6 @@ void flameSolver::run(void)
             theSys.debugFailedTimestep(theSolver.y);
         }
 		if (ICflag == 100) {
-            //theSys.writeStateMatFile("errorOutput",true);
 		    theSys.writeStateMatFile("",true);
             throw;
 		}

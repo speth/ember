@@ -44,9 +44,9 @@ int main(int argc, char** argv)
 void strainedFlame(const std::string& inputFile)
 {
     // This version string is automatically updated during the build process
-    std::string REVISION = "75";
-    std::string BUILDDATE = "2009-05-26 00:54:32";
-    cout << "**** strainedFlame (1Dflame Version 2.0." << REVISION << ")  [" << BUILDDATE << "] ****\n" << std::endl;
+    std::string REVISION = "76";
+    std::string BUILDDATE = "2009-05-26 20:03:29";
+    cout << "**** strainedFlame (1Dflame Version 2.1." << REVISION << ")  [" << BUILDDATE << "] ****\n" << std::endl;
 
     // Read configuration from inputFile
 	configOptions mainOptions;
@@ -60,7 +60,6 @@ void strainedFlame(const std::string& inputFile)
 	procStr = (nProcs==1) ? " core." : " cores.";
 	cout << " Running on " << nProcs << procStr << endl;
 	omp_set_num_threads(nProcs);
-
 
 	if (mainOptions.strainRateList.size()!=0) {
 	    // *** For each strain rate in strainRateList, run until steady-state is reached,
