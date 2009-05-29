@@ -128,21 +128,21 @@ void configOptions::readOptionsFile(const std::string& filename)
     cfg.lookupValue("chemistry.phaseID",gasPhaseID);
     cfg.lookupValue("chemistry.transportModel",transportModel);
 
-    cfg.lookupValue("InitialCondition.nPoints",nPoints);
-    cfg.lookupValue("InitialCondition.xLeft",xLeft);
-    cfg.lookupValue("InitialCondition.xRight",xRight);
+    cfg.lookupValue("initialCondition.nPoints",nPoints);
+    cfg.lookupValue("initialCondition.xLeft",xLeft);
+    cfg.lookupValue("initialCondition.xRight",xRight);
 
-    haveRestartFile = cfg.lookupValue("InitialCondition.file",restartFile);
-    overrideTu = cfg.lookupValue("InitialCondition.Tu",Tu);
-    overrideReactants = cfg.lookupValue("InitialCondition.fuel",fuel);
-    cfg.lookupValue("InitialCondition.oxidizer",oxidizer);
-    cfg.lookupValue("InitialCondition.equivalenceRatio",equivalenceRatio);
-    cfg.lookupValue("InitialCondition.pressure",pressure);
+    haveRestartFile = cfg.lookupValue("initialCondition.file",restartFile);
+    overrideTu = cfg.lookupValue("initialCondition.Tu",Tu);
+    overrideReactants = cfg.lookupValue("initialCondition.fuel",fuel);
+    cfg.lookupValue("initialCondition.oxidizer",oxidizer);
+    cfg.lookupValue("initialCondition.equivalenceRatio",equivalenceRatio);
+    cfg.lookupValue("initialCondition.pressure",pressure);
 
-    cfg.lookupValue("StrainParameters.initial",strainRateInitial);
-    cfg.lookupValue("StrainParameters.final",strainRateFinal);
-    cfg.lookupValue("StrainParameters.tStart",strainRateT0);
-    cfg.lookupValue("StrainParameters.dt",strainRateDt);
+    cfg.lookupValue("strainParameters.initial",strainRateInitial);
+    cfg.lookupValue("strainParameters.final",strainRateFinal);
+    cfg.lookupValue("strainParameters.tStart",strainRateT0);
+    cfg.lookupValue("strainParameters.dt",strainRateDt);
 
     cfg.lookupValue("grid.centerGridMin",centerGridMin);
 
@@ -247,8 +247,8 @@ void configOptions::readOptionsFile(const std::string& filename)
     cfg.lookupValue("terminationCondition.measurement",terminationMeasurement);
     terminateForSteadyQdot = (terminationMeasurement == "Q");
 
-    if (cfg.exists("StrainParameters.list")) {
-        libconfig::Setting& strainSetting = cfg.lookup("StrainParameters.list");
+    if (cfg.exists("strainParameters.list")) {
+        libconfig::Setting& strainSetting = cfg.lookup("strainParameters.list");
         int strainCount = strainSetting.getLength();
         for (int i=0; i<strainCount; i++) {
             strainRateList.push_back(strainSetting[i]);

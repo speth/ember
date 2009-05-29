@@ -42,6 +42,7 @@ public:
     double tEnd;
     double tNow;
     double tPrev;
+    double aPrev;
 
     // Boundary values
     double rhou, rhob, rhoLeft, rhoRight;

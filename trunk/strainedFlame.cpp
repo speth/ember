@@ -41,8 +41,8 @@ int main(int argc, char** argv)
 void strainedFlame(const std::string& inputFile)
 {
     // This version string is automatically updated during the build process
-    std::string REVISION = "79";
-    std::string BUILDDATE = "2009-05-27 14:59:29";
+    std::string REVISION = "80";
+    std::string BUILDDATE = "2009-05-29 12:08:01";
     cout << "**** strainedFlame (1Dflame Version 2.1." << REVISION << ")  [" << BUILDDATE << "] ****\n" << std::endl;
 
     // Read configuration from inputFile
@@ -161,6 +161,7 @@ void strainedFlame(const std::string& inputFile)
         theFlameSolver.initialize();
         theFlameSolver.run();
 
+        theFlameSolver.theSys.writeStateMatFile("prof");
         std::string strainString;
         matlabFile outFile(mainOptions.outputDir+"/out.mat");
         outFile.writeVector("t",theFlameSolver.timeVector);

@@ -9,7 +9,7 @@ using std::max; using std::min;
 oneDimGrid::oneDimGrid(configOptions& theOptions)
     : options(theOptions)
 {
-    leftBoundaryConfig = -1;
+    leftBoundaryConfig = -1; // invalid default value
 }
 
 void oneDimGrid::updateValues()
@@ -171,7 +171,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         }
 
         // Special minimum grid size for flames pinned at x=0
-        if (leftBoundaryConfig == lbControlVolume && x[j] < centerGridMin) {
+        if (j == 0 && leftBoundaryConfig == lbControlVolume) {
             insert = false;
             if (debugParameters::debugAdapt) {
                 cout << "Adapt: grid point addition canceled by minimum center grid size j = " << j;
@@ -295,7 +295,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         }
 
         // Special fixed grid for flames pinned at x=0
-        if (leftBoundaryConfig == lbControlVolume && x[j] < centerGridMin) {
+        if (j == 1 && leftBoundaryConfig == lbControlVolume) {
             if (debugParameters::debugAdapt) {
                 cout << "Adapt: no removal - fixed grid near r = 0." << endl;
             }
@@ -373,9 +373,8 @@ bool oneDimGrid::addRight(void)
     // Pick the comparison point for the grid flatness criterion,
     // depending on whether a zero-gradient condition is being enforced
 
-    // djMom is for momentum equation, which always uses a
-    // zero-gradient condition on the burned side:
-    int djMom = (jb==jj) ? 2 : 1;
+    // djMom is for momentum equation, which always uses a special zero-gradient condition
+    int djMom = 1;
 
     // All other variables use fixed or zero gradient conditions
     // depending on fixedBurnedVal
@@ -439,7 +438,7 @@ bool oneDimGrid::addLeft(void)
     // *** Criteria for addition to the left (j==0) ***
 
     int djOther = (jb==1 && !fixedBurnedVal) ? 2 : 1;
-    int djMom = (jb==1) ? 2 : 1;
+    int djMom = 1;
 
     bool pointAdded = false;
     if (!options.fixedLeftLoc) {
@@ -511,7 +510,7 @@ bool oneDimGrid::removeRight(void)
 
     // Comparison point for flatness criteria, depending on
     // zero-gradient or fixed value boundary condition
-    int djMom = (jb==jj) ? 3 : 2;
+    int djMom = 2;
     int djOther = (jb==jj && !fixedBurnedVal) ? 3 : 2;
 
     bool pointRemoved = true; // assume removal
@@ -546,7 +545,7 @@ bool oneDimGrid::removeLeft(void)
     vector<dvector>& ydot = *ydotIn;
 
     // *** Criteria for removal from the left (j==0) ***
-    int djMom = (jb==1) ? 3 : 2;
+    int djMom = 2;
     int djOther = (jb==1 && !fixedBurnedVal) ? 3 : 2;
 
     // Don't remove points if the location of the left boundary is fixed

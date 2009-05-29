@@ -60,6 +60,8 @@ void flameSolver::run(void)
     }
 
     theSys.tFlamePrev = t;
+    theSys.tPrev = t;
+    theSys.aPrev = theSys.strainRate(t);
 
     if (options.outputProfiles) {
         theSys.writeStateMatFile();
@@ -173,6 +175,7 @@ void flameSolver::run(void)
 
             dt = integratorTimestep = theSolver.getStepSize();
             t = theSys.tPrev = theSolver.tInt;
+            theSys.aPrev = theSys.strainRate(t);
 
             // *** See if it worked
             if (IDAflag == CV_SUCCESS) {
@@ -181,6 +184,7 @@ void flameSolver::run(void)
                 nProfile++;
                 nIntegrate++;
                 nTerminate++;
+                nCurrentState++;
 
                 if (debugParameters::debugTimesteps) {
                     int order = theSolver.getLastOrder();
@@ -229,6 +233,7 @@ void flameSolver::run(void)
             // *** Save the current integral and profile data
             //     in files that are automatically overwritten.
             if (nCurrentState >= options.currentStateStepInterval) {
+                nCurrentState = 0;
                 matlabFile outFile(options.outputDir+"/outNow.mat");
                 outFile.writeVector("t",timeVector);
                 outFile.writeVector("dt",timestepVector);
