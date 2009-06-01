@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <iostream>
+#include <exception>
 
 class debugParameters
 {
@@ -25,3 +26,12 @@ namespace debugType {
 }
 
 void debugWrite(debugType::debugType type, std::string message);
+
+class debugException : public std::exception
+{
+public:
+    std::string errorString;
+    debugException(void);
+    ~debugException(void) throw() {}
+    debugException(const std::string error);
+};

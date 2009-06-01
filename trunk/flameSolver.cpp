@@ -83,11 +83,6 @@ void flameSolver::run(void)
         theSolver.findRoots = false;
         theSolver.t0 = theSolver.tInt = t;
 
-        if (options.enforceNonnegativeSpecies) {
-            theSolver.imposeConstraints = true;
-            theSys.updateConstraints(theSolver.constraints);
-        }
-
         int N = theSys.nVars;
 
         theSys.rollY(theSolver.y);
@@ -115,7 +110,6 @@ void flameSolver::run(void)
         // *** Get a consistent initial condition ***
         // ******************************************
 
-        theSys.updateAlgebraicComponents();
         if (options.xFlameControl) {
             theSys.gas.setStateMass(theSys.Y,theSys.T);
             theSys.gas.getReactionRates(theSys.wDot);
@@ -140,14 +134,14 @@ void flameSolver::run(void)
             theSys.gas.setStateMass(theSys.Y,theSys.T);
             theSys.gas.getMassFractions(theSys.Y);
             theSys.rollY(theSolver.y);
-            ICflag = theSys.getInitialCondition(t, theSolver.y, theSolver.ydot, theSys.algebraic);
+            ICflag = theSys.getInitialCondition(t, theSolver.y, theSolver.ydot);
         }
         if (ICflag != 0) {
             theSys.debugFailedTimestep(theSolver.y);
         }
         if (ICflag == 100) {
             theSys.writeStateMatFile("",true);
-            throw;
+            throw debugException("Initial condition calculation failed repeatedly.");
         }
 
         // *** Final preparation of IDA solver

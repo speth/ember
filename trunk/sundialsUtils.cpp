@@ -28,13 +28,13 @@ void sundialsCVODE::initialize(void)
 
     sundialsMem = CVodeCreate(linearMultistepMethod, nonlinearSolverMethod);
     if (check_flag((void *)sundialsMem, "CVodeCreate", 0)) {
-        throw;
+        throw debugException("sundialsCVODE::initialize: error in CVodeCreate");
     }
 
     flag = CVodeMalloc(sundialsMem, f, t0, y.forSundials(), CV_SV, reltol,
             abstol.forSundials());
     if (check_flag(&flag, "CVodeMalloc", 1)) {
-        throw;
+        throw debugException("sundialsCVODE::initialize: error in CVodeMalloc");
     }
 
     if (findRoots) {
@@ -42,20 +42,20 @@ void sundialsCVODE::initialize(void)
         // Call CVodeRootInit to specify the root function g with nRoots components
         flag = CVodeRootInit(sundialsMem, nRoots, g, theODE);
         if (check_flag(&flag, "CVodeRootInit", 1)) {
-            throw;
+            throw debugException("sundialsCVODE::initialize: error in CVodeRootInit");
         }
     }
 
     // Call CVDense to specify the CVDENSE dense linear solver
     flag = CVDense(sundialsMem, nEq);
     if (check_flag(&flag, "CVDense", 1)) {
-        throw;
+        throw debugException("sundialsCVODE::initialize: error in CVDense");
     }
 
     // Set the Jacobian routine to Jac (user-supplied)
     flag = CVDenseSetJacFn(sundialsMem, Jac, theODE);
     if (check_flag(&flag, "CVDenseSetJacFn", 1)) {
-        throw;
+        throw debugException("sundialsCVODE::initialize: error in CVDenseSetJacFn");
     }
 
     CVodeSetFdata(sundialsMem, theODE);
@@ -70,7 +70,9 @@ int sundialsCVODE::integrateToTime(realtype t)
 int sundialsCVODE::getRootInfo(void)
 {
     flagr = CVodeGetRootInfo(sundialsMem, &rootsFound[0]);
-    if (check_flag(&flagr, "CVodeGetRootInfo", 1)) throw;
+    if (check_flag(&flagr, "CVodeGetRootInfo", 1)) {
+        throw debugException("sundialsCVODE::getRootInfo: error in CVodeGetRootInfo");
+    }
     return flagr;
 }
 
@@ -174,7 +176,9 @@ sdVector::sdVector(unsigned int N)
     alloc = true;
     v = N_VNew_Serial(N);
     n = N;
-    if (sundialsCVODE::check_flag((void *)v, "N_VNew_Serial", 0)) throw;
+    if (sundialsCVODE::check_flag((void *)v, "N_VNew_Serial", 0)) {
+        throw debugException("sdVector: error allocating vector");
+    }
 }
 
 sdVector::sdVector(N_Vector other)
@@ -315,7 +319,7 @@ void sundialsIDA::initialize(void)
 {
     sundialsMem = IDACreate();
     if (check_flag((void *)sundialsMem, "IDACreate", 0)) {
-        throw;
+        throw debugException("sundialsIDA::initialize: error in IDACreate");
     }
 
     IDASetRdata(sundialsMem, theDAE);
@@ -328,7 +332,7 @@ void sundialsIDA::initialize(void)
     flag = IDAMalloc(sundialsMem, f, t0, y.forSundials(), ydot.forSundials(),
         IDA_SV, reltol, abstol.forSundials());
     if (check_flag(&flag, "IDAMalloc", 1)) {
-        throw;
+        throw debugException("sundialsIDA::initialize: error in IDAMalloc");
     }
 
     if (findRoots) {
@@ -336,45 +340,44 @@ void sundialsIDA::initialize(void)
         // Call IDARootInit to specify the root function g with nRoots components
         flag = IDARootInit(sundialsMem, nRoots, g, theDAE);
         if (check_flag(&flag, "IDARootInit", 1)) {
-            throw;
-            std::cout << "IDARootInit Error" << std::endl;
+            throw debugException("sundialsIDA::initialize: error in IDARootInit");
         }
     }
 
     // Call IDASpbcg to specify the IDASpbcg dense linear solver
     flag = IDASpbcg(sundialsMem, 0);
     if (check_flag(&flag, "IDASpbcg", 1)) {
-        throw;
+        throw debugException("sundialsIDA::initialize: error in IDASpbcg");
     }
 
     if (imposeConstraints) {
         flag = IDASetConstraints(sundialsMem, constraints.forSundials());
         if (check_flag(&flag, "IDASetConstraints", 1)) {
-            throw;
+            throw debugException("sundialsIDA::initialize: error in IDASetConstraints");
         }
     }
 
     // this seems to work better using the default J-v function rather than specifying our own...
     //flag = IDASpilsSetJacTimesVecFn(sundialsMem, JvProd, theDAE);
     //if (check_flag(&flag, "IDASpilsSetJacTimesVecFn", 1)) {
-    //    throw;
+    //    throw myException("sundialsIDA::initialize: error in IDASpilsSetJacTimesVecFn");
     //}
 
     flag = IDASpilsSetPreconditioner(sundialsMem, preconditionerSetup, preconditionerSolve, theDAE);
     if (check_flag(&flag, "IDASpilsSetPreconditioner", 1)) {
-        throw;
+        throw debugException("sundialsIDA::initialize: error in IDASpilsSetPreconditioner");
     }
 
     if (calcIC) {
         flag = IDACalcIC(sundialsMem, IDA_YA_YDP_INIT, t0+1e-4);
         if (check_flag(&flag, "IDACalcIC", 1)) {
             std::cout << "IDACalcIC Error" << std::endl;
-            throw;
+            throw debugException("sundialsIDA::initialize: error in IDACalcIC");
         }
 
         flag = IDAGetConsistentIC(sundialsMem, y0.forSundials(), ydot0.forSundials());
         if (check_flag(&flag, "IDAGetConsistentIC", 1)) {
-            throw;
+            throw debugException("sundialsIDA::initialize: error in IDAGetConsistentIC");
         }
     }
 
@@ -397,7 +400,8 @@ int sundialsIDA::integrateOneStep(void)
 int sundialsIDA::getRootInfo(void)
 {
     flagr = IDAGetRootInfo(sundialsMem, &rootsFound[0]);
-    if (check_flag(&flagr, "IDAGetRootInfo", 1)) throw;
+    if (check_flag(&flagr, "IDAGetRootInfo", 1))
+        throw debugException("sundialsIDA::getRootInfo: error in IDAGetRootInfo.");
     return flagr;
 }
 

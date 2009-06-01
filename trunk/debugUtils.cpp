@@ -19,3 +19,13 @@ void debugWrite(debugType::debugType type, std::string message)
         std::cout << message << std::endl;
     }
 }
+
+debugException::debugException(void)
+{
+    errorString = "debugException: unspecified error.";
+}
+
+debugException::debugException(const std::string error)
+{
+    errorString = error;
+}

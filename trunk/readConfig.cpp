@@ -1,251 +1,177 @@
 #include "readConfig.h"
 #include "flameSys.h"
-#include "libconfig.h++"
 #include "boost/filesystem.hpp"
 #include "debugUtils.h"
 
 void configOptions::readOptionsFile(const std::string& filename)
 {
+    theConfig = new libconfig::Config;
+    libconfig::Config& cfg = *theConfig;
+
     // read input file
-    libconfig::Config cfg;
     if (boost::filesystem::exists(filename)) {
         cfg.readFile(filename.c_str());
         cout << "Reading configuration options from " << filename << endl;
     } else {
-        cout << "readOptionsFile: Error: Input file \"" << filename << "\" does not exist." << endl;
-        throw;
+        throw debugException("configOptions::readOptionsFile: Error: Input file \"" + filename + "\" does not exist.");
     }
-
+    
+    cout << std::boolalpha; // prints "true" and "false" rather than 1 and 0
     cfg.setAutoConvert(true);
 
-    // These are default values for the configuration options:
+    // Read options from the configuration file
 
     // Paths
-    inputDir = "input";
-    outputDir = "output";
+    readOption("paths.inputDir", inputDir, "input");
+    readOption("paths.outputDir", outputDir, "output");
 
     // Chemistry
-    gasMechanismFile = "gri30.xml";
-    gasPhaseID = "gri30_multi";
-    std::string transportModel = "Multi";
+    bool haveMech = readOption("chemistry.mechanismFile", gasMechanismFile, "gri30.xml");
+    if (haveMech) {
+        readOption("chemistry.phaseID", gasPhaseID, "gas");
+    } else {
+        readOption("chemistry.phaseID", gasPhaseID, "gri30_multi");
+    }
 
-    // Initial Conditions
-    restartFile = "";
-    useRelativeRestartPath = true;
-    fuel = "CH4:1.0";
-    oxidizer = "O2:1.0, N2:3.76";
-    Tu = 300;
-    Tb = 2000;
-    pressure = Cantera::OneAtm;
-
-    // Strain Rate Parameters
-    strainRateInitial = 100;
-    strainRateFinal = 100;
-    strainRateDt = 1e-3;
-    strainRateT0 = 0;
-
-    curvedFlame = false;
-    fixedLeftLoc = false;
-    twinFlame = false;
-    centeredDifferences = false;
-    steadyOnly = false;
+    std::string transportModel;
+    readOption("chemistry.transportModel", transportModel, "Multi");
+    if (transportModel=="Multi") {
+        usingMultiTransport = true;
+    } else if (transportModel=="Mix") {
+        usingMultiTransport = false;
+    } else {
+        throw debugException("configOptions::readOptionsFile: Invalid Transport Model specified (general.transportModel).");
+    }
 
     // Grid
-    nPoints = 50;
-    xLeft = -0.05;
-    xRight = 0.05;
+    readOption("initialCondition.nPoints", nPoints, 50);
+    readOption("initialCondition.xLeft", xLeft, -0.005);
+    readOption("initialCondition.xRight", xRight, 0.005);
 
-    vtol = 0.04;
-    dvtol = 0.4;
+    // Initial Condition
+    haveRestartFile = readOptionQuietDefault("initialCondition.file", restartFile, "");
+    useRelativeRestartPath = true;
+    if (haveRestartFile) {
+        haveRestartFile = boost::filesystem::exists(inputDir + "/" + restartFile);
+        if (!haveRestartFile) {
+            cout << "  Warning: couldn't find restart file \"" << inputDir+"/"+restartFile << "\"" << endl;
+        }
+    }
 
-    vtolCont = 1; // effectively disabled
-    dvtolCont = 1;
+    overrideTu = readOption("initialCondition.Tu", Tu, 300);
+    overrideReactants = readOption("initialCondition.fuel", fuel, "CH4:1.0");
+    readOption("initialCondition.oxidizer", oxidizer, "O2:1.0, N2:3.76");
+    readOption("initialCondition.equivalenceRatio", equivalenceRatio, 0.6);
+    readOption("initialCondition.pressure", pressure, Cantera::OneAtm);
 
-    rmTol = 0.67;
-    dampConst = 5000;
-    gridMin = 1.0e-6;
-    gridMax = 0.2;
-    uniformityTol = 2.7;
-    absvtol = 1e-10;
-    centerGridMin = 100*gridMin;
+    // Strain Rate Parameters
+    readOption("strainParameters.initial", strainRateInitial, 100);
+    readOption("strainParameters.final", strainRateFinal, 100);
+    readOption("strainParameters.tStart", strainRateT0, 1.0e-3);
+    readOption("strainParameters.dt", strainRateDt, 0.0e0);
 
-    boundaryTol = 2e-5;
-    boundaryTolRm = 5e-6;
-
-    fixedBurnedVal = true;
-    unburnedLeft = true;
-    addPointCount = 1;
-
-    // Times
-    tStart = 0;
-    tEnd = 1000;
-    maxTimestep = 10000;
-
-    regridTimeInterval = 123456789; // bogus value for later check;
-    profileTimeInterval = 123456789;
-    outputTimeInterval = 1e-5;
-    regridStepInterval = 123456789;
-    profileStepInterval = 123456789;
-    integratorRestartInterval = 123456789;
-    currentStateStepInterval = 2000;
-    outputStepInterval = 1;
-    terminateStepInterval = 20;
-
-    xStag = 0;
-
-    idaRelTol = 1e-5;
-    idaRelTolLow = 1e-3;
-    idaContinuityAbsTol = 1e-6;
-    idaMomentumAbsTol = 1e-6;
-    idaEnergyAbsTol = 1e-6;
-    idaSpeciesAbsTol = 1e-10;
-    enforceNonnegativeSpecies = false;
-
-    outputAuxiliaryVariables = false;
-    outputTimeDerivatives = false;
-    outputHeatReleaseRate = false;
-    outputResidualComponents = false;
-    outputFileNumber = 0;
-    outputProfiles = true;
-    errorStopCount = 1;
-
-    terminateForSteadyQdot = false;
-    terminationTolerance = 1e-4;
-    terminationToleranceLow = 1e-4;
-    terminationAbsTol = 0.5;
-    terminationPeriodHigh = 0.1;
-    terminationPeriodLow = 0.04;
-    terminationPeriod = 0.04;
-    terminationMaxTime = 2;
-
-    numberOfThreads = 1;
-
-    // Read options from the configuration file
-    cfg.lookupValue("paths.inputDir",inputDir);
-    cfg.lookupValue("paths.outputDir",outputDir);
-
-    cfg.lookupValue("chemistry.mechanismFile",gasMechanismFile);
-    cfg.lookupValue("chemistry.phaseID",gasPhaseID);
-    cfg.lookupValue("chemistry.transportModel",transportModel);
-
-    cfg.lookupValue("initialCondition.nPoints",nPoints);
-    cfg.lookupValue("initialCondition.xLeft",xLeft);
-    cfg.lookupValue("initialCondition.xRight",xRight);
-
-    haveRestartFile = cfg.lookupValue("initialCondition.file",restartFile);
-    overrideTu = cfg.lookupValue("initialCondition.Tu",Tu);
-    overrideReactants = cfg.lookupValue("initialCondition.fuel",fuel);
-    cfg.lookupValue("initialCondition.oxidizer",oxidizer);
-    cfg.lookupValue("initialCondition.equivalenceRatio",equivalenceRatio);
-    cfg.lookupValue("initialCondition.pressure",pressure);
-
-    cfg.lookupValue("strainParameters.initial",strainRateInitial);
-    cfg.lookupValue("strainParameters.final",strainRateFinal);
-    cfg.lookupValue("strainParameters.tStart",strainRateT0);
-    cfg.lookupValue("strainParameters.dt",strainRateDt);
-
-    cfg.lookupValue("grid.centerGridMin",centerGridMin);
-
-    if (cfg.lookupValue("positionControl.xStag",xStag)) {
+    if (readOptionQuietDefault("positionControl.xStag", xStag, 0)) {
         xStagControl = true;
     } else {
         xStagControl = false;
     }
 
-    if (cfg.lookupValue("positionControl.xInitial",xFlameInitial) &&
-        cfg.lookupValue("positionControl.xFinal",xFlameFinal) &&
-        cfg.lookupValue("positionControl.tStart",xFlameT0) &&
-        cfg.lookupValue("positionControl.dt",xFlameDt) &&
-        cfg.lookupValue("positionControl.integralGain",xFlameIntegralGain) &&
-        cfg.lookupValue("positionControl.proportionalGain",xFlameProportionalGain)) {
-            xFlameControl = true;
-            xStagControl = true;
+    if (readOptionQuietDefault("positionControl.xInitial", xFlameInitial, 0.005) &&
+            readOptionQuietDefault("positionControl.xFinal", xFlameFinal, 0.005) &&
+            readOptionQuietDefault("positionControl.tStart", xFlameT0, 0.0) &&
+            readOptionQuietDefault("positionControl.dt", xFlameDt, 1e-3)) {
+
+        readOption("positionControl.integralGain",xFlameIntegralGain, 500);
+        readOption("positionControl.proportionalGain",xFlameProportionalGain, 100);
+        xFlameControl = true;
+        xStagControl = true;
     } else {
         xFlameControl = false;
     }
 
-    cfg.lookupValue("grid.adaptation.vtol",vtol);
-    cfg.lookupValue("grid.adaptation.dvtol",dvtol);
+    readOption("grid.centerGridMin", centerGridMin, 1.0e-4);
 
-    if (!cfg.lookupValue("grid.adaptation.vtolCont",vtolCont)) {
-        vtolCont = vtol;
+    readOption("grid.adaptation.vtol", vtol, 0.06);
+    readOption("grid.adaptation.dvtol", dvtol, 0.2);
+    readOption("grid.adaptation.vtolCont", vtolCont, vtol);
+    readOption("grid.adaptation.dvtolCont", dvtolCont, dvtol);
+
+    readOption("grid.adaptation.rmTol", rmTol, 0.67);
+    readOption("grid.adaptation.dampConst", dampConst, 0.5);
+    readOption("grid.adaptation.gridMin", gridMin, 1.0e-6);
+    readOption("grid.adaptation.gridMax", gridMax, 1.0e-3);
+    readOption("grid.adaptation.uniformityTol", uniformityTol, 3.0);
+    readOption("grid.adaptation.absvtol", absvtol, 1.0e-10);
+
+    readOption("grid.regridding.boundaryTol", boundaryTol, 2.0e-5);
+    readOption("grid.regridding.boundaryTolRm", boundaryTolRm, 5.0e-6);
+    readOption("grid.regridding.addPointCount", addPointCount, 2);
+
+    readOption("times.tStart", tStart, 0.0e0);
+    readOption("terminationCondition.tEnd", tEnd, 1.0e0);
+
+    readOption("general.fixedBurnedVal", fixedBurnedVal, true);
+    readOption("general.fixedLeftLocation", fixedLeftLoc, false);
+    readOption("general.unburnedLeft",unburnedLeft, true);
+    readOption("general.curvedFlame",curvedFlame, false);
+    readOption("general.twinFlame",twinFlame, false);
+    readOption("general.centeredDifferences",centeredDifferences, false);
+    readOption("general.steadyOnly",steadyOnly, false);
+
+    if (cfg.exists("times.regridTimeInterval") || cfg.exists("times.regridStepInterval")) {
+        readOptionQuietDefault("times.regridTimeInterval",regridTimeInterval, 100);
+        readOptionQuietDefault("times.regridStepInterval",regridStepInterval, 100000);
+    } else {
+        readOption("times.regridTimeInterval",regridTimeInterval, 0.005);
+        readOption("times.regridStepInterval",regridStepInterval, 100);
     }
 
-    if (!cfg.lookupValue("grid.adaptation.dvtolCont",dvtolCont)) {
-        dvtolCont = dvtol;
+    if (cfg.exists("times.outputTimeInterval") || cfg.exists("times.outputStepInterval")) {
+        readOptionQuietDefault("times.outputTimeInterval", outputTimeInterval, 100);
+        readOptionQuietDefault("times.outputStepInterval", outputStepInterval, 100000);
+    } else {
+        readOption("times.outputTimeInterval", outputTimeInterval, 0.001);
+        readOption("times.outputStepInterval", outputStepInterval, 10);
     }
-    cfg.lookupValue("grid.adaptation.rmTol",rmTol);
-    cfg.lookupValue("grid.adaptation.dampConst",dampConst);
-    cfg.lookupValue("grid.adaptation.gridMin",gridMin);
-    cfg.lookupValue("grid.adaptation.gridMax",gridMax);
-    cfg.lookupValue("grid.adaptation.uniformityTol",uniformityTol);
-    cfg.lookupValue("grid.adaptation.absvtol",absvtol);
 
-    cfg.lookupValue("grid.regridding.boundaryTol",boundaryTol);
-    cfg.lookupValue("grid.regridding.boundaryTolRm",boundaryTolRm);
-    cfg.lookupValue("grid.regridding.addPointCount",addPointCount);
+    if (cfg.exists("times.profileTimeInterval") || cfg.exists("times.profileStepInterval")) {
+        readOptionQuietDefault("times.profileTimeInterval", profileTimeInterval, 100);
+        readOptionQuietDefault("times.profileStepInterval", profileStepInterval, 100000);
+    } else {
+        readOption("times.profileTimeInterval", profileTimeInterval, 0.050);
+        readOption("times.profileStepInterval", profileStepInterval, 2000);
+    }
 
-    cfg.lookupValue("times.tStart",tStart);
-    cfg.lookupValue("terminationCondition.tEnd",tEnd);
+    readOption("times.currentStateStepInterval", currentStateStepInterval, 2000);
+    readOption("times.terminateStepInterval", terminateStepInterval, 100);
+    readOption("times.integratorRestartInterval",integratorRestartInterval, 200);
+    readOption("times.maxTimestep",maxTimestep, 1.0e-3);
 
-    cfg.lookupValue("general.fixedBurnedVal",fixedBurnedVal);
-    cfg.lookupValue("general.fixedLeftLocation",fixedLeftLoc);
-    cfg.lookupValue("general.unburnedLeft",unburnedLeft);
-    cfg.lookupValue("general.curvedFlame",curvedFlame);
-    cfg.lookupValue("general.twinFlame",twinFlame);
-    cfg.lookupValue("general.centeredDifferences",centeredDifferences);
-    cfg.lookupValue("general.steadyOnly",steadyOnly);
+    readOption("debug.adaptation",debugParameters::debugAdapt, false);
+    readOption("debug.regridding",debugParameters::debugRegrid, false);
+    readOption("debug.sundials",debugParameters::debugSundials, false);
+    readOption("debug.jacobian",debugParameters::debugJacobian, false);
+    readOption("debug.calcIC",debugParameters::debugCalcIC, false);
+    readOption("debug.timesteps",debugParameters::debugTimesteps, true);
+    readOption("debug.solverStats",debugParameters::debugSolverStats, true);
+    readOption("debug.performanceStats",debugParameters::debugPerformanceStats, true);
+    readOption("debug.flameRadiusControl",debugParameters::debugFlameRadiusControl, false);
 
-    cfg.lookupValue("times.regridTimeInterval",regridTimeInterval);
-    cfg.lookupValue("times.regridStepInterval",regridStepInterval);
-    cfg.lookupValue("times.outputTimeInterval",outputTimeInterval);
-    cfg.lookupValue("times.outputStepInterval",outputStepInterval);
-    cfg.lookupValue("times.profileTimeInterval",profileTimeInterval);
-    cfg.lookupValue("times.profileStepInterval",profileStepInterval);
-    cfg.lookupValue("times.currentStateStepInterval",currentStateStepInterval);
-    cfg.lookupValue("times.terminateStepInterval",terminateStepInterval);
+    readOption("integrator.relativeTolerance", idaRelTol, 1e-5);
+    readOption("integrator.relativeToleranceLow", idaRelTolLow, 1e-3);
+    readOption("integrator.continuityAbsTol", idaContinuityAbsTol, 1e-8);
+    readOption("integrator.momentumAbsTol", idaMomentumAbsTol, 1e-8);
+    readOption("integrator.energyAbsTol", idaEnergyAbsTol, 1e-6);
+    readOption("integrator.speciesAbsTol", idaSpeciesAbsTol, 1e-10);
 
-    cfg.lookupValue("times.integratorRestartInterval",integratorRestartInterval);
-    cfg.lookupValue("times.maxTimestep",maxTimestep);
-
-    cfg.lookupValue("debug.adaptation",debugParameters::debugAdapt);
-    cfg.lookupValue("debug.regridding",debugParameters::debugRegrid);
-    cfg.lookupValue("debug.sundials",debugParameters::debugSundials);
-    cfg.lookupValue("debug.jacobian",debugParameters::debugJacobian);
-    cfg.lookupValue("debug.calcIC",debugParameters::debugCalcIC);
-    cfg.lookupValue("debug.timesteps",debugParameters::debugTimesteps);
-    cfg.lookupValue("debug.solverStats",debugParameters::debugSolverStats);
-    cfg.lookupValue("debug.performanceStats",debugParameters::debugPerformanceStats);
-    cfg.lookupValue("debug.flameRadiusControl",debugParameters::debugFlameRadiusControl);
-
-    cfg.lookupValue("integrator.relativeTolerance",idaRelTol);
-    cfg.lookupValue("integrator.relativeToleranceLow",idaRelTolLow);
-    cfg.lookupValue("integrator.continuityAbsTol",idaContinuityAbsTol);
-    cfg.lookupValue("integrator.momentumAbsTol",idaMomentumAbsTol);
-    cfg.lookupValue("integrator.energyAbsTol",idaEnergyAbsTol);
-    cfg.lookupValue("integrator.speciesAbsTol",idaSpeciesAbsTol);
-    cfg.lookupValue("integrator.enforceNonnegativeSpecies",enforceNonnegativeSpecies);
-
-    cfg.lookupValue("outputFiles.heatReleaseRate",outputHeatReleaseRate);
-    cfg.lookupValue("outputFiles.auxiliaryVariables",outputAuxiliaryVariables);
-    cfg.lookupValue("outputFiles.timeDerivatives",outputTimeDerivatives);
-    cfg.lookupValue("outputFiles.residualComponents",outputResidualComponents);
-    fileNumberOverride = cfg.lookupValue("outputFiles.firstFileNumber",outputFileNumber);
-    cfg.lookupValue("outputFiles.saveProfiles",outputProfiles);
-
-    cfg.lookupValue("terminationCondition.tolerance",terminationTolerance);
-    cfg.lookupValue("terminationCondition.toleranceLow",terminationToleranceLow);
-    cfg.lookupValue("terminationCondition.abstol",terminationAbsTol);
-    cfg.lookupValue("terminationCondition.timeLow",terminationPeriodLow);
-    cfg.lookupValue("terminationCondition.timeHigh",terminationPeriodHigh);
-    cfg.lookupValue("terminationCondition.time",terminationPeriod);
-    cfg.lookupValue("terminationCondition.timeMax",terminationMaxTime);
-
-    stopIfError = cfg.lookupValue("general.errorStopCount",errorStopCount);
-
-    std::string terminationMeasurement;
-    cfg.lookupValue("terminationCondition.measurement",terminationMeasurement);
-    terminateForSteadyQdot = (terminationMeasurement == "Q");
+    if (readOption("outputFiles.saveProfiles", outputProfiles, true)) {
+        readOption("outputFiles.heatReleaseRate", outputHeatReleaseRate, true);
+        readOption("outputFiles.auxiliaryVariables", outputAuxiliaryVariables, false);
+        readOption("outputFiles.timeDerivatives", outputTimeDerivatives, false);
+        readOption("outputFiles.residualComponents", outputResidualComponents, false);
+        fileNumberOverride = readOption("outputFiles.firstFileNumber", outputFileNumber, 0);
+    }
+    stopIfError = readOption("general.errorStopCount",errorStopCount, 1);
 
     if (cfg.exists("strainParameters.list")) {
         libconfig::Setting& strainSetting = cfg.lookup("strainParameters.list");
@@ -253,10 +179,30 @@ void configOptions::readOptionsFile(const std::string& filename)
         for (int i=0; i<strainCount; i++) {
             strainRateList.push_back(strainSetting[i]);
         }
+        cout << "    read option: strainParameters.list = " << strainRateList << endl;
+        multiRun = true;
+    } else {
+        multiRun = false;
     }
 
-    if (haveRestartFile) {
-        haveRestartFile = boost::filesystem::exists(inputDir + "/" + restartFile);
+    if (multiRun) {
+        terminateForSteadyQdot = true;
+        readOption("terminationCondition.timeMax",terminationMaxTime, 2.0);
+        readOption("terminationCondition.timeLow",terminationPeriodLow, 0.04);
+        readOption("terminationCondition.timeHigh",terminationPeriodHigh, 0.10);
+        readOption("terminationCondition.tolerance", terminationTolerance, 1e-4);
+        readOption("terminationCondition.toleranceLow", terminationToleranceLow, 1e-4);
+        readOption("terminationCondition.abstol",terminationAbsTol, 0.5);
+    } else {
+        std::string terminationMeasurement;
+        readOptionQuietDefault("terminationCondition.measurement",terminationMeasurement, "");
+        terminateForSteadyQdot = (terminationMeasurement == "Q");
+        if (terminateForSteadyQdot) {
+            readOption("terminationCondition.timeMax",terminationMaxTime, 2.0);
+            readOption("terminationCondition.time",terminationPeriod, 0.10);
+            readOption("terminationCondition.tolerance", terminationTolerance, 1e-4);
+            readOption("terminationCondition.abstol",terminationAbsTol, 0.5);
+        }
     }
 
     if (!boost::filesystem::exists(outputDir)) {
@@ -267,15 +213,6 @@ void configOptions::readOptionsFile(const std::string& filename)
         gasMechanismFile = inputDir + "/" + gasMechanismFile;
     }
 
-    if (transportModel=="Multi") {
-        usingMultiTransport = true;
-    } else if (transportModel=="Mix") {
-        usingMultiTransport = false;
-    } else {
-        cout << "Error: Invalid Transport Model specified (general.transportModel)." << endl;
-        throw;
-    }
-
     gridAlpha = (curvedFlame) ? 1 : 0;
 
     kContinuity = 0;
@@ -283,16 +220,31 @@ void configOptions::readOptionsFile(const std::string& filename)
     kEnergy = 2;
     kSpecies = 3;
 
-    // If neither step nor time intervals have been specified, use a default step interval
-    if (profileTimeInterval == 123456789 && profileStepInterval == 123456789) {
-        profileStepInterval = 50;
-    }
+    cout << "Finished reading configuration options." << endl;
+    delete theConfig;
+}
 
-    if (regridTimeInterval == 123456789 && regridStepInterval == 123456789) {
-        regridStepInterval = 20;
+template <class T1, class T2>
+bool configOptions::readOption(const std::string name, T1& value, const T2 defaultVal)
+{
+    bool readVal = theConfig->lookupValue(name, value);
+    if (readVal) {
+        cout << "    read option: " << name << " = " << value << endl;
+    } else {
+        value = defaultVal;
+        cout << " * used default: " << name << " = " << defaultVal << endl;
     }
+    return readVal;
+}
 
-    if (integratorRestartInterval == 123456789) {
-        integratorRestartInterval = 400;
+template <class T1, class T2>
+bool configOptions::readOptionQuietDefault(const std::string name, T1& value, const T2 defaultVal)
+{
+    bool readVal = theConfig->lookupValue(name, value);
+    if (readVal) {
+            cout << "    read option: " << name << " = " << value << endl;
+    } else {
+        value = defaultVal;
     }
+    return readVal;
 }

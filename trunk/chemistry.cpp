@@ -1,5 +1,6 @@
 #include "chemistry.h"
 #include "boost/filesystem.hpp"
+#include "debugUtils.h"
 
 canteraGas::canteraGas()
     : rootXmlNode(NULL)
@@ -37,8 +38,7 @@ void canteraGas::initialize(bool multiTransportFlag)
 
     // XML Information File
     if (!boost::filesystem::exists(mechanismFile)) {
-        cout << "Error: Cantera input file \"" << mechanismFile << "\" not found." << endl;
-        throw;
+        throw debugException("Error: Cantera input file \"" + mechanismFile + "\" not found.");
     }
 
     rootXmlNode = Cantera::get_XML_File(mechanismFile);

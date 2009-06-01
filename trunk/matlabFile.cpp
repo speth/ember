@@ -1,5 +1,6 @@
 #include "matlabFile.h"
 #include "boost/filesystem.hpp"
+#include "debugUtils.h"
 
 matlabFile::matlabFile(void)
      : file(NULL)
@@ -70,8 +71,7 @@ double matlabFile::readScalar(const std::string& name)
     }
 
     if (!mxIsDouble(var)) {
-        std::cout << "matFile::readScalar: Error: Data type is not double" << std::endl;
-        throw;
+        throw debugException("matFile::readScalar: Error: Data type is not double");
     }
 
     memcpy(&x, mxGetPr(var), sizeof(double));
@@ -115,8 +115,7 @@ dvector matlabFile::readVector(const std::string& name)
     }
 
     if (!mxIsDouble(var)) {
-        std::cout << "matFile::readVector: Error: Data type is not double" << std::endl;
-        throw;
+        throw debugException("matFile::readVector: Error: Data type is not double");
     }
 
     int n = mxGetNumberOfElements(var);
@@ -162,8 +161,7 @@ Cantera::Array2D matlabFile::readArray2D(const std::string& name)
     }
 
     if (!mxIsDouble(var)) {
-        std::cout << "matlabFile::readArray2D: Error: Data type is not double." << std::endl;
-        throw;
+        throw debugException("matlabFile::readArray2D: Error: Data type is not double.");
     }
 
     int nDims = mxGetNumberOfDimensions(var);

@@ -1,5 +1,6 @@
 #include "mathUtils.h"
 #include "sundialsUtils.h"
+#include "debugUtils.h"
 
 using std::cout; using std::endl;
 
@@ -57,7 +58,9 @@ double mathUtils::maxval(const dvector& v, int iStart, int iEnd)
 {
     int n = v.size();
     if (n==0) { return 0; }
-    if (iStart < 0 || iEnd > n) { throw; }
+    if (iStart < 0 || iEnd > n)
+        throw debugException("mathUtils::maxval: bad range specified");
+
     double val = v[0];
     for (int i=iStart; i<=iEnd; i++) {
         if (v[i] > val) {
@@ -71,7 +74,9 @@ double mathUtils::minval(const dvector& v, int iStart, int iEnd)
 {
     int n = v.size();
     if (n==0) { return 0; }
-    if (iStart < 0 || iEnd > n) { throw; }
+    if (iStart < 0 || iEnd > n)
+        throw debugException("mathUtils::minval: bad range specified");
+
     double val = v[0];
     for (int i=iStart; i<=iEnd; i++) {
         if (v[i] < val) {
@@ -85,7 +90,9 @@ double mathUtils::sum(const dvector& v, int iStart, int iEnd)
 {
     int n = v.size();
     if (n==0) { return 0; }
-    if (iStart < 0 || iEnd > n) { throw; }
+    if (iStart < 0 || iEnd > n)
+        throw debugException("mathUtils::sum: bad range specified");
+
     double val = 0;
     for (int i=iStart; i<=iEnd; i++) {
         val += v[i];
@@ -97,7 +104,9 @@ double mathUtils::mean(const dvector& v, int iStart, int iEnd)
 {
     int n = v.size();
     if (n==0) { return 0; }
-    if (iStart < 0 || iEnd > n) { throw; }
+    if (iStart < 0 || iEnd > n)
+        throw debugException("mathUtils::mean: bad range specified");
+
     double val = 0;
     for (int i=iStart; i<=iEnd; i++) {
         val += v[i];
@@ -205,8 +214,7 @@ dvector mathUtils::linspace(const double x1, const double x2, const int n)
 vector<dvector> mathUtils::computeSplines(const dvector& xIn, const dvector& yIn)
 {
     if (xIn.size() != yIn.size()) {
-        cout << "mathUtils::ComputeSplines: error: xIn and yIn must be the same size." << endl;
-        throw;
+        throw debugException("mathUtils::ComputeSplines: error: xIn and yIn must be the same size.");
     }
 
     int nIn = xIn.size();
@@ -251,8 +259,7 @@ vector<dvector> mathUtils::computeSplines(const dvector& xIn, const dvector& yIn
 dvector mathUtils::interp1(const dvector& xIn, const dvector& yIn, const dvector& xOut)
 {
     if (xIn.size() != yIn.size()) {
-        cout << "mathUtils::interp1: error: xIn and yIn must be the same size." << endl;
-        throw;
+        throw debugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
     }
     int nOut = xOut.size();
     int nIn = xIn.size();
@@ -275,8 +282,7 @@ dvector mathUtils::interp1(const dvector& xIn, const dvector& yIn, const dvector
 double mathUtils::interp1(const dvector& xIn, const dvector& yIn, const double xOut)
 {
     if (xIn.size() != yIn.size()) {
-        cout << "mathUtils::interp1: error: xIn and yIn must be the same size." << endl;
-        throw;
+        throw debugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
     }
 
     int nIn = xIn.size();
@@ -294,8 +300,7 @@ double mathUtils::interp1(const dvector& xIn, const dvector& yIn, const double x
 dvector mathUtils::splines(const dvector& xIn, const dvector& yIn, const dvector& xOut)
 {
     if (xIn.size() != yIn.size()) {
-        cout << "mathUtils::splines: error: xIn and yIn must be the same size." << endl;
-        throw;
+        throw debugException("mathUtils::splines: error: xIn and yIn must be the same size.");
     }
 
     int nOut = xOut.size();
@@ -324,8 +329,7 @@ dvector mathUtils::splines(const dvector& xIn, const dvector& yIn, const dvector
 double mathUtils::splines(const dvector& xIn, const dvector& yIn, const double xOut)
 {
     if (xIn.size() != yIn.size()) {
-        cout << "mathUtils::splines: error: xIn and yIn must be the same size." << endl;
-        throw;
+        throw debugException("mathUtils::splines: error: xIn and yIn must be the same size.");
     }
 
     int nIn = xIn.size();
@@ -346,8 +350,7 @@ double mathUtils::splines(const dvector& xIn, const dvector& yIn, const double x
 double mathUtils::integrate(const dvector& x, const dvector& y)
 {
     if (x.size() != y.size()) {
-        cout << "mathUtils::integrate: error: xIn and yIn must be the same size." << endl;
-        throw;
+        throw debugException("mathUtils::integrate: error: xIn and yIn must be the same size.");
     }
 
     int n = x.size();
@@ -367,8 +370,7 @@ double mathUtils::integrate(const dvector& x, const dvector& y)
 double mathUtils::trapz(const dvector& x, const dvector& y)
 {
     if (x.size() != y.size()) {
-        cout << "mathUtils::trapz: error: x and y must be the same size." << endl;
-        throw;
+        throw debugException("mathUtils::trapz: error: x and y must be the same size.");
     }
 
     double I = 0;
@@ -470,9 +472,9 @@ std::ostream& operator<<(std::ostream& os, vector<int>& v)
 
 dvector& operator+=(dvector& v1, const dvector& v2)
 {
-    if (v1.size() != v2.size()) {
-        throw;
-    }
+    if (v1.size() != v2.size())
+        throw debugException("mathUtils::operator+=: cannot add vectors of different sizes.");
+
     unsigned int n = v1.size();
 
     for (unsigned int i=0; i<n; i++) {
@@ -490,9 +492,9 @@ dvector operator+(const dvector& v1, const dvector& v2)
 
 dvector& operator-=(dvector& v1, const dvector& v2)
 {
-    if (v1.size() != v2.size()) {
-        throw;
-    }
+    if (v1.size() != v2.size())
+        throw debugException("mathUtils::operator-=: cannot subtract vectors of different sizes.");
+
     unsigned int n = v1.size();
 
     for (unsigned int i=0; i<n; i++) {
@@ -549,7 +551,7 @@ dvector& operator*=(dvector& v1, const double s)
 dvector& operator*=(dvector& v1, const dvector& v2)
 {
     if (v1.size() != v2.size()) {
-        throw;
+        throw debugException("mathUtils::operator*=: cannot multiply vectors of different sizes.");
     }
     unsigned int n = v1.size();
     for (unsigned int i=0; i<n; i++) {
@@ -579,7 +581,7 @@ dvector operator*(const double s, const dvector& v1)
 dvector& operator/=(dvector& v1, const dvector& v2)
 {
     if (v1.size() != v2.size()) {
-        throw;
+        throw debugException("mathUtils::operator/=: cannot divide vectors of different sizes.");
     }
     unsigned int n = v1.size();
     for (unsigned int i=0; i<n; i++) {
@@ -611,7 +613,9 @@ dvector operator/(const dvector& v1, const double s)
 
 vector<bool> operator>(const dvector& v1, const dvector& v2)
 {
-    if (v1.size() != v2.size()) throw;
+    if (v1.size() != v2.size())
+        throw debugException("mathUtils::operator>: cannot compare vectors of different sizes.");
+
     dvector::size_type n = v1.size();
     vector<bool> v(n);
     for (dvector::size_type i=0; i<n; i++) {
@@ -622,7 +626,9 @@ vector<bool> operator>(const dvector& v1, const dvector& v2)
 
 vector<bool> operator<(const dvector& v1, const dvector& v2)
 {
-    if (v1.size() != v2.size()) throw;
+    if (v1.size() != v2.size())
+        throw debugException("mathUtils::operator<: cannot compare vectors of different sizes.");
+
     dvector::size_type n = v1.size();
     vector<bool> v(n);
     for (dvector::size_type i=0; i<n; i++) {
@@ -633,7 +639,9 @@ vector<bool> operator<(const dvector& v1, const dvector& v2)
 
 vector<bool> operator>=(const dvector& v1, const dvector& v2)
 {
-    if (v1.size() != v2.size()) throw;
+    if (v1.size() != v2.size())
+        throw debugException("mathUtils::operator>=: cannot compare vectors of different sizes.");
+
     dvector::size_type n = v1.size();
     vector<bool> v(n);
     for (dvector::size_type i=0; i<n; i++) {
@@ -644,7 +652,9 @@ vector<bool> operator>=(const dvector& v1, const dvector& v2)
 
 vector<bool> operator<=(const dvector& v1, const dvector& v2)
 {
-    if (v1.size() != v2.size()) throw;
+    if (v1.size() != v2.size())
+        throw debugException("mathUtils::operator<=: cannot compare vectors of different sizes.");
+
     dvector::size_type n = v1.size();
     vector<bool> v(n);
     for (dvector::size_type i=0; i<n; i++) {
@@ -655,7 +665,8 @@ vector<bool> operator<=(const dvector& v1, const dvector& v2)
 
 vector<bool> operator==(const dvector& v1, const dvector& v2)
 {
-    if (v1.size() != v2.size()) throw;
+    if (v1.size() != v2.size())
+        throw debugException("mathUtils::operator==: cannot compare vectors of different sizes.");
     dvector::size_type n = v1.size();
     vector<bool> v(n);
     for (dvector::size_type i=0; i<n; i++) {
@@ -666,7 +677,9 @@ vector<bool> operator==(const dvector& v1, const dvector& v2)
 
 vector<bool> operator!=(const dvector& v1, const dvector& v2)
 {
-    if (v1.size() != v2.size()) throw;
+    if (v1.size() != v2.size())
+        throw debugException("mathUtils::operator!=: cannot compare vectors of different sizes.");
+
     dvector::size_type n = v1.size();
     vector<bool> v(n);
     for (dvector::size_type i=0; i<n; i++) {
@@ -748,7 +761,9 @@ vector<bool> operator!(const vector<bool>& v)
 vector<bool> operator&&(const vector<bool>& v1, const vector<bool>& v2)
 {
     vector<bool>::size_type n = v1.size();
-    if (n != v2.size()) throw;
+    if (n != v2.size())
+        throw debugException("mathUtils::operator&&: cannot compare vectors of different sizes.");
+
     vector<bool> out(n);
     for (vector<bool>::size_type i=0; i<n; i++) {
         out[i] = v1[i] && v2[i];
@@ -759,7 +774,9 @@ vector<bool> operator&&(const vector<bool>& v1, const vector<bool>& v2)
 vector<bool> operator||(const vector<bool>& v1, const vector<bool>& v2)
 {
     vector<bool>::size_type n = v1.size();
-    if (n != v2.size()) throw;
+    if (n != v2.size())
+        throw debugException("mathUtils::operator||: cannot compare vectors of different sizes.");
+
     vector<bool> out(n);
     for (vector<bool>::size_type i=0; i<n; i++) {
         out[i] = v1[i] || v2[i];

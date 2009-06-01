@@ -29,7 +29,7 @@ public:
                             sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta);
 
     // Finds a consistent solution for the DAE to begin the integration
-    int getInitialCondition(double t, sdVector& y, sdVector& ydot, vector<bool>& algebraic);
+    int getInitialCondition(double t, sdVector& y, sdVector& ydot);
 
     // Problem definition
     std::string reactants;
@@ -47,7 +47,6 @@ public:
     // Boundary values
     double rhou, rhob, rhoLeft, rhoRight;
     double Tu, Tb, Tleft, Tright;
-    double Ub, Uleft, Uright; // Uu = 1 by definition
     dvector Yu, Yb, Yleft, Yright;
 
     void setup(void);
@@ -152,16 +151,10 @@ public:
     double strainRateT0; // [s]
 
     double rVcenter; // mass flux at centerline [kg/m^2 or kg/m*rad*s]
+    double rVzero; // mass flux at j=0
     double tFlamePrev, tFlameNext;
     double xFlameTarget, xFlameActual;
     double flamePosIntegralError;
-
-     // Algebraic components of state, for IC calculation
-    vector<bool> algebraic;
-    void updateAlgebraicComponents(void);
-
-    // Constrained solution variables (species mass fractions)
-    void updateConstraints(sdVector& constraints);
 
     // Sundials solver parameters
     sdVector* abstol;

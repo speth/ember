@@ -33,6 +33,10 @@ int main(int argc, char** argv)
     } catch (libconfig::ParseException err) {
         cout << "Error in config file \"" << inputFile << "\": ";
         cout << err.getError() << " on line " << err.getLine() << endl;
+    } catch (debugException& e) {
+        cout << e.errorString << endl;
+    } catch (...) {
+        cout << "I have no idea what went wrong!" << endl;
     }
 
     return 0;
@@ -41,8 +45,8 @@ int main(int argc, char** argv)
 void strainedFlame(const std::string& inputFile)
 {
     // This version string is automatically updated during the build process
-    std::string REVISION = "80";
-    std::string BUILDDATE = "2009-05-29 12:08:01";
+    std::string REVISION = "81";
+    std::string BUILDDATE = "2009-06-01 13:57:28";
     cout << "**** strainedFlame (1Dflame Version 2.1." << REVISION << ")  [" << BUILDDATE << "] ****\n" << std::endl;
 
     // Read configuration from inputFile
