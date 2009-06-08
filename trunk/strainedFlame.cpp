@@ -45,8 +45,8 @@ int main(int argc, char** argv)
 void strainedFlame(const std::string& inputFile)
 {
     // This version string is automatically updated during the build process
-    std::string REVISION = "81";
-    std::string BUILDDATE = "2009-06-01 13:57:28";
+    std::string REVISION = "82";
+    std::string BUILDDATE = "2009-06-08 18:40:08";
     cout << "**** strainedFlame (1Dflame Version 2.1." << REVISION << ")  [" << BUILDDATE << "] ****\n" << std::endl;
 
     // Read configuration from inputFile
@@ -87,8 +87,12 @@ void strainedFlame(const std::string& inputFile)
                 double tEnd = *(oldTime.rbegin());
 
                 // Append the integral data from the old run
-                int iStart = findFirst(oldTime > tEnd - mainOptions.terminationPeriod);
+                int iStart = findFirst(oldTime > tEnd - mainOptions.terminationPeriodHigh);
                 int iEnd = oldTime.size()-1;
+                if (iStart == -1) {
+                    cout << "Warning: old data file did not contain data spanning the requested period." << endl;
+                    iStart = iEnd/2;
+                }
                 eps.push_back(a);
                 Q.push_back(mean(oldQ, iStart, iEnd));
                 Sc.push_back(mean(oldSc, iStart, iEnd));
@@ -140,14 +144,23 @@ void strainedFlame(const std::string& inputFile)
                 outFile.close();
 
                 // Append and save the integral data for this run
-                int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.theSys.tNow - mainOptions.terminationPeriod));
+                int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.theSys.tNow - mainOptions.terminationPeriodHigh));
                 int iEnd = theFlameSolver.timestepVector.size()-1;
                 eps.push_back(a);
                 Q.push_back(mean(theFlameSolver.heatReleaseRate, iStart, iEnd));
                 Sc.push_back(mean(theFlameSolver.consumptionSpeed, iStart, iEnd));
                 xFlame.push_back(mean(theFlameSolver.flamePosition, iStart, iEnd));
-
             }
+
+            // Sort by strain rate:
+            vector<dvector> intProps(3);
+            intProps[0] = Q;
+            intProps[1] = Sc;
+            intProps[2] = xFlame;
+            mathUtils::uniqueSort(eps, intProps);
+            Q = intProps[0];
+            Sc = intProps[1];
+            xFlame = intProps[2];
 
             matlabFile dataFile(mainOptions.outputDir+"/integral.mat");
             dataFile.writeVector("a",eps);

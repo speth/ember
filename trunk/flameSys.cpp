@@ -75,12 +75,12 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
     for (int j=0; j<jj; j++) {
         sumcpj[j] = 0;
         for (int k=0; k<nSpec; k++) {
-            jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1))
-                * (Y(k,j+1)-Y(k,j))/hh[j];
+            jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1)) * ((Y(k,j+1)-Y(k,j))/hh[j]) -
+                0.5*(rhoD(k,j)*Y(k,j)/Wmx[j]+Y(k,j+1)*rhoD(k,j+1)/Wmx[j+1])*(Wmx[j+1]-Wmx[j])/hh[j]; 
             jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
                 * (T[j+1]-T[j])/hh[j];
-
         }
+
         qFourier[j] = -0.5*(lambda[j]+lambda[j+1])*(T[j+1]-T[j])/hh[j];
         if (inGetIC) {
             jCorr[j] = 0;
@@ -90,7 +90,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
         }
         for (int k=0; k<nSpec; k++) {
             jFick(k,j) += 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]; // correction to ensure that sum of mass fractions equals 1
-            sumcpj[j] += cpSpec(k,j)/W[k]*(jFick(k,j) + jSoret(k,j));
+            sumcpj[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j) + jSoret(k,j));
         }
     }
 
@@ -489,15 +489,21 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
                 0.5*rphalf[j]*((rhoD(k,j)+rhoD(k,j+1))/hh[j]+jCorr[j])/(dlj[j]*r[j]) +
                 0.5*rphalf[j-1]*((rhoD(k,j-1)+rhoD(k,j))/hh[j-1]-jCorr[j-1])/(dlj[j]*r[j]);
 
+            jacB(j,kSpecies+k,kSpecies+k) += 0.5*rhoD(k,j)/Wmx[j]*(-rphalf[j]*(Wmx[j+1]-Wmx[j])/hh[j] + rphalf[j-1]*(Wmx[j]-Wmx[j-1])/hh[j-1])/(dlj[j]*r[j]); 
+
             // dSpeciesk/dYk_j-1
             jacA(j,kSpecies+k,kSpecies+k) = -0.5*rphalf[j-1]
                 * ((rhoD(k,j-1)+rhoD(k,j))/hh[j-1]+jCorr[j-1])
                 / (dlj[j]*r[j]);
+                
+            jacA(j,kSpecies+k,kSpecies+k) += 0.5*rphalf[j-1]*rhoD(k,j-1)/Wmx[j-1]*(Wmx[j]-Wmx[j-1])/(hh[j]*dlj[j]*r[j]);
 
             // dSpeciesk/dYk_j+1
             jacC(j,kSpecies+k,kSpecies+k) = -0.5*rphalf[j]
                 * ((rhoD(k,j)+rhoD(k,j+1))/hh[j]-jCorr[j])
                 / (dlj[j]*r[j]);
+                
+            jacC(j,kSpecies+k,kSpecies+k) -= 0.5*rphalf[j]*rhoD(k,j+1)/Wmx[j+1]*(Wmx[j+1]-Wmx[j])/(hh[j]*dlj[j]*r[j]);
 
             if (options.centeredDifferences) {
                 jacA(j,kSpecies+k,kSpecies+k) += V[j]*cfm[j];
@@ -519,10 +525,14 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
             jacB(j,kEnergy,kSpecies+k) = hdwdY(k,j)/cp[j] + rho[j]*(W[k]-Wmx[j])/(W[k]*(1-Y(k,j)))*dTdt[j];
 
             // Enthalpy flux term
-            jacA(j,kEnergy,kSpecies+k) += 0.25*dTdxCen[j]*cpSpec(k,j)/W[k]*(rhoD(k,j)+rhoD(k,j-1))/cp[j]/hh[j-1];
-            jacB(j,kEnergy,kSpecies+k) -= 0.25*dTdxCen[j]*cpSpec(k,j)/W[k]*(rhoD(k,j)+rhoD(k,j-1))/cp[j]/hh[j-1];
-            jacB(j,kEnergy,kSpecies+k) += 0.25*dTdxCen[j]*cpSpec(k,j)/W[k]*(rhoD(k,j)+rhoD(k,j+1))/cp[j]/hh[j];
-            jacC(j,kEnergy,kSpecies+k) -= 0.25*dTdxCen[j]*cpSpec(k,j)/W[k]*(rhoD(k,j)+rhoD(k,j+1))/cp[j]/hh[j];
+            jacA(j,kEnergy,kSpecies+k) += 0.25*dTdxCen[j]*(cpSpec(k,j)+cpSpec(k,j-1))/W[k]
+                *(rhoD(k,j)+rhoD(k,j-1))/cp[j]/hh[j-1];
+            jacB(j,kEnergy,kSpecies+k) -= 0.25*dTdxCen[j]*(cpSpec(k,j)+cpSpec(k,j-1))/W[k]
+                *(rhoD(k,j)+rhoD(k,j-1))/cp[j]/hh[j-1];
+            jacB(j,kEnergy,kSpecies+k) += 0.25*dTdxCen[j]*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]
+                *(rhoD(k,j)+rhoD(k,j+1))/cp[j]/hh[j];
+            jacC(j,kEnergy,kSpecies+k) -= 0.25*dTdxCen[j]*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]
+                *(rhoD(k,j)+rhoD(k,j+1))/cp[j]/hh[j];
         }
 
         // dEnergy/dT_j
@@ -1358,14 +1368,11 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot)
     // rV[jj]
     if (grid.unburnedLeft && !grid.fixedBurnedVal) {
         // Zero gradient condition for T,Y
-        double sum1 = 0;
-        double sum2 = 0;
+        double sum = 0;
         for (int k=0; k<nSpec; k++) {
-            sum1 += dYdt(k,jj-1)/W[k];
-            sum2 += dYdt(k,jj)/W[k];
+            sum += dYdt(k,jj)/W[k];
         }
-        drhodt[jj-1] = -rho[jj-1]*(dTdt[jj-1]/T[jj-1] + Wmx[jj-1]*sum1);
-        drhodt[jj] = -rho[jj]*(dTdt[jj]/T[jj] + Wmx[jj]*sum2);
+        drhodt[jj] = -rho[jj]*(dTdt[jj]/T[jj] + Wmx[jj]*sum);
     } else {
         // Fixed values for T,Y
         drhodt[jj] = 0;
@@ -1557,6 +1564,8 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
 
     if (options.outputHeatReleaseRate || errorFile) {
         outFile.writeVector("q",qDot);
+        outFile.writeVector("rho", rho);
+
     }
 
     if (options.outputTimeDerivatives || errorFile) {
@@ -1568,7 +1577,6 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
     }
 
     if (options.outputAuxiliaryVariables || errorFile) {
-        outFile.writeVector("rho", rho);
         outFile.writeArray2D("wdot", wDot);
         outFile.writeArray2D("rhoD",rhoD);
         outFile.writeVector("lambda",lambda);
@@ -1579,19 +1587,13 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("jFick", jFick);
         outFile.writeArray2D("jSoret", jSoret);
         outFile.writeVector("qFourier",qFourier);
-
         outFile.writeVector("cfp",grid.cfp);
         outFile.writeVector("cf",grid.cf);
         outFile.writeVector("cfm",grid.cfm);
-        outFile.writeVector("csp",grid.cfp);
-        outFile.writeVector("cs",grid.cf);
-        outFile.writeVector("csm",grid.cfm);
         outFile.writeVector("hh",hh);
         outFile.writeVector("rphalf",grid.rphalf);
-
         outFile.writeScalar("Tleft",Tleft);
         outFile.writeVector("Yleft",Yleft);
-
         outFile.writeVector("sumcpj",sumcpj);
     }
 
@@ -1750,6 +1752,8 @@ void flameSys::testPreconditioner(void)
     // both using the analytic Jacobian function and numerically
     // by evaluating (f(y+dy)-f(y))/dy. Since the latter method
     // would take too long normally, we only look at 3 points: j=1, j=jj/2 and j=jj
+    // This function is for debugging purposes only, and is not called when
+    // the code is running normally.
 
     int jj = nPoints - 1;
 

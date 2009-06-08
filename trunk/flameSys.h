@@ -85,7 +85,7 @@ public:
 
     // State variables:
     dvector V; // mass flux normal to flame per unit area (rho*v) [kg/m^2*s]
-    dvector U; // normalized tangential velocity (u/u_inf) [non-dim]
+    dvector U; // normalized tangential velocity (u*a/u_inf) [1/s]
     dvector T; // temperature [K]
     Array2D Y; // species mass fractions, Y(k,j)
 
@@ -118,7 +118,7 @@ public:
 
     // Diffusion coefficients
     Array2D rhoD; // density-weighted, mixture-averaged diffusion coefficients [kg/m*s] (= rho*Dkm)
-    Array2D Dkt; // thermal diffusion coefficients [m^2/s]
+    Array2D Dkt; // thermal diffusion coefficients [kg/m*s]
 
     // Diffusion mass fluxes
     Array2D jFick; // Normal diffusion (Fick's Law) [kg/m^2*s]

@@ -1,6 +1,7 @@
 #include "mathUtils.h"
 #include "sundialsUtils.h"
 #include "debugUtils.h"
+#include <map>
 
 using std::cout; using std::endl;
 

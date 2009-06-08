@@ -64,11 +64,6 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("initialCondition.equivalenceRatio", equivalenceRatio, 0.6);
     readOption("initialCondition.pressure", pressure, Cantera::OneAtm);
 
-    // Strain Rate Parameters
-    readOption("strainParameters.initial", strainRateInitial, 100);
-    readOption("strainParameters.final", strainRateFinal, 100);
-    readOption("strainParameters.tStart", strainRateT0, 1.0e-3);
-    readOption("strainParameters.dt", strainRateDt, 0.0e0);
 
     if (readOptionQuietDefault("positionControl.xStag", xStag, 0)) {
         xStagControl = true;
@@ -108,7 +103,7 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("grid.regridding.addPointCount", addPointCount, 2);
 
     readOption("times.tStart", tStart, 0.0e0);
-    readOption("terminationCondition.tEnd", tEnd, 1.0e0);
+    readOption("terminationCondition.tEnd", tEnd, 10);
 
     readOption("general.fixedBurnedVal", fixedBurnedVal, true);
     readOption("general.fixedLeftLocation", fixedLeftLoc, false);
@@ -182,6 +177,11 @@ void configOptions::readOptionsFile(const std::string& filename)
         cout << "    read option: strainParameters.list = " << strainRateList << endl;
         multiRun = true;
     } else {
+        // Strain Rate Parameters
+        readOption("strainParameters.initial", strainRateInitial, 100);
+        readOption("strainParameters.final", strainRateFinal, 100);
+        readOption("strainParameters.tStart", strainRateT0, 1.0e-3);
+        readOption("strainParameters.dt", strainRateDt, 0.0e0);
         multiRun = false;
     }
 

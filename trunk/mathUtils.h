@@ -77,6 +77,10 @@ namespace mathUtils
     int sign(const double x);
     int sign(const int x);
 
+    // Sort & remove duplicate entries from "keys", and perform the same permutation on "values"
+    // Requires that keys.size() == values[i].size()
+    template <class Tx, class Ty>
+    void uniqueSort(vector<Tx>& keys, vector< vector<Ty> >& values);
 }
 
 std::ostream& operator<<(std::ostream& os, dvector& v);
@@ -121,3 +125,37 @@ vector<bool> operator!=(const dvector& v1, const double& s);
 vector<bool> operator!(const vector<bool>& v);
 vector<bool> operator&&(const vector<bool>& v1, const vector<bool>& v2);
 vector<bool> operator||(const vector<bool>& v1, const vector<bool>& v2);
+
+
+template <class Tx, class Ty>
+void mathUtils::uniqueSort(vector<Tx>& keys, vector< vector<Ty> >& values)
+{
+    int n = keys.size();
+    int m = values.size();
+    std::map<Tx, vector<Ty> > box;
+    vector<double> tmp(m);
+
+    for (int i=0; i<n; i++) {
+        for (int j=0; j<m; j++) {
+            tmp[j] = values[j][i];
+        }
+        box[keys[i]] = tmp;
+    }
+
+    n = box.size();
+    keys.resize(n);
+    for (int j=0; j<m; j++) {
+        values[j].resize(n);
+    }
+
+    typename std::map<Tx, vector<Ty> >::iterator iter;
+    int i=0;
+    for (iter=box.begin(); iter!=box.end(); iter++) {
+        keys[i] = iter->first;
+        for (int j=0; j<m; j++) {
+            values[j][i] = iter->second[j];
+        }
+        i++;
+    }
+}
+
