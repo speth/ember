@@ -1,0 +1,4918 @@
+#LyX 1.6.4 created this file. For more info see http://www.lyx.org/
+\lyxformat 345
+\begin_document
+\begin_header
+\textclass article
+\begin_preamble
+\makeatletter
+\def\@biblabel#1{\hspace*{-\labelsep}}
+\makeatother
+
+\hyphenpenalty=2000
+\end_preamble
+\use_default_options true
+\language english
+\inputencoding auto
+\font_roman ae
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\paperfontsize 11
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_amsmath 1
+\use_esint 1
+\cite_engine natbib_numerical
+\use_bibtopic false
+\paperorientation portrait
+\leftmargin 1in
+\topmargin 1in
+\rightmargin 1in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\author "" 
+\author "" 
+\end_header
+
+\begin_body
+
+\begin_layout Title
+1dflameV2: User's Guide
+\end_layout
+
+\begin_layout Author
+Raymond Speth
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+The purpose of this document is to provide a detailed, up-to-date description
+ of the RGD one-dimensional flame code.
+ The code simulates an unsteady, quasi-one dimensional flame subjected to
+ arbitrarily varying strain rate and curvature.
+ The code is written in C++, utilizing Cantera to compute chemical properties,
+ and the Sundials IDA solver to integrate the system of governing equations.
+\end_layout
+
+\begin_layout Section
+Flame Model
+\end_layout
+
+\begin_layout Standard
+The elemental flame model consists of a laminar flame stabilized in a stagnation
+ flow.
+ The parameters of the stagnation flow may be imposed explicitly, or provided
+ through coupling with an outer flow within which the elemental flame is
+ embedded.
+ The kinematics of the coupling between the elemental flame and the outer
+ flow has been described elsewhere 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Marzouk1999"
+
+\end_inset
+
+.
+ Here, the flame is parameterized by the strain rate and position (radius)
+ of the stagnation point in the non-reacting flow.
+ The stagnation flow models are described in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Flame-models"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The general 3D conservation equations for mass, momentum, energy and chemical
+ species are reduced to one dimension by using a boundary layer approximation
+ across the flame.
+ The derivation of these governing equations is contained in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Governing-equations"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The boundary conditions for the elemental flame model are discussed in Section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Boundary-Conditions"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Flame-models"
+
+\end_inset
+
+Flame Models
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Single-opposed-jet"
+
+\end_inset
+
+Single Opposed-Jet Flame
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+centering
+\end_layout
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename planar-single.pdf
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "cap:SingleOppJetFlame"
+
+\end_inset
+
+The single opposed-jet flame configuration.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+The simplest configuration for the elemental flame is that of the single
+ opposed-jet flame 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Marzouk1999,Marzouk2003"
+
+\end_inset
+
+.
+ Fluid flows from 
+\begin_inset Formula $x=\pm\infty$
+\end_inset
+
+ toward the stagnation point at 
+\begin_inset Formula $x=0$
+\end_inset
+
+.
+ The potential flow velocity field for the non-reacting flow is
+\begin_inset Formula \begin{equation}
+u=a(t)z\quad\quad v=-a(t)x\label{eq:potential-planar}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $u$
+\end_inset
+
+ and 
+\begin_inset Formula $v$
+\end_inset
+
+ are the velocity components in the 
+\begin_inset Formula $z$
+\end_inset
+
+ and 
+\begin_inset Formula $x$
+\end_inset
+
+ directions, respectively, and 
+\begin_inset Formula $a(t)$
+\end_inset
+
+ is the time varying strain rate parameter.
+ If we take the mixture coming from 
+\begin_inset Formula $x=-\infty$
+\end_inset
+
+ to be premixed reactants and the mixture coming from 
+\begin_inset Formula $x=-\infty$
+\end_inset
+
+ to be the reaction products, a flame will be established at some point
+ 
+\begin_inset Formula $x<0$
+\end_inset
+
+ where the consumption speed balances the local fluid velocity.
+ This configuration is shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "cap:SingleOppJetFlame"
+
+\end_inset
+
+.
+ Note that a flame in this configuration can never be completely extinguished
+ because there will always be a region of contact between reactants and
+ products.
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Twin-opposed-jet"
+
+\end_inset
+
+Twin Opposed-Jet Flame
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+centering
+\end_layout
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename planar-twin.pdf
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "cap:TwinOppJetFlame"
+
+\end_inset
+
+Twin opposed-jet flame configuration.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+The potential flow velocity field for the twin opposed-jet flame is identical
+ to that of the single opposed jet flame, but with both inlet streams consisting
+ of premixed reactants.
+ As depicted in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "cap:TwinOppJetFlame"
+
+\end_inset
+
+, two flames are established, one on each side of the stagnation point,
+ propagating away from one another.
+ Reaction products exist in the region between the two flames.
+ Because the composition of the products mixture is not imposed externally,
+ this configuration allows flame extinction to occur when the flames are
+ pushed close together.
+ The domain is symmetric about the stagnation plane 
+\begin_inset Formula $x=0$
+\end_inset
+
+, allowing this configuration to be simulated numerically as a single flame
+ with a symmetry boundary condition applied on the products side of the
+ flame.
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Curved-zero"
+
+\end_inset
+
+Tubular Flame at Zero Stagnation Radius
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+centering
+\end_layout
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename curved0.pdf
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "cap:CurvedFlameZero"
+
+\end_inset
+
+Tubular flame at zero stagnation radius.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+The curved flame at zero stagnation radius is quite similar to the twin
+ opposed-jet flame.
+ Instead of the planar stagnation flow, we have an axisymmetric stagnation
+ flow, with reactants flowing inward from 
+\begin_inset Formula $r=\infty$
+\end_inset
+
+ toward the stagnation point at 
+\begin_inset Formula $r=0$
+\end_inset
+
+, establishing a cylindrical flame propagating away from the centerline.
+ This configuration is shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "cap:CurvedFlameZero"
+
+\end_inset
+
+.
+ The potential flow velocity field is
+\begin_inset Formula \begin{equation}
+u=a(t)z\quad\quad v=-\frac{1}{2}a(t)r\label{eq:potential-rstag0}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $u$
+\end_inset
+
+ and 
+\begin_inset Formula $v$
+\end_inset
+
+ are the velocity components in the 
+\begin_inset Formula $z$
+\end_inset
+
+ and 
+\begin_inset Formula $r$
+\end_inset
+
+ directions, respectively.
+ As in the twin opposed jet flame, a symmetry boundary condition applies
+ at 
+\begin_inset Formula $r=0$
+\end_inset
+
+, and flame extinction occurs when the flame is pushed too close to the
+ centerline.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Curved-finite"
+
+\end_inset
+
+Tubular Flame at Finite Stagnation Radius
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename curvedfinite.pdf
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "cap:CurvedFlameFinite"
+
+\end_inset
+
+Positively (left) and negatively (right) curved tubular flames at finite
+ stagnation radii.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+The tubular flame at zero stagnation radius can be modified by introducing
+ a line source at 
+\begin_inset Formula $r=0$
+\end_inset
+
+.
+ This produces a potential flow where the stagnation surface is a cylinder
+ of radius 
+\begin_inset Formula $R$
+\end_inset
+
+, as shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "cap:CurvedFlameFinite"
+
+\end_inset
+
+.
+ Since the composition of the flow coming from 
+\begin_inset Formula $r=0$
+\end_inset
+
+ may be freely specified, this configuration permits both positively and
+ negatively curved flames.
+ The resulting potential flow velocity field is
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+u=az\quad\quad v=\frac{a}{2}\left(\frac{R^{2}-r^{2}}{r}\right)\label{eq:potential-curved-finite}\end{equation}
+
+\end_inset
+
+The boundary condition at 
+\begin_inset Formula $r=0$
+\end_inset
+
+ requires special attention in order to capture both the symmetry condition
+ and the effect of the mass flux at the centerline.
+ The appropriate equations for the boundary condition are derived in Section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Boundary-Conditions"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Unified-formulation"
+
+\end_inset
+
+Unified Formulation
+\end_layout
+
+\begin_layout Standard
+The stagnation point flow configurations discussed above can be rewritten
+ in a unified form, permitting both planar and curved geometry through the
+ introduction of the parameter 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ where 
+\begin_inset Formula $\alpha=0$
+\end_inset
+
+ for planar geometry and 
+\begin_inset Formula $\alpha=1$
+\end_inset
+
+ for curved geometry.
+ Introducing the coordinate system 
+\begin_inset Formula $(r,z)$
+\end_inset
+
+ where 
+\begin_inset Formula $r$
+\end_inset
+
+ is the coordinate normal to the flame (regardless of whether the coordinate
+ system is curved or planar) and the 
+\begin_inset Formula $z$
+\end_inset
+
+ coordinate is tangential to the flame.
+ The potential flow velocity field is then 
+\begin_inset Formula \begin{equation}
+u=az\quad\quad v=\frac{a}{\alpha+1}\left(\frac{\left|R\right|R^{\alpha}-r^{\alpha+1}}{r^{\alpha}}\right)\label{eq:potential-unified}\end{equation}
+
+\end_inset
+
+ This formulation permits the use of a fictitious negative stagnation point
+ radius 
+\begin_inset Formula $R$
+\end_inset
+
+, with the centerline acting as a sink rather than a source.
+\end_layout
+
+\begin_layout Standard
+The stretch rate 
+\begin_inset Formula $\kappa$
+\end_inset
+
+ for a flame at radius 
+\begin_inset Formula $R_{f}$
+\end_inset
+
+ is
+\begin_inset Formula \begin{equation}
+\kappa=a+\frac{\alpha}{R_{f}}\frac{dR_{f}}{dt}\end{equation}
+
+\end_inset
+
+When the flame is stationary, the stretch rate reduces to 
+\begin_inset Formula $\kappa=a$
+\end_inset
+
+ and thus curvature does not contribute to flame stretch for stationary
+ flames in this configuration.
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Governing-equations"
+
+\end_inset
+
+Governing Equations
+\end_layout
+
+\begin_layout Standard
+The one-dimensional governing equations for the elemental flame are derived
+ in this section.
+ We begin with the general 3D governing equations for reacting flow as given
+ by Kee 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Kee2003"
+
+\end_inset
+
+ and reduce them to a single dimension normal to the flame using a boundary
+ layer approximation and solving along the stagnation streamline 
+\begin_inset Formula $z=0$
+\end_inset
+
+.
+ Consider the coordinate system 
+\begin_inset Formula $(z,r,\theta)$
+\end_inset
+
+ with velocity components 
+\begin_inset Formula $(u,v,w)$
+\end_inset
+
+ and let 
+\begin_inset Formula $\hat{r}$
+\end_inset
+
+ be the flame normal.
+ We may allow this coordinate system to be either Cartesian or cylindrical
+ through the introduction of a parameter 
+\begin_inset Formula $\alpha$
+\end_inset
+
+, where 
+\begin_inset Formula $\alpha=1$
+\end_inset
+
+ for the cylindrical case and 
+\begin_inset Formula $\alpha=0$
+\end_inset
+
+ for the Cartesian case.
+ In making the boundary layer approximation, the tangential variations of
+ all quantities except the pressure 
+\begin_inset Formula $p$
+\end_inset
+
+ and tangential velocity 
+\begin_inset Formula $u$
+\end_inset
+
+ are neglected.
+ The velocity and all variations in the 
+\begin_inset Formula $\theta$
+\end_inset
+
+ direction are zero.
+ For an arbitrary scalar 
+\begin_inset Formula $F$
+\end_inset
+
+, the gradient and substantial derivative are defined as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\nabla F\equiv\hat{z}\frac{\partial F}{\partial z}+\hat{r}\frac{\partial F}{\partial r}\label{eq:gradient}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\frac{DF}{Dt}=\frac{\partial F}{\partial t}+{\bf v}\cdot\nabla F=\frac{\partial F}{\partial t}+u\frac{\partial F}{\partial z}+v\frac{\partial F}{\partial r}\label{eq:substDeriv}\end{equation}
+
+\end_inset
+
+The divergence of a vector 
+\begin_inset Formula $\mathbf{F}$
+\end_inset
+
+ is defined as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\nabla\cdot\mathbf{F}\equiv\frac{\partial F_{z}}{\partial z}+\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left(r^{\alpha}F_{r}\right)\label{eq:divergence}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $F_{z}$
+\end_inset
+
+ and 
+\begin_inset Formula $F_{r}$
+\end_inset
+
+ are respectively the 
+\begin_inset Formula $z$
+\end_inset
+
+ and 
+\begin_inset Formula $r$
+\end_inset
+
+ components of 
+\begin_inset Formula $\mathbf{F}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsubsection
+Momentum Equation
+\end_layout
+
+\begin_layout Standard
+First, we will focus on the momentum equation.
+ In general three-dimensional form, it is
+\begin_inset Formula \begin{equation}
+\rho\frac{D\mathbf{v}}{Dt}={\bf f}+\nabla\cdot\mathsf{T}\label{eq:vec_momentum}\end{equation}
+
+\end_inset
+
+ where 
+\begin_inset Formula $\mathsf{T}$
+\end_inset
+
+ is the stress tensor,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\mathsf{T}=\left(\begin{array}{ccc}
+-p+2\mu\frac{\partial u}{\partial z}+\kappa\nabla\cdot\mathbf{v} & \mu\left(\frac{\partial u}{\partial r}+\frac{\partial v}{\partial z}\right) & \mu\left(\frac{1}{r^{\alpha}}\frac{\partial u}{\partial\theta}+\frac{\partial w}{\partial z}\right)\\
+\mu\left(\frac{\partial u}{\partial r}+\frac{\partial v}{\partial z}\right) & -p+2\mu\frac{\partial v}{\partial r}+\kappa\nabla\cdot\mathbf{v} & \mu\left(\frac{\partial w}{\partial r}-\alpha\frac{w}{r}+\frac{1}{r^{\alpha}}\frac{\partial v}{\partial\theta}\right)\\
+\mu\left(\frac{1}{r^{\alpha}}\frac{\partial u}{\partial\theta}+\frac{\partial w}{\partial z}\right) & \mu\left(\frac{\partial w}{\partial r}-\alpha\frac{w}{r}+\frac{1}{r^{\alpha}}\frac{\partial v}{\partial\theta}\right) & -p+2\mu\left(\frac{1}{r^{\alpha}}\frac{\partial w}{\partial\theta}+\alpha\frac{v}{r}\right)+\kappa\nabla\cdot\mathbf{v}\end{array}\right)\label{eq:stress_tensor}\end{equation}
+
+\end_inset
+
+ and the body force 
+\begin_inset Formula $\mathbf{f}=\mathbf{0}$
+\end_inset
+
+.
+ Here, 
+\begin_inset Formula $p$
+\end_inset
+
+ is the pressure and 
+\begin_inset Formula $\mu$
+\end_inset
+
+ is the dynamic viscosity of the mixture.
+ Setting velocities and derivatives in the 
+\begin_inset Formula $\theta$
+\end_inset
+
+ direction to zero, the 
+\begin_inset Formula $z$
+\end_inset
+
+-momentum equation is
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial u}{\partial t}+\rho u\frac{\partial u}{\partial z}+\rho v\frac{\partial u}{\partial r}=\frac{\partial}{\partial z}\left[-p+2\mu\frac{\partial u}{\partial z}+\kappa\nabla\cdot\mathbf{v}\right]+\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left[r^{\alpha}\mu\left(\frac{\partial u}{\partial r}+\frac{\partial v}{\partial z}\right)\right]\end{equation}
+
+\end_inset
+
+The term containing the second coefficient of viscosity, 
+\begin_inset Formula $\kappa\nabla\cdot\mathbf{v}$
+\end_inset
+
+, is taken to be zero.
+ Additionally, 
+\begin_inset Formula $\partial v/\partial z$
+\end_inset
+
+ and 
+\begin_inset Formula $\partial^{2}u/\partial z^{2}$
+\end_inset
+
+ are neglected by the boundary layer approximation, giving the simplified
+ 
+\begin_inset Formula $z$
+\end_inset
+
+-momentum equation 
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial u}{\partial t}+\rho u\frac{\partial u}{\partial z}+\rho v\frac{\partial u}{\partial r}=-\frac{\partial p}{\partial z}+\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left[r^{\alpha}\mu\frac{\partial u}{\partial r}\right]\end{equation}
+
+\end_inset
+
+ The pressure gradient outside the boundary layer may be obtained by substitutin
+g the potential flow solution for 
+\begin_inset Formula $u$
+\end_inset
+
+ and 
+\begin_inset Formula $v$
+\end_inset
+
+ into the momentum equation.
+\begin_inset Formula \begin{equation}
+\rho_{\infty}z\frac{da}{dt}+\rho_{\infty}a^{2}z=-\frac{\partial p}{\partial z}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\rho_{\infty}$
+\end_inset
+
+ is the density of the reactants mixture.
+ By the boundary layer approximation, this must be the pressure gradient
+ inside the boundary layer as well.
+ 
+\end_layout
+
+\begin_layout Standard
+The 
+\begin_inset Formula $z$
+\end_inset
+
+ dependence of 
+\begin_inset Formula $u$
+\end_inset
+
+ may be found similarly.
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial u}{\partial t}+\rho u\frac{\partial u}{\partial z}+\rho v\frac{\partial u}{\partial r}=\rho_{\infty}z\frac{da}{dt}+\rho_{\infty}a^{2}z+\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left[r^{\alpha}\mu\frac{\partial u}{\partial r}\right]\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now, introduce the notation 
+\begin_inset Formula $U\equiv ua/u_{\infty}$
+\end_inset
+
+.
+ Using equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:potential-unified"
+
+\end_inset
+
+, we can then write
+\begin_inset Formula \begin{equation}
+u=\frac{Uu_{\infty}}{a}=\frac{Uaz}{a}=Uz\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Substituting this into the momentum equation gives
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho z\frac{\partial U}{\partial t}+\rho Uz\left(z\frac{\partial U}{\partial z}+U\right)+\rho vz\frac{\partial U}{\partial r}=\rho_{\infty}z\frac{da}{dt}+\rho_{\infty}a^{2}z+\frac{z}{r^{\alpha}}\frac{\partial}{\partial r}\left[r^{\alpha}\mu\frac{\partial U}{\partial r}\right]\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Dividing by 
+\begin_inset Formula $az$
+\end_inset
+
+, and solving along the stagnation streamline 
+\begin_inset Formula $z=0$
+\end_inset
+
+, the momentum equation simplifies to
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial U}{\partial t}+\rho U^{2}+\rho v\frac{\partial U}{\partial r}=\rho_{\infty}\frac{da}{dt}+\rho_{\infty}a^{2}+\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left[r^{\alpha}\mu\frac{\partial U}{\partial r}\right]\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Continuity Equation
+\end_layout
+
+\begin_layout Standard
+Now consider the mass conservation equation
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial t}+\nabla\cdot\left(\rho{\bf v}\right)=0\end{equation}
+
+\end_inset
+
+Expanding the divergence using Equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:divergence"
+
+\end_inset
+
+ gives
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial t}+\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left(r^{\alpha}\rho v\right)+\rho\frac{\partial u}{\partial z}=0\end{equation}
+
+\end_inset
+
+Making the substitution for the similarity variable 
+\begin_inset Formula $U$
+\end_inset
+
+, the mass conservation equation becomes
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial t}++\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left(r^{\alpha}\rho v\right)+\rho U=0\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Species Equation
+\end_layout
+
+\begin_layout Standard
+The general form of the species continuity equation is 
+\begin_inset Formula \begin{equation}
+\rho\frac{DY_{k}}{Dt}=-\nabla\cdot\mathbf{j}_{k}+\dot{\omega}_{k}W_{k}\label{eq:vec_species}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $Y_{k}$
+\end_inset
+
+ is the mass fraction of species 
+\begin_inset Formula $k$
+\end_inset
+
+, 
+\begin_inset Formula $\dot{\omega}_{k}$
+\end_inset
+
+ is the molar production rate of species 
+\begin_inset Formula $k$
+\end_inset
+
+, 
+\begin_inset Formula $W_{k}$
+\end_inset
+
+ is the molecular weight of species 
+\begin_inset Formula $k$
+\end_inset
+
+, and the diffusion mass flux 
+\begin_inset Formula $\mathbf{j}_{k}$
+\end_inset
+
+ is defined as
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{eqnarray}
+\mathbf{j}_{k} & = & -\frac{\rho W_{k}}{\bar{W}}D_{km}\nabla X_{k}-\frac{D_{k}^{T}}{T}\nabla T+Y_{k}\mathbf{j}'\\
+ &  & -\rho D_{km}\left(\nabla Y_{k}+\frac{Y_{k}}{\bar{W}}\nabla\bar{W}\right)-\frac{D_{k}^{T}}{T}\nabla T+Y_{k}\mathbf{j}'\label{eq:vec_diffusion}\end{eqnarray}
+
+\end_inset
+
+Here, 
+\begin_inset Formula $T$
+\end_inset
+
+ is the temperature, 
+\begin_inset Formula $X_{k}$
+\end_inset
+
+ are the species mole fractions, and 
+\begin_inset Formula $D_{km}$
+\end_inset
+
+ and 
+\begin_inset Formula $D_{k}^{T}$
+\end_inset
+
+ are respectively the mixture-averaged diffusion coefficient and the thermal
+ diffusion coefficient of species 
+\begin_inset Formula $k$
+\end_inset
+
+.
+ Note that this definition of the diffusion mass flux includes the thermal
+ diffusion (Soret) effect.
+ The final term introduces a correction, 
+\begin_inset Formula $\mathbf{j}'$
+\end_inset
+
+, which corrects for the inaccuracy of mixture-averaged model so that the
+ requirement 
+\begin_inset Formula $\sum\mathbf{j}_{k}=0$
+\end_inset
+
+ is satisfied.
+ In order to calculate 
+\begin_inset Formula $\mathbf{j}'$
+\end_inset
+
+, we first calculate the diffusion mass fluxes ignoring its contribution
+\begin_inset Formula \begin{equation}
+\mathbf{j}_{k}^{*}=-\rho D_{km}\left(\nabla Y_{k}+\frac{Y_{k}}{\bar{W}}\nabla\bar{W}\right)-\frac{D_{k}^{T}}{T}\nabla T\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Then, 
+\begin_inset Formula $\mathbf{j}'$
+\end_inset
+
+ is calculated as 
+\begin_inset Formula \begin{equation}
+\mathbf{j}'=-\sum_{k}\mathbf{j}_{k}^{*}\label{eq:jCorr}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Substituting the gradient, substantial derivative and divergence as defined
+ in equations 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:gradient"
+
+\end_inset
+
+, 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:substDeriv"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:divergence"
+
+\end_inset
+
+, respectively, and setting the 
+\begin_inset Formula $z$
+\end_inset
+
+-derivatives to zero, the species equation becomes
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial Y_{k}}{\partial t}+V\frac{\partial Y_{k}}{\partial r}=-\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left[r^{\alpha}j_{k}\right]+\dot{\omega}_{k}W_{k}\label{eq:1d_species}\end{equation}
+
+\end_inset
+
+and the diffusion mass flux is 
+\begin_inset Formula \begin{equation}
+j_{k}=-\rho D_{km}\left(\frac{\partial Y_{k}}{\partial r}+\frac{Y_{k}}{\bar{W}}\frac{\partial\bar{W}}{\partial r}\right)-\frac{D_{k}^{T}}{T}\frac{\partial T}{\partial r}+Y_{k}j'\label{eq:1d_diffusion}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Energy Equation
+\end_layout
+
+\begin_layout Standard
+Finally we turn our attention to the energy conservation equation.
+ The general form of the energy equation, expressed in terms of the enthalpy,
+ is 
+\begin_inset Formula \begin{equation}
+\rho\frac{Dh}{Dt}=\frac{Dp}{Dt}-\nabla\cdot\mathbf{q}+\Phi\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $h$
+\end_inset
+
+ is the enthalpy, 
+\begin_inset Formula $q$
+\end_inset
+
+ is the heat flux and 
+\begin_inset Formula $\Phi$
+\end_inset
+
+ is the viscous work.
+ By the zero-Mach-number assumption, we neglect the effect of pressure variation
+s, so 
+\begin_inset Formula $Dp/Dt=0$
+\end_inset
+
+.
+ The viscous work term is also assumed to be much smaller than the energy
+ released by chemical reactions and is therefore neglected.
+ Expanding the substantial derivative of the enthalpy in terms of 
+\begin_inset Formula $T$
+\end_inset
+
+, 
+\begin_inset Formula $Y_{k}$
+\end_inset
+
+ and specific heat capacity 
+\begin_inset Formula $c_{p}$
+\end_inset
+
+ gives
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\frac{Dh}{Dt}=\sum_{k=1}^{K}\left(Y_{k}\frac{Dh_{k}}{Dt}+h_{k}\frac{DY_{k}}{Dt}\right)=c_{p}\frac{DT}{Dt}+\sum_{k=1}^{K}h_{k}\frac{DY_{k}}{Dt}\end{equation}
+
+\end_inset
+
+The total number of species is 
+\begin_inset Formula $K$
+\end_inset
+
+.
+ The substantial derivative of 
+\begin_inset Formula $Y_{k}$
+\end_inset
+
+ is replaced using the species equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:vec_species"
+
+\end_inset
+
+.
+ With these substitutions, the energy equation then becomes
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho c_{p}\frac{DT}{Dt}+\sum_{k=1}^{K}h_{k}\left(-\nabla\cdot{\bf j}_{k}+\dot{\omega}_{k}W_{k}\right)=-\nabla\cdot\mathbf{q}\end{equation}
+
+\end_inset
+
+The heat flux vector 
+\begin_inset Formula $\mathbf{q}$
+\end_inset
+
+ is
+\begin_inset Formula \begin{equation}
+\mathbf{q}=-\lambda\nabla T+\sum_{k=1}^{K}h_{k}j_{k}+\mathbf{q}_{r}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\lambda$
+\end_inset
+
+ is the thermal conductivity of the mixture and the radiation heat flux
+ 
+\begin_inset Formula $\mathbf{q}_{r}$
+\end_inset
+
+ is neglected in the present model.
+ Also neglected is the Dufour heat flux, proportional to the gradients in
+ species concentrations, which is typically three orders of magnitude smaller
+ than the Fourier heat flux, 
+\begin_inset Formula $\lambda\nabla T$
+\end_inset
+
+.
+ Substituting the heat flux vector into the energy equation, and noting
+ that 
+\begin_inset Formula $\hat{h}_{k}=h_{k}W_{k}$
+\end_inset
+
+ where 
+\begin_inset Formula $\hat{h}_{k}$
+\end_inset
+
+ is the molar enthalpy, we obtain
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho c_{p}\frac{DT}{Dt}+\sum_{k=1}^{K}\hat{h}_{k}\dot{\omega}_{k}-\sum_{k=1}^{K}h_{k}\nabla\cdot\mathbf{j}_{k}=-\nabla\cdot\left(-\lambda\nabla T+\sum_{k=1}^{K}h_{k}\mathbf{j}_{k}\right)\end{equation}
+
+\end_inset
+
+By expanding the term 
+\begin_inset Formula $\nabla\cdot\left(\sum_{k=1}^{K}h_{k}j_{k}\right)$
+\end_inset
+
+ and performing appropriate cancellations, the energy equation simplifies
+ slightly to
+\begin_inset Formula \begin{equation}
+\rho c_{p}\frac{DT}{Dt}+\sum_{k=1}^{K}\hat{h}_{k}\dot{\omega}_{k}+\sum_{k=1}^{K}\mathbf{j}_{k}\nabla\cdot h_{k}=\nabla\cdot\left(\lambda\nabla T\right)\end{equation}
+
+\end_inset
+
+Making the substitutions for the gradient, substantial derivative and divergence
+, and setting the 
+\begin_inset Formula $z$
+\end_inset
+
+-derivatives to zero, the one-dimensional form of the energy equation is
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial T}{\partial t}+\rho v\frac{\partial T}{\partial r}+\frac{1}{c_{p}}\left(\sum_{k=1}^{K}\hat{h}_{k}\dot{\omega}_{k}+\sum_{k=1}^{K}j_{k}c_{p,k}\frac{\partial T}{\partial r}\right)=\frac{1}{c_{p}}\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left[r^{\alpha}\lambda\frac{\partial T}{\partial r}\right]\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Summary
+\end_layout
+
+\begin_layout Standard
+Introducing the notation 
+\begin_inset Formula $V\equiv\rho v$
+\end_inset
+
+ for the mass flux and recasting the governing equations in residual form,
+ the final mass, momentum, species, and energy conservation equations are:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial t}++\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left(r^{\alpha}V\right)+\rho U=0\label{eq:1d_cont0}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial U}{\partial t}+V\frac{\partial U}{\partial r}+\rho U^{2}-\rho_{\infty}\left(\frac{da}{dt}+a^{2}\right)-\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left[r^{\alpha}\mu\frac{\partial U}{\partial r}\right]=0\label{eq:1d_mom0}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial Y_{k}}{\partial t}+V\frac{\partial Y_{k}}{\partial r}+\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left[r^{\alpha}j_{k}\right]-\dot{\omega}_{k}W_{k}=0\label{eq:1d_species0}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial T}{\partial t}+V\frac{\partial T}{\partial r}+\frac{1}{c_{p}}\left(\sum_{k=1}^{K}\hat{h}_{k}\dot{\omega}_{k}+\sum_{k=1}^{K}j_{k}c_{p,k}\frac{\partial T}{\partial r}-\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left[r^{\alpha}\lambda\frac{\partial T}{\partial r}\right]\right)=0\label{eq:1d_energy0}\end{equation}
+
+\end_inset
+
+where the diffusion mass flux appearing in the species and energy equations
+ is defined as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+j_{k}=-\rho D_{km}\frac{\partial Y_{k}}{\partial r}-\frac{D_{k}^{T}}{T}\frac{\partial T}{\partial r}+Y_{k}j'\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Boundary-Conditions"
+
+\end_inset
+
+Boundary Conditions
+\end_layout
+
+\begin_layout Standard
+Establishing the boundary conditions for the elemental flame requires separate
+ consideration of each of the flame configurations described in Section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Flame-models"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Single Opposed Jet 
+\end_layout
+
+\begin_layout Standard
+For the single opposed jet flame, defined in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Single-opposed-jet"
+
+\end_inset
+
+, the boundary conditions for the species and energy equations consist of
+ defining the temperature and mass fraction of the two incoming streams.
+ For the momentum equation, spatial gradients in 
+\begin_inset Formula $U$
+\end_inset
+
+ must vanish on both sides of the flame, and we solve the simplified form
+ of the momentum equation, 
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial U}{\partial t}+\rho U^{2}-\rho_{\infty}\left(\frac{da}{dt}+a^{2}\right)=0\label{eq:BC_momentum}\end{equation}
+
+\end_inset
+
+for each boundary point.
+ For steady strain rates, this equation requires that 
+\begin_inset Formula $U=a$
+\end_inset
+
+ on the reactants side and 
+\begin_inset Formula $U=a\sqrt{\rho_{u}/\rho_{b}}$
+\end_inset
+
+ on the products side.
+\end_layout
+
+\begin_layout Standard
+For a premixed flame with reactants supplied from 
+\begin_inset Formula $-\infty$
+\end_inset
+
+, the boundary conditions for the species and energy equations are:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\begin{array}{ccc}
+r=-\infty: & Y_{k}=Y_{k,u} & T=T_{u}\\
+r=+\infty: & Y_{k}=Y_{k,b} & T=T_{b}\end{array}\label{eq:BC_fixedval}\end{equation}
+
+\end_inset
+
+The burned gas temperature and composition correspond to the unburned mixture
+ brought to equilibrum at constant enthalpy and pressure.
+ The boundary condition for the continuity equationis taken at the left
+ side of the computational domain, where 
+\begin_inset Formula $V$
+\end_inset
+
+ is held fixed.
+\end_layout
+
+\begin_layout Subsubsection
+Central Control Volume
+\end_layout
+
+\begin_layout Standard
+For curved flames at finite stagnation radius, or flames specified in terms
+ of the unified formulation given in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Unified-formulation"
+
+\end_inset
+
+, the 
+\begin_inset Formula $r=\infty$
+\end_inset
+
+ boundary condition is the same as for the curved flame at zero stagnation
+ radius.
+ The boundary conditions at 
+\begin_inset Formula $r=0$
+\end_inset
+
+, however, require special attention.
+ First, the mass flux at the center must be expressed in terms of 
+\begin_inset Formula $rV$
+\end_inset
+
+ because 
+\begin_inset Formula $V\rightarrow\infty$
+\end_inset
+
+ as 
+\begin_inset Formula $r\rightarrow0$
+\end_inset
+
+ in the potential flow solution of Equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:potential-curved-finite"
+
+\end_inset
+
+.
+ If we specify the non-reacting stagnation point radius 
+\begin_inset Formula $R$
+\end_inset
+
+, then the boundary condition for the continuity equation is 
+\begin_inset Formula \begin{equation}
+r=0:\quad rV=\frac{1}{\alpha+1}\rho a\left|R\right|R\end{equation}
+
+\end_inset
+
+If the boundary mass flux 
+\begin_inset Formula $\left(rV\right)_{0}$
+\end_inset
+
+ is positive, indicating the presence of source at the boundary, special
+ care must be taken in specifying the boundary conditions for the energy,
+ species and momentum equations.
+ While the zero-gradient condition must still hold because of the symmetry
+ at that boundary, it is important to retain the effect of the mixture being
+ introduced, which may not be at the same state as the mixture in the vicinity
+ of 
+\begin_inset Formula $r=0$
+\end_inset
+
+.
+ To this end, we consider an integral, control volume approach to the 
+\begin_inset Formula $r=0$
+\end_inset
+
+ boundary condition.
+ Beginning with the species conservation equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:1d_species0"
+
+\end_inset
+
+, we multiply through by 
+\begin_inset Formula $r^{\alpha}$
+\end_inset
+
+ and integrate from 
+\begin_inset Formula $0$
+\end_inset
+
+ to some small radius 
+\begin_inset Formula $R_{i}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\int_{0}^{R_{i}}r^{\alpha}\rho\frac{\partial Y_{k}}{\partial t}+r^{\alpha}V\frac{\partial Y_{k}}{\partial r}+\frac{\partial}{\partial r}\left[r^{\alpha}j_{k}\right]-r^{\alpha}\dot{\omega}_{k}W_{k}\, dr=0\end{equation}
+
+\end_inset
+
+Because this volume is small, we assume that variations of 
+\begin_inset Formula $Y_{k}$
+\end_inset
+
+, 
+\begin_inset Formula $\rho$
+\end_inset
+
+ and 
+\begin_inset Formula $\dot{\omega}_{k}$
+\end_inset
+
+ are negligible, so the unsteady term and the production term may be taken
+ out of the integral.
+ 
+\begin_inset Formula \begin{equation}
+\frac{r^{\alpha+1}}{\alpha+1}\left(\rho\frac{\partial Y_{k}}{\partial t}-\dot{\omega}_{k}W_{k}\right)+\int_{0}^{R_{i}}r^{\alpha}V\frac{\partial Y_{k}}{\partial r}+\frac{\partial}{\partial r}\left[r^{\alpha}j_{k}\right]\, dr=0\end{equation}
+
+\end_inset
+
+The convection term may be integrated by noting that variations in 
+\begin_inset Formula $r^{\alpha}V$
+\end_inset
+
+ are negligible across this small distance.
+ Furthermore, we recognize that 
+\begin_inset Formula $Y_{k}|_{r=0}=Y_{k,left}$
+\end_inset
+
+ is the mass fraction corresponding to the inlet mixture (either reactants
+ or products).
+ The diffusion term may also be integrated, noting that 
+\begin_inset Formula $j_{k}|_{r=0}=0$
+\end_inset
+
+ by the symmetry condition.
+ We now have an ODE for the mass fraction of species 
+\begin_inset Formula $k$
+\end_inset
+
+ in the vicinity of the symmetry boundary,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\frac{R_{i}^{\alpha+1}}{\alpha+1}\left(\rho\frac{\partial Y_{k}}{\partial t}-\dot{\omega}_{k}W_{k}\right)+\left(r^{\alpha}V\right)_{0}\left(Y_{k,left}-Y_{k}\right)+R_{i}^{\alpha}j_{k}=0\end{equation}
+
+\end_inset
+
+Finally, we divide by the leading coefficient so that this equation scales
+ similarly to the species equation in the rest of the domain:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial Y_{k}}{\partial t}-\dot{\omega}_{k}W_{k}+\frac{\alpha+1}{R_{i}^{\alpha+1}}\left(r^{\alpha}V\right)_{0}\left(Y_{k,left}-Y_{k}\right)+\frac{\alpha+1}{R_{i}}j_{k}=0\label{eq:bc-species-integral}\end{equation}
+
+\end_inset
+
+A similar analysis for the energy equation yields
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial T}{\partial t}+\frac{1}{c_{p}}\sum_{k=1}^{K}\hat{h}_{k}\dot{\omega}_{k}+\frac{\alpha+1}{R_{i}^{\alpha+1}}\left(r^{\alpha}V\right)_{0}\left(T_{left}-T\right)-\frac{\alpha+1}{R_{i}}R_{i}^{\alpha}\left(\lambda\frac{\partial T}{\partial r}\right)=0\label{eq:bc-energy-integral}\end{equation}
+
+\end_inset
+
+In the case of the momentum equation, we neglect the term associated with
+ the boundary mass flux, and obtain
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho\frac{\partial U}{\partial t}+\rho U^{2}-\rho_{\infty}\left(\frac{\partial a}{\partial t}+a^{2}\right)-\frac{\alpha+1}{R_{i}}\mu\frac{\partial U}{\partial r}=0\label{eq:bc-mom-integral}\end{equation}
+
+\end_inset
+
+If the boundary mass flux 
+\begin_inset Formula $\left(rV\right)_{0}$
+\end_inset
+
+ is negative, the term including it in each of these boundary conditions
+ is eliminated.
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Multicomponent-Fuel-Mixtures"
+
+\end_inset
+
+Multicomponent Fuel Mixtures
+\end_layout
+
+\begin_layout Standard
+In this section, the formula for the composition of the reactants mixture
+ is derived, assuming an arbitrary fuel and oxidizer mixture and a specified
+ equivalence ratio.
+ It is assumed that only H, C and O are the only reacting elements present.
+ Other elements may be present, but are assumed to be inert.
+ Given the mole fractions of the fuel components, 
+\begin_inset Formula $X_{k,f}$
+\end_inset
+
+, and the mole fractions of the oxidizer components, 
+\begin_inset Formula $ $
+\end_inset
+
+
+\begin_inset Formula $X_{k,o}$
+\end_inset
+
+, and the chemical formulas for each species, 
+\begin_inset Formula $\mbox{C}_{n_{k}}\mbox{H}_{m_{k}}\mbox{O}_{p_{k}}$
+\end_inset
+
+ the number of moles of each element per mole of fuel are defined as 
+\begin_inset Formula \begin{equation}
+C_{f}=\sum_{k}X_{k,f}n_{k}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+H_{f}=\sum_{k}X_{k,f}m_{k}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+O_{f}=\sum_{k}X_{k,f}p_{k,f}\end{equation}
+
+\end_inset
+
+and the number of moles of each element per mole of oxidizer are 
+\begin_inset Formula $C_{o}$
+\end_inset
+
+, 
+\begin_inset Formula $H_{o}$
+\end_inset
+
+, and 
+\begin_inset Formula $O_{o}$
+\end_inset
+
+, calculated similarly.
+\end_layout
+
+\begin_layout Standard
+For a stoichiometric fuel/oxidizer mixture, all hydrocarbons are converted
+ to CO
+\begin_inset Formula $_{2}$
+\end_inset
+
+ and H
+\begin_inset Formula $_{2}$
+\end_inset
+
+O.
+ Defining 
+\begin_inset Formula $F$
+\end_inset
+
+ as the stoichiometric fuel/oxidizer ratio, the reaction may be written
+ as
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $ $
+\end_inset
+
+
+\begin_inset Formula \begin{multline}
+F\left(\sum_{k}X_{k,f}\mbox{C}_{n_{k}}\mbox{H}_{m_{k}}\mbox{O}_{p_{k}}\right)+\sum_{k}X_{k,o}\mbox{C}_{n_{k}}\mbox{H}_{m_{k}}\mbox{O}_{p_{k}}\to\\
+\left(FC_{f}+C_{o}\right)\mbox{C}\mbox{O}_{2}+\frac{1}{2}\left(FH_{f}+H_{o}\right)\mbox{H}_{2}\mbox{O}+\frac{1}{2}\left(FO_{f}+O_{o}-2FC_{f}-2C_{o}-\frac{1}{2}FH_{f}-\frac{1}{2}H_{o}\right)\mbox{O}_{2}\end{multline}
+
+\end_inset
+
+If all the oxygen is consumed, then we can solve for 
+\begin_inset Formula $F$
+\end_inset
+
+:
+\begin_inset Formula \begin{equation}
+FO_{f}+O_{o}-2FC_{f}-2C_{o}-\frac{1}{2}FH_{f}-\frac{1}{2}H_{o}=0\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula \begin{equation}
+F=-\frac{O_{o}-2C_{o}-H_{o}/2}{O_{f}-2C_{f}-H_{f}/2}\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula $ $
+\end_inset
+
+The final reactant mixture composition can be calculated using the given
+ equivalence ratio
+\begin_inset Formula \begin{equation}
+X_{k}=\frac{F\phi}{1+F\phi}X_{k,f}+\frac{1}{1+F\phi}X_{k,o}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "cha:Numerical-Simulation"
+
+\end_inset
+
+Numerical Simulation
+\end_layout
+
+\begin_layout Standard
+The governing equations developed in the previous section are solved numerically
+ using an implicit finite difference method.
+ The equations are discretized spatially on an adaptive non-uniform grid,
+ producing a system of differential algebraic equations.
+ The discretized equations are integrated using the Sundials IDA solver
+ [REF].
+ The IDA solver integrates the equations using the variable-order (from
+ 1 to 5) backward differentiation formula (BDF).
+ At each timestep, this produces a system of nonlinear algebraic equations,
+ which are solved using a preconditioned Newton-Krylov method.
+ Thermodynamic properties, transport coefficients, and chemical kinetic
+ rates are calculated using the Cantera [REF] library.
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Finite-Difference"
+
+\end_inset
+
+Finite Difference Discretization
+\end_layout
+
+\begin_layout Subsubsection
+Derived Grid Parameters
+\end_layout
+
+\begin_layout Standard
+It is helpful to first define a number of derived grid parameters which
+ occur repeatedly in the discretized governing equations.
+ Let 
+\begin_inset Formula $r_{j}$
+\end_inset
+
+ be the spatial location of each grid point.
+ The mesh spacing 
+\begin_inset Formula $h_{j}$
+\end_inset
+
+ is then defined as
+\begin_inset Formula \begin{equation}
+h_{j}=r_{j+1}-r_{j}\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula $ $
+\end_inset
+
+The coefficients 
+\begin_inset Formula $\mathbb{C}_{j}^{-}$
+\end_inset
+
+, 
+\begin_inset Formula $\mathbb{C}_{j}$
+\end_inset
+
+, and 
+\begin_inset Formula $\mathbb{C}_{j}^{+}$
+\end_inset
+
+ are the coefficients of neighboring points in the second-order centered
+ difference approximation to the first derivative, and are calculated as
+\begin_inset Formula \begin{eqnarray}
+\mathbb{C}_{j}^{-} & = & \frac{-h_{j}}{h_{j-1}\left(h_{j}+h_{j-1}\right)}\\
+\mathbb{C}_{j} & = & \frac{h_{j}-h_{j-1}}{h_{j}h_{j-1}}\\
+\mathbb{C}_{j}^{+} & = & \frac{h_{j-1}}{h_{j}\left(h_{j}+h_{j-1}\right)}\end{eqnarray}
+
+\end_inset
+
+A few other quantities which will are:
+\begin_inset Formula \begin{eqnarray}
+\mathbb{D}_{j} & = & \frac{1}{2}\left(r_{j+1}-r_{j-1}\right)\\
+r_{j+1/2} & = & \frac{1}{2}\left(r_{j+1}+r_{j}\right)\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Governing Equations
+\end_layout
+
+\begin_layout Standard
+In this section, we will give the finite difference discretizations of the
+ governing equations.
+ We start with the discretizations of a number of derived quantities which
+ are used in the formulation of the governing equations.
+ The heat flux 
+\begin_inset Formula $q$
+\end_inset
+
+ is calculated between grid points as 
+\begin_inset Formula \begin{equation}
+q_{j+1/2}\approx-\frac{\lambda_{j}+\lambda_{j+1}}{2}\frac{T_{j+1}-T_{j}}{h_{j}}\label{eq:qFourier}\end{equation}
+
+\end_inset
+
+Similarly, the diffusion mass fluxes are calculated as 
+\begin_inset Formula \begin{multline}
+j_{k,j+1/2}=-\frac{1}{2}\left(\rho_{j}D_{km,j}+\rho_{j+1}D_{km,j+1}\right)\frac{Y_{k,j+1}-Y_{k,j}}{h_{j}}-\frac{1}{2}\left(\frac{\rho_{j}D_{km,j}Y_{k,j}}{\bar{W}_{j}}+\frac{\rho_{j+1}D_{km,j+1}Y_{k,j+1}}{\bar{W}_{j+1}}\right)\frac{\bar{W}_{j+1}-\bar{W}_{j}}{h_{j}}\\
+-\frac{1}{2}\left(\frac{D_{k,j+1}^{T}}{T_{j+1}}+\frac{D_{k,j}^{T}}{T_{j}}\right)\frac{T_{j+1}-T_{j}}{h_{j}}+\frac{1}{2}\left(Y_{k,j+1}+Y_{k,j}\right)j'_{j+1/2}\end{multline}
+
+\end_inset
+
+The sum appearing in the enthalpy flux term of the energy equation is calculated
+ as
+\begin_inset Formula \begin{equation}
+S_{j+1/2}=\left(\sum_{k}j_{k}c_{p,k}\right)_{j+1/2}=\sum_{k}\frac{c_{p,k,j+1}+c_{p,k,j}}{2}j_{k,j+1/2}\label{eq:enthalpy-flux}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now, we will give the discretizations of each term in the energy equation;
+ the species and momentum equations are discretized in essentially the same
+ manner.
+\end_layout
+
+\begin_layout Standard
+The unsteady term is simply
+\begin_inset Formula \begin{equation}
+\left(\rho\frac{\partial T}{\partial t}\right)_{j}\approx\rho_{j}\frac{dT_{j}}{dt}\end{equation}
+
+\end_inset
+
+The convective term is discretized using a second-order centered difference
+ approximation:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\left(V\frac{\partial T}{\partial r}\right)_{j}\approx V_{j}\left(\mathbb{C}_{j}^{-}T_{j-1}+\mathbb{C}_{j}T_{j}+\mathbb{C}_{j}^{+}T_{j+1}\right)\end{equation}
+
+\end_inset
+
+We discretize the diffusive (conduction) term as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\left(\frac{1}{r^{\alpha}c_{p}}\frac{\partial}{\partial r}\left[r^{\alpha}q\right]\right)_{j}\approx\frac{1}{r_{j}c_{p,j}}\frac{r_{j+1/2}q_{j+1/2}-r_{j-1/2}q_{j-1/2}}{\mathbb{D}_{j}}\end{equation}
+
+\end_inset
+
+The enthalpy flux term is discretized as 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\noun off
+\color none
+
+\begin_inset Formula \begin{equation}
+\left(\frac{S}{c_{p}}\frac{\partial T}{\partial r}\right)_{j}\approx\frac{1}{c_{p,j}}\frac{\left(S_{j+1/2}+S_{j-1/2}\right)}{2}\left(\mathbb{C}_{j}^{-}T_{j-1}+\mathbb{C}_{j}T_{j}+\mathbb{C}_{j}^{+}T_{j+1}\right)\end{equation}
+
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\noun default
+\color inherit
+The production term is simply
+\begin_inset Formula \begin{equation}
+\left(\sum h_{k}\dot{\omega}_{k}\right)_{j}\approx\sum h_{k,j}\dot{\omega}_{k,j}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The continuity equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:1d_cont0"
+
+\end_inset
+
+ is discretized using a first order fully implicit finite difference method.
+ The boundary condition for the mass flux is taken at 
+\begin_inset Formula $j=0$
+\end_inset
+
+.
+ The discretized form of the continuity equation is
+\begin_inset Formula \begin{equation}
+\frac{d\rho_{j}}{dt}+\frac{r_{j}^{\alpha}V_{j}-r_{j-1}^{\alpha}V_{j-1}}{r_{j+1/2}^{\alpha}h_{j-1}}+\rho_{j}U_{j}=0\end{equation}
+
+\end_inset
+
+Since 
+\begin_inset Formula $\rho$
+\end_inset
+
+ is not one of the solution variables, we must calculate 
+\begin_inset Formula $\partial\rho/\partial t$
+\end_inset
+
+ from the state variables 
+\begin_inset Formula $T$
+\end_inset
+
+ and 
+\begin_inset Formula $Y_{k}$
+\end_inset
+
+,
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial t}=\frac{\partial\rho}{\partial T}\frac{\partial T}{\partial t}+\sum_{k}\frac{\partial\rho}{\partial Y_{k}}\frac{\partial Y_{k}}{\partial t}\end{equation}
+
+\end_inset
+
+The first term can be found from the ideal gas law, 
+\begin_inset Formula \begin{equation}
+P=\rho\frac{\bar{R}}{\bar{W}}T\end{equation}
+
+\end_inset
+
+which can be rewritten as 
+\begin_inset Formula \begin{equation}
+\rho=\frac{P\bar{W}}{\bar{R}T}\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial T}=-\frac{P\bar{W}}{RT^{2}}=-\frac{\rho}{T}\label{eq:drhodT}\end{equation}
+
+\end_inset
+
+The derivatives of the second term are calculated similarly, based on the
+ formula for the mixture molecular weight 
+\begin_inset Formula $\bar{W}$
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\bar{W}=\left[\sum_{i}Y_{i}/W_{i}\right]^{-1}\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula \begin{eqnarray}
+\frac{\partial\bar{W}}{\partial Y_{k}} & = & -\left[\sum_{i}Y_{i}/W_{i}\right]^{-2}\frac{1}{W_{k}}=-\frac{\bar{W}^{2}}{W_{k}}\end{eqnarray}
+
+\end_inset
+
+
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial Y_{k}}=\frac{P}{RT}\frac{\partial\bar{W}}{\partial Y_{k}}=-\frac{\rho\bar{W}}{W_{k}}\end{equation}
+
+\end_inset
+
+Finally, we have
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial t}=-\frac{\rho}{T}\frac{\partial T}{\partial t}-\sum\frac{\rho\bar{W}}{W_{k}}\frac{\partial Y_{k}}{\partial t}\label{eq:drhodt}\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:discretized-BC"
+
+\end_inset
+
+Boundary Conditions
+\end_layout
+
+\begin_layout Standard
+The boundary conditions must also be written as ODEs or algebraic equations.
+ There are several different cases to consider, depending on the boundary
+ configuration.
+\end_layout
+
+\begin_layout Standard
+For boundaries where the composition and temperature are fixed, e.g.
+ both boundaries of the free flame, or at the 
+\begin_inset Formula $r=\infty$
+\end_inset
+
+ boundary in the twin and curved flame configurations, we have 
+\begin_inset Formula \begin{eqnarray}
+\frac{dT_{j}}{dt} & = & 0\\
+\frac{dY_{k}}{dt} & = & 0\end{eqnarray}
+
+\end_inset
+
+For the momentum equation, we discretize equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:BC_momentum"
+
+\end_inset
+
+ as
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\rho_{j}\frac{dU_{j}}{dt}+\rho_{j}U_{j}^{2}-\rho_{\infty}\left(\frac{da}{dt}+a^{2}\right)=0\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In a few cases, a simple zero-gradient condition for 
+\begin_inset Formula $T$
+\end_inset
+
+ and 
+\begin_inset Formula $Y_{k}$
+\end_inset
+
+ is applied.
+ This boundary condition is not usually consistent with the direction of
+ the convective velocity 
+\begin_inset Formula $V$
+\end_inset
+
+ at the boundary, except in the special case of the unstrained flame.
+ In these cases, the zero gradient condition (on the right-hand side of
+ the domain) requires
+\begin_inset Formula \begin{eqnarray}
+\frac{T_{J}-T_{J-1}}{h_{J-1}} & = & 0\\
+\frac{Y_{k,J}-Y_{k,J-1}}{h_{J-1}} & = & 0\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $J$
+\end_inset
+
+ is the index of the last grid point.
+\end_layout
+
+\begin_layout Standard
+For boundary conditions at 
+\begin_inset Formula $r=0$
+\end_inset
+
+, discretized forms of equations 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:bc-species-integral"
+
+\end_inset
+
+, 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:bc-energy-integral"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:bc-mom-integral"
+
+\end_inset
+
+ are used.
+ Most of the terms in these equations use the same discretization as terms
+ elsewhere in the domain, with the exception of the diffusive term.
+ Since we know that 
+\begin_inset Formula $\partial T/\partial r=0$
+\end_inset
+
+ at 
+\begin_inset Formula $r=0$
+\end_inset
+
+, 
+\begin_inset Formula \begin{equation}
+q_{j+1/2}\approx-\left(\lambda_{j}+\lambda_{j+1}\right)\frac{T_{j+1}-T_{j}}{h_{j}}\end{equation}
+
+\end_inset
+
+which is twice the value obtained normally.
+ The same applies for the diffusive mass and momentum fluxes.
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:DiscretizedSolution"
+
+\end_inset
+
+Solution of the Discretized Problem
+\end_layout
+
+\begin_layout Standard
+In the previous section, we established a system of ordinary differential
+ and algebraic equations modeling the elemental flame.
+ We may write this system of equations generically as 
+\begin_inset Formula \begin{equation}
+\mathbf{f}\left(t,\mathbf{y},\mathbf{y}'\right)=\mathbf{0}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{f}$
+\end_inset
+
+ is the system of equations, 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+ is the solution vector, 
+\begin_inset Formula $\mathbf{y}'=d\mathbf{y}/dt$
+\end_inset
+
+ and 
+\begin_inset Formula $t$
+\end_inset
+
+ is time
+\begin_inset Formula $ $
+\end_inset
+
+.
+ Given an initial condition, 
+\begin_inset Formula $t_{0},\,\mathbf{y}_{0},\,\mathbf{y}'_{0}$
+\end_inset
+
+, the system can be integrated to find 
+\begin_inset Formula $\mathbf{y}(t_{n})$
+\end_inset
+
+ where 
+\begin_inset Formula $t_{n}$
+\end_inset
+
+ is some future time.
+ The structure of the solution vector is 
+\begin_inset Formula \begin{equation}
+\mathbf{y}=\left[V_{0},U_{0},T_{0},Y_{0,0},\ldots,Y_{K,0},\ldots\ldots,V_{J},U_{J},T_{J},Y_{0,J},\ldots,Y_{K,J}\right]^{T}\end{equation}
+
+\end_inset
+
+and the structure of the function 
+\begin_inset Formula $\mathbf{f}$
+\end_inset
+
+ is 
+\begin_inset Formula \begin{equation}
+\mathbf{f}=\left[C_{0},M_{0},E_{0},S_{0,0},\ldots,S_{K,0},\ldots\ldots,C_{J},M_{J},E_{J},S_{0,J},\ldots,S_{K,J}\right]^{T}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $S_{k,j}$
+\end_inset
+
+, 
+\begin_inset Formula $E_{j}$
+\end_inset
+
+, 
+\begin_inset Formula $M_{j}$
+\end_inset
+
+ and 
+\begin_inset Formula $C_{j}$
+\end_inset
+
+ are the respective species, energy, momentum and continuity equations at
+ point 
+\begin_inset Formula $j$
+\end_inset
+
+.
+ The total number of grid points is 
+\begin_inset Formula $J+1$
+\end_inset
+
+, and the total number of species is 
+\begin_inset Formula $K+1$
+\end_inset
+
+.
+ For the boundary conditions at 
+\begin_inset Formula $j=0$
+\end_inset
+
+ and 
+\begin_inset Formula $j=J$
+\end_inset
+
+, the corresponding boundary equations discussed in section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:discretized-BC"
+
+\end_inset
+
+ are used.
+\end_layout
+
+\begin_layout Standard
+The nonlinear system of governing equations are solved using an inexact
+ Newton's method coupled with an iterative sparse linear solver (Usually
+ BiCGStab), as implemented by the Sundials IDA solver.
+ A detailed description of the solution method is contained in the IDA User's
+ Guide [REF].
+ Using the Sundials solver requires us to provide the following:
+\end_layout
+
+\begin_layout Itemize
+A function to evaluate the residual function 
+\begin_inset Formula $\mathbf{f}$
+\end_inset
+
+ given 
+\begin_inset Formula $t$
+\end_inset
+
+ and (estimates for) 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathbf{y}'$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Itemize
+A preconditioner, approximating the inverse of the Jacobian 
+\begin_inset Formula $\partial\mathbf{f}/\partial\mathbf{y}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+A consistent initial condition 
+\begin_inset Formula $t_{0},\,\mathbf{y}_{0},\,\mathbf{y}'_{0}$
+\end_inset
+
+, such that 
+\begin_inset Formula $ $
+\end_inset
+
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\noun off
+\color none
+
+\begin_inset Formula $\mathbf{f}\left(t_{0},\mathbf{y}_{0},\mathbf{y}_{0}'\right)=\mathbf{0}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The residual function is computed using the finite difference equations
+ derived in section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Finite-Difference"
+
+\end_inset
+
+.
+ In the next two sections, we will give methods for obtaining the Jacobian
+ components and computing a consistent initial condition.
+\end_layout
+
+\begin_layout Subsection
+Jacobian Components
+\end_layout
+
+\begin_layout Standard
+To accelerate the convergence rate of the iterative solver, a preconditioner
+ which approximates the inverse of the Jacobian must be supplied.
+ Based on the construction of our finite difference stencil and the arrangement
+ of the solution vector 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+, the Jacobian has a block tridiagonal structure, e.g.
+\begin_inset Formula \begin{equation}
+J=\left[\begin{array}{ccccccc}
+B_{0} & C_{0}\\
+A_{1} & B_{1} & C_{1}\\
+ & \ddots & \ddots & \ddots\\
+ &  & A_{j} & B_{j} & C_{j}\\
+ &  &  & \ddots & \ddots & \ddots\\
+ &  &  &  & A_{J-1} & B_{J-1} & C_{J-1}\\
+ &  &  &  &  & A_{J} & B_{J}\end{array}\right]\end{equation}
+
+\end_inset
+
+Each row of blocks corresponds to the set of governing equations at a point
+ 
+\begin_inset Formula $j$
+\end_inset
+
+.
+ The block 
+\begin_inset Formula $B_{j}$
+\end_inset
+
+ contains the dependence of the equations on the state variables at the
+ same grid point, and the 
+\begin_inset Formula $A_{j}$
+\end_inset
+
+ and 
+\begin_inset Formula $C_{j}$
+\end_inset
+
+ blocks contain the dependence on the state variables at grid points 
+\begin_inset Formula $j-1$
+\end_inset
+
+ and 
+\begin_inset Formula $j+1$
+\end_inset
+
+ respectively.
+ The formulas for each of these components are derived analytically from
+ the governing equations, with the exception of the reaction rate terms,
+ for which the derivatives are calculated numerically.
+ While this is in principle a straightforward task, there are a number of
+ subtleties that make actually calculating some of the terms a bit complex.
+\end_layout
+
+\begin_layout Subsubsection
+Numerically evaluated terms
+\end_layout
+
+\begin_layout Standard
+The derivatives of the reaction rate terms are calculated using finite differenc
+es.
+ In the energy equation, we require the derivatives of the production term
+ 
+\begin_inset Formula $\dot{\omega}_{k}$
+\end_inset
+
+ with respect to 
+\begin_inset Formula $Y_{i}$
+\end_inset
+
+.
+ We create a perturbed mass fraction vector 
+\begin_inset Formula $\mathbf{Y}_{i}'=\left[Y_{0,},\ldots,Y_{i}+\epsilon,\ldots,Y_{K}\right]$
+\end_inset
+
+
+\begin_inset Formula \begin{equation}
+\frac{\partial\dot{\omega}_{k}}{\partial Y_{i}}=\frac{\dot{\omega}_{k}\left(\mathbf{Y}_{i}',T\right)-\dot{\omega}_{k}\left(\mathbf{Y},T\right)}{\epsilon}\end{equation}
+
+\end_inset
+
+and similarly
+\begin_inset Formula \begin{equation}
+\frac{\partial\dot{\omega}_{k}}{\partial T}=\frac{\dot{\omega}_{k}\left(\mathbf{Y},T+\epsilon\right)-\dot{\omega}_{k}\left(\mathbf{Y},T\right)}{\epsilon}\end{equation}
+
+\end_inset
+
+In the energy equation, the derivatives with respect to species are computed
+ in the same way, but the derivative with respect to temperature must be
+ expanded since 
+\begin_inset Formula $\hat{h}_{k}$
+\end_inset
+
+ also depends on 
+\begin_inset Formula $T$
+\end_inset
+
+:
+\begin_inset Formula \begin{equation}
+\frac{\partial}{\partial T}\left[\hat{h}_{k}\dot{\omega}_{k}\right]=\hat{h}_{k}\frac{\partial\dot{\omega}_{k}}{\partial T}+\hat{c}_{p,k}\dot{\omega}_{k}\end{equation}
+
+\end_inset
+
+The derivatives of the governing equations are taken term-by-term.
+ A few terms that will be showing up repeatedly deserve special attention.
+ As derived in Equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:drhodT"
+
+\end_inset
+
+, the derivative of the density with respect to temperature is
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho_{j}}{\partial T_{j}}=-\frac{\rho_{j}}{T_{j}}\end{equation}
+
+\end_inset
+
+The derivative of the density with respect to mass fraction is a bit more
+ complicated.
+ We begin with the formula
+\begin_inset Formula \begin{equation}
+\rho=\frac{P}{\bar{R}T_{j}}\left[\sum_{i}\frac{Y_{i}}{W_{i}}\right]^{-1}\end{equation}
+
+\end_inset
+
+Taking the derivative, this becomes
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial Y_{k}}=-\frac{P}{\bar{R}T}\left[\sum_{i}\frac{Y_{i}}{W_{i}}\right]^{-2}\left(\frac{1}{W_{k}}+\sum_{i\ne k}\frac{1}{W_{i}}\frac{\partial Y_{i}}{\partial Y_{k}}\right)\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial Y_{k}}=-\rho\bar{W}\left(\frac{1}{W_{k}}+\sum_{i\ne k}\frac{1}{W_{i}}\frac{\partial Y_{i}}{\partial Y_{k}}\right)\label{eq:drhodyk-long}\end{equation}
+
+\end_inset
+
+Assume that all of the 
+\begin_inset Formula $Y_{i}$
+\end_inset
+
+ (except for 
+\begin_inset Formula $Y_{k}$
+\end_inset
+
+) vary proportionally, i.e.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\frac{1}{Y_{i}}\frac{\partial Y_{i}}{\partial Y_{k}}=\frac{1}{Y_{j}}\frac{\partial Y_{j}}{\partial Y_{k}}\end{equation}
+
+\end_inset
+
+and using the fact that 
+\begin_inset Formula $\sum Y_{i}=1$
+\end_inset
+
+, we find that 
+\begin_inset Formula \begin{equation}
+\frac{\partial Y_{i}}{\partial Y_{k}}=-\frac{Y_{i}}{1-Y_{k}}\end{equation}
+
+\end_inset
+
+Substituting this into Equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:drhodyk-long"
+
+\end_inset
+
+, we find
+\begin_inset Formula \begin{eqnarray}
+\frac{\partial\rho}{\partial Y_{k}} & = & -\rho\bar{W}\left(\frac{1}{W_{k}}-\frac{1}{1-Y_{k}}\sum_{i\ne k}\frac{Y_{i}}{W_{i}}\right)\\
+ & = & -\rho\bar{W}\left(\frac{1}{W_{k}}-\frac{1}{1-Y_{k}}\sum_{i}\frac{Y_{i}}{W_{i}}+\frac{1}{W_{k}}\frac{Y_{k}}{1-Y_{k}}\right)\\
+ & = & -\rho\left(\frac{\bar{W}}{W_{k}}-\frac{1}{1-Y_{k}}+\frac{\bar{W}}{W_{k}}\frac{Y_{k}}{1-Y_{k}}\right)\\
+\frac{\partial\rho}{\partial Y_{k}} & = & \frac{\rho\left(W_{k}-\bar{W}\right)}{W_{k}\left(1-Y_{k}\right)}\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+All other quantities, such as transport coefficients and specific heats,
+ are assumed to be constant for the purpose of evaluating the Jacobian,
+ and the Soret mass flux is also ignored.
+\end_layout
+
+\begin_layout Standard
+Sundials uses the Jacobian in the form
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\mathbf{J}=\frac{\partial\mathbf{f}}{\partial\mathbf{y}}+\frac{1}{\tau}\frac{\partial\mathbf{f}}{\partial\mathbf{y}'}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\tau$
+\end_inset
+
+ is the timestep.
+ As an example, we give here the derivatives of the energy equation 
+\begin_inset Formula $E_{j}$
+\end_inset
+
+, as all of the other equations are simpler.
+ 
+\begin_inset Formula \begin{multline}
+E_{j}=\rho_{j}\frac{dT_{j}}{dt}+V_{j}\left(\mathbb{C}_{j}^{-}T_{,j-1}+\mathbb{C}_{j}T_{,j}+\mathbb{C}_{j}^{+}T_{j+1}\right)+\frac{1}{c_{p,j}}\sum h_{k,j}\dot{\omega}_{k,j}\\
++\frac{1}{c_{p,j}}\frac{\mathcal{S}_{j}+\mathcal{S}_{j-1}}{2}\left(\mathbb{C}_{j}^{-}T_{,j-1}+\mathbb{C}_{j}T_{,j}+\mathbb{C}_{j}^{+}T_{j+1}\right)-\\
+\frac{1}{r_{j}c_{p,j}\mathbb{D}_{j}}\left[r_{j+1/2}\left(\frac{\lambda_{j}+\lambda_{j+1}}{2}\frac{T_{j+1}-T_{j}}{h_{j}}\right)-r_{j-1/2}\left(\frac{\lambda_{j-1}+\lambda_{j}}{2}\frac{T_{j}-T_{j-1}}{h_{j-1}}\right)\right]\label{eq:species-disc-full}\end{multline}
+
+\end_inset
+
+where
+\begin_inset Formula \begin{equation}
+\mathcal{S}_{j}=-\sum_{k}\left(\frac{c_{p,k,j+1}+c_{p,k,j}}{2}\frac{\rho_{j}D_{km,j}+\rho_{j+1}D_{km,j+1}}{2}\frac{Y_{k,j+1}-Y_{k,j}}{h_{j}}\right)\label{eq:sumcpj}\end{equation}
+
+\end_inset
+
+In this equation, the Soret mass flux, the term containing the gradient
+ in 
+\begin_inset Formula $\bar{W}$
+\end_inset
+
+, and the correction mass flux 
+\begin_inset Formula $j'$
+\end_inset
+
+ have been neglected as their contributions are small.
+ The blocks of the Jacobian are indicated as follows: The derivative of
+ the 
+\begin_inset Formula $k^{\mathrm{th}}$
+\end_inset
+
+ equation with respect to the 
+\begin_inset Formula $i^{\mathrm{th}}$
+\end_inset
+
+ state variable at the 
+\begin_inset Formula $j^{\mathrm{th}}$
+\end_inset
+
+grid point is written as 
+\begin_inset Formula $B_{i}^{k}(j)$
+\end_inset
+
+, where we write 
+\begin_inset Formula $U$
+\end_inset
+
+, 
+\begin_inset Formula $T$
+\end_inset
+
+, and 
+\begin_inset Formula $V$
+\end_inset
+
+ as the subscripts and superscripts for those equations.
+ The derivatives with respect to temperature are:
+\begin_inset Formula \begin{equation}
+A_{T}^{T}(j)=V_{j}\mathbb{C}_{j}^{-}+\frac{\left(\mathcal{S}_{j}+\mathcal{S}_{j-1}\right)\mathbb{C}_{j}^{-}}{2c_{p,j}}-\frac{1}{r_{j}c_{p,j}\mathbb{D}_{j}}\left(\frac{r_{j-1/2}}{h_{j-1}}\frac{\lambda_{j-1}+\lambda_{j}}{2}\right)\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula \begin{multline}
+B_{T}^{T}(j)=\frac{\rho_{j}}{\tau}-\frac{\rho_{j}}{T_{j}}\frac{dT_{j}}{dt}+V_{j}\mathbb{C}_{j}+\frac{1}{c_{p,j}}\sum_{k}\left(\hat{h}_{k,j}\frac{\partial\dot{\omega}_{k,j}}{\partial T}+\hat{c}_{p,k,j}\dot{\omega}_{k,j}\right)+\frac{\left(\mathcal{S}_{j}+\mathcal{S}_{j-1}\right)\mathbb{C}_{j}}{2c_{p,j}}\\
++\frac{1}{r_{j}c_{p,j}\mathbb{D}_{j}}\left(\frac{r_{j+1/2}}{h_{j}}\frac{\lambda_{j}+\lambda_{j+1}}{2}+\frac{r_{j-1/2}}{h_{j-1}}\frac{\lambda_{j-1}+\lambda_{j}}{2}\right)\end{multline}
+
+\end_inset
+
+
+\begin_inset Formula \begin{equation}
+C_{T}^{T}(j)=V_{j}\mathbb{C}_{j}^{+}+\frac{\left(\mathcal{S}_{j}+\mathcal{S}_{j-1}\right)\mathbb{C}_{j}^{+}}{2c_{p,j}}-\frac{1}{r_{j}c_{p,j}\mathbb{D}_{j}}\left(\frac{r_{j+1/2}}{h_{j}}\frac{\lambda_{j}+\lambda_{j+1}}{2}\right)\end{equation}
+
+\end_inset
+
+The derivatives with respect to species are:
+\begin_inset Formula \begin{equation}
+A_{Y_{k}}^{T}(j)=\frac{1}{4c_{p,j}h_{j-1}}\left(c_{p,k,j}+c_{p,k,j-1}\right)\left(\rho_{j}D_{km,j}+\rho_{j-1}D_{km,j-1}\right)\left(\mathbb{C}_{j}^{-}T_{,j-1}+\mathbb{C}_{j}T_{,j}+\mathbb{C}_{j}^{+}T_{j+1}\right)\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{multline}
+B_{Y_{k}}^{T}(j)=\frac{\partial\rho_{j}}{\partial Y_{k}}\frac{dT_{j}}{dt}+\frac{1}{c_{p,j}}\sum_{k}\hat{h}_{k}\frac{\partial\dot{\omega}_{k,j}}{\partial Y_{k,j}}\\
+-\frac{1}{4c_{p,j}h_{j-1}}\left(c_{p,k,j}+c_{p,k,j-1}\right)\left(\rho_{j}D_{km,j}+\rho_{j-1}D_{km,j-1}\right)\left(\mathbb{C}_{j}^{-}T_{,j-1}+\mathbb{C}_{j}T_{,j}+\mathbb{C}_{j}^{+}T_{j+1}\right)\\
+-\frac{1}{4c_{p,j}h_{j}}\left(c_{p,k,j+1}+c_{p,k,j}\right)\left(\rho_{j+1}D_{km,j+1}+\rho_{j}D_{km,j}\right)\left(\mathbb{C}_{j}^{-}T_{,j-1}+\mathbb{C}_{j}T_{,j}+\mathbb{C}_{j}^{+}T_{j+1}\right)\end{multline}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+C_{Y_{k}}^{T}(j)=\frac{1}{4c_{p,j}h_{j}}\left(c_{p,k,j+1}+c_{p,k,j}\right)\left(\rho_{j+1}D_{km,j+1}+\rho_{j}D_{km,j}\right)\left(\mathbb{C}_{j}^{-}T_{,j-1}+\mathbb{C}_{j}T_{,j}+\mathbb{C}_{j}^{+}T_{j+1}\right)\end{equation}
+
+\end_inset
+
+The derivatives with respect to 
+\begin_inset Formula $V$
+\end_inset
+
+ are 
+\begin_inset Formula \begin{equation}
+B_{V}^{T}(j)=\mathbb{C}_{j}^{-}T_{,j-1}+\mathbb{C}_{j}T_{,j}+\mathbb{C}_{j}^{+}T_{j+1}\end{equation}
+
+\end_inset
+
+and all the derivatives with respect to 
+\begin_inset Formula $U$
+\end_inset
+
+ are zero.
+\end_layout
+
+\begin_layout Subsection
+Initial Condition
+\end_layout
+
+\begin_layout Standard
+Integration of the system of equations requires a consistent set of initial
+ conditions such that 
+\begin_inset Formula $ $
+\end_inset
+
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\noun off
+\color none
+
+\begin_inset Formula $\mathbf{f}\left(t_{0},\mathbf{y}_{0},\mathbf{y}_{0}'\right)=\mathbf{0}$
+\end_inset
+
+.
+ Physically, the initial condition is fully defined by the temperature,
+ species mass fractions, and tangential velocity (
+\begin_inset Formula $U$
+\end_inset
+
+) profiles, along with the boundary value for the normal mass flux (
+\begin_inset Formula $V$
+\end_inset
+
+).
+ From these, we must compute the time derivatives of 
+\begin_inset Formula $T$
+\end_inset
+
+, 
+\begin_inset Formula $Y_{k}$
+\end_inset
+
+, and 
+\begin_inset Formula $U$
+\end_inset
+
+, as well as the value of 
+\begin_inset Formula $V$
+\end_inset
+
+ throughout the domain.
+ These variables are all coupled in the governing equations, but since all
+ of them appear linearly, their values may be found analytically.
+ Start first by considering the continuity equation.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\frac{d\rho_{j}}{dt}+\frac{r_{j}^{\alpha}V_{j}-r_{j-1}^{\alpha}V_{j-1}}{r_{j+1/2}^{\alpha}h_{j-1}}+\rho_{j}U_{j}=0\end{equation}
+
+\end_inset
+
+Now replace 
+\begin_inset Formula $d\rho/dt$
+\end_inset
+
+ with equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:drhodt"
+
+\end_inset
+
+ to obtain
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+-\frac{\rho_{j}}{T_{j}}\frac{dT_{j}}{dt}-\sum_{k}\frac{\rho_{j}\bar{W}_{j}}{W_{k}}\frac{dY_{k,j}}{dt}+\frac{r_{j}^{\alpha}V_{j}-r_{j-1}^{\alpha}V_{j-1}}{r_{j+1/2}^{\alpha}h_{j-1}}+\rho_{j}U_{j}=0\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now, take the discretized energy and species equations, and write them as
+\begin_inset Formula \begin{equation}
+\rho_{j}\frac{dT_{j}}{dt}=-V_{j}\frac{\partial T_{j}}{\partial r}-\mathbb{S}_{T,j}\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula \[
+\rho_{j}\frac{dY_{k,j}}{dt}=-V_{j}\frac{\partial Y_{k,j}}{\partial r}-\mathbb{S}_{k,j}\]
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbb{S}_{T,j}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathbb{S}_{k,j}$
+\end_inset
+
+ are the sums of the remaining terms in the respective equations.
+ The continuity equation can then be rewritten as
+\begin_inset Formula \begin{equation}
+\frac{1}{T_{j}}\left(V_{j}\frac{\partial T_{j}}{\partial r}+\mathbb{S}_{T,j}\right)+\sum_{k}\frac{\bar{W}_{j}}{W_{k}}\left(V_{j}\frac{\partial Y_{k,j}}{\partial r}+\mathbb{S}_{k,j}\right)+\frac{r_{j}^{\alpha}V_{j}-r_{j-1}^{\alpha}V_{j-1}}{r_{j+1/2}^{\alpha}h_{j-1}}+\rho_{j}U_{j}=0\end{equation}
+
+\end_inset
+
+Solving for 
+\begin_inset Formula $V_{j}$
+\end_inset
+
+ gives
+\begin_inset Formula \begin{equation}
+V_{j}=\frac{{\displaystyle -\frac{\mathbb{S}_{T,j}}{T_{j}}-\sum_{k}\frac{\bar{W}_{j}}{W_{k}}\mathbb{S}_{k,j}-\rho_{j}U_{j}+\frac{r_{j-1}^{\alpha}V_{j-1}}{r_{j+1/2}^{\alpha}h_{j-1}}}}{{\displaystyle \frac{1}{T}\frac{\partial T_{j}}{\partial r}+\sum_{k}\frac{\bar{W}_{j}}{W_{k}}\frac{\partial Y_{k,j}}{\partial r}+\frac{r_{j}^{\alpha}}{h_{j-1}r_{j+1/2}^{\alpha}}}}\end{equation}
+
+\end_inset
+
+This formula can be succesively applied to find 
+\begin_inset Formula $V$
+\end_inset
+
+ at each grid point from the boundary value at 
+\begin_inset Formula $j=0$
+\end_inset
+
+.
+ Then, the time derivatives of the state variables are calculated from the
+ governing equations:
+\begin_inset Formula \[
+\]
+
+\end_inset
+
+
+\begin_inset Formula \begin{equation}
+\frac{dT_{j}}{dt}=-\frac{1}{\rho_{j}}\left(V_{j}\frac{\partial T_{j}}{\partial r}+\mathbb{S}_{T,j}\right)\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula \begin{equation}
+\frac{dY_{k,j}}{dt}=-\frac{1}{\rho_{j}}\left(V_{j}\frac{\partial Y_{k,j}}{\partial r}+\mathbb{S}_{k,j}\right)\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Flame-Radius-Control"
+
+\end_inset
+
+Flame Radius Control
+\end_layout
+
+\begin_layout Standard
+To simulate flames at a specific radius of curvature, a mechanism must be
+ implemented to provide control over the flame location.
+ In the elemental flame formulation, the flame radius is controlled by manipulat
+ing the mass flux per radian 
+\begin_inset Formula $\left(rV\right)_{0}$
+\end_inset
+
+at the 
+\begin_inset Formula $r=0$
+\end_inset
+
+ boundary.
+ This is expressed in terms of a fictitious non-reacting stagnation point
+ radius 
+\begin_inset Formula $R$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\left(rV\right)_{0}=\frac{a}{2}\rho_{0}\left|R\right|R\end{equation}
+
+\end_inset
+
+The current flame radius is defined as
+\begin_inset Formula \begin{equation}
+R_{f}\equiv\frac{\int_{0}^{\infty}q'''r\, dr}{\int_{0}^{\infty}q'''\, dr}\label{eq:flame-radius}\end{equation}
+
+\end_inset
+
+
+\emph on
+THIS IS NO LONGER CORRECT 
+\emph default
+Given a target flame radius 
+\begin_inset Formula $R_{f}^{*}$
+\end_inset
+
+, a PI (proportional--integral) control algorithm is applied to the stagnation
+ point radius to determine the value of the centerline mass flux.
+ 
+\begin_inset Formula \begin{equation}
+R=K_{1}\left[\left(R_{f}^{*}-R_{f}\right)+K_{2}\int\left(R_{f}^{*}-R_{f}\right)dt\right]\end{equation}
+
+\end_inset
+
+Appropriate values of the controller gains 
+\begin_inset Formula $K_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $K_{2}$
+\end_inset
+
+ depend on the characteristics of the flame being simulated.
+ For the flames presented here, acceptable values of the gains are 
+\begin_inset Formula $K_{1}=10$
+\end_inset
+
+ and 
+\begin_inset Formula $K_{2}=800\,\mathrm{s^{-1}}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Adaptation and Regridding
+\end_layout
+
+\begin_layout Standard
+A number of grid adaptation criteria are applied to ensure accurate solution
+ of the discretized problem with a minimum number of grid points.
+ The following criteria must be met between each pair of grid points.
+ If any of these criteria are not met, a new grid point is introduced midway
+ between the two existing points.
+\end_layout
+
+\begin_layout Standard
+First, the grid must accurately resolve variations in the scalar quantities
+ relative to their respective ranges.
+\begin_inset Formula \begin{equation}
+\left|F_{j+1}-F_{j}\right|<\varphi_{1}\left(\max_{j}F-\min_{j}F\right)\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $F$
+\end_inset
+
+ includes each of the dependent variables 
+\begin_inset Formula $T$
+\end_inset
+
+, 
+\begin_inset Formula $Y_{k}$
+\end_inset
+
+, 
+\begin_inset Formula $U$
+\end_inset
+
+, 
+\begin_inset Formula $V$
+\end_inset
+
+ as well as the chemical source term 
+\begin_inset Formula $\sum h_{k}\dot{\omega}_{k}W_{k}$
+\end_inset
+
+, and 
+\begin_inset Formula $\varphi_{1}$
+\end_inset
+
+ is a tolerance parameter on the order of 0.1.
+ Gradients of the scalar quantities are subject to an similar criterion
+\begin_inset Formula \begin{equation}
+\left|\left(\frac{\partial F}{\partial r}\right)_{j+1}-\left(\frac{\partial F}{\partial r}\right)_{j}\right|<\varphi_{2}\left(\max_{j}\frac{\partial F}{\partial r}-\min_{j}\frac{\partial F}{\partial r}\right)\end{equation}
+
+\end_inset
+
+where the tolerance parameter 
+\begin_inset Formula $\varphi_{2}$
+\end_inset
+
+ has a typical value of 0.3.
+ 
+\end_layout
+
+\begin_layout Standard
+
+\emph on
+THIS PART IS NO LONGER CORRECT
+\emph default
+ The next criterion ensures that numerical diffusion and dispersion introduced
+ by the discretization of the convection terms in the conservation equations
+ is small compared to the physical diffusion terms
+\begin_inset Formula \begin{equation}
+x_{j+1}-x_{j}<\varphi_{3}\left|d_{j}\right|\label{eq:adapt-numdiff}\end{equation}
+
+\end_inset
+
+where the damping ratio 
+\begin_inset Formula $d_{j}$
+\end_inset
+
+ is 
+\begin_inset Formula $\rho D_{km}/V$
+\end_inset
+
+ for the species equation, 
+\begin_inset Formula $\lambda/c_{p}V$
+\end_inset
+
+ for the energy equation and 
+\begin_inset Formula $\mu/V$
+\end_inset
+
+ for the momentum equation.
+ The tolerance parameter 
+\begin_inset Formula $\varphi_{3}$
+\end_inset
+
+ has a typical value of 1.0.
+ The final grid adaptation criterion forces the grid to be relatively uniform.
+\begin_inset Formula \begin{equation}
+\varphi_{4}<\frac{x_{j+1}-x_{j}}{x_{j}-x_{j-1}}<\frac{1}{\varphi_{4}}\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula $\varphi_{4}$
+\end_inset
+
+ has a value of around 2.5.
+ If all of these criteria are met to better than their required tolerance
+ without a particular grid point, then that grid point may be safely removed.
+\end_layout
+
+\begin_layout Standard
+The location of the boundary grid points is also modified dynamically.
+ For the sake of computational efficiency, the computational domain should
+ be truncated as close to the flame as possible while still resolving the
+ complete flame structure.
+ That is, we expect that 
+\begin_inset Formula $\partial F/\partial x\to0$
+\end_inset
+
+ as 
+\begin_inset Formula $r\to\pm\infty$
+\end_inset
+
+ even when using fixed-value boundary conditions.
+ This condition may be written at the right (
+\begin_inset Formula $j=J$
+\end_inset
+
+) boundary for a scalar 
+\begin_inset Formula $F$
+\end_inset
+
+ as 
+\begin_inset Formula \begin{equation}
+\left|F_{J}-F_{J-2}\right|<\varphi_{5}\left(\max_{j}F-\min_{j}F\right)\end{equation}
+
+\end_inset
+
+where the tolerance parameter 
+\begin_inset Formula $\varphi_{5}$
+\end_inset
+
+ is typically chosen on the order of 
+\begin_inset Formula $10^{-4}$
+\end_inset
+
+.
+ Note that the boundary value must be compared with the value two grid points
+ away since the flatness criterion between 
+\begin_inset Formula $J$
+\end_inset
+
+ and 
+\begin_inset Formula $J-1$
+\end_inset
+
+ is sometimes satisfied exactly by an imposed zero-gradient boundary condition.
+\end_layout
+
+\begin_layout Section
+Code Description
+\end_layout
+
+\begin_layout Standard
+
+\emph on
+(work in progress)
+\end_layout
+
+\begin_layout Standard
+This section is the link between the equations described above and the actual
+ C++ implementation of the 1D flame code.
+ It should include tables that pair up the variable names in code with the
+ variables used in the above.
+ This section should also contain a description of the input file format,
+ and compilation instructions on supported platforms.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="34" columns="5">
+<features>
+<column alignment="left" valignment="top" width="0">
+<column alignment="left" valignment="top" width="0">
+<column alignment="left" valignment="top" width="0">
+<column alignment="left" valignment="top" width="0">
+<column alignment="left" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Name in code
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Name here
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Description
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Units
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Eq.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+j
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $j$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+grid point index
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+jj
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $J$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+index of the rightmost grid point
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+k
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $k$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+species index
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+nSpec
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $K$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+number of species
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+T[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $T_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+temperature
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+K
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+U[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $U_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+normalized tangential velocity
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{s}^{-1}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+V[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $V_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+normal mass flux
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{kg\slash m^{2}\cdot s}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+Y(k,j)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $Y_{k,j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+species mass fractions
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+rho[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\rho_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+density
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mbox{kg/m}^{3}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+W[k]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $W_{k}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+molecular weight of species 
+\begin_inset Formula $k$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{kg/kmol}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+Wmx[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\bar{W}_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+mixture molecular weight
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{kg/kmol}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+sumcpj[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathcal{S}_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+enthalpy flux
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{W/m^{2}\cdot K}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:enthalpy-flux"
+
+\end_inset
+
+, 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:sumcpj"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+mu[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mu_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dynamic viscosity
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{Pa\cdot s}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+lambda[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\lambda_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+thermal conductivity
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{W/m\cdot K}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+cp[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $c_{p,j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+mixture specific heat
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{J/kg\cdot K}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+cpSpec(k,j)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\hat{c}_{p,k,j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+species molar specific heat
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{J/kmol\cdot K}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+qFourier[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $q_{j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+heat flux
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{W/m^{2}}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:qFourier"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+rhoD(k,j)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\rho_{j}D_{km,j}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+density-weighted diffusion coefficient
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{kg/m\cdot s}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+Dkt(k,j)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $D_{k,j}^{T}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+thermal diffusion coefficient
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{m^{2}/s}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+jCorr[j]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $j'_{j}$
+\end_inset
+
+
+\begin_inset Formula $ $
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+correction to diffusion mass flux
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathrm{kg/m^{2}\cdot s}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "references"
+options "plain"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

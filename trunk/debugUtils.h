@@ -17,16 +17,6 @@ public:
     static bool debugFlameRadiusControl;
 };
 
-namespace debugType {
-    enum debugType {
-        adaptation,
-        regridding,
-        sundials
-    };
-}
-
-void debugWrite(debugType::debugType type, std::string message);
-
 class debugException : public std::exception
 {
 public:

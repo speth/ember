@@ -2,6 +2,9 @@
 #include "debugUtils.h"
 #include "perfTimer.h"
 #include "matlabFile.h"
+#include "boost/format.hpp"
+
+using boost::format;
 
 void flameSolver::setOptions(const configOptions& theOptions)
 {
@@ -182,14 +185,17 @@ void flameSolver::run(void)
 
                 if (debugParameters::debugTimesteps) {
                     int order = theSolver.getLastOrder();
-                    cout << "t = " << t << "  (dt = " << dt << ") [" << order << "]" << endl;
+                    cout << "t = " << format("%8.6f") % t;
+                    cout << "  (dt = " << format("%9.3e") % dt;
+                    cout << ")  [" << order << "]" << endl;
                 }
                 if (options.xFlameControl) {
                     theSys.update_xStag(t, true);
                 }
 
             } else {
-                cout << "IDA Solver failed at time t = " << t << "  (dt = " << dt << ")" << endl;
+                cout << "IDA Solver failed at time t = " << format("%8.6f") % t;
+                cout << "  (dt = " << format("%9.3e") % dt << ")" << endl;
                 theSys.debugFailedTimestep(theSolver.y);
                 theSys.writeStateMatFile("errorOutput",true);
                 integratorTimestep = 0;
@@ -360,8 +366,8 @@ bool flameSolver::checkTerminationCondition(void)
 
         if (j1 == -1)
         {
-            cout << "Continuing integration: t (" << theSys.tNow-timeVector[0] <<
-                ") < terminationPeriod (" << options.terminationPeriod << ")" << endl;
+            cout << "Continuing integration: t (" << format("%8.6f") % (theSys.tNow-timeVector[0]) <<
+                ") < terminationPeriod (" << format("%8.6f") % options.terminationPeriod << ")" << endl;
             return false;
         }
 
@@ -373,8 +379,8 @@ bool flameSolver::checkTerminationCondition(void)
         }
         hrrError /= (j2-j1+1);
 
-        cout << "Heat release rate deviation =  " << hrrError/qMean*100 << "%" << endl;
-        cout << "hrrError = " << hrrError << endl;
+        cout << "Heat release rate deviation =  " << format("%6.3f") % (hrrError/qMean*100) << "%    ";
+        cout << "hrrError = " << format("%9.4e") % hrrError << endl;
 
         if (hrrError/abs(qMean) < options.terminationTolerance) {
             cout << "Terminating integration: ";
@@ -388,7 +394,7 @@ bool flameSolver::checkTerminationCondition(void)
           cout << "Terminating integration: Maximum integration time reached." << endl;
           return true;
         } else {
-            cout << "Continuing integration. t = "<< theSys.tNow-timeVector[0] << endl;
+            cout << "Continuing integration. t = "<< format("%8.6f") % (theSys.tNow-timeVector[0]) << endl;
         }
 
     }
