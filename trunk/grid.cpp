@@ -172,10 +172,13 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
         // Special minimum grid size for flames pinned at x=0
         if (j == 0 && leftBoundaryConfig == lbControlVolume) {
-            insert = false;
-            if (debugParameters::debugAdapt) {
-                cout << "Adapt: grid point addition canceled by minimum center grid size j = " << j;
-                cout << " hh(j) = " << hh[j] << " < " << 2*centerGridMin << endl;
+            double xLeftMin = min(options.centerGridMin, 0.005*x[jj]);
+            if (hh[j] < xLeftMin) {
+                insert = false;
+                if (debugParameters::debugAdapt) {
+                    cout << "Adapt: grid point addition canceled by minimum center grid size j = " << j;
+                    cout << " hh(j) = " << hh[j] << " < " << 2*xLeftMin << endl;
+                }
             }
         }
 
@@ -477,8 +480,18 @@ bool oneDimGrid::addLeft(void)
         for (int i=0; i<addPointCount; i++) {
             double xLeft = x[0]-hh[0];
             if (options.twinFlame || options.curvedFlame) {
-                xLeft = std::max(xLeft,options.centerGridMin);
+                if (x[0] == 0) {
+                    break;
+                }
+
+                double xLeftMin = std::min(options.centerGridMin, 0.005*x[jj]);
+                if (xLeft < 0.0) {
+                    xLeft = 0.0;
+                } else if (xLeft < xLeftMin) {
+                    xLeft = xLeftMin;
+                }
             }
+            cout << "adding point at " << xLeft << endl;
             x.insert(x.begin(),xLeft);
 
             for (int k=0; k<nVars; k++) {
@@ -530,6 +543,10 @@ bool oneDimGrid::removeRight(void)
         }
     }
 
+    if (jj < 3) {
+        pointRemoved = false;
+    }
+
     if (pointRemoved) {
         removePoint(jj,y,ydot);
         jj--;
@@ -573,6 +590,10 @@ bool oneDimGrid::removeLeft(void)
         }
     }
 
+    if (jj < 3) {
+        pointRemoved = false;
+    }
+
     if (pointRemoved) {
         removePoint(0,y,ydot);
         jj--;
@@ -613,7 +634,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
     }
     if (rightRemovalCount > 0) {
         std::string suffix = (rightRemovalCount == 1) ? "" : "s";
-        cout << "Removed " << rightRemovalCount << " point" << suffix << " from the right side. ";
+        cout << "Removed " << rightRemovalCount << " point" << suffix << " from the right side. " << endl;
     }
 
     int leftRemovalCount = 0;
@@ -630,10 +651,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 
     if (leftRemovalCount > 0) {
         std::string suffix = (leftRemovalCount == 1) ? "" : "s";
-        cout << "Removed " << leftRemovalCount << " point" << suffix << " from the left side.";
-    }
-    if (leftRemovalCount > 0 || rightRemovalCount > 0) {
-        cout << endl;
+        cout << "Removed " << leftRemovalCount << " point" << suffix << " from the left side." << endl;
     }
 
     bool gridUpdated = (leftAddition || rightAddition || leftRemoval || rightRemoval);
