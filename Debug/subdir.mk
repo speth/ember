@@ -4,17 +4,17 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../chemistry.cpp \
-../debugUtils.cpp \
-../flameSolver.cpp \
-../flameSys.cpp \
-../grid.cpp \
-../mathUtils.cpp \
-../matlabFile.cpp \
-../perfTimer.cpp \
-../readConfig.cpp \
-../strainedFlame.cpp \
-../sundialsUtils.cpp 
+../src/chemistry.cpp \
+../src/debugUtils.cpp \
+../src/flameSolver.cpp \
+../src/flameSys.cpp \
+../src/grid.cpp \
+../src/mathUtils.cpp \
+../src/matlabFile.cpp \
+../src/perfTimer.cpp \
+../src/readConfig.cpp \
+../src/strainedFlame.cpp \
+../src/sundialsUtils.cpp 
 
 OBJS += \
 ./chemistry.o \
@@ -47,6 +47,8 @@ CPP_DEPS += \
 %.o: ../%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	icc -g -I/opt/matlab_r2007a/extern/include -O2 -fp-model precise -Wall -c -fmessage-length=0 -wd981,1782,383,869,1572 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
+	icc -I/usr/local/cantera/include -I/opt/matlab_r2007a/extern/include -O0 -g3 -Wall -c -fmessage-length=0 -openmp -wd981,1782,383,869,1572 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
+
+
