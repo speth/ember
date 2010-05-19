@@ -15,6 +15,9 @@
 #include <iostream>
 #include <vector>
 
+typedef DlsMat DenseMat;
+typedef DlsMat BandMat;
+
 // wrapper class for Sundials "N_Vector"
 class sdVector {
 public:
@@ -46,7 +49,7 @@ public:
     ~sdMatrix(void);
     realtype& operator()(unsigned int i, unsigned int j);
     realtype& operator()(unsigned int i, unsigned int j) const;
-    realtype** forSundials(void) {return M->data;}
+    realtype* forSundials(void) {return M->data;}
 
 private:
     DenseMat M;
@@ -97,7 +100,7 @@ public:
     //            flag >= 0
     //   opt == 2 means function allocates memory so check if returned
     //            NULL pointer
-    static int check_flag(void *flagvalue, char *funcname, int opt);
+    static int check_flag(void *flagvalue, const char *funcname, int opt);
 
     realtype reltol;
     sdVector abstol;
@@ -116,8 +119,8 @@ private:
 
     static int f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data);
     static int g(realtype t, N_Vector yIn, realtype *gout, void *g_data);
-    static int Jac(long int N, DenseMat Jin, realtype t,
-                   N_Vector yIn, N_Vector fy, void *jac_data,
+    static int Jac(int N, realtype t, N_Vector yIn,
+    		       N_Vector fy, DenseMat Jin, void *jac_data,
                    N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
     sdODE* theODE;
@@ -171,7 +174,7 @@ public:
     //            flag >= 0
     //   opt == 2 means function allocates memory so check if returned
     //            NULL pointer
-    static int check_flag(void *flagvalue, char *funcname, int opt);
+    static int check_flag(void *flagvalue, const char *funcname, int opt);
 
     double getStepSize(void);
     void setInitialStepSize(double dt);
