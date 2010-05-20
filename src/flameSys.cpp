@@ -1054,13 +1054,13 @@ flameSys::flameSys(void)
     , x(grid.x)
     , r(grid.r)
     , rphalf(grid.rphalf)
-    , dlj(grid.dlj)
     , hh(grid.hh)
+    , dlj(grid.dlj)
     , cfm(grid.cfm)
     , cf(grid.cf)
     , cfp(grid.cfp)
-    , bandedJacobian(NULL)
     , flamePosIntegralError(0)
+    , bandedJacobian(NULL)
 {
     inGetIC = false;
     inTestPreconditioner = false;
