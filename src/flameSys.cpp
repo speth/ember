@@ -287,7 +287,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
     // a substantial impact on the convergence rate of the solver.
     double eps = sqrt(DBL_EPSILON)*800;
 
-    BandZero(bandedJacobian->forSundials());
+    SetToZero(bandedJacobian->forSundials());
 
     // *** Derivatives of reaction rate with respect to temperature
     dvector TplusdT(nPoints);
@@ -666,7 +666,7 @@ int flameSys::preconditionerSetup(realtype t, sdVector& y, sdVector& ydot,
     // *** Get LU Factorization of the Jacobian
     if (!inTestPreconditioner) {
         perfTimerLU.start();
-        long int iError = BandGBTRF(bandedJacobian->forSundials(),&pMat[0]);
+        int iError = BandGBTRF(bandedJacobian->forSundials(),&pMat[0]);
         perfTimerLU.stop();
 
         if (iError!=0) {
@@ -764,7 +764,7 @@ void flameSys::setup(void)
 
     delete bandedJacobian;
     bandedJacobian = new sdBandMatrix(N,2*nVars+1,2*nVars+1,4*nVars+2);
-    BandZero(bandedJacobian->forSundials());
+    SetToZero(bandedJacobian->forSundials());
 
     pMat.resize(N);
     grid.jj = nPoints-1;
@@ -1051,8 +1051,6 @@ void flameSys::loadInitialProfiles(void)
 
 flameSys::flameSys(void)
     : grid(options)
-    , bandedJacobian(NULL)
-    , flamePosIntegralError(0)
     , x(grid.x)
     , r(grid.r)
     , rphalf(grid.rphalf)
@@ -1061,6 +1059,8 @@ flameSys::flameSys(void)
     , cfm(grid.cfm)
     , cf(grid.cf)
     , cfp(grid.cfp)
+    , bandedJacobian(NULL)
+    , flamePosIntegralError(0)
 {
     inGetIC = false;
     inTestPreconditioner = false;

@@ -16,10 +16,10 @@
 #ifdef WIN32
 #define Cantera_CXX Cantera
 #endif
- 
+
 class canteraGas
 {
-    // This clas groups together a set of Cantera objects needed for calculating
+    // This class groups together a set of Cantera objects needed for calculating
     // thermodynamic properties, transport properties, and kinetic rates
 
 public:

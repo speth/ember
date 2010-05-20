@@ -6,6 +6,8 @@
 #include "flameSolver.h"
 #include "libconfig.h++"
 
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+
 using namespace mathUtils;
 
 int main(int argc, char** argv)

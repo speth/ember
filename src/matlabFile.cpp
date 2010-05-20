@@ -1,6 +1,9 @@
+#include <cstring>
 #include "matlabFile.h"
 #include "boost/filesystem.hpp"
 #include "debugUtils.h"
+
+using std::memcpy;
 
 matlabFile::matlabFile(void)
      : file(NULL)

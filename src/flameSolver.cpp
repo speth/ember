@@ -160,7 +160,7 @@ void flameSolver::run(void)
         // *** Integrate until the termination condition is reached ***
         // ************************************************************
 
-        int IDAflag;
+        int IDAflag(0);
 
         while (t < theSys.tEnd) {
             // *** Take a time step

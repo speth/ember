@@ -192,7 +192,7 @@ private:
 
     // Jacobian data
     sdBandMatrix* bandedJacobian;
-    vector<long int> pMat;
+    vector<int> pMat;
 
     // Functions for addressing the subdiagonal,
     // diagonal, and superdiagonal blocks of the Jacobian
