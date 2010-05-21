@@ -49,7 +49,7 @@ grid:
     };
 };
 
-InitialCondition:
+initialCondition:
 {
     // Read Initial profile from a file.
     //file = "restartD.mat";
@@ -68,7 +68,7 @@ InitialCondition:
     xRight = 0.004;
 };
 
-StrainParameters:
+strainParameters:
 {
     initial = 600;
     final = 600;
