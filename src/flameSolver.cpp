@@ -45,9 +45,9 @@ void flameSolver::run(void)
     int nTerminate = 1; // number of steps since last checking termination condition
     int nCurrentState = 0; // number of time steps since profNow.mat and outNow.mat were written
 
-    double tOutput = t; // time of last integral flame parameters output
-    double tRegrid = t; // time of last regridding
-    double tProfile = t; // time of last profile output
+    double tOutput = t + options.outputTimeInterval; // time of next integral flame parameters output
+    double tRegrid = t + options.regridTimeInterval; // time of next regridding
+    double tProfile = t + options.profileTimeInterval; // time of next profile output
 
     theSys.grid.updateValues();
 
