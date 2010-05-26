@@ -10,6 +10,7 @@ project
 		   <search>/opt/matlab2009a/bin/glnxa64
 
 		   <variant>release
+		   <debug-symbols>on
     ;
 
 lib equil kinetics transport thermo tpx ctnumerics clib ctbase ctcxx ctf2c ctmath ;
