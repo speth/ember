@@ -46,6 +46,7 @@ double DataFile::readScalar(const std::string& name)
 
     double value;
     H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &value);
+    H5Dclose(dataset);
     return value;
 }
 
@@ -62,6 +63,7 @@ void DataFile::writeVector(const std::string& name, const dvector& v)
 
     dataset = get_dataset(name, datatype, dataspace);
     H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, &v[0]);
+    H5Dclose(dataset);
 }
 
 dvector DataFile::readVector(const std::string& name)
@@ -80,6 +82,7 @@ dvector DataFile::readVector(const std::string& name)
     dvector values(N);
 
     H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &values[0]);
+    H5Dclose(dataset);
     return values;
 }
 
@@ -106,6 +109,7 @@ void DataFile::writeArray2D(const std::string& name, const Cantera::Array2D& y)
 
     dataset = get_dataset(name, datatype, dataspace);
     H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, &yt.data()[0]);
+    H5Dclose(dataset);
 }
 
 Cantera::Array2D DataFile::readArray2D(const std::string& name)
@@ -128,6 +132,7 @@ Cantera::Array2D DataFile::readArray2D(const std::string& name)
     Cantera::Array2D yt(dimensions[1], dimensions[0]);
 
     H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &yt.data()[0]);
+    H5Dclose(dataset);
 
     // Take the transpose because Array2D is column-major
     for (size_t i=0; i<yt.nRows(); i++) {
@@ -177,8 +182,7 @@ void DataFile::require_file_open()
 hid_t DataFile::get_dataset(const std::string& name, hid_t datatype, hid_t dataspace)
 {
     if (H5Lexists(file, name.c_str(), H5P_DEFAULT)) {
-        return H5Dopen(file, name.c_str(), H5P_DEFAULT);
-    } else {
-        return H5Dcreate(file, name.c_str(), datatype, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        H5Ldelete(file, name.c_str(), H5P_DEFAULT);
     }
+    return H5Dcreate(file, name.c_str(), datatype, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 }
