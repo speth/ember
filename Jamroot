@@ -23,9 +23,11 @@ alias sundials : sundials_cvode sundials_ida sundials_nvecserial : <link>static 
 lib icui18n icuio icuuc icudata ut mat mx ;
 alias matlab : icui18n icuio icuuc icudata ut mat mx ;
 
+lib hdf5 ;
+
 lib config++ lapack blas boost_filesystem ;
 
-exe 1dflameV2 : [ glob src/*.cpp ] cantera sundials lapack blas config++ matlab boost_filesystem
+exe 1dflameV2 : [ glob src/*.cpp ] cantera sundials lapack blas config++ matlab boost_filesystem hdf5
 	      ;
 
 install bin : 1dflameV2 ;
