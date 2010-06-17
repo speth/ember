@@ -29,7 +29,7 @@ public:
     int regridStepInterval;
     int outputStepInterval;
     int profileStepInterval;
-    int currentStateStepInterval; // number of time steps before updating profNow.mat and outNow.mat
+    int currentStateStepInterval; // number of time steps before updating profNow.h5 and outNow.h5
     int terminateStepInterval;
     int integratorRestartInterval;
     double regridTimeInterval;
@@ -73,7 +73,7 @@ public:
     int gridAlpha; // 1 for curved flames, 0 for planar flames
     int kContinuity, kMomentum, kEnergy, kSpecies; // indices of the respective equations in the solution vector
 
-    // Controls which variables are included in the outXXXXXX.mat files
+    // Controls which variables are included in the outXXXXXX.h5 files
     bool outputAuxiliaryVariables;
     bool outputTimeDerivatives;
     bool outputHeatReleaseRate;

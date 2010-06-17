@@ -4,7 +4,7 @@
 #include <cmath>
 #include "debugUtils.h"
 #include "mathUtils.h"
-#include "matlabFile.h"
+#include "dataFile.h"
 #include "boost/filesystem.hpp"
 
 using namespace mathUtils;
@@ -40,7 +40,7 @@ int flameSys::f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)
 
         perfTimerRxnRates.stop();
     } catch (Cantera::CanteraError) {
-        writeStateMatFile("errorOutput",true);
+        writeStateFile("errorOutput",true);
         throw debugException("Error evaluating thermodynamic properties");
     }
 
@@ -960,7 +960,7 @@ void flameSys::loadInitialProfiles(void)
     }
 
     cout << "Reading initial condition from " << inputFilename << endl;
-    matlabFile infile(inputFilename);
+    DataFile infile(inputFilename);
     x = infile.readVector("x");
 
     nPoints = x.size();
@@ -1204,13 +1204,13 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot)
 {
     if (debugParameters::debugCalcIC) {
         std::ostringstream fileName(ostringstream::out);
-        // Determine the name of the output file (ICaxxxxxx.mat)
+        // Determine the name of the output file (ICaxxxxxx.h5)
 
         fileName << options.outputDir << "/ICa";
         fileName.flags(ios_base::right);
         fileName.fill('0');
         fileName.width(6);
-        fileName << ICfileNumber << ".mat";
+        fileName << ICfileNumber << ".h5";
 
         cout << "Writing IC file: " << fileName.str() << endl;
 
@@ -1227,7 +1227,7 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot)
             ydotVec[i] = ydot(i);
         }
 
-        matlabFile outfile(fileName.str());
+        DataFile outfile(fileName.str());
 
         outfile.writeScalar("rhoLeft",rhoLeft);
         outfile.writeScalar("rVzero",rVzero);
@@ -1397,13 +1397,13 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot)
 
     if (debugParameters::debugCalcIC) {
         std::ostringstream fileName(ostringstream::out);
-        // Determine the name of the output file (ICbxxxxxx.mat)
+        // Determine the name of the output file (ICbxxxxxx.h5)
 
         fileName << options.outputDir << "/ICb";
         fileName.flags(ios_base::right);
         fileName.fill('0');
         fileName.width(6);
-        fileName << ICfileNumber++ << ".mat";
+        fileName << ICfileNumber++ << ".h5";
 
         cout << "Writing IC file: " << fileName.str() << endl;
 
@@ -1421,9 +1421,9 @@ int flameSys::getInitialCondition(double t, sdVector& y, sdVector& ydot)
             ydotVec[i] = ydot(i);
         }
 
-        matlabFile outfile(fileName.str());
+        DataFile outfile(fileName.str());
 
-        //writeStateMatFile("errorOutput",true);
+        //writeStateFile("errorOutput",true);
         outfile.writeScalar("rhoLeft",rhoLeft);
         outfile.writeScalar("a",a);
         outfile.writeScalar("rVzero",rVzero);
@@ -1519,13 +1519,13 @@ void flameSys::rV2V(void)
     }
 }
 
-void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
+void flameSys::writeStateFile(const std::string fileNameStr, bool errorFile)
 {
     std::ostringstream fileName(ostringstream::out);
     bool incrementFileNumber = false;
 
     if (fileNameStr.length() == 0) {
-        // Determine the name of the output file (outXXXXXX.mat)
+        // Determine the name of the output file (outXXXXXX.h5)
         incrementFileNumber = true;
         if (errorFile) {
             fileName << options.outputDir << "/error";
@@ -1535,9 +1535,9 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
         fileName.flags(ios_base::right);
         fileName.fill('0');
         fileName.width(6);
-        fileName << options.outputFileNumber << ".mat";
+        fileName << options.outputFileNumber << ".h5";
     } else {
-        fileName << options.outputDir << "/" << fileNameStr << ".mat";
+        fileName << options.outputDir << "/" << fileNameStr << ".h5";
     }
     if (errorFile) {
         cout << "Writing error output file: " << fileName.str() << endl;
@@ -1549,7 +1549,7 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
     if (boost::filesystem::exists(fileName.str())) {
         boost::filesystem::remove(fileName.str());
     }
-    matlabFile outFile(fileName.str());
+    DataFile outFile(fileName.str());
 
     // Write the state data to the output file:
     outFile.writeScalar("t", tNow);
@@ -1565,7 +1565,6 @@ void flameSys::writeStateMatFile(const std::string fileNameStr, bool errorFile)
     if (options.outputHeatReleaseRate || errorFile) {
         outFile.writeVector("q",qDot);
         outFile.writeVector("rho", rho);
-
     }
 
     if (options.outputTimeDerivatives || errorFile) {
@@ -1762,7 +1761,7 @@ void flameSys::testPreconditioner(void)
         updateTransportProperties();
         gas.getReactionRates(wDot);
     } catch (Cantera::CanteraError) {
-        writeStateMatFile("errorOutput",true);
+        writeStateFile("errorOutput",true);
         throw debugException("Error evaluating thermodynamic properties");
     }
 
@@ -1831,7 +1830,7 @@ void flameSys::testPreconditioner(void)
     }
 
     // And then save the results:
-    matlabFile jacobianFile(options.outputDir+"/jacobianComparison.mat");
+    DataFile jacobianFile(options.outputDir+"/jacobianComparison.h5");
     jacobianFile.writeArray2D("aFirst",firstBlock1);
     jacobianFile.writeArray2D("aMiddle",secondBlock1);
     jacobianFile.writeArray2D("aEnd",thirdBlock1);
@@ -1840,7 +1839,7 @@ void flameSys::testPreconditioner(void)
     jacobianFile.writeArray2D("nEnd",thirdBlock2);
     jacobianFile.close();
 
-    cout << "Wrote output file: " << options.outputDir+"/jacobianComparison.mat" << endl;
+    cout << "Wrote output file: " << options.outputDir+"/jacobianComparison.h5" << endl;
     inTestPreconditioner = false;
 }
 

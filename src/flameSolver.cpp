@@ -1,7 +1,7 @@
 #include "flameSolver.h"
 #include "debugUtils.h"
 #include "perfTimer.h"
-#include "matlabFile.h"
+#include "dataFile.h"
 #include "boost/format.hpp"
 
 using boost::format;
@@ -43,7 +43,7 @@ void flameSolver::run(void)
     int nProfile = 0; // number of time steps since saving flame profiles
     int nIntegrate = 0; // number of time steps since restarting integrator
     int nTerminate = 1; // number of steps since last checking termination condition
-    int nCurrentState = 0; // number of time steps since profNow.mat and outNow.mat were written
+    int nCurrentState = 0; // number of time steps since profNow.h5 and outNow.h5 were written
 
     double tOutput = t; // time of next integral flame parameters output (this step)
     double tRegrid = t + options.regridTimeInterval; // time of next regridding
@@ -67,7 +67,7 @@ void flameSolver::run(void)
     theSys.aPrev = theSys.strainRate(t);
 
     if (options.outputProfiles) {
-        theSys.writeStateMatFile();
+        theSys.writeStateFile();
     }
 
     while (t < theSys.tEnd) {
@@ -143,7 +143,7 @@ void flameSolver::run(void)
             theSys.debugFailedTimestep(theSolver.y);
         }
         if (ICflag == 100) {
-            theSys.writeStateMatFile("",true);
+            theSys.writeStateFile("",true);
             throw debugException("Initial condition calculation failed repeatedly.");
         }
 
@@ -167,7 +167,7 @@ void flameSolver::run(void)
             try {
                 IDAflag = theSolver.integrateOneStep();
             } catch (Cantera::CanteraError) {
-                theSys.writeStateMatFile("errorOutput",true);
+                theSys.writeStateFile("errorOutput",true);
             }
 
             dt = integratorTimestep = theSolver.getStepSize();
@@ -197,12 +197,12 @@ void flameSolver::run(void)
                 cout << "IDA Solver failed at time t = " << format("%8.6f") % t;
                 cout << "  (dt = " << format("%9.3e") % dt << ")" << endl;
                 theSys.debugFailedTimestep(theSolver.y);
-                theSys.writeStateMatFile("errorOutput",true);
+                theSys.writeStateFile("errorOutput",true);
                 integratorTimestep = 0;
                 break;
             }
 
-            // *** Save the time-series data (out.mat)
+            // *** Save the time-series data (out.h5)
             if (t > tOutput || nOutput >= options.outputStepInterval) {
                 timeVector.push_back(t);
                 timestepVector.push_back(dt);
@@ -222,7 +222,7 @@ void flameSolver::run(void)
                     tIDA2 = clock();
                     theSolver.printStats(tIDA2-tIDA1);
                     if (options.outputProfiles) {
-                        theSys.writeStateMatFile();
+                        theSys.writeStateFile();
                     }
                     runTime.stop();
                     cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
@@ -234,14 +234,14 @@ void flameSolver::run(void)
             //     in files that are automatically overwritten.
             if (nCurrentState >= options.currentStateStepInterval) {
                 nCurrentState = 0;
-                matlabFile outFile(options.outputDir+"/outNow.mat");
+                DataFile outFile(options.outputDir+"/outNow.h5");
                 outFile.writeVector("t",timeVector);
                 outFile.writeVector("dt",timestepVector);
                 outFile.writeVector("Q",heatReleaseRate);
                 outFile.writeVector("Sc",consumptionSpeed);
                 outFile.writeVector("xFlame",flamePosition);
                 outFile.close();
-                theSys.writeStateMatFile("profNow");
+                theSys.writeStateFile("profNow");
             }
 
             // *** Save flame profiles
@@ -249,7 +249,7 @@ void flameSolver::run(void)
                 if (options.outputProfiles) {
                     sdVector resTemp(theSys.N);
                     theSys.f(t, theSolver.y, theSolver.ydot, resTemp);
-                    theSys.writeStateMatFile();
+                    theSys.writeStateFile();
                 }
 
                 tProfile = t + options.profileTimeInterval;
@@ -315,7 +315,7 @@ void flameSolver::run(void)
 
     // *** Integration has reached the termination condition
     if (options.outputProfiles) {
-        theSys.writeStateMatFile();
+        theSys.writeStateFile();
     }
     runTime.stop();
     cout << "Runtime: " << runTime.getTime() << " seconds." << endl;

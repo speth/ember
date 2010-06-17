@@ -72,7 +72,7 @@ public:
     void updateLeftBC(void);
 
     void printForMatlab(ofstream& file, dvector& v, int index, char* name);
-    void writeStateMatFile(const std::string fileName="", bool errorFile=false);
+    void writeStateFile(const std::string fileName="", bool errorFile=false);
 
     // For debugging purposes
     void testPreconditioner(void);

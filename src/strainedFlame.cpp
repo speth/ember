@@ -1,10 +1,10 @@
 #include "strainedFlame.h"
 #include "debugUtils.h"
-#include "matlabFile.h"
 #include "boost/filesystem.hpp"
 #include "sundialsUtils.h"
 #include "flameSolver.h"
 #include "libconfig.h++"
+#include "dataFile.h"
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
@@ -70,18 +70,18 @@ void strainedFlame(const std::string& inputFile)
             std::string restartFile = "prof_eps"+stringify(a,4);
             std::string historyFile = "out_eps"+stringify(a,4);
 
-            if (boost::filesystem::exists(mainOptions.outputDir+"/"+restartFile+".mat") &&
-                boost::filesystem::exists(mainOptions.outputDir+"/"+historyFile+".mat"))
+            if (boost::filesystem::exists(mainOptions.outputDir+"/"+restartFile+".h5") &&
+                boost::filesystem::exists(mainOptions.outputDir+"/"+historyFile+".h5"))
             {
                 // If the output files already exist, we simply retrieve the integral flame
                 // properties from the existing profiles and advance to the next strain rate.
-                mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
+                mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".h5";
                 mainOptions.useRelativeRestartPath = false;
                 mainOptions.haveRestartFile = true;
                 cout << "Skipping run at strain rate a = " << a << " because the output file \"" <<
                     restartFile << "\" already exists." << endl;
 
-                matlabFile oldOutFile(mainOptions.outputDir+"/"+historyFile+".mat");
+                DataFile oldOutFile(mainOptions.outputDir+"/"+historyFile+".h5");
                 dvector oldTime = oldOutFile.readVector("t");
                 dvector oldQ = oldOutFile.readVector("Q");
                 dvector oldSc = oldOutFile.readVector("Sc");
@@ -131,13 +131,13 @@ void strainedFlame(const std::string& inputFile)
 
                 // Write data needed for the next run
                 mainOptions.fileNumberOverride = false;
-                theFlameSolver.theSys.writeStateMatFile(restartFile);
-                mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".mat";
+                theFlameSolver.theSys.writeStateFile(restartFile);
+                mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".h5";
                 mainOptions.useRelativeRestartPath = false;
                 mainOptions.haveRestartFile = true;
 
                 // Write the time-series data file for this run
-                matlabFile outFile(mainOptions.outputDir+"/out_eps"+stringify(a,4)+".mat");
+                DataFile outFile(mainOptions.outputDir+"/out_eps"+stringify(a,4)+".h5");
                 outFile.writeVector("t",theFlameSolver.timeVector);
                 outFile.writeVector("dt",theFlameSolver.timestepVector);
                 outFile.writeVector("Q",theFlameSolver.heatReleaseRate);
@@ -164,7 +164,7 @@ void strainedFlame(const std::string& inputFile)
             Sc = intProps[1];
             xFlame = intProps[2];
 
-            matlabFile dataFile(mainOptions.outputDir+"/integral.mat");
+            DataFile dataFile(mainOptions.outputDir+"/integral.h5");
             dataFile.writeVector("a",eps);
             dataFile.writeVector("Q",Q);
             dataFile.writeVector("Sc",Sc);
@@ -180,9 +180,9 @@ void strainedFlame(const std::string& inputFile)
         theFlameSolver.initialize();
         theFlameSolver.run();
 
-        theFlameSolver.theSys.writeStateMatFile("prof");
+        theFlameSolver.theSys.writeStateFile("prof");
         std::string strainString;
-        matlabFile outFile(mainOptions.outputDir+"/out.mat");
+        DataFile outFile(mainOptions.outputDir+"/out.h5");
         outFile.writeVector("t",theFlameSolver.timeVector);
         outFile.writeVector("dt",theFlameSolver.timestepVector);
         outFile.writeVector("Q",theFlameSolver.heatReleaseRate);
@@ -192,11 +192,11 @@ void strainedFlame(const std::string& inputFile)
     }
 
     // Cleanup
-    if (boost::filesystem::exists(mainOptions.outputDir+"/profNow.mat")) {
-        boost::filesystem::remove(mainOptions.outputDir+"/profNow.mat");
+    if (boost::filesystem::exists(mainOptions.outputDir+"/profNow.h5")) {
+        boost::filesystem::remove(mainOptions.outputDir+"/profNow.h5");
     }
-    if (boost::filesystem::exists(mainOptions.outputDir+"/outNow.mat")) {
-        boost::filesystem::remove(mainOptions.outputDir+"/outNow.mat");
+    if (boost::filesystem::exists(mainOptions.outputDir+"/outNow.h5")) {
+        boost::filesystem::remove(mainOptions.outputDir+"/outNow.h5");
     }
 }
 
@@ -299,5 +299,4 @@ void chemistryTest(void)
 
 void miscTest(void)
 {
-
 }
