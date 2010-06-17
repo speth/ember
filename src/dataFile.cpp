@@ -186,3 +186,42 @@ hid_t DataFile::get_dataset(const std::string& name, hid_t datatype, hid_t datas
     }
     return H5Dcreate(file, name.c_str(), datatype, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 }
+
+void dataFileTest()
+{
+    // Test reading from / writing to an HDF5 data file
+    DataFile f("test.h5");
+    double x;
+    f.writeScalar("x", x);
+
+    dvector v(10);
+    for (int i=0; i<10; i++) {
+        v[i] = i*i;
+    }
+
+    f.writeVector("v", v);
+
+    Array2D A(3,7);
+    for (int i=0; i<3; i++) {
+        for (int j=0; j<7; j++) {
+            A(i,j) = 10*i + j;
+        }
+    }
+
+    cout << "rows:" << A.nRows() << endl;
+    cout << "cols:" << A.nColumns() << endl;
+
+    f.writeArray2D("A", A);
+    f.close();
+
+    DataFile g("test.h5");
+    dvector w = g.readVector("v");
+    for (int i=0; i<w.size(); i++) {
+        std::cout << w[i] << std::endl;
+    }
+
+    std::cout << g.readScalar("x") << std::endl;
+    std::cout << g.readArray2D("A") << std::endl;
+
+    g.close();
+}

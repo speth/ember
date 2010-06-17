@@ -36,3 +36,5 @@ private:
     hid_t file;
     bool fileIsOpen;
 };
+
+void dataFileTest();
