@@ -191,32 +191,32 @@ void dataFileTest()
 {
     // Test reading from / writing to an HDF5 data file
     DataFile f("test.h5");
-    double x;
+    double x = 9001;
     f.writeScalar("x", x);
 
     dvector v(10);
-    for (int i=0; i<10; i++) {
+    for (size_t i=0; i<v.size(); i++) {
         v[i] = i*i;
     }
 
     f.writeVector("v", v);
 
     Array2D A(3,7);
-    for (int i=0; i<3; i++) {
-        for (int j=0; j<7; j++) {
+    for (size_t i=0; i<A.nRows(); i++) {
+        for (size_t j=0; j<A.nColumns(); j++) {
             A(i,j) = 10*i + j;
         }
     }
 
-    cout << "rows:" << A.nRows() << endl;
-    cout << "cols:" << A.nColumns() << endl;
+    std::cout << "rows:" << A.nRows() << std::endl;
+    std::cout << "cols:" << A.nColumns() << std::endl;
 
     f.writeArray2D("A", A);
     f.close();
 
     DataFile g("test.h5");
     dvector w = g.readVector("v");
-    for (int i=0; i<w.size(); i++) {
+    for (size_t i=0; i<w.size(); i++) {
         std::cout << w[i] << std::endl;
     }
 
