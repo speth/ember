@@ -87,9 +87,17 @@ void DataFile::writeArray2D(const std::string& name, const Cantera::Array2D& y)
 {
     require_file_open();
 
+    // Take the transpose because Array2D is column-major
+    Cantera::Array2D yt(y.nColumns(), y.nRows());
+    for (size_t i=0; i<y.nRows(); i++) {
+        for (size_t j=0; j<y.nColumns(); j++) {
+            yt(j,i) = y(i,j);
+        }
+    }
+
     hsize_t dims[2];
-    dims[0] = y.nColumns(); // TODO: double check the order of these
-    dims[1] = y.nRows();
+    dims[0] = yt.nColumns(); // TODO: double check the order of these
+    dims[1] = yt.nRows();
 
     hid_t dataspace, dataset, datatype;
     dataspace = H5Screate_simple(2, dims, NULL);
@@ -97,7 +105,7 @@ void DataFile::writeArray2D(const std::string& name, const Cantera::Array2D& y)
     H5Tset_order(datatype, H5T_ORDER_LE);
 
     dataset = get_dataset(name, datatype, dataspace);
-    H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, &y.data()[0]);
+    H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, &yt.data()[0]);
 }
 
 Cantera::Array2D DataFile::readArray2D(const std::string& name)
@@ -116,9 +124,19 @@ Cantera::Array2D DataFile::readArray2D(const std::string& name)
     vector<hsize_t> dimensions(2);
     H5Sget_simple_extent_dims(dataspace, &dimensions[0], &ndim);
 
-    Cantera::Array2D values(dimensions[1], dimensions[0]);
-    H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &values.data()[0]);
-    return values;
+    Cantera::Array2D y(dimensions[0], dimensions[1]);
+    Cantera::Array2D yt(dimensions[1], dimensions[0]);
+
+    H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &yt.data()[0]);
+
+    // Take the transpose because Array2D is column-major
+    for (size_t i=0; i<yt.nRows(); i++) {
+        for (size_t j=0; j<yt.nColumns(); j++) {
+            y(j,i) = yt(i,j);
+        }
+    }
+
+    return y;
 }
 
 void DataFile::open(const std::string& in_filename)
