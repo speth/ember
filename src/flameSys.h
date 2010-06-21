@@ -6,21 +6,78 @@
 #include "grid.h"
 #include "readConfig.h"
 #include "perfTimer.h"
+#include "integrator.h"
 
 using Cantera::Array2D;
 using std::string;
 
-class flameSys : public sdDAE
+class GridBased
 {
 public:
-    flameSys(void);
-    ~flameSys(void);
+    GridBased();
+    // the grid:
+    oneDimGrid grid;
 
-    // the functions for solving the ODE
-    int f(realtype t, sdVector& y, sdVector& ydot, sdVector& res);
+private:
+    // local names for things that are part of the grid:
+    dvector& x;
+    dvector& r;
+    dvector& rphalf;
+    dvector& hh;
+    dvector& dlj;
+    dvector& cfm;
+    dvector& cf;
+    dvector& cfp;
+};
 
-    //int JvProd(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
-    //           sdVector& vIn, sdVector& JvIn, realtype c_j);
+class SourceSystem : public sdODE
+{
+    // This is the system representing the (chemical) source term at a point
+public:
+    // The ODE function: ydot = f(t,y)
+    virtual int f(realtype t, sdVector& y, sdVector& ydot) = 0;
+
+    virtual int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn,
+                                    sdVector& resIn, realtype c_j) = 0;
+
+    virtual int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
+                                    sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta) = 0;
+
+private:
+    // Jacobian data
+    sdBandMatrix* bandedJacobian;
+    vector<int> pMat;
+
+    // Sundials solver parameters
+    sdVector* abstol;
+    double reltol;
+
+    dvector cp; // specific heat capacity (average) [J/kg*K]
+    dvector W; // species molecular weights [kg/kmol]
+    dvector wDot; // species net production rates [kmol/m^3*s]
+    dvector hk; // species enthalpies [J/kmol]
+    double qDot; // heat release rate per unit volume [W/m^3]
+};
+
+
+class DiffusionSystem : public sdODE, public GridBased
+{
+    // This is a system representing diffusion of a single solution component
+private:
+    // Jacobian data
+    sdBandMatrix* bandedJacobian;
+    vector<int> pMat;
+
+    // Sundials solver parameters
+    sdVector* abstol;
+    double reltol;
+};
+
+class SpeciesDiffusionSystem : public DiffusionSystem
+{
+    // This system represents the diffusion of a single species at all grid points
+public:
+    int f(realtype t, sdVector& y, sdVector& ydot);
 
     int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn,
                             sdVector& resIn, realtype c_j);
@@ -28,13 +85,96 @@ public:
     int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
                             sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta);
 
-    // Finds a consistent solution for the DAE to begin the integration
-    int getInitialCondition(double t, sdVector& y, sdVector& ydot);
+    // Diffusion coefficients
+    dvector rhoD; // density-weighted, mixture-averaged diffusion coefficients [kg/m*s] (= rho*Dkm)
+    dvector Dkt; // thermal diffusion coefficients [kg/m*s]
+
+    // Diffusion mass fluxes
+    dvector jFick; // Normal diffusion (Fick's Law) [kg/m^2*s]
+    dvector jSoret; // Soret Effect diffusion [kg/m^2*s]
+    dvector dYkdx; // upwinded
+};
+
+
+class TemperatureDiffusionSystem : public DiffusionSystem
+{
+    // This system represents the diffusion Temperature at all grid points
+public:
+    int f(realtype t, sdVector& y, sdVector& ydot);
+
+    int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn,
+                            sdVector& resIn, realtype c_j);
+
+    int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
+                            sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta);
+
+private:
+    dvector sumcpj; // for enthalpy flux term [W/m^2*K]
+    dvector lambda; // thermal conductivity [W/m*K]
+    dvector cp; // specific heat capacity (average) [J/kg*K]
+    Array2D cpSpec; // species specific heat capacity [J/mol*K]
+    dvector W; // species molecular weights [kg/kmol]
+    dvector qFourier; // heat flux [W/m^2]
+    dvector dTdx; // upwinded
+    dvector dTdxCen; // centered difference (for enthalpy flux term)
+};
+
+
+class MomentumDiffusionSystem : public DiffusionSystem
+{
+    // This system represents the diffusion of tangential momentum at all grid points
+public:
+    int f(realtype t, sdVector& y, sdVector& ydot);
+
+    int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn,
+                            sdVector& resIn, realtype c_j);
+
+    int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
+                            sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta);
+
+
+private:
+    dvector mu; // viscosity [Pa*s]
+    dvector dUdx; // upwinded
+};
+
+
+class ConvectionSystem : public sdODE, public GridBased
+{
+    // This is the system representing convection of all state variables in the domain.
+public:
+    int f(realtype t, sdVector& y, sdVector& ydot);
+    // This uses an explicit integrator, so no Jacobian/Preconditioner is necessary
+
+    // Sundials solver parameters
+    sdVector* abstol;
+    double reltol;
+
+private:
+    dvector drhodt;
+    dvector Wmx; // mixture molecular weight [kg/kmol]
+    dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
+    dvector W; // species molecular weights [kg/kmol]
+};
+
+class FlameSystem : public GridBased
+{
+    // This is the system which contains the split solvers and is responsible
+    // for the large-scale time integration.
+public:
+    FlameSystem();
+    ~FlameSystem();
+
+private:
+    vector<SourceSystem*> sourceTerms; // One for each grid point
+    vector<SpeciesDiffusionSystem*> YDiffTerms; // One for each species
+    TemperatureDiffusionSystem TDiffTerm;
+    MomentumDiffusionSystem UDiffTerm;
+    ConvectionSystem convectionTerm;
 
     // Problem definition
     std::string reactants;
     std::string diluent;
-
     double xLeft, xRight;
     int nPoints;
 
@@ -95,52 +235,9 @@ public:
     dvector dTdt;
     Array2D dYdt;
 
-    // Spatial derivatives of state variables:
-    dvector dUdx; // upwinded
-    dvector dTdx; // upwinded
-    Array2D dYdx; // upwinded
-    dvector dTdxCen; // centered difference
-
     // Auxiliary variables:
-    dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
     dvector rho; // density [kg/m^3]
-    dvector drhodt;
-    dvector W; // species molecular weights [kg/kmol]
-    dvector Wmx; // mixture molecular weight [kg/kmol]
-    dvector sumcpj; // for enthalpy flux term [W/m^2*K]
-
-    dvector mu; // viscosity [Pa*s]
-
-    dvector lambda; // thermal conductivity [W/m*K]
-    dvector cp; // specific heat capacity (average) [J/kg*K]
-    Array2D cpSpec; // species specific heat capacity [J/mol*K]
-    dvector qFourier; // heat flux [W/m^2]
-
-    // Diffusion coefficients
-    Array2D rhoD; // density-weighted, mixture-averaged diffusion coefficients [kg/m*s] (= rho*Dkm)
-    Array2D Dkt; // thermal diffusion coefficients [kg/m*s]
-
-    // Diffusion mass fluxes
-    Array2D jFick; // Normal diffusion (Fick's Law) [kg/m^2*s]
-    Array2D jSoret; // Soret Effect diffusion [kg/m^2*s]
-    dvector jCorr; // Correction to ensure sum of mass fractions
-
-    Array2D wDot; // species net production rates [kmol/m^3*s]
-    Array2D hk; // species enthalpies [J/kmol]
-    dvector qDot; // heat release rate per unit volume [W/m^3]
-
-    // the grid:
-    oneDimGrid grid;
-
-    // local names for things that are part of the grid:
-    dvector& x;
-    dvector& r;
-    dvector& rphalf;
-    dvector& hh;
-    dvector& dlj;
-    dvector& cfm;
-    dvector& cf;
-    dvector& cfp;
+    dvector jCorr; // Correction to ensure sum of mass fractions = 1
 
     // Strain rate parameters:
     // The strain rate is constant at a=strainRateInitial until
@@ -155,10 +252,6 @@ public:
     double tFlamePrev, tFlameNext;
     double xFlameTarget, xFlameActual;
     double flamePosIntegralError;
-
-    // Sundials solver parameters
-    sdVector* abstol;
-    double reltol;
 
     // Cantera data
     canteraGas gas;
@@ -183,30 +276,17 @@ public:
     void printPerformanceStats(void);
     void printPerfString(const std::string& label, const perfTimer& T) const;
 
-private:
     // Subdivided governing equation components
     dvector energyUnst, energyDiff, energyConv, energyProd;
     dvector momentumUnst, momentumDiff, momentumConv, momentumProd;
     Array2D speciesUnst, speciesDiff, speciesConv, speciesProd;
     dvector continuityUnst, continuityRhov, continuityStrain;
 
-    // Jacobian data
-    sdBandMatrix* bandedJacobian;
-    vector<int> pMat;
-
-    // Functions for addressing the subdiagonal,
-    // diagonal, and superdiagonal blocks of the Jacobian
-    double& jacA(const int j, const int k1, const int k2);
-    double& jacB(const int j, const int k1, const int k2);
-    double& jacC(const int j, const int k1, const int k2);
-
     int kMomentum, kContinuity, kEnergy, kSpecies;
     int alpha;
 
-    bool inGetIC, inTestPreconditioner;
+    bool inTestPreconditioner;
     double centerVol, centerArea;
-
-    int ICfileNumber;
 
     // Performance Timers
     perfTimer perfTimerResFunc, perfTimerPrecondSetup, perfTimerPrecondSolve, perfTimerTransportProps;
