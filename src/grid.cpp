@@ -673,3 +673,16 @@ void oneDimGrid::updateBoundaryIndices(void) {
         ju = jj;
     }
 }
+
+GridBased::GridBased()
+    : grid(options)
+    , x(grid.x)
+    , r(grid.r)
+    , rphalf(grid.rphalf)
+    , hh(grid.hh)
+    , dlj(grid.dlj)
+    , cfm(grid.cfm)
+    , cf(grid.cf)
+    , cfp(grid.cfp)
+{
+}

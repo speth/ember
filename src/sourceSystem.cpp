@@ -1,26 +1,5 @@
-#include "flameSys.h"
-#include <sstream>
-#include <vector>
-#include <cmath>
-#include "debugUtils.h"
-#include "mathUtils.h"
-#include "dataFile.h"
-#include "boost/filesystem.hpp"
-
-using namespace mathUtils;
-
-GridBased::GridBased()
-    : grid(options)
-    , x(grid.x)
-    , r(grid.r)
-    , rphalf(grid.rphalf)
-    , hh(grid.hh)
-    , dlj(grid.dlj)
-    , cfm(grid.cfm)
-    , cf(grid.cf)
-    , cfp(grid.cfp)
-{
-}
+#include "sourceSystem.h"
+#include "readConfig.h"
 
 void SourceSystem::resize(size_t new_nSpec)
 {

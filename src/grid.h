@@ -2,7 +2,6 @@
 
 #include "readConfig.h"
 
-
 class oneDimGrid
 {
 public:
@@ -75,4 +74,26 @@ private:
     bool removeLeft(void);
     bool addRight(void);
     bool addLeft(void);
+};
+
+
+class GridBased
+{
+public:
+    GridBased();
+    configOptions options;
+
+    // the grid:
+    oneDimGrid grid;
+
+private:
+    // local names for some things that are part of the grid:
+    dvector& x;
+    dvector& r;
+    dvector& rphalf;
+    dvector& hh;
+    dvector& dlj;
+    dvector& cfm;
+    dvector& cf;
+    dvector& cfp;
 };
