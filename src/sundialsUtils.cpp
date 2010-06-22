@@ -203,12 +203,12 @@ sdVector::~sdVector(void)
     }
 }
 
-realtype& sdVector::operator() (unsigned int i)
+realtype& sdVector::operator[] (unsigned int i)
 {
     return NV_Ith_S(v,i);
 }
 
-realtype& sdVector::operator() (unsigned int i) const
+realtype& sdVector::operator[] (unsigned int i) const
 {
     return NV_Ith_S(v,i);
 }
@@ -216,9 +216,9 @@ realtype& sdVector::operator() (unsigned int i) const
 std::ostream& operator<<(std::ostream& os, const sdVector& v)
 {
     for (unsigned int i=0; i<(v.length()-1); i++) {
-        os << v(i) << ", ";
+        os << v[i] << ", ";
     }
-    os << v(v.length()-1);
+    os << v[v.length()-1];
     return os;
 }
 

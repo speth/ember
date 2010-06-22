@@ -26,8 +26,8 @@ public:
     sdVector(const sdVector& other);
     ~sdVector(void);
 
-    realtype& operator()(unsigned int i);
-    realtype& operator()(unsigned int i) const;
+    realtype& operator[](unsigned int i);
+    realtype& operator[](unsigned int i) const;
     N_Vector& forSundials(void) {return v;}
     unsigned int length(void) const {return n;}
 
@@ -76,7 +76,7 @@ class sdODE {
 public:
     virtual int f(realtype t, sdVector& y, sdVector& ydot)=0;
     virtual int g(realtype t, sdVector& y, realtype* gOut) {return 0;}
-    virtual int Jac(realtype t, sdVector& y, sdVector& fy, sdMatrix& J)=0;
+    virtual int Jac(realtype t, sdVector& y, sdVector& ydot, sdMatrix& J) {return 0;}
     virtual ~sdODE(void) {}
 };
 
