@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include "sundialsUtils.h"
-#include "chemistry.h"
+#include "chemistry0d.h"
 #include "grid.h"
 #include "readConfig.h"
 #include "perfTimer.h"
@@ -11,10 +11,19 @@
 using Cantera::Array2D;
 using std::string;
 
+class StrainFunction
+{
+public:
+    double a(double t) const;
+    double dadt(double t) const;
+};
+
 class GridBased
 {
 public:
     GridBased();
+    configOptions options;
+
     // the grid:
     oneDimGrid grid;
 
@@ -35,28 +44,48 @@ class SourceSystem : public sdODE
     // This is the system representing the (chemical) source term at a point
 public:
     // The ODE function: ydot = f(t,y)
-    virtual int f(realtype t, sdVector& y, sdVector& ydot) = 0;
+    int f(const realtype t, const sdVector& y, sdVector& ydot);
 
-    virtual int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn,
-                                    sdVector& resIn, realtype c_j) = 0;
+    // Calculate the Jacobian matrix: J = df/dy
+    int Jac(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J);
 
-    virtual int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
-                                    sdVector& rhs, sdVector& outVec, realtype c_j, realtype delta) = 0;
+    void unroll_y(const sdVector& y); // fill in current state variables from sdvector
+    void roll_y(sdVector& y) const; // fill in sdvector with current state variables
+    void roll_ydot(sdVector& ydot) const; // fill in sdvector with current time derivatives
+
+    // Setup functions
+    void resize(size_t nSpec);
+
+    // A class that provides the strain rate and its time derivative
+    StrainFunction strainFunction;
+
+    // current state variables
+    double U, dUdt; // tangential velocity
+    double T, dTdt; // temperature
+    dvector Y, dYdt; // species mass fractions
+
+    // other parameters
+    size_t nSpec;
 
 private:
-    // Jacobian data
-    sdBandMatrix* bandedJacobian;
-    vector<int> pMat;
+    // Cantera data
+    CanteraGas* gas;
 
-    // Sundials solver parameters
-    sdVector* abstol;
-    double reltol;
-
-    dvector cp; // specific heat capacity (average) [J/kg*K]
+    // Physical properties
+    double rho; // density [kg/m^3]
+    double cp; // specific heat capacity (average) [J/kg*K]
+    dvector cpSpec; // species specific heat capacity [J/mol*K]
     dvector W; // species molecular weights [kg/kmol]
-    dvector wDot; // species net production rates [kmol/m^3*s]
+    double Wmx; // mixture molecular weight [kg/mol]
     dvector hk; // species enthalpies [J/kmol]
+
+    // Other quantities
+    dvector wDot; // species net production rates [kmol/m^3*s]
     double qDot; // heat release rate per unit volume [W/m^3]
+    double rhou; // density of the unburned mixture
+
+    // The sum of the terms held constant for each component in this system
+    dvector constantTerm;
 };
 
 
@@ -71,6 +100,9 @@ private:
     // Sundials solver parameters
     sdVector* abstol;
     double reltol;
+
+    // The sum of the terms held constant for this system
+    dvector constantTerm;
 };
 
 class SpeciesDiffusionSystem : public DiffusionSystem
@@ -155,6 +187,9 @@ private:
     dvector Wmx; // mixture molecular weight [kg/kmol]
     dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
     dvector W; // species molecular weights [kg/kmol]
+
+    // The sum of the terms held constant for this system
+    dvector constantTerm;
 };
 
 class FlameSystem : public GridBased
@@ -167,9 +202,7 @@ public:
 
 private:
     vector<SourceSystem*> sourceTerms; // One for each grid point
-    vector<SpeciesDiffusionSystem*> YDiffTerms; // One for each species
-    TemperatureDiffusionSystem TDiffTerm;
-    MomentumDiffusionSystem UDiffTerm;
+    vector<DiffusionSystem*> diffusionTerms; // One for each species (plus T and U)
     ConvectionSystem convectionTerm;
 
     // Problem definition
@@ -177,6 +210,8 @@ private:
     std::string diluent;
     double xLeft, xRight;
     int nPoints;
+    void generateInitialProfiles(void);
+    void loadInitialProfiles(void);
 
     double tStart;
     double tEnd;
@@ -190,32 +225,17 @@ private:
     dvector Yu, Yb, Yleft, Yright;
 
     void setup(void);
-
-    void generateInitialProfiles(void);
-    void loadInitialProfiles(void);
     void copyOptions(void);
-
-    // Utility functions
-    void unrollY(const sdVector& y);
-    void unrollYdot(const sdVector& yDot);
-    void rollY(sdVector& y);
-    void rollYdot(sdVector& yDot);
-    void rollResiduals(sdVector& res);
 
     // Utility functions for adaptation & regridding
     void rollVectorVector(const sdVector& y, const dvector& qdot, vector<dvector>& v);
     void unrollVectorVector(const vector<dvector>& v);
     void unrollVectorVectorDot(const vector<dvector>& v);
 
-    void updateTransportProperties(void);
-    void updateThermoProperties(void);
-    void updateLeftBC(void);
-
     void printForMatlab(ofstream& file, dvector& v, int index, char* name);
     void writeStateFile(const std::string fileName="", bool errorFile=false);
 
     // For debugging purposes
-    void testPreconditioner(void);
     void debugFailedTimestep(const sdVector& y);
 
     // these should be read-only:
@@ -224,7 +244,6 @@ private:
     int nSpec; // Number of chemical species
 
     // State variables:
-    dvector V; // mass flux normal to flame per unit area (rho*v) [kg/m^2*s]
     dvector U; // normalized tangential velocity (u*a/u_inf) [1/s]
     dvector T; // temperature [K]
     Array2D Y; // species mass fractions, Y(k,j)
@@ -254,7 +273,7 @@ private:
     double flamePosIntegralError;
 
     // Cantera data
-    canteraGas gas;
+    CanteraGas gas;
 
     // Miscellaneous options
     configOptions options;
@@ -277,18 +296,37 @@ private:
     void printPerfString(const std::string& label, const perfTimer& T) const;
 
     // Subdivided governing equation components
-    dvector energyUnst, energyDiff, energyConv, energyProd;
-    dvector momentumUnst, momentumDiff, momentumConv, momentumProd;
-    Array2D speciesUnst, speciesDiff, speciesConv, speciesProd;
-    dvector continuityUnst, continuityRhov, continuityStrain;
+    dvector energyDiff, energyConv, energyProd;
+    dvector momentumDiff, momentumConv, momentumProd;
+    Array2D speciesDiff, speciesConv, speciesProd;
 
-    int kMomentum, kContinuity, kEnergy, kSpecies;
     int alpha;
 
-    bool inTestPreconditioner;
     double centerVol, centerArea;
 
     // Performance Timers
     perfTimer perfTimerResFunc, perfTimerPrecondSetup, perfTimerPrecondSolve, perfTimerTransportProps;
     perfTimer perfTimerRxnRates, perfTimerSetup, perfTimerLU;
 };
+
+
+class flameSys
+{
+public:
+    // Remnants of the old class flameSys that should be moved somewhere else or deleted
+
+    // Utility functions
+    void unrollY(const sdVector& y);
+    void unrollYdot(const sdVector& yDot);
+    void rollY(sdVector& y);
+    void rollYdot(sdVector& yDot);
+
+    void updateTransportProperties(void);
+    void updateThermoProperties(void);
+    void updateLeftBC(void);
+
+    dvector V; // mass flux normal to flame per unit area (rho*v) [kg/m^2*s]
+    bool inTestPreconditioner;
+    void testPreconditioner(void);
+};
+

@@ -24,14 +24,13 @@
 <builder buildPath="${workspace_loc:/1dflameV2}" command="bjam" enableCleanBuild="false" enabledIncrementalBuild="true" id="org.eclipse.cdt.build.core.settings.default.builder.1139915151" incrementalBuildTarget="release" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 <tool id="org.eclipse.cdt.build.core.settings.holder.libs.397740050" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 <tool id="org.eclipse.cdt.build.core.settings.holder.1552018393" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
-<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1940242630" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath"/>
+<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1940242630" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths"/>
 <inputType id="org.eclipse.cdt.build.core.settings.holder.inType.864955097" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 </tool>
 <tool id="org.eclipse.cdt.build.core.settings.holder.1806339154" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder">
 <option id="org.eclipse.cdt.build.core.settings.holder.incpaths.558968250" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
 <listOptionValue builtIn="false" value="/opt/cantera-gcc/include"/>
 <listOptionValue builtIn="false" value="/opt/sundials-2.4.0-gcc/include"/>
-<listOptionValue builtIn="false" value="/opt/matlab2009a/extern/include"/>
 </option>
 <inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1895636378" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 </tool>
@@ -48,6 +47,7 @@
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile">
@@ -213,7 +213,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.319712924;cdt.managedbuild.config.gnu.exe.debug.319712924.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.776351692;cdt.managedbuild.tool.gnu.cpp.compiler.input.1480131720">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.837257934;cdt.managedbuild.config.gnu.exe.release.837257934.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.928860952;cdt.managedbuild.tool.gnu.cpp.compiler.input.1301370737">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile">
 <buildOutputProvider>
@@ -296,7 +296,7 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
-<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.837257934;cdt.managedbuild.config.gnu.exe.release.837257934.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.928860952;cdt.managedbuild.tool.gnu.cpp.compiler.input.1301370737">
+<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.319712924;cdt.managedbuild.config.gnu.exe.debug.319712924.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.776351692;cdt.managedbuild.tool.gnu.cpp.compiler.input.1480131720">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 <profile id="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile">
 <buildOutputProvider>
@@ -546,7 +546,6 @@
 </profile>
 </scannerConfigBuildInfo>
 </storageModule>
-<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cconfiguration>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">
