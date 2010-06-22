@@ -13,10 +13,6 @@ public:
 
     int alpha; // domain curvature parameter. 0: planar, 1: cylindrical
     int ju, jb; // indices of burned / unburned boundaries
-    int kMomentum; // index into solutionState of the Momentum equation
-    int kContinuity; // index into solutionState of the continuity equation
-    int kEnergy; // index into solutionState of the Energy equation
-    int kSpecies; // index into solutionState of the first species equation
     int kQdot; // index into solutionState of the heat release rate
 
     // Parameters for controlling internal grid points:

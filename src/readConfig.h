@@ -3,6 +3,8 @@
 #include <string>
 #include "mathUtils.h"
 
+extern const int kMomentum, kEnergy, kSpecies; // indices of the respective equations / solution components
+
 class configOptions
 {
 public:
@@ -71,7 +73,6 @@ public:
     double tStart, tEnd;
 
     int gridAlpha; // 1 for curved flames, 0 for planar flames
-    int kContinuity, kMomentum, kEnergy, kSpecies; // indices of the respective equations in the solution vector
 
     // Controls which variables are included in the outXXXXXX.h5 files
     bool outputAuxiliaryVariables;

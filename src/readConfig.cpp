@@ -215,11 +215,6 @@ void configOptions::readOptionsFile(const std::string& filename)
 
     gridAlpha = (curvedFlame) ? 1 : 0;
 
-    kContinuity = 0;
-    kMomentum = 1;
-    kEnergy = 2;
-    kSpecies = 3;
-
     cout << "Finished reading configuration options." << endl;
     delete theConfig;
 }
@@ -248,3 +243,7 @@ bool configOptions::readOptionQuietDefault(const std::string name, T1& value, co
     }
     return readVal;
 }
+
+const int kMomentum = 0;
+const int kEnergy = 1;
+const int kSpecies = 2;
