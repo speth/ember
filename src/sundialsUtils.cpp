@@ -10,6 +10,8 @@ sundialsCVODE::sundialsCVODE(unsigned int n)
     : abstol(n)
     , y0(n)
     , y(n)
+    , bandwidth_upper(0)
+    , bandwidth_lower(0)
 {
     nEq = n;
     sundialsMem = NULL;
@@ -22,10 +24,8 @@ sundialsCVODE::~sundialsCVODE(void)
     CVodeFree(&sundialsMem);
 }
 
-void sundialsCVODE::initialize(void)
+void sundialsCVODE::initialize()
 {
-
-
     sundialsMem = CVodeCreate(linearMultistepMethod, nonlinearSolverMethod);
     if (check_flag((void *)sundialsMem, "CVodeCreate", 0)) {
         throw debugException("sundialsCVODE::initialize: error in CVodeCreate");
@@ -47,19 +47,37 @@ void sundialsCVODE::initialize(void)
         }
     }
 
-    // Call CVDense to specify the CVDENSE dense linear solver
-    flag = CVDense(sundialsMem, nEq);
-    if (check_flag(&flag, "CVDense", 1)) {
-        throw debugException("sundialsCVODE::initialize: error in CVDense");
-    }
+    if (bandwidth_upper == 0 && bandwidth_lower == 0) {
+        // Call CVDense to specify the CVDENSE dense linear solver
+        flag = CVDense(sundialsMem, nEq);
+        if (check_flag(&flag, "CVDense", 1)) {
+            throw debugException("sundialsCVODE::initialize: error in CVDense");
+        }
 
-    // Set the Jacobian routine to Jac (user-supplied)
-    flag = CVDlsSetDenseJacFn(sundialsMem, Jac);
-    if (check_flag(&flag, "CVDenseSetJacFn", 1)) {
-        throw debugException("sundialsCVODE::initialize: error in CVDenseSetJacFn");
-    }
+        // Set the Jacobian routine to Jac (user-supplied)
+        flag = CVDlsSetDenseJacFn(sundialsMem, denseJac);
+        if (check_flag(&flag, "CVDlsSetDenseJacFn", 1)) {
+            throw debugException("sundialsCVODE::initialize: error in CVDlsSetDenseJacFn");
+        }
+    } else {
+        // Call CVDense to specify the CVDENSE dense linear solver
+        flag = CVBand(sundialsMem, nEq, bandwidth_upper, bandwidth_lower);
+        if (check_flag(&flag, "CVBand", 1)) {
+            throw debugException("sundialsCVODE::initialize: error in CVBand");
+        }
 
-    //CVodeSetFdata(sundialsMem, theODE); // Replaced in Sundials 2.4.0?
+        // Set the Jacobian routine to Jac (user-supplied)
+        flag = CVDlsSetBandJacFn(sundialsMem, bandJac);
+        if (check_flag(&flag, "CVDlsSetBandJacFn", 1)) {
+            throw debugException("sundialsCVODE::initialize: error in CVDlsSetBandJacFn");
+        }
+    }
+}
+
+void sundialsCVODE::setBandwidth(int upper, int lower)
+{
+    bandwidth_upper = upper;
+    bandwidth_lower = lower;
 }
 
 int sundialsCVODE::integrateToTime(realtype t)
@@ -155,15 +173,26 @@ int sundialsCVODE::g(realtype t, N_Vector yIn, realtype *gout, void *g_data)
 }
 
 // Jacobian routine. Compute J(t,y) = df/dy. *
-int sundialsCVODE::Jac(int N, realtype t, N_Vector yIn,
-		       N_Vector fyIn, DenseMat JIn, void *jac_data,
-               N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+int sundialsCVODE::denseJac(int N, realtype t, N_Vector yIn,
+                            N_Vector fyIn, DenseMat JIn, void *user_data,
+                            N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
     sdVector y(yIn);
     sdVector fy(fyIn);
     sdMatrix J(JIn);
-    // jac_data contains a pointer to the "theODE" object
-    return ((sdODE*) jac_data)->Jac(t, y, fy, J);
+    // user_data contains a pointer to the "theODE" object
+    return ((sdODE*) user_data)->denseJacobian(t, y, fy, J);
+}
+
+int sundialsCVODE::bandJac(int N, int mupper, int mLower, realtype t,
+        N_Vector yIn, N_Vector fyIn, DlsMat JIn, void* user_data,
+        N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+{
+    sdVector y(yIn);
+    sdVector fy(fyIn);
+    sdBandMatrix J(JIn);
+    // user_data contains a pointer to the "theODE" object
+    return ((sdODE*) user_data)->bandedJacobian(t, y, fy, J);
 }
 
 void sundialsCVODE::setODE(sdODE* newODE)

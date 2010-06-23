@@ -8,6 +8,7 @@
 
 #include <cvode/cvode.h>
 #include <cvode/cvode_dense.h>
+#include <cvode/cvode_band.h>
 #include <ida/ida.h>
 //#include <ida/ida_dense.h>
 #include <ida/ida_spbcgs.h>
@@ -19,7 +20,8 @@ typedef DlsMat DenseMat;
 typedef DlsMat BandMat;
 
 // wrapper class for Sundials "N_Vector"
-class sdVector {
+class sdVector
+{
 public:
     sdVector(unsigned int n);
     sdVector(N_Vector other);
@@ -76,7 +78,8 @@ class sdODE {
 public:
     virtual int f(realtype t, sdVector& y, sdVector& ydot)=0;
     virtual int g(realtype t, sdVector& y, realtype* gOut) {return 0;}
-    virtual int Jac(realtype t, sdVector& y, sdVector& ydot, sdMatrix& J) {return 0;}
+    virtual int denseJacobian(realtype t, sdVector& y, sdVector& ydot, sdMatrix& J) {return -1;}
+    virtual int bandedJacobian(realtype t, sdVector& y, sdVector& ydot, sdBandMatrix& J) {return -1;}
     virtual ~sdODE(void) {}
 };
 
@@ -85,11 +88,12 @@ class sundialsCVODE
 {
 public:
     sundialsCVODE(unsigned int n);
-    ~sundialsCVODE(void);
+    ~sundialsCVODE();
 
-    void initialize(void);
+    void initialize();
     int integrateToTime(realtype t);
     void setODE(sdODE* newODE);
+    void setBandwidth(int upper, int lower);
     int getRootInfo();
     void printStats();
 
@@ -115,19 +119,26 @@ public:
     sdVector y;
     std::vector<int> rootsFound;
     unsigned int nRoots;
+
 private:
 
     static int f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data);
     static int g(realtype t, N_Vector yIn, realtype *gout, void *g_data);
-    static int Jac(int N, realtype t, N_Vector yIn,
-    		       N_Vector fy, DenseMat Jin, void *jac_data,
-                   N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+    static int denseJac(int N, realtype t, N_Vector yIn,
+                        N_Vector fy, DenseMat Jin, void *jac_data,
+                        N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+    static int bandJac(int N, int mupper, int mLower, realtype t,
+                       N_Vector y, N_Vector fy, DlsMat Jac, void* user_data,
+                       N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
     sdODE* theODE;
     void *sundialsMem;
     int flag;
     int flagr;
     int nEq;
+
+    int bandwidth_upper;
+    int bandwidth_lower;
 };
 
 
@@ -230,5 +241,3 @@ private:
     int flagr;
     int nEq;
 };
-
-
