@@ -3,8 +3,9 @@
 #include "mathUtils.h"
 #include "sundialsUtils.h"
 #include "strainFunction.h"
+#include "grid.h"
 
-class ConvectionSystem : public sdODE, public GridBased
+class ConvectionSystem  : public sdODE, public GridBased
 {
     // This is the system representing convection of all state variables in the domain.
 public:
