@@ -121,7 +121,8 @@ void BDFIntegrator::step()
     if (stepCount == 0) {
         yprev.assign(y.begin(), y.end());
 
-        myODE.get_J(y, *J);
+        myODE.get_J(*J);
+        myODE.get_c(c);
         BandCopy(J->forSundials(), LU->forSundials(), upper_bw, lower_bw);
         sdBandMatrix& A = *LU;
         for (int i=0; i<N; i++) {
@@ -131,7 +132,7 @@ void BDFIntegrator::step()
 
         // y_n -> y_n+1
         for (int i=0; i<N; i++) {
-            y[i] /= -h;
+            y[i] = -y[i]/h - c[i];
         }
         BandGBTRS(LU->forSundials(), &p[0], &y[0]);
     } else {
@@ -146,7 +147,7 @@ void BDFIntegrator::step()
         dvector tmp(y);
 
         for (int i=0; i<N; i++) {
-            y[i] = -2*y[i]/h + yprev[i]/(2*h);
+            y[i] = -2*y[i]/h + yprev[i]/(2*h) - c[i];
         }
         yprev.assign(tmp.begin(), tmp.end());
         BandGBTRS(LU->forSundials(), &p[0], &y[0]);

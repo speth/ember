@@ -17,8 +17,9 @@ public:
     LinearODE();
     ~LinearODE();
 
-    // ODE defined as ydot = f(t,y) = J*y
-    virtual sdBandMatrix& get_J(const dvector& y, sdBandMatrix& J) = 0;
+    // ODE defined as ydot = f(t,y) = J*y + c
+    virtual void get_J(sdBandMatrix& J) = 0;
+    virtual void get_c(dvector& y) = 0;
 };
 
 
@@ -94,4 +95,5 @@ private:
     int N; // The system size
     int upper_bw, lower_bw; // bandwidth of the Jacobian
     dvector yprev; // previous solution
+    dvector c;
 };
