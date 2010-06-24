@@ -86,7 +86,7 @@ public:
     // the grid:
     oneDimGrid grid;
 
-private:
+protected:
     // local names for some things that are part of the grid:
     dvector& x;
     dvector& r;
