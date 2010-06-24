@@ -15,6 +15,9 @@ public:
 
     int bandedJacobian(realtype t, sdVector& y, sdVector& ydot, sdBandMatrix& J);
 
+    // The current solution vector
+    dvector y;
+
     // the coefficients of the ODE
     dvector B;
     dvector D;

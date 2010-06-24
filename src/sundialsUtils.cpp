@@ -287,10 +287,10 @@ realtype& sdMatrix::operator() (unsigned int i, unsigned int j) const
 
 // Band Matrix
 
-sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower, long int storeUpper)
+sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower)
 {
     alloc = true;
-    M = NewBandMat(N,bwUpper,bwLower,storeUpper);
+    M = NewBandMat(N,bwUpper,bwLower, std::min(N-1, bwUpper+bwLower));
 }
 
 sdBandMatrix::sdBandMatrix(BandMat other)

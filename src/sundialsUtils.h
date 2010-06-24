@@ -61,7 +61,7 @@ private:
 class sdBandMatrix
 {
 public:
-    sdBandMatrix(long int N, long int bwUpper, long int bwLower, long int storeUpper);
+    sdBandMatrix(long int N, long int bwUpper, long int bwLower);
     sdBandMatrix(BandMat other);
     sdBandMatrix(void);
     ~sdBandMatrix(void);
