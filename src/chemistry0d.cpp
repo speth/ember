@@ -1,4 +1,4 @@
-#include "chemistry0D.h"
+#include "chemistry0d.h"
 #include "boost/filesystem.hpp"
 #include "debugUtils.h"
 
