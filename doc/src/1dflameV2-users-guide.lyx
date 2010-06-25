@@ -1,4 +1,4 @@
-#LyX 1.6.4 created this file. For more info see http://www.lyx.org/
+#LyX 1.6.5 created this file. For more info see http://www.lyx.org/
 \lyxformat 345
 \begin_document
 \begin_header
@@ -249,7 +249,7 @@ where
 \end_inset
 
  to be premixed reactants and the mixture coming from 
-\begin_inset Formula $x=-\infty$
+\begin_inset Formula $x=+\infty$
 \end_inset
 
  to be the reaction products, a flame will be established at some point
@@ -926,7 +926,7 @@ Substituting this into the momentum equation gives
 
 \begin_layout Standard
 Dividing by 
-\begin_inset Formula $az$
+\begin_inset Formula $z$
 \end_inset
 
 , and solving along the stagnation streamline 
@@ -984,7 +984,7 @@ Making the substitution for the similarity variable
 
 \begin_layout Standard
 \begin_inset Formula \begin{equation}
-\frac{\partial\rho}{\partial t}++\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left(r^{\alpha}\rho v\right)+\rho U=0\end{equation}
+\frac{\partial\rho}{\partial t}+\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left(r^{\alpha}\rho v\right)+\rho U=0\end{equation}
 
 \end_inset
 
@@ -1036,7 +1036,7 @@ where
 \begin_layout Standard
 \begin_inset Formula \begin{eqnarray}
 \mathbf{j}_{k} & = & -\frac{\rho W_{k}}{\bar{W}}D_{km}\nabla X_{k}-\frac{D_{k}^{T}}{T}\nabla T+Y_{k}\mathbf{j}'\\
- &  & -\rho D_{km}\left(\nabla Y_{k}+\frac{Y_{k}}{\bar{W}}\nabla\bar{W}\right)-\frac{D_{k}^{T}}{T}\nabla T+Y_{k}\mathbf{j}'\label{eq:vec_diffusion}\end{eqnarray}
+ & = & -\rho D_{km}\left(\nabla Y_{k}+\frac{Y_{k}}{\bar{W}}\nabla\bar{W}\right)-\frac{D_{k}^{T}}{T}\nabla T+Y_{k}\mathbf{j}'\label{eq:vec_diffusion}\end{eqnarray}
 
 \end_inset
 
@@ -1315,7 +1315,7 @@ Introducing the notation
 
 \begin_layout Standard
 \begin_inset Formula \begin{equation}
-\frac{\partial\rho}{\partial t}++\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left(r^{\alpha}V\right)+\rho U=0\label{eq:1d_cont0}\end{equation}
+\frac{\partial\rho}{\partial t}+\frac{1}{r^{\alpha}}\frac{\partial}{\partial r}\left(r^{\alpha}V\right)+\rho U=0\label{eq:1d_cont0}\end{equation}
 
 \end_inset
 
@@ -1352,7 +1352,7 @@ where the diffusion mass flux appearing in the species and energy equations
 
 \begin_layout Standard
 \begin_inset Formula \begin{equation}
-j_{k}=-\rho D_{km}\frac{\partial Y_{k}}{\partial r}-\frac{D_{k}^{T}}{T}\frac{\partial T}{\partial r}+Y_{k}j'\end{equation}
+j_{k}=-\rho D_{km}\left(\frac{\partial Y_{k}}{\partial r}+\frac{Y_{k}}{\bar{W}}\frac{\partial\bar{W}}{\partial r}\right)-\frac{D_{k}^{T}}{T}\frac{\partial T}{\partial r}+Y_{k}j'\end{equation}
 
 \end_inset
 
@@ -1565,7 +1565,7 @@ Because this volume is small, we assume that variations of
  out of the integral.
  
 \begin_inset Formula \begin{equation}
-\frac{r^{\alpha+1}}{\alpha+1}\left(\rho\frac{\partial Y_{k}}{\partial t}-\dot{\omega}_{k}W_{k}\right)+\int_{0}^{R_{i}}r^{\alpha}V\frac{\partial Y_{k}}{\partial r}+\frac{\partial}{\partial r}\left[r^{\alpha}j_{k}\right]\, dr=0\end{equation}
+\frac{R_{i}^{\alpha+1}}{\alpha+1}\left(\rho\frac{\partial Y_{k}}{\partial t}-\dot{\omega}_{k}W_{k}\right)+\int_{0}^{R_{i}}r^{\alpha}V\frac{\partial Y_{k}}{\partial r}+\frac{\partial}{\partial r}\left[r^{\alpha}j_{k}\right]\, dr=0\end{equation}
 
 \end_inset
 
@@ -1594,7 +1594,7 @@ The convection term may be integrated by noting that variations in
 
 \begin_layout Standard
 \begin_inset Formula \begin{equation}
-\frac{R_{i}^{\alpha+1}}{\alpha+1}\left(\rho\frac{\partial Y_{k}}{\partial t}-\dot{\omega}_{k}W_{k}\right)+\left(r^{\alpha}V\right)_{0}\left(Y_{k,left}-Y_{k}\right)+R_{i}^{\alpha}j_{k}=0\end{equation}
+\frac{R_{i}^{\alpha+1}}{\alpha+1}\left(\rho\frac{\partial Y_{k}}{\partial t}-\dot{\omega}_{k}W_{k}\right)+\left(r^{\alpha}V\right)_{0}\left(Y_{k}-Y_{k,left}\right)+R_{i}^{\alpha}j_{k}=0\end{equation}
 
 \end_inset
 
@@ -1604,7 +1604,7 @@ Finally, we divide by the leading coefficient so that this equation scales
 
 \begin_layout Standard
 \begin_inset Formula \begin{equation}
-\rho\frac{\partial Y_{k}}{\partial t}-\dot{\omega}_{k}W_{k}+\frac{\alpha+1}{R_{i}^{\alpha+1}}\left(r^{\alpha}V\right)_{0}\left(Y_{k,left}-Y_{k}\right)+\frac{\alpha+1}{R_{i}}j_{k}=0\label{eq:bc-species-integral}\end{equation}
+\rho\frac{\partial Y_{k}}{\partial t}-\dot{\omega}_{k}W_{k}+\frac{\alpha+1}{R_{i}^{\alpha+1}}\left(r^{\alpha}V\right)_{0}\left(Y_{k}-Y_{k,left}\right)+\frac{\alpha+1}{R_{i}}j_{k}=0\label{eq:bc-species-integral}\end{equation}
 
 \end_inset
 
@@ -1613,7 +1613,7 @@ A similar analysis for the energy equation yields
 
 \begin_layout Standard
 \begin_inset Formula \begin{equation}
-\rho\frac{\partial T}{\partial t}+\frac{1}{c_{p}}\sum_{k=1}^{K}\hat{h}_{k}\dot{\omega}_{k}+\frac{\alpha+1}{R_{i}^{\alpha+1}}\left(r^{\alpha}V\right)_{0}\left(T_{left}-T\right)-\frac{\alpha+1}{R_{i}}R_{i}^{\alpha}\left(\lambda\frac{\partial T}{\partial r}\right)=0\label{eq:bc-energy-integral}\end{equation}
+\rho\frac{\partial T}{\partial t}+\frac{1}{c_{p}}\sum_{k=1}^{K}\hat{h}_{k}\dot{\omega}_{k}+\frac{\alpha+1}{R_{i}^{\alpha+1}}\left(r^{\alpha}V\right)_{0}\left(T-T_{left}\right)-\frac{\alpha+1}{R_{i}c_{p}}\left(\lambda\frac{\partial T}{\partial r}\right)=0\label{eq:bc-energy-integral}\end{equation}
 
 \end_inset
 
@@ -2558,6 +2558,23 @@ reference "eq:drhodyk-long"
  & = & -\rho\bar{W}\left(\frac{1}{W_{k}}-\frac{1}{1-Y_{k}}\sum_{i}\frac{Y_{i}}{W_{i}}+\frac{1}{W_{k}}\frac{Y_{k}}{1-Y_{k}}\right)\\
  & = & -\rho\left(\frac{\bar{W}}{W_{k}}-\frac{1}{1-Y_{k}}+\frac{\bar{W}}{W_{k}}\frac{Y_{k}}{1-Y_{k}}\right)\\
 \frac{\partial\rho}{\partial Y_{k}} & = & \frac{\rho\left(W_{k}-\bar{W}\right)}{W_{k}\left(1-Y_{k}\right)}\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To protect against undefined behavior as 
+\begin_inset Formula $Y_{k}\to1$
+\end_inset
+
+, the denominator is modified slightly:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{equation}
+\frac{\partial\rho}{\partial Y_{k}}=\frac{\rho\left(W_{k}-\bar{W}\right)}{W_{k}\left(1-Y_{k}\left(1-\epsilon\right)\right)}\end{equation}
 
 \end_inset
 
@@ -4208,7 +4225,7 @@ thermal diffusion coefficient
 \begin_inset Text
 
 \begin_layout Plain Layout
-\begin_inset Formula $\mathrm{m^{2}/s}$
+\begin_inset Formula $\mathrm{kg/m\cdot s}$
 \end_inset
 
 
