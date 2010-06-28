@@ -6,10 +6,6 @@
 #include "grid.h"
 #include "integrator.h"
 
-namespace BoundaryCondition {
-    enum BC { FixedValue, ZeroGradient };
-}
-
 class DiffusionSystem : public LinearODE, public GridBased
 {
     // This is a system representing diffusion of a single solution component,
@@ -32,9 +28,6 @@ public:
     dvector B; // pre-factor
     dvector C; // constant term
     dvector D; // "diffusion" coefficient
-
-    BoundaryCondition::BC leftBC;
-    BoundaryCondition::BC rightBC;
 
 private:
 };

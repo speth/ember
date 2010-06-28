@@ -62,7 +62,6 @@ private:
 
     // these should be read-only:
     int N; // total problem size;
-    int nVars; // Number of solution variables at each point
     int nSpec; // Number of chemical species
 
     // State variables:

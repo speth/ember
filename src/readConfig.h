@@ -3,7 +3,7 @@
 #include <string>
 #include "mathUtils.h"
 
-extern const int kMomentum, kEnergy, kSpecies; // indices of the respective equations / solution components
+extern const size_t kMomentum, kEnergy, kSpecies; // indices of the respective equations / solution components
 
 class configOptions
 {

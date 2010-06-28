@@ -2,6 +2,10 @@
 
 #include "readConfig.h"
 
+namespace BoundaryCondition {
+    enum BC { FixedValue, ZeroGradient, ControlVolume };
+}
+
 class oneDimGrid
 {
 public:
@@ -11,8 +15,8 @@ public:
     dvector dampVal; // ratio of convective to diffusive coefficients (e.g. nu/v)
 
     int alpha; // domain curvature parameter. 0: planar, 1: cylindrical
-    int ju, jb; // indices of burned / unburned boundaries
-    int kQdot; // index into solutionState of the heat release rate
+    size_t ju, jb; // indices of burned / unburned boundaries
+    size_t kQdot; // index into solutionState of the heat release rate
 
     // Parameters for controlling internal grid points:
     dvector vtol; // relative solution variable tolerance for point insertion
@@ -30,7 +34,7 @@ public:
 
     double boundaryTol;
     double boundaryTolRm;
-    int addPointCount; // number of points to add when regridding
+    size_t addPointCount; // number of points to add when regridding
 
     // Derived mesh parameters (calculated by updateValues)
     dvector cfm, cf, cfp; // first centered difference
@@ -38,7 +42,9 @@ public:
     dvector hh;
     dvector rphalf;
     dvector r;
-    int jj; // number of grid points
+    size_t nVars; // number of solution variables at each grid point
+    size_t nPoints; // number of grid point
+    size_t jj; // index of last grid point ( = nPoints-1)
 
     // Update the grid based on the solutionState, and adjust it to fit
     // on the new grid. Each element of the solutionState is a vector
@@ -52,20 +58,14 @@ public:
 
     void updateBoundaryIndices(void);
 
-    enum leftBoundaryConfigOptions {
-        lbFixedVal,
-        lbZeroGradNonCenter,
-        lbControlVolume
-    };
-
-    int leftBoundaryConfig;
+    BoundaryCondition::BC leftBC;
+    BoundaryCondition::BC rightBC;
 
 private:
     vector<dvector>* yIn;
     vector<dvector>* ydotIn;
 
     configOptions& options;
-    int nVars; // number of solution variables at each grid point
 
     void removePoint(int jRemove, vector<dvector>& y, vector<dvector>& ydot);
     void addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot);
@@ -96,4 +96,7 @@ protected:
     dvector& cfm;
     dvector& cf;
     dvector& cfp;
+
+    size_t& nPoints;
+    size_t& jj;
 };

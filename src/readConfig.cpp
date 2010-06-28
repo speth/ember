@@ -1,7 +1,9 @@
 #include "readConfig.h"
-#include "flameSys.h"
 #include "boost/filesystem.hpp"
 #include "debugUtils.h"
+
+using std::cout;
+using std::endl;
 
 void configOptions::readOptionsFile(const std::string& filename)
 {
@@ -244,6 +246,6 @@ bool configOptions::readOptionQuietDefault(const std::string name, T1& value, co
     return readVal;
 }
 
-const int kMomentum = 0;
-const int kEnergy = 1;
-const int kSpecies = 2;
+const size_t kMomentum = 0;
+const size_t kEnergy = 1;
+const size_t kSpecies = 2;

@@ -9,7 +9,6 @@ using std::max; using std::min;
 oneDimGrid::oneDimGrid(configOptions& theOptions)
     : options(theOptions)
 {
-    leftBoundaryConfig = -1; // invalid default value
 }
 
 void oneDimGrid::updateValues()
@@ -74,9 +73,9 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
     vtol.resize(nVars);
     dvtol.resize(nVars);
-    for (int k=0; k<nVars; k++) {
-        vtol[k] =  (k == kContinuity) ? options.vtolCont  : options.vtol;
-        dvtol[k] = (k == kContinuity) ? options.dvtolCont : options.dvtol;
+    for (size_t k=0; k<nVars; k++) {
+        vtol[k] = options.vtol;
+        dvtol[k] = options.dvtol;
     }
 
     // Used for informational purposes only
@@ -87,7 +86,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
     // *** Grid point insertion algorithm
 
-    int j = 0;
+    size_t j = 0;
     dvector dv(jj+1); // dv/dx
 
     while (j < jj) {
@@ -96,10 +95,10 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         bool insert = false;
 
         // Consider tolerances for each variable v in the solution y
-        for (int k=0; k<nVars; k++) {
+        for (size_t k=0; k<nVars; k++) {
 
             dvector& v = y[k];
-            for (int i=1; i<jj; i++) {
+            for (size_t i=1; i<jj; i++) {
                 dv[i] = cfp[i]*v[i+1] + cf[i]*v[i] + cfm[i]*v[i-1];
             }
 
@@ -171,7 +170,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         }
 
         // Special minimum grid size for flames pinned at x=0
-        if (j == 0 && leftBoundaryConfig == lbControlVolume) {
+        if (j == 0 && leftBC == BoundaryCondition::ControlVolume) {
             double xLeftMin = min(options.centerGridMin, 0.005*x[jj]);
             if (hh[j] < xLeftMin) {
                 insert = false;
@@ -222,10 +221,10 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         bool remove = true;
 
         // Consider tolerances each variable v in the solution y
-        for (int k=0; k<nVars; k++) {
+        for (size_t k=0; k<nVars; k++) {
 
             dvector& v = y[k];
-            for (int i=1; i<jj; i++) {
+            for (size_t i=1; i<jj; i++) {
                 dv[i] = cfp[i]*v[i+1] + cf[i]*v[i] + cfm[i]*v[i-1];
             }
 
@@ -298,7 +297,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         }
 
         // Special fixed grid for flames pinned at x=0
-        if (j == 1 && leftBoundaryConfig == lbControlVolume) {
+        if (j == 1 && leftBC == BoundaryCondition::ControlVolume) {
             if (debugParameters::debugAdapt) {
                 cout << "Adapt: no removal - fixed grid near r = 0." << endl;
             }
@@ -328,6 +327,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         updateBoundaryIndices();
     }
 
+    nPoints = jj + 1;
     return gridUpdated;
 }
 
@@ -381,13 +381,13 @@ bool oneDimGrid::addRight(void)
 
     // All other variables use fixed or zero gradient conditions
     // depending on fixedBurnedVal
-    int djOther = (jb==jj && !fixedBurnedVal) ? 2 : 1;
+    size_t djOther = (jb==jj && !fixedBurnedVal) ? 2 : 1;
 
     bool pointAdded = false; // Assume no addition
 
     // check flatness of temperature, velocity and species profiles at the boundary
-    for (int k=0; k<nVars; k++) {
-        if (k == kContinuity || k == kQdot) {
+    for (size_t k=0; k<nVars; k++) {
+        if (k == kQdot) {
             continue;
         }
 
@@ -410,19 +410,12 @@ bool oneDimGrid::addRight(void)
     if (pointAdded) {
         cout << "Regrid: Adding points to right side." << endl;
 
-        for (int i=0; i<addPointCount; i++) {
+        for (size_t i=0; i<addPointCount; i++) {
             x.push_back(x[jj] + (x[jj]-x[jj-1]));
-            for (int k=0; k<nVars; k++) {
-                if (k==kContinuity) {
-                    // linear extrapolation for V
-                    y[k].push_back(y[k][jj] + (y[k][jj]-y[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
-                    ydot[k].push_back(
-                        ydot[k][jj] + (ydot[k][jj]-ydot[k][jj-1])*(x[jj+1]-x[jj])/(x[jj]-x[jj-1]));
-                } else {
-                    // keep constant boundary value
-                    y[k].push_back(y[k][jj]);
-                    ydot[k].push_back(ydot[k][jj]);
-                }
+            for (size_t k=0; k<nVars; k++) {
+                // keep constant boundary value
+                y[k].push_back(y[k][jj]);
+                ydot[k].push_back(ydot[k][jj]);
             }
             jj++;
         }
@@ -445,8 +438,8 @@ bool oneDimGrid::addLeft(void)
 
     bool pointAdded = false;
     if (!options.fixedLeftLoc) {
-        for (int k=0; k<nVars; k++) {
-            if (k==kContinuity || k==kQdot) {
+        for (size_t k=0; k<nVars; k++) {
+            if (k==kQdot) {
                 continue;
             }
 
@@ -463,7 +456,7 @@ bool oneDimGrid::addLeft(void)
         }
     }
 
-    if (options.fixedLeftLoc && leftBoundaryConfig != lbControlVolume) {
+    if (options.fixedLeftLoc && leftBC != BoundaryCondition::ControlVolume) {
         if (!pointAdded && debugParameters::debugRegrid) {
             cout << "Regrid: Adding point to force left boundary toward x = 0" << endl;
         }
@@ -477,7 +470,7 @@ bool oneDimGrid::addLeft(void)
     if (pointAdded) {
         cout << "Regrid: Adding points to left side." << endl;
         // Add point to the left.
-        for (int i=0; i<addPointCount; i++) {
+        for (size_t i=0; i<addPointCount; i++) {
             double xLeft = x[0]-hh[0];
             if (options.twinFlame || options.curvedFlame) {
                 if (x[0] == 0) {
@@ -494,17 +487,10 @@ bool oneDimGrid::addLeft(void)
             cout << "adding point at " << xLeft << endl;
             x.insert(x.begin(),xLeft);
 
-            for (int k=0; k<nVars; k++) {
-                if (k==kContinuity) {
-                    // linear extrapolation
-                    y[k].insert(y[k].begin(),y[k][0] + (y[k][1]-y[k][0])*(x[0]-x[1])/(x[2]-x[1]));
-                    ydot[k].insert(
-                        ydot[k].begin(),ydot[k][0] + (ydot[k][1]-ydot[k][0])*(x[1]-x[0])/(x[2]-x[1]));
-                } else {
-                    // keep constant boundary value
-                    y[k].insert(y[k].begin(),y[k][0]);
-                    ydot[k].insert(ydot[k].begin(),ydot[k][0]);
-                }
+            for (size_t k=0; k<nVars; k++) {
+                // keep constant boundary value
+                y[k].insert(y[k].begin(),y[k][0]);
+                ydot[k].insert(ydot[k].begin(),ydot[k][0]);
             }
             jj++;
         }
@@ -524,11 +510,11 @@ bool oneDimGrid::removeRight(void)
     // Comparison point for flatness criteria, depending on
     // zero-gradient or fixed value boundary condition
     int djMom = 2;
-    int djOther = (jb==jj && !fixedBurnedVal) ? 3 : 2;
+    size_t djOther = (jb==jj && !fixedBurnedVal) ? 3 : 2;
 
     bool pointRemoved = true; // assume removal
-    for (int k=0; k<nVars; k++) {
-        if (k==kContinuity || k==kQdot) {
+    for (size_t k=0; k<nVars; k++) {
+        if (k==kQdot) {
             continue; // no flatness criterion for continuity equation
         }
         int dj = (k==kMomentum) ? djMom : djOther;
@@ -574,9 +560,9 @@ bool oneDimGrid::removeLeft(void)
         pointRemoved = false;
     }
 
-    for (int k=0; k<nVars; k++) {
-        int dj = (k==kMomentum) ? djMom : djOther;
-        if (k==kContinuity || k==kQdot) {
+    for (size_t k=0; k<nVars; k++) {
+        size_t dj = (k==kMomentum) ? djMom : djOther;
+        if (k==kQdot) {
             continue;
         }
 
@@ -661,6 +647,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
         updateBoundaryIndices();
     }
 
+    nPoints = jj + 1;
     return gridUpdated;
 }
 
@@ -684,5 +671,7 @@ GridBased::GridBased()
     , cfm(grid.cfm)
     , cf(grid.cf)
     , cfp(grid.cfp)
+    , nPoints(grid.nPoints)
+    , jj(grid.jj)
 {
 }
