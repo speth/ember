@@ -30,6 +30,9 @@ public:
     size_t nVars; // == nSpec + 2
     int alpha;
 
+    double Tleft, Tright; // Temperature boundary values
+    dvector Yleft, Yright; // Mass fraction boundary values
+
 private:
     void V2rV();
     void rV2V();

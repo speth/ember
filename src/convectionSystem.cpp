@@ -3,6 +3,7 @@
 int ConvectionSystem::f(realtype t, sdVector& y, sdVector& ydot)
 {
     unroll_y(y);
+
     // *** Update auxiliary data ***
     for (size_t j=0; j<nPoints; j++) {
         gas->setStateMass(Y[j],T[j]);
@@ -38,23 +39,58 @@ int ConvectionSystem::f(realtype t, sdVector& y, sdVector& ydot)
 
     rV2V();
 
-    // TODO: left boundary conditions
-
     // *** Calculate dY/dt, dU/dt, dT/dt
-    for (size_t j=1; j<nPoints-1; j++) {
-        dTdt[j] = - (V[j] * dTdx[j]) / rho[j] - Tconst[j];
-        dUdt[j] = - (V[j] * dUdx[j]) / rho[j] - Uconst[j];
+
+    // Left boundary conditions
+    dUdt[0] = -Uconst[0]; // zero-gradient condition for U no matter what
+
+    if (grid.leftBC == BoundaryCondition::FixedValue) {
+        dTdt[0] = 0;
         for (size_t k=0; k<nSpec; k++) {
-            dYdt[j][k] = - (V[j] * dYdx[j][k]) / rho[j] - Yconst[j][k];
+            dYdt[0][k] = 0;
+        }
+    } else if (grid.leftBC == BoundaryCondition::ControlVolume) {
+        double centerVol = pow(x[1],alpha+1) / (alpha+1);
+        double rVzero = std::max(rV[0], 0.0);
+
+        dTdt[0] = -rVzero * (T[0] - Tleft) / (rho[0] * centerVol) - Tconst[0];
+        for (size_t k=0; k<nSpec; k++) {
+            dYdt[0][k] = -rVzero * (Y[0][k] - Yleft[k]) / (rho[0] * centerVol) - Yconst[0][k];
+        }
+
+    } else { // grid.leftBC == BoundaryCondition::ZeroGradient
+        dTdt[0] = -Tconst[0];
+        for (size_t k=0; k<nSpec; k++) {
+            dYdt[0][k] = -Yconst[0][k];
         }
     }
 
-    // TODO: right boundary conditions
+    // Intermediate points
+    for (size_t j=1; j<jj; j++) {
+        dUdt[j] = -(V[j] * dUdx[j]) / rho[j] - Uconst[j];
+        dTdt[j] = -(V[j] * dTdx[j]) / rho[j] - Tconst[j];
+        for (size_t k=0; k<nSpec; k++) {
+            dYdt[j][k] = -(V[j] * dYdx[j][k]) / rho[j] - Yconst[j][k];
+        }
+    }
+
+    // Right boundary values
+    dUdt[jj] = -Uconst[jj]; // zero-gradient condition for U no matter what
+    if (grid.rightBC == BoundaryCondition::FixedValue) {
+        dTdt[jj] = 0;
+        for (size_t k=0; k<nSpec; k++) {
+            dYdt[jj][k] = 0;
+        }
+    } else { // grid.leftBC == BoundaryCondition::ZeroGradient
+        dTdt[jj] = -Tconst[jj];
+        for (size_t k=0; k<nSpec; k++) {
+            dYdt[jj][k] = -Yconst[jj][k];
+        }
+    }
 
     roll_ydot(ydot);
     return 0;
 }
-
 
 void ConvectionSystem::unroll_y(const sdVector& y)
 {
@@ -119,6 +155,8 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
     dYdx.resize(nPoints);
     Yconst.resize(nPoints);
 
+    Yleft.resize(nSpec);
+    Yright.resize(nSpec);
     for (size_t k=0; k<nPoints; k++) {
         Y[k].resize(nSpec);
         dYdt[k].resize(nSpec);
@@ -130,11 +168,11 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
 void ConvectionSystem::V2rV(void)
 {
     if (alpha == 0) {
-        for (int j=0; j<nPoints; j++) {
+        for (size_t j=0; j<nPoints; j++) {
             rV[j] = V[j];
         }
     } else {
-        for (int j=0; j<nPoints; j++) {
+        for (size_t j=0; j<nPoints; j++) {
             rV[j] = x[j]*V[j];
         }
     }
@@ -149,11 +187,11 @@ void ConvectionSystem::V2rV(void)
 void ConvectionSystem::rV2V(void)
 {
     if (alpha == 0) {
-        for (int j=0; j<nPoints; j++) {
+        for (size_t j=0; j<nPoints; j++) {
             V[j] = rV[j];
         }
     } else {
-        for (int j=0; j<nPoints; j++) {
+        for (size_t j=0; j<nPoints; j++) {
             V[j] = rV[j]/x[j];
         }
     }
