@@ -14,8 +14,15 @@ void DiffusionSystem::get_J(sdBandMatrix& J)
 
     // left boundary value
     int jStart;
-    if (leftBC == BoundaryCondition::FixedValue) {
+    if (grid.leftBC == BoundaryCondition::FixedValue) {
         jStart = 1;
+    } else if (grid.leftBC == BoundaryCondition::ControlVolume) {
+        jStart =  1;
+        double centerVol = pow(x[1], grid.alpha+1)/(grid.alpha+1);
+        double centerArea = pow(x[1],grid.alpha);
+        double c0 = centerArea/centerVol * (D[0]+D[1]) / (hh[0] * B[0]);
+        J(0,0) = c0;
+        J(0,1) = - c0;
     } else  { // (leftBC == BoundaryCondition::ZeroGradient)
         jStart = 2;
         J(1,1) = -c1[1]*c2[1];
@@ -24,7 +31,7 @@ void DiffusionSystem::get_J(sdBandMatrix& J)
 
     // right boundary value
     int jStop;
-    if (rightBC == BoundaryCondition::FixedValue) {
+    if (grid.rightBC == BoundaryCondition::FixedValue) {
         jStop = N-1;
     } else { // (rightBC == BoundaryCondition::ZeroGradient)
         jStop = N-2;
