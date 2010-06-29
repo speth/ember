@@ -366,11 +366,8 @@ void oneDimGrid::removePoint(int jRemove, vector<dvector>& y, vector<dvector>& y
     }
 }
 
-bool oneDimGrid::addRight(void)
+bool oneDimGrid::addRight(vector<dvector>& y, vector<dvector>& ydot)
 {
-    vector<dvector>& y = *yIn;
-    vector<dvector>& ydot = *ydotIn;
-
     // *** Criteria for addition to right (j==jj) ***
 
     // Pick the comparison point for the grid flatness criterion,
@@ -426,11 +423,8 @@ bool oneDimGrid::addRight(void)
 
 }
 
-bool oneDimGrid::addLeft(void)
+bool oneDimGrid::addLeft(vector<dvector>& y, vector<dvector>& ydot)
 {
-    vector<dvector>& y = *yIn;
-    vector<dvector>& ydot = *ydotIn;
-
     // *** Criteria for addition to the left (j==0) ***
 
     int djOther = (jb==1 && !fixedBurnedVal) ? 2 : 1;
@@ -500,11 +494,8 @@ bool oneDimGrid::addLeft(void)
     return pointAdded;
 }
 
-bool oneDimGrid::removeRight(void)
+bool oneDimGrid::removeRight(vector<dvector>& y, vector<dvector>& ydot)
 {
-    vector<dvector>& y = *yIn;
-    vector<dvector>& ydot = *ydotIn;
-
     // *** Criteria for removal from the right (j==jj) ***
 
     // Comparison point for flatness criteria, depending on
@@ -542,11 +533,8 @@ bool oneDimGrid::removeRight(void)
     return pointRemoved;
 }
 
-bool oneDimGrid::removeLeft(void)
+bool oneDimGrid::removeLeft(vector<dvector>& y, vector<dvector>& ydot)
 {
-    vector<dvector>& y = *yIn;
-    vector<dvector>& ydot = *ydotIn;
-
     // *** Criteria for removal from the left (j==0) ***
     int djMom = 2;
     int djOther = (jb==1 && !fixedBurnedVal) ? 3 : 2;
@@ -597,11 +585,8 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 
     jj = y[0].size()-1;
 
-    yIn = &y;
-    ydotIn = &ydot;
-
-    bool rightAddition = addRight();
-    bool leftAddition = addLeft();
+    bool rightAddition = addRight(y, ydot);
+    bool leftAddition = addLeft(y, ydot);
 
     bool rightRemoval = false;
     bool leftRemoval = false;
@@ -611,7 +596,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
     if (!rightAddition) {
         bool continueRemoval = true;
         while (continueRemoval) {
-            continueRemoval = removeRight();
+            continueRemoval = removeRight(y, ydot);
             if (continueRemoval) {
                 rightRemoval = true;
                 rightRemovalCount++;
@@ -627,7 +612,7 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
     if (!leftAddition) {
         bool continueRemoval = true;
         while (continueRemoval) {
-            continueRemoval = removeLeft();
+            continueRemoval = removeLeft(y, ydot);
             if (continueRemoval) {
                 leftRemoval = true;
                 leftRemovalCount++;
