@@ -12,14 +12,18 @@ class DiffusionSystem : public LinearODE, public GridBased
     // represented by an ODE in one of the following forms:
     //     ydot = B * d/dx(D * dy/dx) + C
     //     ydot = B/r * d/dr(r * D * dy/dr) + C
+    // The ODE in this form may be written as a linear system:
+    //     ydot = Ay + C
+    // where the entries of the matrix A are determined by the prefactor B,
+    // the diffusion coefficients D, and the finite difference formula used.
 
 public:
 
-    // The Jacobian matrix assoicated with the ODE, requested by the integrator
-    void get_J(sdBandMatrix& J);
+    // Provide the matrix associated with the ODE to the integrator
+    void get_A(sdBandMatrix& J);
 
-    // provides the constant term to the integrator
-    void get_c(dvector& y);
+    // Provides the constant term to the integrator
+    void get_C(dvector& y);
 
     // The current solution vector
     dvector y;
@@ -28,6 +32,4 @@ public:
     dvector B; // pre-factor
     dvector C; // constant term
     dvector D; // "diffusion" coefficient
-
-private:
 };
