@@ -90,10 +90,28 @@ public:
     sundialsCVODE(unsigned int n);
     ~sundialsCVODE();
 
+    // *** INITIALIZATION ***
+    // Call each of these functions and assign each of these
+    // variables before calling initialize().
+
+    void setBandwidth(int upper, int lower); // Required if using a banded Jacobian
+    void setODE(sdODE* newODE); // Required
+
+    realtype t0; // initial time
+    sdVector y; // initial or current state vector
+
+    realtype reltol;
+    sdVector abstol;
+    int linearMultistepMethod; // CV_ADAMS for non-stiff problems, CV_BDF for stiff problems
+    int nonlinearSolverMethod; // CV_FUNCTIONAL for non-stiff problems, CV_NEWTON for stiff problems
+    bool findRoots; // Specify whether or not to use the function g for rootfinding
+
+    // Call initialize() before using integrateToTime to integrate.
+    // Integration may be restarted by reassigning y and t0 and calling initialize again.
     void initialize();
+
     int integrateToTime(realtype t);
-    void setODE(sdODE* newODE);
-    void setBandwidth(int upper, int lower);
+
     int getRootInfo();
     void printStats();
 
@@ -106,17 +124,7 @@ public:
     //            NULL pointer
     static int check_flag(void *flagvalue, const char *funcname, int opt);
 
-    realtype reltol;
-    sdVector abstol;
-
-    int linearMultistepMethod; // CV_ADAMS for non-stiff problems, CV_BDF for stiff problems
-    int nonlinearSolverMethod; // CV_FUNCTIONAL for non-stiff problems, CV_NEWTON for stiff problems
-    bool findRoots; // Specify whether or not to use the function g for rootfinding
-
-    realtype t0; // initial time
     realtype tInt; // time reached by integrator
-    sdVector y0;
-    sdVector y;
     std::vector<int> rootsFound;
     unsigned int nRoots;
 
@@ -139,6 +147,8 @@ private:
 
     int bandwidth_upper;
     int bandwidth_lower;
+
+    bool initialized;
 };
 
 

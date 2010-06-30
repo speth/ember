@@ -7,11 +7,11 @@ using std::cout;
 using std::endl;
 
 sundialsCVODE::sundialsCVODE(unsigned int n)
-    : abstol(n)
-    , y0(n)
-    , y(n)
+    : y(n)
+    , abstol(n)
     , bandwidth_upper(0)
     , bandwidth_lower(0)
+    , initialized(false)
 {
     nEq = n;
     sundialsMem = NULL;
@@ -26,6 +26,17 @@ sundialsCVODE::~sundialsCVODE(void)
 
 void sundialsCVODE::initialize()
 {
+    if (initialized) {
+        // Starting over with a new IC, but the same ODE
+        flag = CVodeReInit(sundialsMem, t0, y.forSundials());
+        if (check_flag(&flag, "CVodeReInit", 1)) {
+            throw debugException("sundialsCVODE::reInitialize: error in CVodeReInit");
+        }
+        return;
+    }
+
+    // On the first call to initialize, need to allocate and set up
+    // the Sundials solver, set tolerances and link the ODE functions
     sundialsMem = CVodeCreate(linearMultistepMethod, nonlinearSolverMethod);
     if (check_flag((void *)sundialsMem, "CVodeCreate", 0)) {
         throw debugException("sundialsCVODE::initialize: error in CVodeCreate");
@@ -54,24 +65,26 @@ void sundialsCVODE::initialize()
             throw debugException("sundialsCVODE::initialize: error in CVDense");
         }
 
-        // Set the Jacobian routine to Jac (user-supplied)
+        // Set the Jacobian routine to denseJac (user-supplied)
         flag = CVDlsSetDenseJacFn(sundialsMem, denseJac);
         if (check_flag(&flag, "CVDlsSetDenseJacFn", 1)) {
             throw debugException("sundialsCVODE::initialize: error in CVDlsSetDenseJacFn");
         }
     } else {
-        // Call CVDense to specify the CVDENSE dense linear solver
+        // Call CVDense to specify the CVBAND Banded linear solver
         flag = CVBand(sundialsMem, nEq, bandwidth_upper, bandwidth_lower);
         if (check_flag(&flag, "CVBand", 1)) {
             throw debugException("sundialsCVODE::initialize: error in CVBand");
         }
 
-        // Set the Jacobian routine to Jac (user-supplied)
+        // Set the Jacobian routine to bandJac (user-supplied)
         flag = CVDlsSetBandJacFn(sundialsMem, bandJac);
         if (check_flag(&flag, "CVDlsSetBandJacFn", 1)) {
             throw debugException("sundialsCVODE::initialize: error in CVDlsSetBandJacFn");
         }
     }
+
+    initialized = true;
 }
 
 void sundialsCVODE::setBandwidth(int upper, int lower)
