@@ -76,10 +76,10 @@ private:
 
 class sdODE {
 public:
-    virtual int f(realtype t, sdVector& y, sdVector& ydot)=0;
+    virtual int f(const realtype t, const sdVector& y, sdVector& ydot)=0;
     virtual int g(realtype t, sdVector& y, realtype* gOut) {return 0;}
-    virtual int denseJacobian(realtype t, sdVector& y, sdVector& ydot, sdMatrix& J) {return -1;}
-    virtual int bandedJacobian(realtype t, sdVector& y, sdVector& ydot, sdBandMatrix& J) {return -1;}
+    virtual int denseJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J) {return -1;}
+    virtual int bandedJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdBandMatrix& J) {return -1;}
     virtual ~sdODE(void) {}
 };
 

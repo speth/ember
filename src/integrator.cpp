@@ -73,7 +73,7 @@ void ExplicitIntegrator::step_to_time(double tEnd)
 
 BDFIntegrator::BDFIntegrator(LinearODE& ode)
     : myODE(ode)
-    , J(NULL)
+    , A(NULL)
     , LU(NULL)
     , stepCount(0)
 {
@@ -82,7 +82,7 @@ BDFIntegrator::BDFIntegrator(LinearODE& ode)
 BDFIntegrator::~BDFIntegrator()
 {
     delete LU;
-    delete J;
+    delete A;
 }
 
 void BDFIntegrator::set_size(int N_in, int upper_bw_in, int lower_bw_in)
@@ -92,9 +92,9 @@ void BDFIntegrator::set_size(int N_in, int upper_bw_in, int lower_bw_in)
     lower_bw = lower_bw_in;
 
     delete LU;
-    delete J;
+    delete A;
     LU = new sdBandMatrix(N, upper_bw, lower_bw);
-    J = new sdBandMatrix(N, upper_bw, lower_bw);
+    A = new sdBandMatrix(N, upper_bw, lower_bw);
     p.resize(N);
 }
 
@@ -121,12 +121,12 @@ void BDFIntegrator::step()
     if (stepCount == 0) {
         yprev.assign(y.begin(), y.end());
 
-        myODE.get_J(*J);
-        myODE.get_c(c);
-        BandCopy(J->forSundials(), LU->forSundials(), upper_bw, lower_bw);
-        sdBandMatrix& A = *LU;
+        myODE.get_A(*A);
+        myODE.get_C(c);
+        BandCopy(A->forSundials(), LU->forSundials(), upper_bw, lower_bw);
+        sdBandMatrix& M = *LU;
         for (int i=0; i<N; i++) {
-            A(i,i) -= 1/h;
+            M(i,i) -= 1/h;
         }
         BandGBTRF(LU->forSundials(), &p[0]);
 
@@ -137,10 +137,10 @@ void BDFIntegrator::step()
         BandGBTRS(LU->forSundials(), &p[0], &y[0]);
     } else {
         if (stepCount == 1) {
-            BandCopy(J->forSundials(), LU->forSundials(), upper_bw, lower_bw);
-            sdBandMatrix& A = *LU;
+            BandCopy(A->forSundials(), LU->forSundials(), upper_bw, lower_bw);
+            sdBandMatrix& M = *LU;
             for (int i=0; i<N; i++) {
-                A(i,i) -= 3.0/(2.0*h);
+                M(i,i) -= 3.0/(2.0*h);
             }
             BandGBTRF(LU->forSundials(), &p[0]);
         }

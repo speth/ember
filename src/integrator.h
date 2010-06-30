@@ -18,8 +18,8 @@ public:
     ~LinearODE();
 
     // ODE defined as ydot = f(t,y) = J*y + c
-    virtual void get_J(sdBandMatrix& J) = 0;
-    virtual void get_c(dvector& y) = 0;
+    virtual void get_A(sdBandMatrix& J) = 0;
+    virtual void get_C(dvector& y) = 0;
 };
 
 
@@ -88,7 +88,7 @@ public:
 
 private:
     LinearODE& myODE;
-    sdBandMatrix* J;
+    sdBandMatrix* A;
     sdBandMatrix* LU;
     vector<int> p; // pivot matrix
     unsigned int stepCount; // the number of steps taken since last initialization
