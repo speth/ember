@@ -82,8 +82,6 @@ void flameSolver::run(void)
 
         sundialsIDA theSolver(theSys.N);
         theSolver.reltol = options.idaRelTol;
-        theSolver.nRoots = 0;
-        theSolver.findRoots = false;
         theSolver.t0 = theSolver.tInt = t;
 
         int N = theSys.nVars;

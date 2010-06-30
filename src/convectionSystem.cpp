@@ -1,6 +1,6 @@
 #include "convectionSystem.h"
 
-int ConvectionSystem::f(realtype t, sdVector& y, sdVector& ydot)
+int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
 {
     unroll_y(y);
 

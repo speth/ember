@@ -7,8 +7,17 @@
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 
-
 using boost::format;
+
+FlameSolver::FlameSolver()
+    : convectionSolver(NULL)
+{
+}
+
+FlameSolver::~FlameSolver()
+{
+    delete convectionSolver;
+}
 
 void FlameSolver::setOptions(const configOptions& _options)
 {
@@ -27,6 +36,9 @@ void FlameSolver::initialize(void)
 
     // Cantera initialization
     gas.initialize();
+    nSpec = gas.nSpec;
+    W.resize(nSpec);
+    gas.getMolecularWeights(W);
 
     // Initial Conditions
     ProfileGenerator generator(options);
@@ -40,8 +52,14 @@ void FlameSolver::initialize(void)
     Y = generator.Y;
     grid = generator.grid;
 
-    sourceTerms.resize(grid.nPoints);
-    diffusionTerms.resize(gas.nSpec);
+    for (size_t i=0; i<nSpec; i++) {
+        DiffusionSystem* term = new DiffusionSystem();
+        BDFIntegrator* integrator = new BDFIntegrator(*term);
+        diffusionTerms.push_back(term);
+        diffusionSolvers.push_back(integrator);
+    }
+
+    resizeAuxiliary();
 }
 
 void FlameSolver::run(void)
@@ -76,12 +94,32 @@ void FlameSolver::run(void)
     }
 
     while (t < tEnd) {
-        resize();
 
-        // **************************************
-        // *** Set up the Sundials IDA solver ***
-        // **************************************
+        // Allocate the solvers and arrays for auxiliary variables
+        resizeAuxiliary();
 
+        // Calculate auxiliary data
+        for (size_t j=0; j<nPoints; j++) {
+            gas.setStateMass(&Y(0,j), T[j]);
+            rho[j] = gas.getDensity();
+            Wmx[j] = gas.getMixtureMolecularWeight();
+            lambda[j] = gas.getThermalConductivity();
+            cp[j] = gas.getSpecificHeatCapacity();
+            mu[j] = gas.getViscosity();
+            gas.getWeightedDiffusionCoefficients(&rhoD(0,j));
+            gas.getThermalDiffusionCoefficients(&Dkt(0,j));
+            gas.getSpecificHeatCapacities(&cpSpec(0,j));
+            gas.getReactionRates(&wDot(0,j));
+            gas.getEnthalpies(&hk(0,j));
+            qDot[j] = 0;
+            for (size_t k=0; k<nSpec; k++) {
+                qDot[j] -= wDot(k,j)*hk(k,j);
+            }
+        }
+
+        updateDiffusionFluxes();
+
+        // Set the initial conditions for each solver
         tIDA1 = clock();
 
         sundialsIDA theSolver(theSys.N);
@@ -502,29 +540,87 @@ void FlameSolver::resizeAuxiliary()
 
     rho.resize(nPoints);
     Wmx.resize(nPoints);
-    W.resize(nSpec);
     mu.resize(nPoints);
     lambda.resize(nPoints);
     cp.resize(nPoints);
-    cpSpec.resize(nSpec,nPoints);
-    rhoD.resize(nSpec,nPoints);
-    Dkt.resize(nSpec,nPoints);
     sumcpj.resize(nPoints);
     jCorr.resize(nPoints);
-    wDot.resize(nSpec,nPoints);
     qDot.resize(nPoints);
+    cpSpec.resize(nSpec, nPoints);
+    rhoD.resize(nSpec, nPoints);
+    Dkt.resize(nSpec, nPoints);
+    wDot.resize(nSpec, nPoints);
+    hk.resize(nSpec, nPoints);
+    jFick.resize(nSpec, nPoints);
+    jSoret.resize(nSpec, nPoints);
 
     grid.jj = nPoints-1;
     grid.updateBoundaryIndices();
 
-    sourceTerms.resize(grid.nPoints);
-    sourceSolvers.resize(grid.nPoints);
+    if (nPoints > nPointsOld) {
+        for (size_t i=nPointsOld; i<nPoints; i++) {
+            // Create and initialize the new SourceSystem
+            SourceSystem* system = new SourceSystem();
+            system->resize(nSpec);
 
-    for (size_t i=nPointsOld; i<nPoints; i++) {
-        // initialize the sundials solvers
+            // Create and initialize the new Sundials solver
+            sundialsCVODE* solver = new sundialsCVODE(nVars);
+            solver->setODE(system);
+            solver->abstol[kMomentum] = options.idaMomentumAbsTol;
+            solver->abstol[kEnergy] = options.idaEnergyAbsTol;
+            for (size_t k=0; k<nSpec; k++) {
+                solver->abstol[kSpecies+k] = options.idaSpeciesAbsTol;
+            }
+            solver->reltol = options.idaRelTol;
+
+            // Store the solver and system
+            sourceTerms.push_back(system);
+            sourceSolvers.push_back(solver);
+        }
+
+    } else {
+        // Delete the unwanted solvers and systems
+        sourceTerms.erase(sourceTerms.begin()+nPoints, sourceTerms.end());
+        sourceSolvers.erase(sourceSolvers.begin()+nPoints, sourceSolvers.end());
     }
 
+    convectionTerm.resize(nSpec, nPoints);
+    delete convectionSolver;
+    convectionSolver = new sundialsCVODE(N);
+    convectionSolver->setODE(&convectionTerm);
+    for (size_t j=0; j<nPoints; j++) {
+        convectionSolver->abstol[N*j+kMomentum] = options.idaMomentumAbsTol;
+        convectionSolver->abstol[N*j+kEnergy] = options.idaEnergyAbsTol;
+        for (size_t k=0; k<nSpec; k++) {
+            convectionSolver->abstol[N*j+kSpecies+k] = options.idaSpeciesAbsTol;
+        }
+    }
+    convectionSolver->reltol = options.idaRelTol;
+
     perfTimerResize.stop();
+}
+
+void FlameSolver::updateDiffusionFluxes()
+{
+    for (int j=0; j<jj; j++) {
+        sumcpj[j] = 0;
+        for (int k=0; k<nSpec; k++) {
+            jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1)) * ((Y(k,j+1)-Y(k,j))/hh[j]) -
+                0.5*(rhoD(k,j)*Y(k,j)/Wmx[j]+Y(k,j+1)*rhoD(k,j+1)/Wmx[j+1])*(Wmx[j+1]-Wmx[j])/hh[j];
+            jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
+                * (T[j+1]-T[j])/hh[j];
+        }
+
+        jCorr[j] = 0;
+        for (int k=0; k<nSpec; k++) {
+            jCorr[j] -= jFick(k,j);
+        }
+        for (int k=0; k<nSpec; k++) {
+            jFick(k,j) += 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]; // correction to ensure that sum of mass fractions equals 1
+            sumcpj[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j) + jSoret(k,j));
+        }
+    }
+
 }
 
 double FlameSolver::getHeatReleaseRate(void)

@@ -61,6 +61,7 @@ private:
 
     boost::ptr_vector<sundialsCVODE> sourceSolvers; // One for each grid point
     boost::ptr_vector<BDFIntegrator> diffusionSolvers; // One for each state variable
+    sundialsCVODE* convectionSolver;
 
     double tPrev;
     double aPrev;
@@ -71,6 +72,8 @@ private:
     dvector Yu, Yb, Yleft, Yright;
 
     void resizeAuxiliary(void); // Handle resizing of data structures as grid size changes
+
+    void updateDiffusionFluxes(); // calculates values of jFick, jSoret, sumcpj, and jCorr
 
     // Utility functions for adaptation & regridding
     void rollVectorVector(const sdVector& y, const dvector& qdot, vector<dvector>& v);
@@ -109,6 +112,9 @@ private:
     Array2D cpSpec;
     Array2D rhoD;
     Array2D Dkt;
+    Array2D hk;
+    Array2D jFick;
+    Array2D jSoret;
 
     // Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;
