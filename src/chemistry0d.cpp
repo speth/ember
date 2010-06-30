@@ -90,14 +90,28 @@ void CanteraGas::setStateMole(const dvector& X_in, const double T)
     thermo.setState_TPX(T, pressure, &X[0]);
 }
 
+void CanteraGas::setStateMole(const double* X_in, const double T)
+{
+    dvector X(nSpec);
+    for (size_t k=0; k<nSpec; k++) {
+        X[k] = max(X[k], 0.0);
+    }
+    thermo.setState_TPX(T, pressure, &X[0]);
+}
+
 void CanteraGas::getMoleFractions(dvector& X) const
 {
     thermo.getMoleFractions(&X[0]);
 }
 
-void CanteraGas::getMassFractions(dvector& Y) const
+void CanteraGas::getMoleFractions(double* X) const
 {
-    thermo.getMassFractions(&Y[0]);
+    thermo.getMoleFractions(X);
+}
+
+void CanteraGas::getMassFractions(double* Y) const
+{
+    thermo.getMassFractions(Y);
 }
 
 double CanteraGas::getDensity() const
@@ -111,6 +125,13 @@ double CanteraGas::getMixtureMolecularWeight() const
 }
 
 void CanteraGas::getMolecularWeights(dvector& W) const
+{
+    for (size_t k=0; k<nSpec; k++) {
+        W[k] = thermo.molecularWeight(k);
+    }
+}
+
+void CanteraGas::getMolecularWeights(double* W) const
 {
     for (size_t k=0; k<nSpec; k++) {
         W[k] = thermo.molecularWeight(k);
@@ -144,6 +165,16 @@ void CanteraGas::getDiffusionCoefficients(dvector& Dkm) const
     }
 }
 
+void CanteraGas::getDiffusionCoefficients(double* Dkm) const
+{
+    if (usingMultiTransport) {
+        multiTransport->getMixDiffCoeffs(Dkm);
+    } else {
+        mixTransport->getMixDiffCoeffs(Dkm);
+    }
+}
+
+
 void CanteraGas::getWeightedDiffusionCoefficients(dvector& rhoD) const
 {
     if (usingMultiTransport) {
@@ -161,12 +192,38 @@ void CanteraGas::getWeightedDiffusionCoefficients(dvector& rhoD) const
     }
 }
 
+void CanteraGas::getWeightedDiffusionCoefficients(double* rhoD) const
+{
+    if (usingMultiTransport) {
+        multiTransport->getMixDiffCoeffs(rhoD);
+        double rho = thermo.density();
+        for (size_t k=0; k<nSpec; k++) {
+            rhoD[k] *= rho;
+        }
+    } else {
+        mixTransport->getMixDiffCoeffs(rhoD);
+        double rho = thermo.density();
+        for (size_t k=0; k<nSpec; k++) {
+            rhoD[k] *= rho;
+        }
+    }
+}
+
 void CanteraGas::getThermalDiffusionCoefficients(dvector& Dkt) const
 {
     if (usingMultiTransport) {
         multiTransport->getThermalDiffCoeffs(&Dkt[0]);
     } else {
         mixTransport->getThermalDiffCoeffs(&Dkt[0]);
+    }
+}
+
+void CanteraGas::getThermalDiffusionCoefficients(double* Dkt) const
+{
+    if (usingMultiTransport) {
+        multiTransport->getThermalDiffCoeffs(Dkt);
+    } else {
+        mixTransport->getThermalDiffCoeffs(Dkt);
     }
 }
 
@@ -180,7 +237,17 @@ void CanteraGas::getSpecificHeatCapacities(dvector& cpSpec) const
     thermo.getPartialMolarCp(&cpSpec[0]);
 }
 
+void CanteraGas::getSpecificHeatCapacities(double* cpSpec) const
+{
+    thermo.getPartialMolarCp(cpSpec);
+}
+
 void CanteraGas::getEnthalpies(dvector& hk) const
+{
+    thermo.getPartialMolarEnthalpies(&hk[0]);
+}
+
+void CanteraGas::getEnthalpies(double* hk) const
 {
     thermo.getPartialMolarEnthalpies(&hk[0]);
 }
@@ -188,4 +255,9 @@ void CanteraGas::getEnthalpies(dvector& hk) const
 void CanteraGas::getReactionRates(dvector& wDot) const
 {
     kinetics->getNetProductionRates(&wDot[0]);
+}
+
+void CanteraGas::getReactionRates(double* wDot) const
+{
+    kinetics->getNetProductionRates(wDot);
 }

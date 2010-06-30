@@ -35,25 +35,37 @@ public:
 
     void setStateMass(const dvector& Y, const double T);
     void setStateMass(const double* Y, const double T);
+
     void setStateMole(const dvector& X, const double T);
+    void setStateMole(const double* X, const double T);
 
     void getMoleFractions(dvector& X) const;
+    void getMoleFractions(double* X) const;
     void getMassFractions(dvector& Y) const;
+    void getMassFractions(double* Y) const;
+
     double getDensity() const;
     double getMixtureMolecularWeight() const;
     void getMolecularWeights(dvector& W) const;
+    void getMolecularWeights(double* W) const;
 
     double getViscosity() const;
     double getThermalConductivity() const;
     void getDiffusionCoefficients(dvector& Dkm) const;
+    void getDiffusionCoefficients(double* Dkm) const;
     void getWeightedDiffusionCoefficients(dvector& rhoD) const;
+    void getWeightedDiffusionCoefficients(double* rhoD) const;
     void getThermalDiffusionCoefficients(dvector& Dkt) const;
+    void getThermalDiffusionCoefficients(double* Dkt) const;
 
     double getSpecificHeatCapacity() const;
     void getSpecificHeatCapacities(dvector& cpSpec) const;
+    void getSpecificHeatCapacities(double* cpSpec) const;
     void getEnthalpies(dvector& hk) const;
+    void getEnthalpies(double* hk) const;
 
     void getReactionRates(dvector& wDot) const;
+    void getReactionRates(double* wDot) const;
 
     Cantera::IdealGasPhase thermo;
 
