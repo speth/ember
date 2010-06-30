@@ -36,6 +36,7 @@ public:
     void initialize(bool multiTransportFlag);
 
     void setStateMass(const dvector& Y, const double T);
+    void setStateMass(const double* Y, const double T);
     void setStateMole(const dvector& X, const double T);
 
     void getMoleFractions(dvector& X) const;

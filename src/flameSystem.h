@@ -27,14 +27,7 @@ private:
     vector<DiffusionSystem*> diffusionTerms; // One for each species (plus T and U)
     ConvectionSystem convectionTerm;
 
-    // Problem definition
-    std::string reactants;
-    std::string diluent;
-    double xLeft, xRight;
     int nPoints;
-    void generateInitialProfiles(void);
-    void loadInitialProfiles(void);
-
     double tStart;
     double tEnd;
     double tNow;

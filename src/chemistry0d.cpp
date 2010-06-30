@@ -63,7 +63,16 @@ void CanteraGas::setStateMass(const dvector& Y_in, const double T)
 {
     dvector Y(nSpec);
     for (size_t k=0; k<nSpec; k++) {
-        Y[k] = max(Y[k], 0.0);
+        Y[k] = max(Y_in[k], 0.0);
+    }
+    thermo.setState_TPY(T, pressure, &Y[0]);
+}
+
+void CanteraGas::setStateMass(const double* Y_in, const double T)
+{
+    dvector Y(nSpec);
+    for (size_t k=0; k<nSpec; k++) {
+        Y[k] = max(Y_in[k], 0.0);
     }
     thermo.setState_TPY(T, pressure, &Y[0]);
 }
