@@ -774,17 +774,10 @@ void flameSys::setup(void)
 
 void flameSys::copyOptions(void)
 {
-    strainRateInitial = options.strainRateInitial;
-    strainRateFinal = options.strainRateFinal;
-    strainRateT0 = options.strainRateT0;
-    strainRateDt = options.strainRateDt;
-
-    tStart = options.tStart;
-    tEnd = options.tEnd;
-
     gas.mechanismFile = options.gasMechanismFile;
     gas.phaseID = options.gasPhaseID;
     gas.pressure = options.pressure;
+    gas.usingMultiTransport = options.usingMUltiTransport;
 
     nPoints = options.nPoints;
     grid.unburnedLeft = options.unburnedLeft;
@@ -1137,23 +1130,6 @@ double& flameSys::jacB(const int j, const int k1, const int k2)
 double& flameSys::jacC(const int j, const int k1, const int k2)
 {
     return (*bandedJacobian)(j*nVars+k1, (j+1)*nVars+k2);
-}
-
-double flameSys::getHeatReleaseRate(void)
-{
-    return mathUtils::integrate(x, qDot);
-}
-
-double flameSys::getConsumptionSpeed(void)
-{
-    double QoverCp = mathUtils::integrate(x,qDot/cp);
-    double rhouDeltaT = rhou*(Tb-Tu);
-    return QoverCp/rhouDeltaT;
-}
-
-double flameSys::getFlamePosition(void)
-{
-    return mathUtils::trapz(x,x*qDot)/mathUtils::trapz(x,qDot);
 }
 
 double flameSys::targetFlamePosition(double t)

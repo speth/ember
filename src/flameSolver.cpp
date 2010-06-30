@@ -13,6 +13,11 @@ using boost::format;
 void FlameSolver::setOptions(const configOptions& _options)
 {
     options = _options;
+
+    tStart = options.tStart;
+    tEnd = options.tEnd;
+
+    gas.setOptions(_options);
 }
 
 void FlameSolver::initialize(void)
@@ -21,12 +26,10 @@ void FlameSolver::initialize(void)
     strainfunc.setOptions(options);
 
     // Cantera initialization
-    gas.initialize(options.usingMultiTransport);
+    gas.initialize();
 
     // Initial Conditions
-    setup();
-    ProfileGenerator generator;
-    generator.setOptions(options);
+    ProfileGenerator generator(options);
     if (options.haveRestartFile) {
         generator.loadProfile();
     } else {
@@ -36,6 +39,9 @@ void FlameSolver::initialize(void)
     T = generator.T;
     Y = generator.Y;
     grid = generator.grid;
+
+    sourceTerms.resize(grid.nPoints);
+    diffusionTerms.resize(gas.nSpec);
 }
 
 void FlameSolver::run(void)
@@ -61,18 +67,6 @@ void FlameSolver::run(void)
 
     grid.updateValues();
 
-    // TODO: Why was it necessary to calculate qDot here?
-//    gas.setStateMass(theSys.Y,theSys.T);
-//    gas.getReactionRates(theSys.wDot);
-//    updateThermoProperties();
-//
-//    for (int j=0; j<=theSys.nPoints-1; j++) {
-//        theSys.qDot[j] = 0;
-//        for (int k=0; k<theSys.nSpec; k++) {
-//            theSys.qDot[j] -= theSys.wDot(k,j)*theSys.hk(k,j);
-//        }
-//    }
-
     tFlamePrev = t;
     tPrev = t;
     aPrev = strainfunc.a(t);
@@ -82,8 +76,7 @@ void FlameSolver::run(void)
     }
 
     while (t < tEnd) {
-
-        setup();
+        resize();
 
         // **************************************
         // *** Set up the Sundials IDA solver ***
@@ -412,53 +405,52 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
     outFile.writeVector("T", T);
     outFile.writeVector("U", U);
     outFile.writeArray2D("Y", Y);
-    outFile.writeScalar("a",strainfunc.a(tNow));
-    outFile.writeScalar("dadt",strainfunc.dadt(tNow));
+    outFile.writeScalar("a", strainfunc.a(tNow));
+    outFile.writeScalar("dadt", strainfunc.dadt(tNow));
     outFile.writeScalar("fileNumber", options.outputFileNumber);
 
     if (options.outputHeatReleaseRate || errorFile) {
-        outFile.writeVector("q",qDot);
+        outFile.writeVector("q", qDot);
         outFile.writeVector("rho", rho);
     }
 
     if (options.outputTimeDerivatives || errorFile) {
         outFile.writeVector("dUdt", dUdt);
         outFile.writeVector("dTdt", dTdt);
-        outFile.writeVector("dVdt", dVdt);
         outFile.writeArray2D("dYdt", dYdt);
     }
 
     if (options.outputAuxiliaryVariables || errorFile) {
-//        outFile.writeArray2D("wdot", wDot);
-//        outFile.writeArray2D("rhoD",rhoD);
-//        outFile.writeVector("lambda",lambda);
-//        outFile.writeVector("cp",cp);
-//        outFile.writeVector("mu",mu);
-//        outFile.writeVector("Wmx",Wmx);
-//        outFile.writeVector("W",W);
+        outFile.writeArray2D("wdot", wDot);
+        outFile.writeArray2D("rhoD", rhoD);
+        outFile.writeVector("lambda", lambda);
+        outFile.writeVector("cp", cp);
+        outFile.writeVector("mu", mu);
+        outFile.writeVector("Wmx", Wmx);
+        outFile.writeVector("W", W);
 //        outFile.writeArray2D("jFick", jFick);
 //        outFile.writeArray2D("jSoret", jSoret);
 //        outFile.writeVector("qFourier",qFourier);
-        outFile.writeVector("cfp",grid.cfp);
-        outFile.writeVector("cf",grid.cf);
-        outFile.writeVector("cfm",grid.cfm);
-        outFile.writeVector("hh",hh);
-        outFile.writeVector("rphalf",grid.rphalf);
-        outFile.writeScalar("Tleft",Tleft);
-        outFile.writeVector("Yleft",Yleft);
-//        outFile.writeVector("sumcpj",sumcpj);
+        outFile.writeVector("cfp", grid.cfp);
+        outFile.writeVector("cf", grid.cf);
+        outFile.writeVector("cfm", grid.cfm);
+        outFile.writeVector("hh", hh);
+        outFile.writeVector("rphalf", grid.rphalf);
+        outFile.writeScalar("Tleft", Tleft);
+        outFile.writeVector("Yleft", Yleft);
+        outFile.writeVector("sumcpj", sumcpj);
     }
 
     if (options.outputResidualComponents || errorFile) {
-        outFile.writeVector("resEnergyDiff",energyDiff);
-        outFile.writeVector("resEnergyConv",energyConv);
-        outFile.writeVector("resEnergyProd",energyProd);
-        outFile.writeVector("resMomentumDiff",momentumDiff);
-        outFile.writeVector("resMomentumConv",momentumConv);
-        outFile.writeVector("resMomentumProd",momentumProd);
-        outFile.writeArray2D("resSpeciesDiff",speciesDiff);
-        outFile.writeArray2D("resSpeciesConv",speciesConv);
-        outFile.writeArray2D("resSpeciesProd",speciesProd);
+        outFile.writeVector("resEnergyDiff", energyDiff);
+        outFile.writeVector("resEnergyConv", energyConv);
+        outFile.writeVector("resEnergyProd", energyProd);
+        outFile.writeVector("resMomentumDiff", momentumDiff);
+        outFile.writeVector("resMomentumConv", momentumConv);
+        outFile.writeVector("resMomentumProd", momentumProd);
+        outFile.writeArray2D("resSpeciesDiff", speciesDiff);
+        outFile.writeArray2D("resSpeciesConv", speciesConv);
+        outFile.writeArray2D("resSpeciesProd", speciesProd);
     }
 
     outFile.close();
@@ -472,4 +464,82 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         throw debugException("Too many integration failures.");
       }
     }
+}
+
+void FlameSolver::resizeAuxiliary()
+{
+    perfTimerResize.start();
+    size_t nPointsOld = rho.size();
+    nPoints = T.size();
+
+    if (nPoints == nPointsOld) {
+        return; // nothing to do
+    }
+
+    nSpec = gas.nSpec;
+    nVars = 2+nSpec;
+    N = nVars*nPoints;
+
+//    U.resize(nPoints);
+//    T.resize(nPoints);
+//    Y.resize(nSpec,nPoints);
+
+    dUdt.resize(nPoints,0);
+    dTdt.resize(nPoints,0);
+    dYdt.resize(nSpec,nPoints);
+
+    energyDiff.resize(nPoints,0);
+    energyConv.resize(nPoints,0);
+    energyProd.resize(nPoints,0);
+
+    momentumDiff.resize(nPoints,0);
+    momentumConv.resize(nPoints,0);
+    momentumProd.resize(nPoints,0);
+
+    speciesDiff.resize(nSpec,nPoints,0);
+    speciesConv.resize(nSpec,nPoints,0);
+    speciesProd.resize(nSpec,nPoints,0);
+
+    rho.resize(nPoints);
+    Wmx.resize(nPoints);
+    W.resize(nSpec);
+    mu.resize(nPoints);
+    lambda.resize(nPoints);
+    cp.resize(nPoints);
+    cpSpec.resize(nSpec,nPoints);
+    rhoD.resize(nSpec,nPoints);
+    Dkt.resize(nSpec,nPoints);
+    sumcpj.resize(nPoints);
+    jCorr.resize(nPoints);
+    wDot.resize(nSpec,nPoints);
+    qDot.resize(nPoints);
+
+    grid.jj = nPoints-1;
+    grid.updateBoundaryIndices();
+
+    sourceTerms.resize(grid.nPoints);
+    sourceSolvers.resize(grid.nPoints);
+
+    for (size_t i=nPointsOld; i<nPoints; i++) {
+        // initialize the sundials solvers
+    }
+
+    perfTimerResize.stop();
+}
+
+double FlameSolver::getHeatReleaseRate(void)
+{
+    return mathUtils::integrate(x, qDot);
+}
+
+double FlameSolver::getConsumptionSpeed(void)
+{
+    double QoverCp = mathUtils::integrate(x,qDot/cp);
+    double rhouDeltaT = rhou*(Tb-Tu);
+    return QoverCp/rhouDeltaT;
+}
+
+double FlameSolver::getFlamePosition(void)
+{
+    return mathUtils::trapz(x,x*qDot)/mathUtils::trapz(x,qDot);
 }

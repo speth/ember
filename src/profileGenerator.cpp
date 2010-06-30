@@ -3,9 +3,9 @@
 #include "strainFunction.h"
 #include "dataFile.h"
 
-void ProfileGenerator::setOptions(configOptions& _options)
+ProfileGenerator::ProfileGenerator(configOptions& _options)
+    : options(_options)
 {
-    options = _options;
 }
 
 void ProfileGenerator::generateProfile(void)
@@ -14,10 +14,8 @@ void ProfileGenerator::generateProfile(void)
 
     // Set up a CanteraGas object to use for calculating the initial profiles
     CanteraGas gas;
-    gas.mechanismFile = options.gasMechanismFile;
-    gas.phaseID = options.gasPhaseID;
-    gas.pressure = options.pressure;
-    gas.initialize(false);
+    gas.setOptions(options);
+    gas.initialize();
     size_t nSpec = gas.nSpec;
 
     // Create a uniform initial grid
@@ -37,7 +35,6 @@ void ProfileGenerator::generateProfile(void)
         x[j] = xLeft + j * dx;
     }
 
-    grid.unburnedLeft = options.unburnedLeft;
     grid.updateBoundaryIndices();
     grid.updateValues();
 
@@ -198,10 +195,8 @@ void ProfileGenerator::loadProfile(void)
     Tu = T[grid.ju];
 
     CanteraGas gas;
-    gas.mechanismFile = options.gasMechanismFile;
-    gas.phaseID = options.gasPhaseID;
-    gas.pressure = options.pressure;
-    gas.initialize(false);
+    gas.setOptions(options);
+    gas.initialize();
     size_t nSpec = gas.nSpec;
 
     // save the burned gas properties for the case where burned values are not fixed

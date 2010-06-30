@@ -12,6 +12,7 @@
 #include <cantera/kernel/ctml.h>
 
 #include "mathUtils.h"
+#include "readConfig.h"
 
 #ifdef WIN32
 #define Cantera_CXX Cantera
@@ -26,14 +27,11 @@ public:
     CanteraGas();
     ~CanteraGas();
 
-    std::string mechanismFile;
-    std::string phaseID;
     double pressure; // thermodynamic pressure
     size_t nSpec; // number of species
 
-    bool usingMultiTransport; // use multicomponent transport model? (vs. mixture-averaged)
-
-    void initialize(bool multiTransportFlag);
+    void setOptions(const configOptions& options);
+    void initialize();
 
     void setStateMass(const dvector& Y, const double T);
     void setStateMass(const double* Y, const double T);
@@ -60,6 +58,11 @@ public:
     Cantera::IdealGasPhase thermo;
 
 private:
+    std::string mechanismFile;
+    std::string phaseID;
+
+    bool usingMultiTransport; // use multicomponent transport model? (vs. mixture-averaged)
+
     Cantera::XML_Node* rootXmlNode;
     Cantera::XML_Node* phaseXmlNode;
 

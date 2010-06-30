@@ -12,7 +12,7 @@ class ProfileGenerator : public GridBased
     // file, or uses combination of the two to modify the boundary conditions
     // on a profile loaded from a file.
 public:
-    void setOptions(configOptions& options);
+    ProfileGenerator(configOptions& _options);
     void setSourceFile(std::string filename);
 
     void generateProfile();
@@ -35,5 +35,5 @@ public:
     dvector Yu, Yb, Yleft, Yright;
 
 private:
-    configOptions options;
+    configOptions& options;
 };

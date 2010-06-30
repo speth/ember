@@ -62,7 +62,7 @@ public:
     BoundaryCondition::BC rightBC;
 
 private:
-    configOptions& options;
+    configOptions options;
 
     void removePoint(int jRemove, vector<dvector>& y, vector<dvector>& ydot);
     void addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot);

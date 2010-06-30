@@ -23,11 +23,15 @@ CanteraGas::~CanteraGas()
     delete mixTransport;
 }
 
-
-void CanteraGas::initialize(bool multiTransportFlag)
+void CanteraGas::setOptions(const configOptions& options)
 {
-    usingMultiTransport = multiTransportFlag;
-
+    usingMultiTransport = options.usingMultiTransport;
+    mechanismFile = options.gasMechanismFile;
+    phaseID = options.gasPhaseID;
+    pressure = options.pressure;
+}
+void CanteraGas::initialize()
+{
     // XML Information File
     if (!boost::filesystem::exists(mechanismFile)) {
         throw debugException("Error: Cantera input file \"" + mechanismFile + "\" not found.");

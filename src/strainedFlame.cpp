@@ -107,7 +107,7 @@ void strainedFlame(const std::string& inputFile)
             } else {
 
                 // Instantiate a new solver
-                flameSolver theFlameSolver;
+                FlameSolver theFlameSolver;
 
                 mainOptions.strainRateInitial = a;
                 mainOptions.strainRateFinal = a;
@@ -120,13 +120,13 @@ void strainedFlame(const std::string& inputFile)
                 theFlameSolver.options.idaRelTol = mainOptions.idaRelTolLow;
                  theFlameSolver.options.terminationTolerance = mainOptions.terminationToleranceLow;
                  theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodLow;
-                 theFlameSolver.theSys.tStart = 0;
+                 theFlameSolver.tStart = 0;
                  theFlameSolver.run();
                  cout << "Completed low-res run at strain rate a = " << a << endl;
-                 double dtLow = theFlameSolver.theSys.tNow - theFlameSolver.theSys.tStart;
+                 double dtLow = theFlameSolver.tNow - theFlameSolver.tStart;
 
                 // High Res Run:
-                theFlameSolver.theSys.tStart = theFlameSolver.theSys.tNow;
+                theFlameSolver.tStart = theFlameSolver.tNow;
                 theFlameSolver.options.idaRelTol = mainOptions.idaRelTol;
                 theFlameSolver.options.terminationTolerance = mainOptions.terminationTolerance;
                 theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodHigh + dtLow;
@@ -135,7 +135,7 @@ void strainedFlame(const std::string& inputFile)
 
                 // Write data needed for the next run
                 mainOptions.fileNumberOverride = false;
-                theFlameSolver.theSys.writeStateFile(restartFile);
+                theFlameSolver.writeStateFile(restartFile);
                 mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".h5";
                 mainOptions.useRelativeRestartPath = false;
                 mainOptions.haveRestartFile = true;
@@ -150,7 +150,7 @@ void strainedFlame(const std::string& inputFile)
                 outFile.close();
 
                 // Append and save the integral data for this run
-                int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.theSys.tNow - mainOptions.terminationPeriodHigh));
+                int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.tNow - mainOptions.terminationPeriodHigh));
                 int iEnd = theFlameSolver.timestepVector.size()-1;
                 eps.push_back(a);
                 Q.push_back(mean(theFlameSolver.heatReleaseRate, iStart, iEnd));
@@ -178,13 +178,13 @@ void strainedFlame(const std::string& inputFile)
 
     } else {
         // No strain rate list was provided - run a single case.
-        flameSolver theFlameSolver;
+        FlameSolver theFlameSolver;
         theFlameSolver.setOptions(mainOptions);
         theFlameSolver.calculateReactantMixture();
         theFlameSolver.initialize();
         theFlameSolver.run();
 
-        theFlameSolver.theSys.writeStateFile("prof");
+        theFlameSolver.writeStateFile("prof");
         std::string strainString;
         DataFile outFile(mainOptions.outputDir+"/out.h5");
         outFile.writeVector("t",theFlameSolver.timeVector);

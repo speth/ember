@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <boost/ptr_container/ptr_vector.hpp>
 
 #include "readConfig.h"
 #include "sundialsUtils.h"
@@ -32,6 +33,13 @@ public:
     void calculateReactantMixture(void);
     bool checkTerminationCondition(void);
 
+    void writeStateFile(const std::string fileName="", bool errorFile=false);
+
+    // Functions for calculating flame information
+    double getHeatReleaseRate(void); // [W/m^2]
+    double getConsumptionSpeed(void); // [m/s]
+    double getFlamePosition(void); // [m]
+
     // Time-series data
     dvector timeVector; // [s]
     dvector timestepVector; // [s]
@@ -39,15 +47,21 @@ public:
     dvector consumptionSpeed; // [m/s]
     dvector flamePosition; // [m]
 
-private:
-    vector<SourceSystem*> sourceTerms; // One for each grid point
-    vector<DiffusionSystem*> diffusionTerms; // One for each species (plus T and U)
-    ConvectionSystem convectionTerm;
+    // Options read from the input file
+    configOptions options;
 
-    int nPoints;
     double tStart;
     double tEnd;
     double tNow;
+
+private:
+    boost::ptr_vector<SourceSystem> sourceTerms; // One for each grid point
+    boost::ptr_vector<DiffusionSystem> diffusionTerms; // One for each species (plus T and U)
+    ConvectionSystem convectionTerm;
+
+    boost::ptr_vector<sundialsCVODE> sourceSolvers; // One for each grid point
+    boost::ptr_vector<BDFIntegrator> diffusionSolvers; // One for each state variable
+
     double tPrev;
     double aPrev;
 
@@ -56,31 +70,27 @@ private:
     double Tu, Tb, Tleft, Tright;
     dvector Yu, Yb, Yleft, Yright;
 
-    void setup(void);
-    void copyOptions(void);
+    void resizeAuxiliary(void); // Handle resizing of data structures as grid size changes
 
     // Utility functions for adaptation & regridding
     void rollVectorVector(const sdVector& y, const dvector& qdot, vector<dvector>& v);
     void unrollVectorVector(const vector<dvector>& v);
     void unrollVectorVectorDot(const vector<dvector>& v);
 
-    void printForMatlab(ofstream& file, dvector& v, int index, char* name);
-    void writeStateFile(const std::string fileName="", bool errorFile=false);
-
     // For debugging purposes
     void debugFailedTimestep(const sdVector& y);
 
-    // these should be read-only:
-    int N; // total problem size;
-    int nSpec; // Number of chemical species
+    size_t N; // total problem size;
+    size_t nSpec; // Number of chemical species
+    size_t nVars; // Number of state variables at each grid point (nSpec + 2)
+    size_t nPoints; // Number of grid points
 
     // State variables:
     dvector U; // normalized tangential velocity (u*a/u_inf) [1/s]
     dvector T; // temperature [K]
-    Array2D Y; // species mass fractions, Y(k,j)
+    Array2D Y; // species mass fractions, Y(k,j) [-]
 
     // Time derivatives of state variables:
-    dvector dVdt;
     dvector dUdt;
     dvector dTdt;
     Array2D dYdt;
@@ -89,6 +99,16 @@ private:
     dvector rho; // density [kg/m^3]
     dvector jCorr; // Correction to ensure sum of mass fractions = 1
     dvector qDot; // Heat release rate [W/m^3]
+    Array2D wDot; // species production rates [mol/m^3*s]
+    dvector sumcpj;
+    dvector Wmx;
+    dvector W;
+    dvector mu;
+    dvector lambda;
+    dvector cp;
+    Array2D cpSpec;
+    Array2D rhoD;
+    Array2D Dkt;
 
     // Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;
@@ -101,14 +121,6 @@ private:
 
     // Cantera data
     CanteraGas gas;
-
-    // Options read from the input file
-    configOptions options;
-
-    // Functions for calculating flame information
-    double getHeatReleaseRate(void); // [W/m^2]
-    double getConsumptionSpeed(void); // [m/s]
-    double getFlamePosition(void); // [m]
 
     void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); // [m]
@@ -130,5 +142,5 @@ private:
 
     // Performance Timers
     perfTimer perfTimerResFunc, perfTimerPrecondSetup, perfTimerPrecondSolve, perfTimerTransportProps;
-    perfTimer perfTimerRxnRates, perfTimerSetup, perfTimerLU;
+    perfTimer perfTimerRxnRates, perfTimerResize, perfTimerLU;
 };
