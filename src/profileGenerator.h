@@ -18,6 +18,10 @@ public:
     void generateProfile();
     void loadProfile();
 
+    // Calculate the mole fraction vector of the reactants based on the
+    // equivalence ratio and the fuel and oxidizer compositions
+    dvector calculateReactantMixture(void);
+
     // Initial Profiles
     dvector U; // velocity
     dvector T; // temperature

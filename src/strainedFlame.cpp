@@ -1,14 +1,18 @@
+#include <boost/filesystem.hpp>
+#include <libconfig.h++>
+
 #include "strainedFlame.h"
 #include "debugUtils.h"
-#include "boost/filesystem.hpp"
 #include "sundialsUtils.h"
 #include "flameSolver.h"
-#include "libconfig.h++"
 #include "dataFile.h"
+#include "readConfig.h"
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
 using namespace mathUtils;
+using std::cout;
+using std::endl;
 
 int main(int argc, char** argv)
 {

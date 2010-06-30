@@ -2,50 +2,40 @@
 #include "debugUtils.h"
 #include "perfTimer.h"
 #include "dataFile.h"
-#include "profileGenerator.h"
-
-#include <boost/format.hpp>
-#include <boost/filesystem.hpp>
-
+#include "boost/format.hpp"
 
 using boost::format;
 
-void FlameSolver::setOptions(const configOptions& _options)
+void flameSolver::setOptions(const configOptions& theOptions)
 {
-    options = _options;
+    options = theOptions;
 }
 
-void FlameSolver::initialize(void)
+void flameSolver::initialize(void)
 {
-    //theSys.copyOptions(); TODO: copy to self?
-    strainfunc.setOptions(options);
+    theSys.options = options;
+    theSys.copyOptions();
 
     // Cantera initialization
-    gas.initialize(options.usingMultiTransport);
+    theSys.gas.initialize(options.usingMultiTransport);
 
     // Initial Conditions
-    setup();
-    ProfileGenerator generator;
-    generator.setOptions(options);
+    theSys.setup();
     if (options.haveRestartFile) {
-        generator.loadProfile();
+        theSys.loadInitialProfiles();
     } else {
-        generator.generateProfile();
+        theSys.generateInitialProfiles();
     }
-    U = generator.U;
-    T = generator.T;
-    Y = generator.Y;
-    grid = generator.grid;
 }
 
-void FlameSolver::run(void)
+void flameSolver::run(void)
 {
     clock_t tIDA1, tIDA2;
     perfTimer runTime;
     runTime.start();
 
     double integratorTimestep = 0;
-    double t = tStart;
+    double t = theSys.tStart;
     double dt;
 
     int nRegrid = 0; // number of time steps since regridding/adaptation
@@ -59,31 +49,30 @@ void FlameSolver::run(void)
     double tRegrid = t + options.regridTimeInterval; // time of next regridding
     double tProfile = t + options.profileTimeInterval; // time of next profile output
 
-    grid.updateValues();
+    theSys.grid.updateValues();
 
-    // TODO: Why was it necessary to calculate qDot here?
-//    gas.setStateMass(theSys.Y,theSys.T);
-//    gas.getReactionRates(theSys.wDot);
-//    updateThermoProperties();
-//
-//    for (int j=0; j<=theSys.nPoints-1; j++) {
-//        theSys.qDot[j] = 0;
-//        for (int k=0; k<theSys.nSpec; k++) {
-//            theSys.qDot[j] -= theSys.wDot(k,j)*theSys.hk(k,j);
-//        }
-//    }
+    theSys.gas.setStateMass(theSys.Y,theSys.T);
+    theSys.gas.getReactionRates(theSys.wDot);
+    theSys.updateThermoProperties();
 
-    tFlamePrev = t;
-    tPrev = t;
-    aPrev = strainfunc.a(t);
-
-    if (options.outputProfiles) {
-        writeStateFile();
+    for (int j=0; j<=theSys.nPoints-1; j++) {
+        theSys.qDot[j] = 0;
+        for (int k=0; k<theSys.nSpec; k++) {
+            theSys.qDot[j] -= theSys.wDot(k,j)*theSys.hk(k,j);
+        }
     }
 
-    while (t < tEnd) {
+    theSys.tFlamePrev = t;
+    theSys.tPrev = t;
+    theSys.aPrev = theSys.strainRate(t);
 
-        setup();
+    if (options.outputProfiles) {
+        theSys.writeStateFile();
+    }
+
+    while (t < theSys.tEnd) {
+
+        theSys.setup();
 
         // **************************************
         // *** Set up the Sundials IDA solver ***
@@ -321,25 +310,63 @@ void FlameSolver::run(void)
         if (debugParameters::debugPerformanceStats) {
             theSys.printPerformanceStats();
         }
+
     }
 
     // *** Integration has reached the termination condition
     if (options.outputProfiles) {
-        writeStateFile();
+        theSys.writeStateFile();
     }
     runTime.stop();
     cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
 }
 
-bool FlameSolver::checkTerminationCondition(void)
+void flameSolver::calculateReactantMixture(void)
+{
+    // Calculate the composition of the reactant mixture from compositions of
+    // the fuel and oxidizer mixtures and the equivalence ratio.
+
+    Cantera_CXX::IdealGasMix fuel(options.gasMechanismFile,options.gasPhaseID);
+    Cantera_CXX::IdealGasMix oxidizer(options.gasMechanismFile,options.gasPhaseID);
+
+    fuel.setState_TPX(options.Tu, options.pressure, options.fuel);
+    oxidizer.setState_TPX(options.Tu, options.pressure, options.oxidizer);
+
+    double Cf(0), Hf(0), Of(0); // moles of C/H/O in fuel
+    double Co(0), Ho(0), Oo(0); // moles of C/H/O in oxidizer
+
+    int nSpec = fuel.nSpecies();
+    int mC = fuel.elementIndex("C");
+    int mO = fuel.elementIndex("O");
+    int mH = fuel.elementIndex("H");
+
+    dvector Xf(nSpec), Xo(nSpec), Xr(nSpec);
+    fuel.getMoleFractions(&Xf[0]);
+    oxidizer.getMoleFractions(&Xo[0]);
+    dvector a(fuel.nElements());
+    for (int k=0; k<nSpec; k++) {
+        fuel.getAtoms(k,&a[0]);
+        Cf += a[mC]*Xf[k];
+        Co += a[mC]*Xo[k];
+        Hf += a[mH]*Xf[k];
+        Ho += a[mH]*Xo[k];
+        Of += a[mO]*Xf[k];
+        Oo += a[mO]*Xo[k];
+    }
+    double stoichAirFuelRatio = -(Of-2*Cf-Hf/2)/(Oo-2*Co-Ho/2);
+    options.reactants = Xf*options.equivalenceRatio + stoichAirFuelRatio*Xo;
+    options.reactants /= mathUtils::sum(options.reactants);
+}
+
+bool flameSolver::checkTerminationCondition(void)
 {
 
     if (options.terminateForSteadyQdot) {
-        int j1 = mathUtils::findLast(timeVector < (tNow - options.terminationPeriod));
+        int j1 = mathUtils::findLast(timeVector < (theSys.tNow - options.terminationPeriod));
 
         if (j1 == -1)
         {
-            cout << "Continuing integration: t (" << format("%8.6f") % (tNow-timeVector[0]) <<
+            cout << "Continuing integration: t (" << format("%8.6f") % (theSys.tNow-timeVector[0]) <<
                 ") < terminationPeriod (" << format("%8.6f") % options.terminationPeriod << ")" << endl;
             return false;
         }
@@ -363,113 +390,13 @@ bool FlameSolver::checkTerminationCondition(void)
             cout << "Terminating integration: ";
             cout << "Heat release rate deviation less than absolute tolerance." << endl;
             return true;
-        } else if (tNow-tStart > options.terminationMaxTime ) {
+        } else if (theSys.tNow-theSys.tStart > options.terminationMaxTime ) {
           cout << "Terminating integration: Maximum integration time reached." << endl;
           return true;
         } else {
-            cout << "Continuing integration. t = "<< format("%8.6f") % (tNow-timeVector[0]) << endl;
+            cout << "Continuing integration. t = "<< format("%8.6f") % (theSys.tNow-timeVector[0]) << endl;
         }
 
     }
     return false;
-}
-
-void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
-{
-    std::ostringstream fileName(ostringstream::out);
-    bool incrementFileNumber = false;
-
-    if (fileNameStr.length() == 0) {
-        // Determine the name of the output file (outXXXXXX.h5)
-        incrementFileNumber = true;
-        if (errorFile) {
-            fileName << options.outputDir << "/error";
-        } else {
-            fileName << options.outputDir << "/prof";
-        }
-        fileName.flags(ios_base::right);
-        fileName.fill('0');
-        fileName.width(6);
-        fileName << options.outputFileNumber << ".h5";
-    } else {
-        fileName << options.outputDir << "/" << fileNameStr << ".h5";
-    }
-    if (errorFile) {
-        cout << "Writing error output file: " << fileName.str() << endl;
-    } else {
-        cout << "Writing output file: " << fileName.str() << endl;
-    }
-
-    // Erase the existing file and create a new one
-    if (boost::filesystem::exists(fileName.str())) {
-        boost::filesystem::remove(fileName.str());
-    }
-    DataFile outFile(fileName.str());
-
-    // Write the state data to the output file:
-    outFile.writeScalar("t", tNow);
-    outFile.writeVector("x", x);
-    outFile.writeVector("T", T);
-    outFile.writeVector("U", U);
-    outFile.writeArray2D("Y", Y);
-    outFile.writeScalar("a",strainfunc.a(tNow));
-    outFile.writeScalar("dadt",strainfunc.dadt(tNow));
-    outFile.writeScalar("fileNumber", options.outputFileNumber);
-
-    if (options.outputHeatReleaseRate || errorFile) {
-        outFile.writeVector("q",qDot);
-        outFile.writeVector("rho", rho);
-    }
-
-    if (options.outputTimeDerivatives || errorFile) {
-        outFile.writeVector("dUdt", dUdt);
-        outFile.writeVector("dTdt", dTdt);
-        outFile.writeVector("dVdt", dVdt);
-        outFile.writeArray2D("dYdt", dYdt);
-    }
-
-    if (options.outputAuxiliaryVariables || errorFile) {
-//        outFile.writeArray2D("wdot", wDot);
-//        outFile.writeArray2D("rhoD",rhoD);
-//        outFile.writeVector("lambda",lambda);
-//        outFile.writeVector("cp",cp);
-//        outFile.writeVector("mu",mu);
-//        outFile.writeVector("Wmx",Wmx);
-//        outFile.writeVector("W",W);
-//        outFile.writeArray2D("jFick", jFick);
-//        outFile.writeArray2D("jSoret", jSoret);
-//        outFile.writeVector("qFourier",qFourier);
-        outFile.writeVector("cfp",grid.cfp);
-        outFile.writeVector("cf",grid.cf);
-        outFile.writeVector("cfm",grid.cfm);
-        outFile.writeVector("hh",hh);
-        outFile.writeVector("rphalf",grid.rphalf);
-        outFile.writeScalar("Tleft",Tleft);
-        outFile.writeVector("Yleft",Yleft);
-//        outFile.writeVector("sumcpj",sumcpj);
-    }
-
-    if (options.outputResidualComponents || errorFile) {
-        outFile.writeVector("resEnergyDiff",energyDiff);
-        outFile.writeVector("resEnergyConv",energyConv);
-        outFile.writeVector("resEnergyProd",energyProd);
-        outFile.writeVector("resMomentumDiff",momentumDiff);
-        outFile.writeVector("resMomentumConv",momentumConv);
-        outFile.writeVector("resMomentumProd",momentumProd);
-        outFile.writeArray2D("resSpeciesDiff",speciesDiff);
-        outFile.writeArray2D("resSpeciesConv",speciesConv);
-        outFile.writeArray2D("resSpeciesProd",speciesProd);
-    }
-
-    outFile.close();
-    if (incrementFileNumber) {
-        options.outputFileNumber++;
-    }
-
-    if (errorFile && options.stopIfError) {
-      cout << "Error outputs remaining until termination: " << options.errorStopCount << endl;
-      if (options.errorStopCount-- <= 0) {
-        throw debugException("Too many integration failures.");
-      }
-    }
 }

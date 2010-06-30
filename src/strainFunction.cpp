@@ -10,6 +10,16 @@ StrainFunction::StrainFunction(const configOptions& options)
     tPrev = T0;
 }
 
+void StrainFunction::setOptions(const configOptions& options)
+{
+    aInitial = options.strainRateInitial;
+    aFinal = options.strainRateFinal;
+    T0 = options.strainRateT0;
+    Dt = options.strainRateDt;
+    aPrev = a(T0);
+    tPrev = T0;
+}
+
 double StrainFunction::a(double t) const
 {
     return (t <= T0) ? aInitial

@@ -53,7 +53,6 @@ public:
     std::string fuel; // molar composition of the fuel
     std::string oxidizer; // molar composition of the oxidizer
     double equivalenceRatio;
-    dvector reactants; // mole fractions
     double pressure;
 
     double Tu;

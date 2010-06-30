@@ -8,7 +8,6 @@ void ProfileGenerator::setOptions(configOptions& _options)
     options = _options;
 }
 
-
 void ProfileGenerator::generateProfile(void)
 {
     cout << "Generating initial profiles from given fuel and oxidizer compositions." << endl;
@@ -54,13 +53,14 @@ void ProfileGenerator::generateProfile(void)
     Tu = options.Tu;
 
     // Reactants
-    gas.thermo.setState_TPX(Tu,gas.pressure,&options.reactants[0]);
+    dvector reactants = calculateReactantMixture();
+    gas.thermo.setState_TPX(Tu, gas.pressure, &reactants[0]);
     rhou = gas.thermo.density();
     gas.thermo.getMassFractions(&Yu[0]);
     gas.thermo.getMassFractions(&Y(0,grid.ju));
 
     // Products
-    gas.thermo.setState_TPX(Tu,gas.pressure,&options.reactants[0]);
+    gas.thermo.setState_TPX(Tu, gas.pressure, &reactants[0]);
     Cantera::equilibrate(gas.thermo,"HP");
     Tb = gas.thermo.temperature();
     rhob = gas.thermo.density();
@@ -68,7 +68,7 @@ void ProfileGenerator::generateProfile(void)
     gas.thermo.getMassFractions(&Y(0,grid.jb));
 
     // Diluent in the middle
-    gas.thermo.setState_TPY(Tu,gas.pressure,options.oxidizer);
+    gas.thermo.setState_TPY(Tu, gas.pressure, options.oxidizer);
     gas.thermo.getMassFractions(&Y(0,jm));
 
     if (options.unburnedLeft) {
@@ -212,9 +212,10 @@ void ProfileGenerator::loadProfile(void)
     }
 
     if (options.overrideReactants) {
-        gas.thermo.setState_TPX(Tu,gas.pressure,&options.reactants[0]);
+        dvector reactants = calculateReactantMixture();
+        gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
         gas.thermo.getMassFractions(&Y(0,grid.ju));
-        gas.thermo.setState_TPX(Tu,gas.pressure,&options.reactants[0]);
+        gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
         Cantera::equilibrate(gas.thermo,"HP");
         gas.thermo.getMassFractions(&Y(0,grid.jb));
         T[grid.jb] = gas.thermo.temperature();
@@ -254,6 +255,7 @@ void ProfileGenerator::loadProfile(void)
         }
     }
 
+    // TODO: Figure out where this actually should be implemented
 //    updateLeftBC();
 //
 //    double controlSignal;
@@ -266,4 +268,44 @@ void ProfileGenerator::loadProfile(void)
 //        }
 //        flamePosIntegralError = controlSignal/(options.xFlameProportionalGain*options.xFlameIntegralGain);
 //    }
+}
+
+dvector ProfileGenerator::calculateReactantMixture(void)
+{
+    // Calculate the composition of the reactant mixture from compositions of
+    // the fuel and oxidizer mixtures and the equivalence ratio.
+
+    Cantera_CXX::IdealGasMix fuel(options.gasMechanismFile,options.gasPhaseID);
+    Cantera_CXX::IdealGasMix oxidizer(options.gasMechanismFile,options.gasPhaseID);
+
+    fuel.setState_TPX(options.Tu, options.pressure, options.fuel);
+    oxidizer.setState_TPX(options.Tu, options.pressure, options.oxidizer);
+
+
+    double Cf(0), Hf(0), Of(0); // moles of C/H/O in fuel
+    double Co(0), Ho(0), Oo(0); // moles of C/H/O in oxidizer
+
+    int nSpec = fuel.nSpecies();
+    int mC = fuel.elementIndex("C");
+    int mO = fuel.elementIndex("O");
+    int mH = fuel.elementIndex("H");
+
+    dvector Xf(nSpec), Xo(nSpec), Xr(nSpec);
+    fuel.getMoleFractions(&Xf[0]);
+    oxidizer.getMoleFractions(&Xo[0]);
+    dvector a(fuel.nElements());
+    for (int k=0; k<nSpec; k++) {
+        fuel.getAtoms(k,&a[0]);
+        Cf += a[mC]*Xf[k];
+        Co += a[mC]*Xo[k];
+        Hf += a[mH]*Xf[k];
+        Ho += a[mH]*Xo[k];
+        Of += a[mO]*Xf[k];
+        Oo += a[mO]*Xo[k];
+    }
+    double stoichAirFuelRatio = -(Of-2*Cf-Hf/2)/(Oo-2*Co-Ho/2);
+    Xr = Xf*options.equivalenceRatio + stoichAirFuelRatio*Xo;
+    Xr /= mathUtils::sum(Xr);
+
+    return Xr;
 }
