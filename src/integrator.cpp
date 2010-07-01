@@ -116,6 +116,11 @@ void BDFIntegrator::set_dt(const double h_in)
     stepCount = 0;
 }
 
+void BDFIntegrator::initialize()
+{
+    stepCount = 0;
+}
+
 void BDFIntegrator::step()
 {
     if (stepCount == 0) {

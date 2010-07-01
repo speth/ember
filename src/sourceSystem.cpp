@@ -8,7 +8,7 @@ void SourceSystem::resize(size_t new_nSpec)
     wDot.resize(nSpec);
     W.resize(nSpec);
     hk.resize(nSpec);
-    constantTerm.resize(nSpec+2);
+    C.resize(nSpec+2);
 }
 
 int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
@@ -31,7 +31,7 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     double dadt = strainFunction.dadt(t);
 
     // *** Calculate the time derivatives
-    dUdt = - U*U + rhou/rho*(dadt + a*a) + constantTerm[kMomentum];
+    dUdt = - U*U + rhou/rho*(dadt + a*a) + C[kMomentum];
     dTdt = qDot/(rho*cp);
     for (size_t k=0; k<nSpec; k++) {
         dYdt[k] = wDot[k]*W[k]/rho;

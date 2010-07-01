@@ -33,6 +33,7 @@ public:
     virtual void set_h(double dt);
     virtual void set_y0(const dvector& y0);
     virtual void set_t0(const double t0);
+    virtual void initialize() { }
 
     // Accessor functions
     double get_h() const;
@@ -44,11 +45,12 @@ public:
     virtual void step() = 0; // take a single step
     virtual void step_to_time(double tEnd) = 0;
 
+    dvector y; // solution vector
+    double t; // current time
+
 protected:
     double h; // timestep
     size_t N; // Dimension of y
-    dvector y; // solution vector
-    double t; // current time
 };
 
 class ExplicitIntegrator : public Integrator
@@ -81,6 +83,7 @@ public:
     void set_y0(const dvector& y0);
     void set_t0(const double t0);
     void set_dt(const double h);
+    void initialize();
 
     // Actually do the integration
     void step(); // take a single step

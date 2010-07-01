@@ -51,5 +51,5 @@ private:
     double rhou; // density of the unburned mixture
 
     // The sum of the terms held constant for each component in this system
-    dvector constantTerm;
+    dvector C;
 };
