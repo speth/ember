@@ -913,26 +913,23 @@ dvector FlameSolver::calculateReactantMixture(void)
     // Calculate the composition of the reactant mixture from compositions of
     // the fuel and oxidizer mixtures and the equivalence ratio.
 
-    Cantera_CXX::IdealGasMix fuel(options.gasMechanismFile,options.gasPhaseID);
-    Cantera_CXX::IdealGasMix oxidizer(options.gasMechanismFile,options.gasPhaseID);
-
-    fuel.setState_TPX(options.Tu, options.pressure, options.fuel);
-    oxidizer.setState_TPX(options.Tu, options.pressure, options.oxidizer);
+    int mC = gas.thermo.elementIndex("C");
+    int mO = gas.thermo.elementIndex("O");
+    int mH = gas.thermo.elementIndex("H");
 
     double Cf(0), Hf(0), Of(0); // moles of C/H/O in fuel
     double Co(0), Ho(0), Oo(0); // moles of C/H/O in oxidizer
 
-    int nSpec = fuel.nSpecies();
-    int mC = fuel.elementIndex("C");
-    int mO = fuel.elementIndex("O");
-    int mH = fuel.elementIndex("H");
-
     dvector Xf(nSpec), Xo(nSpec), Xr(nSpec);
-    fuel.getMoleFractions(&Xf[0]);
-    oxidizer.getMoleFractions(&Xo[0]);
-    dvector a(fuel.nElements());
-    for (int k=0; k<nSpec; k++) {
-        fuel.getAtoms(k,&a[0]);
+
+    gas.thermo.setState_TPX(options.Tu, options.pressure, options.fuel);
+    gas.getMoleFractions(Xf);
+    gas.thermo.setState_TPX(options.Tu, options.pressure, options.oxidizer);
+    gas.getMoleFractions(Xo);
+
+    dvector a(gas.thermo.nElements());
+    for (size_t k=0; k<nSpec; k++) {
+        gas.thermo.getAtoms(k,&a[0]);
         Cf += a[mC]*Xf[k];
         Co += a[mC]*Xo[k];
         Hf += a[mH]*Xf[k];
