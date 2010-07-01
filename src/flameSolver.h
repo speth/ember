@@ -27,10 +27,16 @@ public:
     ~FlameSolver();
 
     void setOptions(const configOptions& options);
+    // Call one of these
+    virtual void generateProfile();
+    virtual void loadProfile();
+
     void initialize(void);
     void run(void);
 
-    void calculateReactantMixture(void);
+    // Calculate the mole fraction vector of the reactants based on the
+    // equivalence ratio and the fuel and oxidizer compositions
+    dvector calculateReactantMixture(void);
     bool checkTerminationCondition(void);
 
     void writeStateFile(const std::string fileName="", bool errorFile=false);
@@ -72,8 +78,8 @@ private:
     dvector Yu, Yb, Yleft, Yright;
 
     void resizeAuxiliary(void); // Handle resizing of data structures as grid size changes
-
     void updateDiffusionFluxes(); // calculates values of jFick, jSoret, sumcpj, and jCorr
+    void updateLeftBC();
 
     // Utility functions for adaptation & regridding
     void rollVectorVector(const sdVector& y, const dvector& qdot, vector<dvector>& v);
