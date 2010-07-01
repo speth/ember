@@ -30,6 +30,9 @@ public:
     double T, dTdt; // temperature
     dvector Y, dYdt; // species mass fractions
 
+    // The sum of the terms held constant for each component in this system
+    dvector C;
+
     // other parameters
     size_t nSpec;
 
@@ -49,7 +52,4 @@ private:
     dvector wDot; // species net production rates [kmol/m^3*s]
     double qDot; // heat release rate per unit volume [W/m^3]
     double rhou; // density of the unburned mixture
-
-    // The sum of the terms held constant for each component in this system
-    dvector C;
 };

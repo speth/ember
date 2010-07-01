@@ -93,6 +93,7 @@ protected:
     dvector& cfm;
     dvector& cf;
     dvector& cfp;
+    int& alpha;
 
     size_t& nPoints;
     size_t& jj;

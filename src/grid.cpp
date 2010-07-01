@@ -658,5 +658,6 @@ GridBased::GridBased()
     , cfp(grid.cfp)
     , nPoints(grid.nPoints)
     , jj(grid.jj)
+    , alpha(grid.alpha)
 {
 }

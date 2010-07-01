@@ -25,17 +25,21 @@ public:
     dvector T, dTdt;
     Array2D Y, dYdt;
 
-    size_t nSpec;
-    size_t nPoints;
-    size_t nVars; // == nSpec + 2
-    int alpha;
+    double Tleft; // Temperature left boundary value
+    dvector Yleft; // Mass fraction left boundary values
 
-    double Tleft, Tright; // Temperature boundary values
-    dvector Yleft, Yright; // Mass fraction boundary values
+    // The sum of the terms held constant for each variable in this system
+    dvector Uconst;
+    dvector Tconst;
+    Array2D Yconst;
 
 private:
     void V2rV();
     void rV2V();
+
+    size_t nSpec;
+    size_t nPoints;
+    size_t nVars; // == nSpec + 2
 
     // Cantera data
     CanteraGas* gas;
@@ -44,11 +48,6 @@ private:
     dvector Wmx; // mixture molecular weight [kg/kmol]
     dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
     dvector W; // species molecular weights [kg/kmol]
-
-    // The sum of the terms held constant for each variable in this system
-    dvector Uconst;
-    dvector Tconst;
-    Array2D Yconst;
 
     // variables used internally
     dvector V; // mass flux [kg/m^2*s]

@@ -47,12 +47,17 @@ void FlameSolver::initialize(void)
         generateProfile();
     }
 
+    convectionTerm.Yleft = Yleft;
+    convectionTerm.Tleft = Tleft;
+
     for (size_t i=0; i<nSpec; i++) {
         DiffusionSystem* term = new DiffusionSystem();
         BDFIntegrator* integrator = new BDFIntegrator(*term);
         diffusionTerms.push_back(term);
         diffusionSolvers.push_back(integrator);
     }
+
+    convectionSolver->reltol = options.idaRelTol;
 
     resizeAuxiliary();
 }
@@ -90,6 +95,8 @@ void FlameSolver::run(void)
 
     while (t < tEnd) {
 
+        tIDA1 = clock();
+
         // Allocate the solvers and arrays for auxiliary variables
         resizeAuxiliary();
 
@@ -112,39 +119,105 @@ void FlameSolver::run(void)
             }
         }
 
+        updateLeftBC();
         updateDiffusionFluxes();
 
-        // Set the initial conditions for each solver
-        tIDA1 = clock();
+        // *** Set the initial conditions and auxiliary variables for each
+        // solver/system, and set the value of the "constant" term(s) to zero
 
-        sundialsIDA theSolver(theSys.N);
-        theSolver.reltol = options.idaRelTol;
-        theSolver.nRoots = 0;
-        theSolver.findRoots = false;
-        theSolver.t0 = theSolver.tInt = t;
+        // Convection solver
+        sdVector& yConv = convectionSolver->y;
+        for (size_t j=0; j<nPoints; j++) {
+            yConv[nVars*j+kMomentum] = U[j];
+            yConv[nVars*j+kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                yConv[nVars*j+kSpecies+k] = Y(k,j);
+            }
+        }
+        convectionSolver->t0 = t;
+        convectionSolver->initialize();
 
-        int N = theSys.nVars;
+        convectionTerm.Tconst.assign(nPoints, 0);
+        convectionTerm.Uconst.assign(nPoints, 0);
+        convectionTerm.Yconst.data().assign(nPoints*nSpec, 0);
 
-        theSys.rollY(theSolver.y);
-        for (int j=0; j<theSys.nPoints; j++) {
-            theSolver.abstol(N*j) = options.idaContinuityAbsTol;
-            theSolver.abstol(N*j+1) = options.idaMomentumAbsTol;
-            theSolver.abstol(N*j+2) = options.idaEnergyAbsTol;
-            for (int k=0; k<theSys.nSpec; k++) {
-                theSolver.abstol(N*j+k+3) = options.idaSpeciesAbsTol;
+        // Source solvers
+        for (size_t j=0; j<nPoints; j++) {
+            sdVector& ySource = sourceSolvers[j].y;
+            ySource[kMomentum] = U[j];
+            ySource[kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                ySource[kSpecies+k] = Y(k,j);
+            }
+            sourceSolvers[j].t0 = t;
+            sourceSolvers[j].initialize();
+            sourceTerms[j].C.assign(nVars, 0);
+        }
+
+        // Diffusion solvers
+        dvector& yDiff_U = diffusionSolvers[kMomentum].y;
+        dvector& yDiff_T = diffusionSolvers[kEnergy].y;
+        for (size_t j=0; j<nPoints; j++) {
+            yDiff_U[j] = U[j];
+            yDiff_T[j] = T[j];
+
+            diffusionTerms[kMomentum].B[j] = 1/rho[j];
+            diffusionTerms[kEnergy].B[j] = 1/(rho[j]*cp[j]);
+
+            diffusionTerms[kMomentum].D[j] = mu[j];
+            diffusionTerms[kEnergy].D[j] = lambda[j];
+        }
+
+        for (size_t k=0; k<nSpec; k++) {
+            dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
+            DiffusionSystem& sys = diffusionTerms[kSpecies+k];
+            for (size_t j=0; j<nPoints; j++) {
+                yDiff_Y[j] = Y(k,j);
+                sys.B[j] = 1/rho[j];
+                sys.D[j] = rhoD(k,j);
             }
         }
 
-        theSys.reltol = theSolver.reltol;
-        theSys.abstol = &theSolver.abstol;
-
-        for (int j=0; j<theSys.N; j++) {
-            theSolver.ydot(j) = 0;
+        for (size_t k=0; k<nVars; k++) {
+            diffusionTerms[k].C.assign(nPoints, 0);
+            diffusionSolvers[k].t = t;
+            diffusionSolvers[k].initialize();
         }
 
-        theSys.updateLeftBC();
-        theSolver.setDAE(&theSys);
-        theSolver.calcIC = false;
+        // *** Get the current value of each term's time derivative
+        // needed to compute the constant vector used in the other terms
+
+        // Convection solver
+        sdVector ydotConv(nVars*nPoints);
+        convectionTerm.f(tNow, yConv, ydotConv);
+        for (size_t j=0; j<nPoints; j++) {
+            momentumConv[j] = ydotConv[nVars*j+kMomentum];
+            energyConv[j] = ydotConv[nVars*j+kEnergy];
+            for (size_t k=0; k<nSpec; k++) {
+                speciesConv(k,j) = ydotConv[nVars*j+kSpecies+k];
+            }
+        }
+
+        // Source solvers
+        sdVector ydotSource(nVars);
+        for (size_t j=0; j<nPoints; j++) {
+            sourceTerms[j].f(tNow, sourceSolvers[j].y, ydotSource);
+            momentumProd[j] = ydotSource[kMomentum];
+            energyProd[j] = ydotSource[kEnergy];
+            for (size_t k=0; k<nPoints; k++) {
+                speciesProd(k,j) = ydotSource[kSpecies+k];
+            }
+        }
+
+        // Diffusion solvers
+        momentumDiff = diffusionSolvers[kMomentum].get_ydot();
+        energyDiff = diffusionSolvers[kEnergy].get_ydot();
+
+        for (size_t k=0; k<nSpec; k++) {
+            const dvector& ydotDiff = diffusionSolvers[kSpecies+k].get_ydot();
+            // const_cast required because Array2D::setColumn is missing a const qualifier
+            speciesDiff.setColumn(k, const_cast<double*>(&ydotDiff[0]));
+        }
 
         // ******************************************
         // *** Get a consistent initial condition ***
@@ -199,7 +272,7 @@ void FlameSolver::run(void)
 
         int IDAflag(0);
 
-        while (t < theSys.tEnd) {
+        while (t < tEnd) {
             // *** Take a time step
             try {
                 IDAflag = theSolver.integrateOneStep();
@@ -345,7 +418,7 @@ void FlameSolver::run(void)
         tIDA2 = clock();
         theSolver.printStats(tIDA2-tIDA1);
         if (debugParameters::debugPerformanceStats) {
-            theSys.printPerformanceStats();
+            printPerformanceStats();
         }
     }
 
@@ -590,16 +663,15 @@ void FlameSolver::resizeAuxiliary()
             convectionSolver->abstol[N*j+kSpecies+k] = options.idaSpeciesAbsTol;
         }
     }
-    convectionSolver->reltol = options.idaRelTol;
 
     perfTimerResize.stop();
 }
 
 void FlameSolver::updateDiffusionFluxes()
 {
-    for (int j=0; j<jj; j++) {
+    for (size_t j=0; j<jj; j++) {
         sumcpj[j] = 0;
-        for (int k=0; k<nSpec; k++) {
+        for (size_t k=0; k<nSpec; k++) {
             jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1)) * ((Y(k,j+1)-Y(k,j))/hh[j]) -
                 0.5*(rhoD(k,j)*Y(k,j)/Wmx[j]+Y(k,j+1)*rhoD(k,j+1)/Wmx[j+1])*(Wmx[j+1]-Wmx[j])/hh[j];
             jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])

@@ -154,9 +154,6 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
     dYdt.resize(nSpec, nPoints);
     dYdx.resize(nSpec, nPoints);
     Yconst.resize(nSpec, nPoints);
-
-    Yleft.resize(nSpec);
-    Yright.resize(nSpec);
 }
 
 void ConvectionSystem::V2rV(void)
