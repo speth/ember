@@ -23,7 +23,7 @@ public:
 
     dvector U, dUdt;
     dvector T, dTdt;
-    vector<dvector> Y, dYdt;
+    Array2D Y, dYdt;
 
     size_t nSpec;
     size_t nPoints;
@@ -48,11 +48,11 @@ private:
     // The sum of the terms held constant for each variable in this system
     dvector Uconst;
     dvector Tconst;
-    vector<dvector> Yconst;
+    Array2D Yconst;
 
     // variables used internally
     dvector V; // mass flux [kg/m^2*s]
     dvector dUdx;
     dvector dTdx;
-    vector<dvector> dYdx;
+    Array2D dYdx;
 };

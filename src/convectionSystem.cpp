@@ -6,7 +6,7 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
 
     // *** Update auxiliary data ***
     for (size_t j=0; j<nPoints; j++) {
-        gas->setStateMass(Y[j],T[j]);
+        gas->setStateMass(&Y(0,j), T[j]);
         rho[j] = gas->getDensity();
         Wmx[j] = gas->getMixtureMolecularWeight();
     }
@@ -20,19 +20,19 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
             dTdx[j] = (T[j+1] - T[j]) / hh[j];
             dUdx[j] = (U[j+1] - U[j]) / hh[j];
             for (size_t k=0; k<nSpec; k++) {
-                dYdx[j][k] = (Y[j+1][k] - Y[j][k]) / hh[j];
+                dYdx(k,j) = (Y(k,j+1) - Y(k,j)) / hh[j];
             }
         } else {
             dTdx[j] = (T[j] - T[j-1]) / hh[j-1];
             dUdx[j] = (U[j] - U[j-1]) / hh[j-1];
             for (size_t k=0; k<nSpec; k++) {
-                dYdx[j][k] = (Y[j][k] - Y[j-1][k]) / hh[j-1];
+                dYdx(k,j) = (Y(k,j) - Y(k,j-1)) / hh[j-1];
             }
         }
         rV[j+1] = rV[j] - hh[j] * ((rV[j] * dTdx[j] + rphalf[j] * Tconst[j]) * rho[j] / T[j]);
         rV[j+1] -= hh[j] * rho[j] * U[j] * rphalf[j];
         for (size_t k=0; k<nSpec; k++) {
-            rV[j+1] -= hh[j] * (rV[j] * dYdx[j][k] + rphalf[j] * Yconst[j][k])
+            rV[j+1] -= hh[j] * (rV[j] * dYdx(k,j) + rphalf[j] * Yconst(k,j))
                        * rho[j] * Wmx[j] / W[k];
         }
     }
@@ -47,7 +47,7 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     if (grid.leftBC == BoundaryCondition::FixedValue) {
         dTdt[0] = 0;
         for (size_t k=0; k<nSpec; k++) {
-            dYdt[0][k] = 0;
+            dYdt(k,0) = 0;
         }
     } else if (grid.leftBC == BoundaryCondition::ControlVolume) {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
@@ -55,13 +55,13 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
 
         dTdt[0] = -rVzero * (T[0] - Tleft) / (rho[0] * centerVol) - Tconst[0];
         for (size_t k=0; k<nSpec; k++) {
-            dYdt[0][k] = -rVzero * (Y[0][k] - Yleft[k]) / (rho[0] * centerVol) - Yconst[0][k];
+            dYdt(k,0) = -rVzero * (Y(k,0) - Yleft[k]) / (rho[0] * centerVol) - Yconst(k,0);
         }
 
     } else { // grid.leftBC == BoundaryCondition::ZeroGradient
         dTdt[0] = -Tconst[0];
         for (size_t k=0; k<nSpec; k++) {
-            dYdt[0][k] = -Yconst[0][k];
+            dYdt(k,0) = -Yconst(k,0);
         }
     }
 
@@ -70,7 +70,7 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
         dUdt[j] = -(V[j] * dUdx[j]) / rho[j] - Uconst[j];
         dTdt[j] = -(V[j] * dTdx[j]) / rho[j] - Tconst[j];
         for (size_t k=0; k<nSpec; k++) {
-            dYdt[j][k] = -(V[j] * dYdx[j][k]) / rho[j] - Yconst[j][k];
+            dYdt(k,j) = -(V[j] * dYdx(k,j)) / rho[j] - Yconst(k,j);
         }
     }
 
@@ -79,12 +79,12 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     if (grid.rightBC == BoundaryCondition::FixedValue) {
         dTdt[jj] = 0;
         for (size_t k=0; k<nSpec; k++) {
-            dYdt[jj][k] = 0;
+            dYdt(k,jj) = 0;
         }
     } else { // grid.leftBC == BoundaryCondition::ZeroGradient
         dTdt[jj] = -Tconst[jj];
         for (size_t k=0; k<nSpec; k++) {
-            dYdt[jj][k] = -Yconst[jj][k];
+            dYdt(k,jj) = -Yconst(k,jj);
         }
     }
 
@@ -98,7 +98,7 @@ void ConvectionSystem::unroll_y(const sdVector& y)
         T[j] = y[j*nVars+kEnergy];
         U[j] = y[j*nVars+kMomentum];
         for (size_t k=0; k<nSpec; k++) {
-            Y[j][k] = y[j*nVars+kSpecies+k];
+            Y(k,j) = y[j*nVars+kSpecies+k];
         }
     }
 }
@@ -109,7 +109,7 @@ void ConvectionSystem::roll_y(sdVector& y) const
         y[j*nVars+kEnergy] = T[j];
         y[j*nVars+kMomentum] = U[j];
         for (size_t k=0; k<nSpec; k++) {
-            y[j*nVars+kSpecies+k] = Y[j][k];
+            y[j*nVars+kSpecies+k] = Y(k,j);
         }
     }
 }
@@ -120,7 +120,7 @@ void ConvectionSystem::roll_ydot(sdVector& ydot) const
         ydot[j*nVars+kEnergy] = dTdt[j];
         ydot[j*nVars+kMomentum] = dUdt[j];
         for (size_t k=0; k<nSpec; k++) {
-            ydot[j*nVars+kSpecies+k] = dYdt[j][k];
+            ydot[j*nVars+kSpecies+k] = dYdt(k,j);
         }
     }
 
@@ -150,19 +150,13 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
     W.resize(nSpec);
     V.resize(nPoints);
 
-    Y.resize(nPoints);
-    dYdt.resize(nPoints);
-    dYdx.resize(nPoints);
-    Yconst.resize(nPoints);
+    Y.resize(nSpec, nPoints);
+    dYdt.resize(nSpec, nPoints);
+    dYdx.resize(nSpec, nPoints);
+    Yconst.resize(nSpec, nPoints);
 
     Yleft.resize(nSpec);
     Yright.resize(nSpec);
-    for (size_t k=0; k<nPoints; k++) {
-        Y[k].resize(nSpec);
-        dYdt[k].resize(nSpec);
-        dYdx[k].resize(nSpec);
-        Yconst[k].resize(nSpec);
-    }
 }
 
 void ConvectionSystem::V2rV(void)
