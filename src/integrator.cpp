@@ -47,7 +47,7 @@ void ExplicitIntegrator::set_y0(const dvector& y0)
     ydot.resize(N,0);
 }
 
-const dvector& ExplicitIntegrator::get_ydot() const
+const dvector& ExplicitIntegrator::get_ydot()
 {
     return ydot;
 }
@@ -60,8 +60,13 @@ void ExplicitIntegrator::step()
     t += h;
 }
 
-void ExplicitIntegrator::step_to_time(double tEnd)
+void ExplicitIntegrator::integrateToTime(double tEnd)
 {
+    // Make sure we hit tEnd after an integral number of timesteps
+    int nSteps = (int) (tEnd-t)/h;
+    if (t + h*nSteps != tEnd) {
+        h = (tEnd - t) / (nSteps + 1);
+    }
     while (t < tEnd) {
         step();
     }
@@ -121,6 +126,24 @@ void BDFIntegrator::initialize()
     stepCount = 0;
 }
 
+const dvector& BDFIntegrator::get_ydot()
+{
+    myODE.get_A(*A);
+    sdBandMatrix& AA = *A;
+
+    // TODO: Use something more clever for the Matrix-vector product here
+    // Why doesn't sundials provide DAXPY?
+    size_t N = y.size();
+    ydot.resize(N);
+
+    ydot[0] = AA(0,0)*y[0] + AA(0,1)*y[1] + c[0];
+    for (size_t i=0; i<N-1; i++) {
+        ydot[i] = AA(i,i-1)*y[i-1] + AA(i,i)*y[i] + AA(i,i+1)*y[i+1] + c[i];
+    }
+    ydot[N-1] = AA(N-1,N-2)*y[N-2] + AA(N-1,N-1)*y[N-1] + c[N-1];
+    return ydot;
+}
+
 void BDFIntegrator::step()
 {
     if (stepCount == 0) {
@@ -160,4 +183,17 @@ void BDFIntegrator::step()
 
     stepCount++;
     t += h;
+}
+
+void BDFIntegrator::integrateToTime(double tEnd)
+{
+    // Make sure we hit tEnd after an integral number of timesteps,
+    // Taking timesteps that are no longer than the given h
+    int nSteps = (int) (tEnd-t)/h;
+    if (t + h*nSteps != tEnd) {
+        h = (tEnd - t) / (nSteps + 1);
+    }
+    while (t < tEnd) {
+        step();
+    }
 }

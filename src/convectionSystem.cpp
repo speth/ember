@@ -13,7 +13,7 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     gas->getMolecularWeights(W);
 
     // *** Calculate V ***
-    // rV[0] is a constant
+    rV[0] = rVzero;
     for (size_t j=0; j<nPoints-1; j++) {
         // Compute the upwinded convective derivative
         if (rV[j] < 0 || j == 0) {
@@ -51,11 +51,11 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
         }
     } else if (grid.leftBC == BoundaryCondition::ControlVolume) {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
-        double rVzero = std::max(rV[0], 0.0);
+        double rVzero_mod = std::max(rV[0], 0.0);
 
-        dTdt[0] = -rVzero * (T[0] - Tleft) / (rho[0] * centerVol) - Tconst[0];
+        dTdt[0] = -rVzero_mod * (T[0] - Tleft) / (rho[0] * centerVol) - Tconst[0];
         for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,0) = -rVzero * (Y(k,0) - Yleft[k]) / (rho[0] * centerVol) - Yconst(k,0);
+            dYdt(k,0) = -rVzero_mod * (Y(k,0) - Yleft[k]) / (rho[0] * centerVol) - Yconst(k,0);
         }
 
     } else { // grid.leftBC == BoundaryCondition::ZeroGradient
@@ -159,37 +159,25 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
 void ConvectionSystem::V2rV(void)
 {
     if (alpha == 0) {
-        for (size_t j=0; j<nPoints; j++) {
+        for (size_t j=1; j<nPoints; j++) {
             rV[j] = V[j];
         }
     } else {
-        for (size_t j=0; j<nPoints; j++) {
+        for (size_t j=1; j<nPoints; j++) {
             rV[j] = x[j]*V[j];
         }
-    }
-
-    // In the case where the centerline is part of the domain,
-    // V[0] actually stores rV[0] (since V = Inf there)
-    if (x[0] == 0) {
-        rV[0] = V[0];
     }
 }
 
 void ConvectionSystem::rV2V(void)
 {
     if (alpha == 0) {
-        for (size_t j=0; j<nPoints; j++) {
+        for (size_t j=1; j<nPoints; j++) {
             V[j] = rV[j];
         }
     } else {
-        for (size_t j=0; j<nPoints; j++) {
+        for (size_t j=1; j<nPoints; j++) {
             V[j] = rV[j]/x[j];
         }
-    }
-
-    // In the case where the centerline is part of the domain,
-    // V[0] actually stores rV[0] (since V = Inf there)
-    if (x[0] == 0) {
-        V[0] = rV[0];
     }
 }

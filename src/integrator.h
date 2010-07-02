@@ -14,8 +14,8 @@ public:
 class LinearODE
 {
 public:
-    LinearODE();
-    ~LinearODE();
+    LinearODE() { };
+    ~LinearODE() { };
 
     // ODE defined as ydot = f(t,y) = J*y + c
     virtual void get_A(sdBandMatrix& J) = 0;
@@ -27,7 +27,7 @@ class Integrator
 {
 public:
     Integrator();
-    ~Integrator();
+    ~Integrator() { };
 
     // Initialization - Each of these must be called before starting integration
     virtual void set_h(double dt);
@@ -39,13 +39,14 @@ public:
     double get_h() const;
     double get_t() const;
     virtual const dvector& get_y() const;
-    virtual const dvector& get_ydot() const;
+    virtual const dvector& get_ydot() = 0;
 
     // Actually do the integration
     virtual void step() = 0; // take a single step
-    virtual void step_to_time(double tEnd) = 0;
+    virtual void integrateToTime(double tEnd) = 0;
 
     dvector y; // solution vector
+    dvector ydot; // derivative of state vector
     double t; // current time
 
 protected:
@@ -61,11 +62,11 @@ public:
     ~ExplicitIntegrator();
 
     void set_y0(const dvector& y0);
-    const dvector& get_ydot() const;
+    const dvector& get_ydot();
 
     // Actually do the integration
     void step(); // take a single step
-    void step_to_time(double tEnd);
+    void integrateToTime(double tEnd);
 
 private:
     ODE& myODE;
@@ -85,9 +86,11 @@ public:
     void set_dt(const double h);
     void initialize();
 
+    const dvector& get_ydot();
+
     // Actually do the integration
     void step(); // take a single step
-    void step_to_time(double tEnd);
+    void integrateToTime(double tEnd);
 
 private:
     LinearODE& myODE;

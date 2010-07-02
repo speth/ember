@@ -58,6 +58,8 @@ void FlameSolver::initialize(void)
     }
 
     convectionSolver->reltol = options.idaRelTol;
+    convectionSolver->linearMultistepMethod = CV_ADAMS;
+    convectionSolver->nonlinearSolverMethod = CV_FUNCTIONAL;
 
     resizeAuxiliary();
 }
@@ -68,7 +70,6 @@ void FlameSolver::run(void)
     perfTimer runTime;
     runTime.start();
 
-    double integratorTimestep = 0;
     double t = tStart;
     double dt;
 
@@ -121,6 +122,11 @@ void FlameSolver::run(void)
 
         updateLeftBC();
         updateDiffusionFluxes();
+        if (options.xFlameControl) {
+            update_xStag(t, true); // calculate the value of rVzero
+        }
+        convectionTerm.rVzero = rVzero;
+        dt = options.globalTimestep;
 
         // *** Set the initial conditions and auxiliary variables for each
         // solver/system, and set the value of the "constant" term(s) to zero
@@ -178,6 +184,11 @@ void FlameSolver::run(void)
             }
         }
 
+        // TODO: Use timestep that is based on each component's diffusivity
+        for (size_t k=0; k<nVars; k++) {
+            diffusionSolvers[k].set_dt(options.globalTimestep/64);
+        }
+
         for (size_t k=0; k<nVars; k++) {
             diffusionTerms[k].C.assign(nPoints, 0);
             diffusionSolvers[k].t = t;
@@ -185,7 +196,8 @@ void FlameSolver::run(void)
         }
 
         // *** Get the current value of each term's time derivative
-        // needed to compute the constant vector used in the other terms
+        // needed to compute the constant vector used in the other terms,
+        // as well as the values of Uextrap, Textrap, and Yextrap
 
         // Convection solver
         sdVector ydotConv(nVars*nPoints);
@@ -219,204 +231,223 @@ void FlameSolver::run(void)
             speciesDiff.setColumn(k, const_cast<double*>(&ydotDiff[0]));
         }
 
-        // ******************************************
-        // *** Get a consistent initial condition ***
-        // ******************************************
-
-        if (options.xFlameControl) {
-            theSys.gas.setStateMass(theSys.Y,theSys.T);
-            theSys.gas.getReactionRates(theSys.wDot);
-            theSys.updateThermoProperties();
-
-            for (int j=0; j<=theSys.nPoints-1; j++) {
-                theSys.qDot[j] = 0;
-                for (int k=0; k<theSys.nSpec; k++) {
-                    theSys.qDot[j] -= theSys.wDot(k,j)*theSys.hk(k,j);
-                }
+        // *** Use the time derivatives to calculate the extrapolated values
+        //     for the state variables
+        Uextrap = U + (momentumProd + momentumDiff + momentumConv)*dt;
+        Textrap = T + (energyProd + energyDiff + energyConv)*dt;
+        for (size_t j=0; j<nPoints; j++) {
+            for (size_t k=0; k<nSpec; k++) {
+                Yextrap(k,j) = Y(k,j) + (speciesProd(k,j) + speciesDiff(k,j) + speciesConv(k,j)) * dt;
             }
-            theSys.update_xStag(t, true);
-        }
-        int ICflag = -1;
-        int ICcount = 0;
-
-        while (ICflag!=0 && ICcount < 5) {
-            ICcount++;
-
-            // This corrects the drift of the total mass fractions
-            theSys.unrollY(theSolver.y);
-            theSys.gas.setStateMass(theSys.Y,theSys.T);
-            theSys.gas.getMassFractions(theSys.Y);
-            theSys.rollY(theSolver.y);
-            ICflag = theSys.getInitialCondition(t, theSolver.y, theSolver.ydot);
-        }
-        if (ICflag != 0) {
-            theSys.debugFailedTimestep(theSolver.y);
-        }
-        if (ICflag == 100) {
-            theSys.writeStateFile("",true);
-            throw debugException("Initial condition calculation failed repeatedly.");
         }
 
-        // *** Final preparation of IDA solver
-        theSolver.initialize();
-        theSolver.disableErrorOutput();
-        theSolver.setMaxStepSize(options.maxTimestep);
+        // *** Use the time derivatives to calculate the constant vector
+        // for each term
 
-        if (integratorTimestep == 0.0) {
-            theSolver.setInitialStepSize(1e-9);
+        // Convection term
+        convectionTerm.Uconst = momentumProd + momentumDiff;
+        convectionTerm.Tconst = energyProd + energyDiff;
+        for (size_t j=0; j<nPoints; j++) {
+            for (size_t k=0; k<nSpec; k++) {
+                convectionTerm.Yconst(k,j) = speciesProd(k,j) + speciesDiff(k,j);
+            }
         }
 
-        // ************************************************************
-        // *** Integrate until the termination condition is reached ***
-        // ************************************************************
+        // Source terms
+        for (size_t j=0; j<nPoints; j++) {
+            SourceSystem& term = sourceTerms[j];
+            term.C[kMomentum] = momentumConv[j] + momentumDiff[j];
+            term.C[kEnergy] = energyConv[j] + energyDiff[j];
+            for (size_t k=0; k<nSpec; k++) {
+                term.C[kSpecies+k] = speciesConv(k,j) + speciesDiff(k,j);
+            }
+        }
 
-        int IDAflag(0);
+        // Diffusion terms
+        diffusionTerms[kMomentum].C = momentumConv + momentumProd;
+        diffusionTerms[kEnergy].C = energyConv + energyProd;
+        for (size_t k=0; k<nSpec; k++) {
+            dvector& C = diffusionTerms[kSpecies+k].C;
+            for (size_t j=0; j<nPoints; j++) {
+                C[j] = speciesConv(k,j) + speciesProd(k,j);
+            }
+        }
 
-        while (t < tEnd) {
-            // *** Take a time step
-            try {
-                IDAflag = theSolver.integrateOneStep();
-            } catch (Cantera::CanteraError) {
-                theSys.writeStateFile("errorOutput",true);
+        // *** Take one global timestep
+        double tNext = tNow + dt;
+
+        int cvode_flag = 0;
+        try {
+            for (size_t j=0; j<nPoints; j++) {
+                cvode_flag |= sourceSolvers[j].integrateToTime(tNext);
             }
 
-            dt = integratorTimestep = theSolver.getStepSize();
-            t = theSys.tPrev = theSolver.tInt;
-            theSys.aPrev = theSys.strainRate(t);
-
-            // *** See if it worked
-            if (IDAflag == CV_SUCCESS) {
-                nOutput++;
-                nRegrid++;
-                nProfile++;
-                nIntegrate++;
-                nTerminate++;
-                nCurrentState++;
-
-                if (debugParameters::debugTimesteps) {
-                    int order = theSolver.getLastOrder();
-                    cout << "t = " << format("%8.6f") % t;
-                    cout << "  (dt = " << format("%9.3e") % dt;
-                    cout << ")  [" << order << "]" << endl;
-                }
-                if (options.xFlameControl) {
-                    theSys.update_xStag(t, true);
-                }
-
-            } else {
-                cout << "IDA Solver failed at time t = " << format("%8.6f") % t;
-                cout << "  (dt = " << format("%9.3e") % dt << ")" << endl;
-                theSys.debugFailedTimestep(theSolver.y);
-                theSys.writeStateFile("errorOutput",true);
-                integratorTimestep = 0;
-                break;
+            for (size_t k=0; k<nVars; k++) {
+                diffusionSolvers[k].integrateToTime(tNext);
             }
 
-            // *** Save the time-series data (out.h5)
-            if (t > tOutput || nOutput >= options.outputStepInterval) {
-                timeVector.push_back(t);
-                timestepVector.push_back(dt);
-                heatReleaseRate.push_back(theSys.getHeatReleaseRate());
-                consumptionSpeed.push_back(theSys.getConsumptionSpeed());
-                flamePosition.push_back(theSys.getFlamePosition());
+            cvode_flag |= convectionSolver->integrateToTime(tNext);
 
-                tOutput = t + options.outputTimeInterval;
-                nOutput = 0;
+        } catch (Cantera::CanteraError) {
+            writeStateFile("errorOutput", true);
+            cout << "Integration failed at t = " << tNow << std::endl;
+        }
+
+        t = tNext;
+        aPrev = strainfunc.a(t);
+
+        if (cvode_flag == CV_SUCCESS) {
+            nOutput++;
+            nRegrid++;
+            nProfile++;
+            nIntegrate++;
+            nTerminate++;
+            nCurrentState++;
+
+            if (debugParameters::debugTimesteps) {
+                cout << "t = " << format("%8.6f") % t;
+                cout << "  (dt = " << format("%9.3e") % dt;
+                cout << ")" << endl;
             }
+        } else {
+            cout << "CVODE Solver failed at time t = " << format("%8.6f") % t;
+            cout << "  (dt = " << format("%9.3e") % dt << ")" << endl;
+            writeStateFile("errorOutput",true);
+            break;
+        }
 
-            // *** Periodic check for terminating the integration
-            //     (based on steady heat release rate, etc.)
-            if (nTerminate >= options.terminateStepInterval) {
-                nTerminate = 0;
-                if (checkTerminationCondition()) {
-                    tIDA2 = clock();
-                    theSolver.printStats(tIDA2-tIDA1);
-                    if (options.outputProfiles) {
-                        theSys.writeStateFile();
-                    }
-                    runTime.stop();
-                    cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
-                    return;
-                }
+        // *** Combine the solutions from the split integrators and form
+        //     the new state vector
+        convectionTerm.unroll_y(convectionSolver->y);
+        for (size_t j=0; j<nPoints; j++) {
+            sourceTerms[j].unroll_y(sourceSolvers[j].y);
+        }
+
+        for (size_t j=0; j<nPoints; j++) {
+            U[j] = convectionTerm.U[j] + sourceTerms[j].U + diffusionTerms[kMomentum].y[j] - 2*Uextrap[j];
+            T[j] = convectionTerm.T[j] + sourceTerms[j].T + diffusionTerms[kEnergy].y[j] - 2*Textrap[j];
+            for (size_t k=0; k<nSpec; k++) {
+                Y(k,j) = convectionTerm.Y(k,j) + sourceTerms[j].Y[k] +
+                         diffusionTerms[kSpecies+k].y[j] - 2*Yextrap(k,j);
             }
+        }
 
-            // *** Save the current integral and profile data
-            //     in files that are automatically overwritten.
-            if (nCurrentState >= options.currentStateStepInterval) {
-                nCurrentState = 0;
-                DataFile outFile(options.outputDir+"/outNow.h5");
-                outFile.writeVector("t",timeVector);
-                outFile.writeVector("dt",timestepVector);
-                outFile.writeVector("Q",heatReleaseRate);
-                outFile.writeVector("Sc",consumptionSpeed);
-                outFile.writeVector("xFlame",flamePosition);
-                outFile.close();
-                theSys.writeStateFile("profNow");
-            }
+        if (t > tOutput || nOutput >= options.outputStepInterval) {
+            timeVector.push_back(t);
+            timestepVector.push_back(dt);
+            heatReleaseRate.push_back(getHeatReleaseRate());
+            consumptionSpeed.push_back(getConsumptionSpeed());
+            flamePosition.push_back(getFlamePosition());
 
-            // *** Save flame profiles
-            if (t > tProfile || nProfile >= options.profileStepInterval) {
+            tOutput = t + options.outputTimeInterval;
+            nOutput = 0;
+        }
+
+        // *** Periodic check for terminating the integration
+        //     (based on steady heat release rate, etc.)
+        if (nTerminate >= options.terminateStepInterval) {
+            nTerminate = 0;
+            if (checkTerminationCondition()) {
+                tIDA2 = clock();
+                //theSolver.printStats(tIDA2-tIDA1);
                 if (options.outputProfiles) {
-                    sdVector resTemp(theSys.N);
-                    theSys.f(t, theSolver.y, theSolver.ydot, resTemp);
-                    theSys.writeStateFile();
+                    writeStateFile();
                 }
-
-                tProfile = t + options.profileTimeInterval;
-                nProfile = 0;
-            }
-
-            // *** Adapt the grid if necessary
-            if (t > tRegrid || nRegrid >= options.regridStepInterval) {
-                tRegrid = t + options.regridTimeInterval;
-                nRegrid = 0;
-
-                // dampVal sets a limit on the maximum grid size
-                for (int j=0; j<theSys.nPoints; j++) {
-                    double num = min(theSys.mu[j],theSys.lambda[j]/theSys.cp[j]);
-                    for (int k=0; k<theSys.nSpec; k++) {
-                        num = min(num,theSys.rhoD(k,j));
-                    }
-                    theSys.grid.dampVal[j] = sqrt(num/(theSys.rho[j]*theSys.strainRate(t)));
-                }
-
-                 vector<dvector> currentSolution, currentSolutionDot;
-                theSys.rollVectorVector(theSolver.y, theSys.qDot, currentSolution);
-                theSys.rollVectorVector(theSolver.ydot, theSys.qDot*0, currentSolutionDot);
-
-                bool regridFlag = theSys.grid.regrid(currentSolution, currentSolutionDot);
-                bool adaptFlag = theSys.grid.adapt(currentSolution, currentSolutionDot);
-
-                // Perform updates that are necessary if the grid has changed
-                if (adaptFlag || regridFlag) {
-                    nIntegrate = 0;
-                    theSys.nPoints = theSys.grid.jj+1;
-                    cout << "Grid size: " << theSys.nPoints << " points." << endl;
-                    theSys.setup();
-
-                    theSys.unrollVectorVector(currentSolution);
-                    theSys.unrollVectorVectorDot(currentSolutionDot);
-
-                    // Correct the drift of the total mass fractions
-                    theSys.gas.setStateMass(theSys.Y,theSys.T);
-                    theSys.gas.getMassFractions(theSys.Y);
-
-                    // exit the inner loop to reinitialize the integrator for the new problem size
-                    break;
-                }
-            }
-
-            if (nIntegrate > options.integratorRestartInterval) {
-              nIntegrate = 0;
-
-              // exit inner loop to reinitialize the integrator
-              break;
+                runTime.stop();
+                cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
+                return;
             }
         }
 
-        // *** This is the end for the current instance of the IDA solver
+        // *** Save the current integral and profile data
+        //     in files that are automatically overwritten,
+        //     and save the time-series data (out.h5)
+        if (nCurrentState >= options.currentStateStepInterval) {
+            nCurrentState = 0;
+            DataFile outFile(options.outputDir+"/outNow.h5");
+            outFile.writeVector("t",timeVector);
+            outFile.writeVector("dt",timestepVector);
+            outFile.writeVector("Q",heatReleaseRate);
+            outFile.writeVector("Sc",consumptionSpeed);
+            outFile.writeVector("xFlame",flamePosition);
+            outFile.close();
+            writeStateFile("profNow");
+        }
+
+        // *** Save flame profiles
+        if (t > tProfile || nProfile >= options.profileStepInterval) {
+            if (options.outputProfiles) {
+//                sdVector resTemp(theSys.N);
+//                theSys.f(t, theSolver.y, theSolver.ydot, resTemp);
+                writeStateFile();
+            }
+            tProfile = t + options.profileTimeInterval;
+            nProfile = 0;
+        }
+
+        if (t > tRegrid || nRegrid >= options.regridStepInterval) {
+            tRegrid = t + options.regridTimeInterval;
+            nRegrid = 0;
+
+            // dampVal sets a limit on the maximum grid size
+            for (size_t j=0; j<nPoints; j++) {
+                double num = min(mu[j],lambda[j]/cp[j]);
+                for (size_t k=0; k<nSpec; k++) {
+                    num = min(num, rhoD(k,j));
+                }
+                grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
+            }
+
+            // "rollVectorVector"
+            vector<dvector> currentSolution;
+            vector<dvector> currentSolutionDot; // TODO: Remove this, as we don't need ydot anymore
+            currentSolution.push_back(U);
+            currentSolution.push_back(T);
+            currentSolutionDot.push_back(dUdt);
+            currentSolutionDot.push_back(dTdt);
+            for (size_t k=0; k<nSpec; k++) {
+                dvector tmp(nPoints);
+                dvector dtmp(nPoints);
+                for (size_t j=0; j<nPoints; j++) {
+                    tmp[j] = Y(k,j);
+                    dtmp[j] = dYdt(k,j);
+                }
+                currentSolution.push_back(tmp);
+                currentSolutionDot.push_back(dtmp);
+            }
+
+            bool regridFlag = grid.regrid(currentSolution, currentSolutionDot);
+            bool adaptFlag = grid.adapt(currentSolution, currentSolutionDot);
+
+            // Perform updates that are necessary if the grid has changed
+            if (adaptFlag || regridFlag) {
+                nIntegrate = 0;
+                nPoints = grid.jj+1;
+                cout << "Grid size: " << nPoints << " points." << endl;
+
+                // "unrollVectorVector"
+                U.resize(nPoints);
+                T.resize(nPoints);
+                Y.resize(nSpec, nPoints);
+
+                for (size_t j=0; j<nPoints; j++) {
+                    U[j] = currentSolution[kMomentum][j];
+                    T[j] = currentSolution[kEnergy][j];
+                    for (size_t k=0; k<nSpec; k++) {
+                        Y(k,j) = currentSolution[k][j];
+                    }
+                    // Correct the drift of the total mass fractions
+                    gas.setStateMass(&Y(0,j), T[j]);
+                    gas.getMassFractions(&Y(0,j));
+                }
+            }
+
+        }
+
         tIDA2 = clock();
-        theSolver.printStats(tIDA2-tIDA1);
+        // *** This is the end for the current instance of the IDA solver
+        // theSolver.printStats(tIDA2-tIDA1);
+
         if (debugParameters::debugPerformanceStats) {
             printPerformanceStats();
         }
@@ -426,8 +457,10 @@ void FlameSolver::run(void)
     if (options.outputProfiles) {
         writeStateFile();
     }
+
     runTime.stop();
     cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
+
 }
 
 bool FlameSolver::checkTerminationCondition(void)
@@ -527,6 +560,9 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
     }
 
     if (options.outputAuxiliaryVariables || errorFile) {
+        outFile.writeArray2D("Yextrap", Yextrap);
+        outFile.writeVector("Textrap", Textrap);
+        outFile.writeVector("Uextrap", Uextrap);
         outFile.writeArray2D("wdot", wDot);
         outFile.writeArray2D("rhoD", rhoD);
         outFile.writeVector("lambda", lambda);
@@ -586,9 +622,9 @@ void FlameSolver::resizeAuxiliary()
     nVars = 2+nSpec;
     N = nVars*nPoints;
 
-//    U.resize(nPoints);
-//    T.resize(nPoints);
-//    Y.resize(nSpec,nPoints);
+    Uextrap.resize(nPoints);
+    Textrap.resize(nPoints);
+    Yextrap.resize(nSpec,nPoints);
 
     dUdt.resize(nPoints,0);
     dTdt.resize(nPoints,0);
@@ -640,6 +676,8 @@ void FlameSolver::resizeAuxiliary()
                 solver->abstol[kSpecies+k] = options.idaSpeciesAbsTol;
             }
             solver->reltol = options.idaRelTol;
+            solver->linearMultistepMethod = CV_BDF;
+            solver->nonlinearSolverMethod = CV_NEWTON;
 
             // Store the solver and system
             sourceTerms.push_back(system);
@@ -705,6 +743,41 @@ void FlameSolver::updateLeftBC()
     if (prev != grid.leftBC) {
         cout << "updateLeftBC: BC changed from " << prev << " to " << grid.leftBC << "." << endl;
     }
+}
+
+void FlameSolver::update_xStag(const double t, const bool updateIntError)
+{
+    xFlameActual = getFlamePosition();
+    xFlameTarget = targetFlamePosition(t);
+    if (updateIntError) {
+        flamePosIntegralError += (xFlameTarget-xFlameActual)*(t-tFlamePrev);
+        tFlamePrev = t;
+    }
+
+    // controlSignal is approximately a*xStag
+    double controlSignal = options.xFlameProportionalGain *
+        ( (xFlameTarget-xFlameActual) + (flamePosIntegralError + (xFlameTarget-xFlameActual)*(t-tFlamePrev))*options.xFlameIntegralGain );
+
+    if (debugParameters::debugFlameRadiusControl) {
+        cout << "rFlameControl: " << "rF = " << xFlameActual << "   control = " << controlSignal;
+        cout << "   P = " <<  options.xFlameProportionalGain*(xFlameTarget-xFlameActual);
+        cout << "   I = " << options.xFlameProportionalGain*flamePosIntegralError*options.xFlameIntegralGain;
+        cout << "  dt = " << t-tFlamePrev << endl;
+    }
+
+    double a = strainfunc.a(t);
+    if (alpha == 1) {
+        rVzero = 0.5*rhoLeft*(controlSignal*abs(controlSignal)-a*x[0]*x[0]);
+    } else {
+        rVzero = rhoLeft*(controlSignal-a*x[0]);
+    }
+}
+
+double FlameSolver::targetFlamePosition(double t)
+{
+    return (t <= options.xFlameT0) ? options.xFlameInitial
+        :  (t >= options.xFlameT0+options.xFlameDt) ? options.xFlameFinal
+        : options.xFlameInitial + (options.xFlameFinal-options.xFlameInitial)*(t-options.xFlameT0)/options.xFlameDt;
 }
 
 
@@ -1014,4 +1087,22 @@ dvector FlameSolver::calculateReactantMixture(void)
     Xr /= mathUtils::sum(Xr);
 
     return Xr;
+}
+
+void FlameSolver::printPerformanceStats(void)
+{
+    cout << endl << " **Performance Stats**:  time  (call count)" << endl;
+    printPerfString("         General Setup: ", perfTimerResize);
+    printPerfString("  Preconditioner Setup: ", perfTimerPrecondSetup);
+    printPerfString("  Factorizing Jacobian: ", perfTimerLU);
+    printPerfString("  Preconditioner Solve: ", perfTimerPrecondSolve);
+    printPerfString("   Residual Evaluation: ", perfTimerResFunc);
+    printPerfString("        Reaction Rates: ", perfTimerRxnRates);
+    printPerfString("  Transport Properties: ", perfTimerTransportProps);
+    cout << endl;
+}
+
+void FlameSolver::printPerfString(const std::string& label, const perfTimer& T) const
+{
+    cout << label << mathUtils::stringify(T.getTime(),6) << " (" << T.getCallCount() << ")" << endl;
 }

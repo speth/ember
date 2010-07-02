@@ -104,6 +104,11 @@ private:
     dvector dTdt;
     Array2D dYdt;
 
+    // Extrapolated state from previous timestep:
+    dvector Uextrap;
+    dvector Textrap;
+    Array2D Yextrap;
+
     // Auxiliary variables:
     dvector rho; // density [kg/m^3]
     dvector jCorr; // Correction to ensure sum of mass fractions = 1
@@ -121,6 +126,8 @@ private:
     Array2D hk;
     Array2D jFick;
     Array2D jSoret;
+
+
 
     // Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;

@@ -143,6 +143,7 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("times.terminateStepInterval", terminateStepInterval, 100);
     readOption("times.integratorRestartInterval",integratorRestartInterval, 200);
     readOption("times.maxTimestep",maxTimestep, 1.0e-3);
+    readOption("times.globalTimestep", globalTimestep, 1.0e-4);
 
     readOption("debug.adaptation",debugParameters::debugAdapt, false);
     readOption("debug.regridding",debugParameters::debugRegrid, false);

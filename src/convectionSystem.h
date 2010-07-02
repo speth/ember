@@ -27,6 +27,7 @@ public:
 
     double Tleft; // Temperature left boundary value
     dvector Yleft; // Mass fraction left boundary values
+    double rVzero; // mass flux boundary value at j=0
 
     // The sum of the terms held constant for each variable in this system
     dvector Uconst;

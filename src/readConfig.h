@@ -38,6 +38,7 @@ public:
     double outputTimeInterval;
     double profileTimeInterval;
     double maxTimestep;
+    double globalTimestep; // timestep size for the outer solver
 
     double idaRelTol;
     double idaRelTolLow;
