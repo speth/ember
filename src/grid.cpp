@@ -13,6 +13,7 @@ oneDimGrid::oneDimGrid(configOptions& theOptions)
 
 void oneDimGrid::updateValues()
 {
+    jj = nPoints - 1;
     // Derived mesh sizes
     hh.resize(jj);
     cfm.resize(jj);
@@ -656,8 +657,8 @@ GridBased::GridBased()
     , cfm(grid.cfm)
     , cf(grid.cf)
     , cfp(grid.cfp)
+    , alpha(grid.alpha)
     , nPoints(grid.nPoints)
     , jj(grid.jj)
-    , alpha(grid.alpha)
 {
 }

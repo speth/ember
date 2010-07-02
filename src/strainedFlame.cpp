@@ -41,8 +41,8 @@ int main(int argc, char** argv)
         cout << err.getError() << " on line " << err.getLine() << endl;
     } catch (debugException& e) {
         cout << e.errorString << endl;
-    } catch (...) {
-        cout << "I have no idea what went wrong!" << endl;
+//    } catch (...) {
+//        cout << "I have no idea what went wrong!" << endl;
     }
 
     return 0;
@@ -112,7 +112,6 @@ void strainedFlame(const std::string& inputFile)
                 mainOptions.strainRateInitial = a;
                 mainOptions.strainRateFinal = a;
                 theFlameSolver.setOptions(mainOptions);
-                theFlameSolver.calculateReactantMixture();
 
                 // Low Res Run:
                 cout << "Beginning low-res run at strain rate a = " << a << endl;
@@ -180,7 +179,6 @@ void strainedFlame(const std::string& inputFile)
         // No strain rate list was provided - run a single case.
         FlameSolver theFlameSolver;
         theFlameSolver.setOptions(mainOptions);
-        theFlameSolver.calculateReactantMixture();
         theFlameSolver.initialize();
         theFlameSolver.run();
 

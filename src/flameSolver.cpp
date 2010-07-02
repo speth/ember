@@ -57,10 +57,6 @@ void FlameSolver::initialize(void)
         diffusionSolvers.push_back(integrator);
     }
 
-    convectionSolver->reltol = options.idaRelTol;
-    convectionSolver->linearMultistepMethod = CV_ADAMS;
-    convectionSolver->nonlinearSolverMethod = CV_FUNCTIONAL;
-
     resizeAuxiliary();
 }
 
@@ -694,11 +690,14 @@ void FlameSolver::resizeAuxiliary()
     delete convectionSolver;
     convectionSolver = new sundialsCVODE(N);
     convectionSolver->setODE(&convectionTerm);
+    convectionSolver->reltol = options.idaRelTol;
+    convectionSolver->linearMultistepMethod = CV_ADAMS;
+    convectionSolver->nonlinearSolverMethod = CV_FUNCTIONAL;
     for (size_t j=0; j<nPoints; j++) {
-        convectionSolver->abstol[N*j+kMomentum] = options.idaMomentumAbsTol;
-        convectionSolver->abstol[N*j+kEnergy] = options.idaEnergyAbsTol;
+        convectionSolver->abstol[nVars*j+kMomentum] = options.idaMomentumAbsTol;
+        convectionSolver->abstol[nVars*j+kEnergy] = options.idaEnergyAbsTol;
         for (size_t k=0; k<nSpec; k++) {
-            convectionSolver->abstol[N*j+kSpecies+k] = options.idaSpeciesAbsTol;
+            convectionSolver->abstol[nVars*j+kSpecies+k] = options.idaSpeciesAbsTol;
         }
     }
 
@@ -803,13 +802,11 @@ void FlameSolver::generateProfile(void)
     cout << "Generating initial profiles from given fuel and oxidizer compositions." << endl;
 
     // Set up a CanteraGas object to use for calculating the initial profiles
-    CanteraGas gas;
-    gas.setOptions(options);
-    gas.initialize();
-    size_t nSpec = gas.nSpec;
+    nSpec = gas.nSpec;
+    nPoints = options.nPoints;
 
     // Create a uniform initial grid
-    x.resize(options.nPoints);
+    x.resize(nPoints);
     double xRight, xLeft;
     xRight = options.xRight;
     if (options.twinFlame || options.curvedFlame) {
@@ -832,8 +829,11 @@ void FlameSolver::generateProfile(void)
     int jl = jm - 4;
     int jr = jm + 4;
 
+    U.resize(nPoints);
+    T.resize(nPoints);
     Yb.resize(nSpec);
     Yu.resize(nSpec);
+    Y.resize(nSpec, nPoints);
 
     double a = options.strainRateInitial;
 
@@ -948,8 +948,10 @@ void FlameSolver::generateProfile(void)
         V[j] = V[j-1] - rho[j]*U[j]*(x[j]-x[j-1]);
     }
 
-    for (size_t j=jm-1; j>=0; j--) {
-        V[j] = V[j+1] + rho[j]*U[j]*(x[j+1]-x[j]);
+    if (jm != 0) {
+        for (size_t j=jm-1; j>=0; j--) {
+            V[j] = V[j+1] + rho[j]*U[j]*(x[j+1]-x[j]);
+        }
     }
 }
 

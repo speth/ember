@@ -92,7 +92,6 @@ private:
     size_t N; // total problem size;
     size_t nSpec; // Number of chemical species
     size_t nVars; // Number of state variables at each grid point (nSpec + 2)
-    size_t nPoints; // Number of grid points
 
     // State variables:
     dvector U; // normalized tangential velocity (u*a/u_inf) [1/s]
@@ -126,8 +125,6 @@ private:
     Array2D hk;
     Array2D jFick;
     Array2D jSoret;
-
-
 
     // Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;

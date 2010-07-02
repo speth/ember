@@ -9,7 +9,7 @@ project
 		   <search>/opt/sundials-2.4.0-gcc/lib
 		   <search>/opt/matlab2009a/bin/glnxa64
 
-		   <variant>release
+#		   <variant>release
 		   <debug-symbols>on
     ;
 
