@@ -6,21 +6,21 @@ CanteraGas::CanteraGas()
     : rootXmlNode(NULL)
     , phaseXmlNode(NULL)
     , kinetics(NULL)
-    , multiTransport(NULL)
-    , mixTransport(NULL)
+    , transport(NULL)
 {
+    std:: cout << "CanteraGas::CanteraGas()" << std::endl;
 }
 
 CanteraGas::~CanteraGas()
 {
+    std:: cout << "CanteraGas::~CanteraGas()" << std::endl;
     Cantera::close_XML_File(mechanismFile);
     //phaseXmlNode->unlock();
     //rootXmlNode->unlock();
 //    delete rootXmlNode; // this deletes all child nodes as well
 
     delete kinetics;
-    delete multiTransport;
-    delete mixTransport;
+    delete transport;
 }
 
 void CanteraGas::setOptions(const configOptions& options)
@@ -30,8 +30,10 @@ void CanteraGas::setOptions(const configOptions& options)
     phaseID = options.gasPhaseID;
     pressure = options.pressure;
 }
+
 void CanteraGas::initialize()
 {
+    std:: cout << "CanteraGas::initialize()" << std::endl;
     // XML Information File
     if (!boost::filesystem::exists(mechanismFile)) {
         throw debugException("Error: Cantera input file \"" + mechanismFile + "\" not found.");
@@ -52,11 +54,11 @@ void CanteraGas::initialize()
     // Initialize the default transport properties object
     Cantera::TransportFactory* transFac = Cantera::TransportFactory::factory();
     if (usingMultiTransport) {
-        multiTransport = dynamic_cast<Cantera::MultiTransport*>(transFac->newTransport("Multi",&thermo));
-        transFac->initTransport(multiTransport, &thermo);
+        transport = transFac->newTransport("Multi",&thermo);
+        transFac->initTransport(transport, &thermo);
     } else {
-        mixTransport = dynamic_cast<Cantera::MixTransport*>(transFac->newTransport("Mix",&thermo));
-        transFac->initTransport(mixTransport, &thermo);
+        transport = transFac->newTransport("Mix",&thermo);
+        transFac->initTransport(transport, &thermo);
     }
     transFac->deleteFactory();
 
@@ -85,7 +87,7 @@ void CanteraGas::setStateMole(const dvector& X_in, const double T)
 {
     dvector X(nSpec);
     for (size_t k=0; k<nSpec; k++) {
-        X[k] = max(X[k], 0.0);
+        X[k] = max(X_in[k], 0.0);
     }
     thermo.setState_TPX(T, pressure, &X[0]);
 }
@@ -94,7 +96,7 @@ void CanteraGas::setStateMole(const double* X_in, const double T)
 {
     dvector X(nSpec);
     for (size_t k=0; k<nSpec; k++) {
-        X[k] = max(X[k], 0.0);
+        X[k] = max(X_in[k], 0.0);
     }
     thermo.setState_TPX(T, pressure, &X[0]);
 }
@@ -113,6 +115,12 @@ void CanteraGas::getMassFractions(double* Y) const
 {
     thermo.getMassFractions(Y);
 }
+
+void CanteraGas::getMassFractions(dvector& Y) const
+{
+    thermo.getMassFractions(&Y[0]);
+}
+
 
 double CanteraGas::getDensity() const
 {
@@ -141,36 +149,36 @@ void CanteraGas::getMolecularWeights(double* W) const
 double CanteraGas::getViscosity() const
 {
     if (usingMultiTransport) {
-        return multiTransport->viscosity();
+        return transport->viscosity();
     } else {
-        return mixTransport->viscosity();
+        return transport->viscosity();
     }
 }
 
 double CanteraGas::getThermalConductivity() const
 {
     if (usingMultiTransport) {
-        return multiTransport->thermalConductivity();
+        return transport->thermalConductivity();
     } else {
-        return mixTransport->thermalConductivity();
+        return transport->thermalConductivity();
     }
 }
 
 void CanteraGas::getDiffusionCoefficients(dvector& Dkm) const
 {
     if (usingMultiTransport) {
-        multiTransport->getMixDiffCoeffs(&Dkm[0]);
+        transport->getMixDiffCoeffs(&Dkm[0]);
     } else {
-        mixTransport->getMixDiffCoeffs(&Dkm[0]);
+        transport->getMixDiffCoeffs(&Dkm[0]);
     }
 }
 
 void CanteraGas::getDiffusionCoefficients(double* Dkm) const
 {
     if (usingMultiTransport) {
-        multiTransport->getMixDiffCoeffs(Dkm);
+        transport->getMixDiffCoeffs(Dkm);
     } else {
-        mixTransport->getMixDiffCoeffs(Dkm);
+        transport->getMixDiffCoeffs(Dkm);
     }
 }
 
@@ -178,13 +186,13 @@ void CanteraGas::getDiffusionCoefficients(double* Dkm) const
 void CanteraGas::getWeightedDiffusionCoefficients(dvector& rhoD) const
 {
     if (usingMultiTransport) {
-        multiTransport->getMixDiffCoeffs(&rhoD[0]);
+        transport->getMixDiffCoeffs(&rhoD[0]);
         double rho = thermo.density();
         for (size_t k=0; k<nSpec; k++) {
             rhoD[k] *= rho;
         }
     } else {
-        mixTransport->getMixDiffCoeffs(&rhoD[0]);
+        transport->getMixDiffCoeffs(&rhoD[0]);
         double rho = thermo.density();
         for (size_t k=0; k<nSpec; k++) {
             rhoD[k] *= rho;
@@ -195,13 +203,13 @@ void CanteraGas::getWeightedDiffusionCoefficients(dvector& rhoD) const
 void CanteraGas::getWeightedDiffusionCoefficients(double* rhoD) const
 {
     if (usingMultiTransport) {
-        multiTransport->getMixDiffCoeffs(rhoD);
+        transport->getMixDiffCoeffs(rhoD);
         double rho = thermo.density();
         for (size_t k=0; k<nSpec; k++) {
             rhoD[k] *= rho;
         }
     } else {
-        mixTransport->getMixDiffCoeffs(rhoD);
+        transport->getMixDiffCoeffs(rhoD);
         double rho = thermo.density();
         for (size_t k=0; k<nSpec; k++) {
             rhoD[k] *= rho;
@@ -212,18 +220,18 @@ void CanteraGas::getWeightedDiffusionCoefficients(double* rhoD) const
 void CanteraGas::getThermalDiffusionCoefficients(dvector& Dkt) const
 {
     if (usingMultiTransport) {
-        multiTransport->getThermalDiffCoeffs(&Dkt[0]);
+        transport->getThermalDiffCoeffs(&Dkt[0]);
     } else {
-        mixTransport->getThermalDiffCoeffs(&Dkt[0]);
+        transport->getThermalDiffCoeffs(&Dkt[0]);
     }
 }
 
 void CanteraGas::getThermalDiffusionCoefficients(double* Dkt) const
 {
     if (usingMultiTransport) {
-        multiTransport->getThermalDiffCoeffs(Dkt);
+        transport->getThermalDiffCoeffs(Dkt);
     } else {
-        mixTransport->getThermalDiffCoeffs(Dkt);
+        transport->getThermalDiffCoeffs(Dkt);
     }
 }
 

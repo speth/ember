@@ -83,6 +83,7 @@ void FlameSolver::run(void)
     grid.updateValues();
 
     tFlamePrev = t;
+    tNow = t;
     tPrev = t;
     aPrev = strainfunc.a(t);
 
@@ -822,8 +823,10 @@ void FlameSolver::generateProfile(void)
         x[j] = xLeft + j * dx;
     }
 
-    grid.updateBoundaryIndices();
+    grid.alpha = (options.curvedFlame) ? 1 : 0;
+    grid.unburnedLeft = options.unburnedLeft;
     grid.updateValues();
+    grid.updateBoundaryIndices();
 
     int jm = (grid.ju+grid.jb)/2; // midpoint of the profiles.
     int jl = jm - 4;
@@ -838,19 +841,19 @@ void FlameSolver::generateProfile(void)
     double a = options.strainRateInitial;
 
     Tu = options.Tu;
+    gas.pressure = options.pressure;
 
     // Reactants
     dvector reactants = calculateReactantMixture();
-    gas.thermo.setState_TPX(Tu, gas.pressure, &reactants[0]);
-    rhou = gas.thermo.density();
-    gas.thermo.getMassFractions(&Yu[0]);
-    gas.thermo.getMassFractions(&Y(0,grid.ju));
+    gas.setStateMole(reactants, Tu);
+    rhou = gas.getDensity();
+    gas.getMassFractions(Yu);
+    gas.getMassFractions(&Y(0,grid.ju));
 
     // Products
-    gas.thermo.setState_TPX(Tu, gas.pressure, &reactants[0]);
     Cantera::equilibrate(gas.thermo,"HP");
     Tb = gas.thermo.temperature();
-    rhob = gas.thermo.density();
+    rhob = gas.getDensity();
     gas.thermo.getMassFractions(&Yb[0]);
     gas.thermo.getMassFractions(&Y(0,grid.jb));
 
@@ -949,8 +952,8 @@ void FlameSolver::generateProfile(void)
     }
 
     if (jm != 0) {
-        for (size_t j=jm-1; j>=0; j--) {
-            V[j] = V[j+1] + rho[j]*U[j]*(x[j+1]-x[j]);
+        for (size_t j=jm; j>0; j--) {
+            V[j-1] = V[j] + rho[j-1]*U[j-1]*(x[j]-x[j-1]);
         }
     }
 }

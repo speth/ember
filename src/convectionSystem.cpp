@@ -1,5 +1,12 @@
 #include "convectionSystem.h"
 
+ConvectionSystem::ConvectionSystem()
+    : nSpec(0)
+    , nPoints(0)
+    , nVars(0)
+{
+}
+
 int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
 {
     unroll_y(y);
@@ -134,6 +141,7 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
 
     nSpec = new_nSpec;
     nPoints = new_nPoints;
+    nVars = nPoints + 2;
     U.resize(nPoints);
     dUdt.resize(nPoints);
     dUdx.resize(nPoints);

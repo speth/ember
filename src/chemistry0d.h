@@ -79,6 +79,5 @@ private:
     Cantera::XML_Node* phaseXmlNode;
 
     Cantera::GasKinetics* kinetics;
-    Cantera::MultiTransport* multiTransport;
-    Cantera::MixTransport* mixTransport;
+    Cantera::Transport* transport;
 };

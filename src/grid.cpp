@@ -7,7 +7,9 @@ using namespace mathUtils;
 using std::max; using std::min;
 
 oneDimGrid::oneDimGrid(configOptions& theOptions)
-    : options(theOptions)
+    : leftBC(BoundaryCondition::FixedValue)
+    , rightBC(BoundaryCondition::FixedValue)
+    , options(theOptions)
 {
 }
 

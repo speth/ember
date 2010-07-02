@@ -11,6 +11,8 @@ class ConvectionSystem  : public sdODE, public GridBased
 {
     // This is the system representing convection of all state variables in the domain.
 public:
+    ConvectionSystem();
+
     // The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
     // This uses an explicit integrator, so no Jacobian/Preconditioner is necessary
