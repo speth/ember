@@ -17,6 +17,8 @@ sundialsCVODE::sundialsCVODE(unsigned int n)
     sundialsMem = NULL;
     findRoots = false;
     nRoots = 0;
+    maxNumSteps = 500;
+    minStep = 0;
 }
 
 sundialsCVODE::~sundialsCVODE(void)
@@ -32,6 +34,9 @@ void sundialsCVODE::initialize()
         if (check_flag(&flag, "CVodeReInit", 1)) {
             throw debugException("sundialsCVODE::reInitialize: error in CVodeReInit");
         }
+
+        CVodeSetMaxNumSteps(sundialsMem, maxNumSteps);
+        CVodeSetMinStep(sundialsMem, minStep);
         return;
     }
 
@@ -49,6 +54,9 @@ void sundialsCVODE::initialize()
 
     CVodeSVtolerances(sundialsMem, reltol, abstol.forSundials());
     CVodeSetUserData(sundialsMem, theODE);
+    CVodeSetMaxNumSteps(sundialsMem, maxNumSteps);
+    CVodeSetMinStep(sundialsMem, minStep);
+
     if (findRoots) {
         rootsFound.resize(nRoots);
         // Call CVodeRootInit to specify the root function g with nRoots components
@@ -212,7 +220,6 @@ void sundialsCVODE::setODE(sdODE* newODE)
 {
     theODE = newODE;
 }
-
 
 sdVector::sdVector(unsigned int N)
 {

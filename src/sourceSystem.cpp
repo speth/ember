@@ -11,8 +11,8 @@ void SourceSystem::resize(size_t new_nSpec)
     nSpec = new_nSpec;
     Y.resize(nSpec);
     dYdt.resize(nSpec);
+    cpSpec.resize(nSpec);
     wDot.resize(nSpec);
-    W.resize(nSpec);
     hk.resize(nSpec);
     C.resize(nSpec+2);
 }
@@ -38,19 +38,22 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
 
     // *** Calculate the time derivatives
     dUdt = - U*U + rhou/rho*(dadt + a*a) + C[kMomentum];
-    dTdt = qDot/(rho*cp);
+    dTdt = qDot/(rho*cp) + C[kEnergy];
     for (size_t k=0; k<nSpec; k++) {
-        dYdt[k] = wDot[k]*W[k]/rho;
+        dYdt[k] = wDot[k]*W[k]/rho + C[kSpecies+k];
     }
 
     roll_ydot(ydot);
     return 0;
 }
 
-int SourceSystem::Jac(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J)
+int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J)
 {
     // TODO: Verify that f has just been called so that we don't need to
     // unroll y and compute all the transport properties.
+
+    fdJacobian(t, y, ydot, J);
+    return 0;
 
     double a = strainFunction.a(t);
     double dadt = strainFunction.dadt(t);
@@ -95,7 +98,7 @@ int SourceSystem::Jac(const realtype t, const sdVector& y, const sdVector& ydot,
 
         for (size_t i=0; i<nSpec; i++) {
             dwdY(i,k) = (wDot2[i]-wDot[i])/(YplusdY[k]-Y[k]);
-            hdwdY[k] = hk[i]*dwdY(i,k);
+            hdwdY[k] += hk[i]*dwdY(i,k);
         }
 
         drhodY[k] = rho*(W[k]-Wmx)/(W[k]*(1-Y[k]*(1-eps)));
@@ -104,20 +107,20 @@ int SourceSystem::Jac(const realtype t, const sdVector& y, const sdVector& ydot,
     for (size_t k=0; k<nSpec; k++) {
         for (size_t i=0; i<nSpec; i++) {
             // dSpecies/dY
-            J(kSpecies+k, kSpecies+i) = dwdY(k,i)*W[k]/rho - wDot[k]*W[k]*drhodY[k]/(rho*rho);
+            J(kSpecies+k, kSpecies+i) = dwdY(k,i)*W[k]/rho - wDot[k]*W[k]*drhodY[i]/(rho*rho);
         }
         // dSpecies/dT
         J(kSpecies+k, kEnergy) = dwdT[k]*W[k]/rho - wDot[k]*W[k]*drhodT/(rho*rho);
 
         // dEnergy/dY
-        J(kEnergy, kSpecies+k) = hdwdY[k]/(rho*cp) - qDot*drhodY[k]/(rho*rho*cp);
+        J(kEnergy, kSpecies+k) = -hdwdY[k]/(rho*cp) - qDot*drhodY[k]/(rho*rho*cp);
 
         // dMomentum/dY
         J(kMomentum, kSpecies+k) = -A*drhodY[k]/(rho*rho);
     }
 
     // dEnergy/dT
-    J(kEnergy, kEnergy) = dwhdT/rho -qDot*drhodT/(rho*rho);
+    J(kEnergy, kEnergy) = -dwhdT/(rho*cp) - qDot*drhodT/(rho*rho*cp);
 
     // dMomentum/dU
     J(kMomentum, kMomentum) = -2*U;
@@ -125,6 +128,28 @@ int SourceSystem::Jac(const realtype t, const sdVector& y, const sdVector& ydot,
     // dMomentum/dT
     J(kMomentum, kEnergy) = -A*drhodT/(rho*rho);
 
+    return 0;
+}
+
+int SourceSystem::fdJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J)
+{
+    sdVector yplusdy(y.length());
+    sdVector ydot2(y.length());
+    size_t nVars = nSpec+2;
+    double eps = sqrt(DBL_EPSILON);
+    double atol = DBL_EPSILON;
+
+    for (size_t i=0; i<nVars; i++) {
+        for (size_t k=0; k<nVars; k++) {
+            yplusdy[k] = y[k];
+        }
+        double dy = (abs(y[i]) > atol) ? abs(y[i])*(eps) : abs(y[i])*eps + atol;
+        yplusdy[i] += dy;
+        f(t, yplusdy, ydot2);
+        for (size_t k=0; k<nVars; k++) {
+            J(k,i) = (ydot2[k]-ydot[k])/dy;
+        }
+    }
     return 0;
 }
 

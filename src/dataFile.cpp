@@ -2,6 +2,9 @@
 #include "debugUtils.h"
 #include "boost/filesystem.hpp"
 
+using std::cout;
+using std::endl;
+
 DataFile::DataFile(void)
     : file(0)
     , fileIsOpen(false)
@@ -55,6 +58,10 @@ void DataFile::writeVector(const std::string& name, const dvector& v)
     require_file_open();
 
     hsize_t dims = v.size();
+    if (dims == 0) {
+        cout << "DataFile::writeVector: Warning: '" << name << "' is empty." << endl;
+        return;
+    }
 
     hid_t dataspace, dataset, datatype;
     dataspace = H5Screate_simple(1, &dims, NULL);
@@ -101,6 +108,11 @@ void DataFile::writeArray2D(const std::string& name, const Cantera::Array2D& y)
     hsize_t dims[2];
     dims[0] = yt.nColumns(); // TODO: double check the order of these
     dims[1] = yt.nRows();
+
+    if (dims[0] == 0 || dims[1] == 0) {
+        cout << "DataFile::writeArray2D: Warning: '" << name << "' is empty." << endl;
+        return;
+    }
 
     hid_t dataspace, dataset, datatype;
     dataspace = H5Screate_simple(2, dims, NULL);
@@ -208,8 +220,8 @@ void dataFileTest()
         }
     }
 
-    std::cout << "rows:" << A.nRows() << std::endl;
-    std::cout << "cols:" << A.nColumns() << std::endl;
+    cout << "rows:" << A.nRows() << endl;
+    cout << "cols:" << A.nColumns() << endl;
 
     f.writeArray2D("A", A);
     f.close();
@@ -217,11 +229,11 @@ void dataFileTest()
     DataFile g("test.h5");
     dvector w = g.readVector("v");
     for (size_t i=0; i<w.size(); i++) {
-        std::cout << w[i] << std::endl;
+        cout << w[i] << endl;
     }
 
-    std::cout << g.readScalar("x") << std::endl;
-    std::cout << g.readArray2D("A") << std::endl;
+    cout << g.readScalar("x") << endl;
+    cout << g.readArray2D("A") << endl;
 
     g.close();
 }

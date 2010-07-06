@@ -105,6 +105,8 @@ public:
     int linearMultistepMethod; // CV_ADAMS for non-stiff problems, CV_BDF for stiff problems
     int nonlinearSolverMethod; // CV_FUNCTIONAL for non-stiff problems, CV_NEWTON for stiff problems
     bool findRoots; // Specify whether or not to use the function g for rootfinding
+    int maxNumSteps; // Maximum number of internal timesteps taken in one call to integrateToTime
+    realtype minStep; // minimum step size [s]
 
     // Call initialize() before using integrateToTime to integrate.
     // Integration may be restarted by reassigning y and t0 and calling initialize again.
@@ -144,6 +146,7 @@ private:
     int flag;
     int flagr;
     int nEq;
+
 
     int bandwidth_upper;
     int bandwidth_lower;

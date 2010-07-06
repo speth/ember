@@ -15,7 +15,10 @@ public:
     int f(const realtype t, const sdVector& y, sdVector& ydot);
 
     // Calculate the Jacobian matrix: J = df/dy
-    int Jac(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J);
+    int denseJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J);
+
+    // A simpler finite difference based Jacobian
+    int fdJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J);
 
     void unroll_y(const sdVector& y); // fill in current state variables from sdvector
     void roll_y(sdVector& y) const; // fill in sdvector with current state variables
@@ -40,20 +43,18 @@ public:
 
     // other parameters
     size_t nSpec;
+    dvector W; // species molecular weights [kg/kmol]
+    double rhou; // density of the unburned mixture
 
 private:
-
-
     // Physical properties
     double rho; // density [kg/m^3]
     double cp; // specific heat capacity (average) [J/kg*K]
     dvector cpSpec; // species specific heat capacity [J/mol*K]
-    dvector W; // species molecular weights [kg/kmol]
     double Wmx; // mixture molecular weight [kg/mol]
     dvector hk; // species enthalpies [J/kmol]
 
     // Other quantities
     dvector wDot; // species net production rates [kmol/m^3*s]
     double qDot; // heat release rate per unit volume [W/m^3]
-    double rhou; // density of the unburned mixture
 };

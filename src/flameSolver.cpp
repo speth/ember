@@ -141,6 +141,8 @@ void FlameSolver::run(void)
             }
         }
         convectionSolver->t0 = t;
+        convectionSolver->maxNumSteps = 1000000;
+        convectionSolver->minStep = 1e-16;
         convectionSolver->initialize();
 
         convectionTerm.Tconst.assign(nPoints, 0);
@@ -274,19 +276,22 @@ void FlameSolver::run(void)
             }
         }
 
+        cout << "START OF INTEGRATION" << endl;
         // *** Take one global timestep
         double tNext = tNow + dt;
 
         int cvode_flag = 0;
         try {
             for (size_t j=0; j<nPoints; j++) {
+                cout << "Starting: j=" << j;
+                cout.flush();
                 cvode_flag |= sourceSolvers[j].integrateToTime(tNext);
+                cout << "...done." << endl;
             }
 
             for (size_t k=0; k<nVars; k++) {
                 diffusionSolvers[k].integrateToTime(tNext);
             }
-
             cvode_flag |= convectionSolver->integrateToTime(tNext);
 
         } catch (Cantera::CanteraError) {
@@ -297,6 +302,7 @@ void FlameSolver::run(void)
         t = tNext;
         aPrev = strainfunc.a(t);
 
+        cvode_flag = CV_SUCCESS; // CHARGE!
         if (cvode_flag == CV_SUCCESS) {
             nOutput++;
             nRegrid++;
@@ -583,6 +589,33 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeScalar("Tleft", Tleft);
         outFile.writeVector("Yleft", Yleft);
         outFile.writeVector("sumcpj", sumcpj);
+
+        dvector Uprod(nPoints);
+        dvector Tprod(nPoints);
+        Array2D Ydiff(nSpec, nPoints), Yprod(nSpec, nPoints);
+
+        for (size_t j=0; j<nPoints; j++) {
+            Uprod[j] = sourceTerms[j].U;
+            Tprod[j] = sourceTerms[j].T;
+            for (size_t k=0; k<nSpec; k++) {
+                Yprod(k,j) = sourceTerms[j].Y[k];
+                Ydiff(k,j) = diffusionSolvers[kSpecies+k].y[j];
+            }
+        }
+
+        outFile.writeVector("Uconv", convectionTerm.U);
+        outFile.writeVector("Udiff", diffusionSolvers[kMomentum].y);
+        outFile.writeVector("Uprod", Uprod);
+        outFile.writeVector("Tconv", convectionTerm.T);
+        outFile.writeVector("Tdiff", diffusionSolvers[kEnergy].y);
+        outFile.writeVector("Tprod", Tprod);
+        outFile.writeArray2D("Yconv", convectionTerm.Y);
+        outFile.writeArray2D("Ydiff", Ydiff);
+        outFile.writeArray2D("Yprod", Yprod);
+
+        outFile.writeVector("Uextrap", Uextrap);
+        outFile.writeVector("Textrap", Textrap);
+        outFile.writeArray2D("Yextrap", Yextrap);
     }
 
     if (options.outputResidualComponents || errorFile) {
@@ -624,9 +657,9 @@ void FlameSolver::resizeAuxiliary()
     nVars = 2+nSpec;
     N = nVars*nPoints;
 
-    Uextrap.resize(nPoints);
-    Textrap.resize(nPoints);
-    Yextrap.resize(nSpec,nPoints);
+    Uextrap.resize(nPoints, 0);
+    Textrap.resize(nPoints, 0);
+    Yextrap.resize(nSpec,nPoints, 0);
 
     dUdt.resize(nPoints,0);
     dTdt.resize(nPoints,0);
@@ -670,6 +703,8 @@ void FlameSolver::resizeAuxiliary()
             system->resize(nSpec);
             system->gas = &gas;
             system->strainFunction = strainfunc;
+            system->rhou = rhou;
+            system->W = W;
 
             // Create and initialize the new Sundials solver
             sundialsCVODE* solver = new sundialsCVODE(nVars);
@@ -682,6 +717,8 @@ void FlameSolver::resizeAuxiliary()
             solver->reltol = options.idaRelTol;
             solver->linearMultistepMethod = CV_BDF;
             solver->nonlinearSolverMethod = CV_NEWTON;
+            solver->maxNumSteps = 1000000;
+            solver->minStep = 1e-16;
 
             // Store the solver and system
             sourceTerms.push_back(system);
