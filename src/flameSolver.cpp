@@ -300,6 +300,7 @@ void FlameSolver::run(void)
         }
 
         t = tNext;
+        tNow = tNext;
         aPrev = strainfunc.a(t);
 
         cvode_flag = CV_SUCCESS; // CHARGE!

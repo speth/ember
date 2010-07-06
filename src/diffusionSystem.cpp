@@ -9,7 +9,7 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
     dvector c2(N);
     dvector c3(N);
     for (int j=0; j<N-1; j++) {
-        c1[j] = 0.5/(dlj[j]*r[j]*B[j]);
+        c1[j] = 0.5*B[j]/(dlj[j]*r[j]);
         c2[j] = rphalf[j]*(D[j]+D[j+1])/hh[j];
     }
 
