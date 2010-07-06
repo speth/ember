@@ -77,7 +77,7 @@ private:
     double Tu, Tb, Tleft, Tright;
     dvector Yu, Yb, Yleft, Yright;
 
-    void resizeAuxiliary(void); // Handle resizing of data structures as grid size changes
+    void resizeAuxiliary(); // Handle resizing of data structures as grid size changes
     void updateDiffusionFluxes(); // calculates values of jFick, jSoret, sumcpj, and jCorr
     void updateLeftBC();
 

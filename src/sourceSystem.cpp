@@ -1,8 +1,14 @@
 #include "sourceSystem.h"
 #include "readConfig.h"
 
+SourceSystem::SourceSystem()
+    : gas(NULL)
+{
+}
+
 void SourceSystem::resize(size_t new_nSpec)
 {
+    nSpec = new_nSpec;
     Y.resize(nSpec);
     dYdt.resize(nSpec);
     wDot.resize(nSpec);

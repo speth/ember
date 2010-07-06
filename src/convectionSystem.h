@@ -36,6 +36,9 @@ public:
     dvector Tconst;
     Array2D Yconst;
 
+    // Cantera data
+    CanteraGas* gas;
+
 private:
     void V2rV();
     void rV2V();
@@ -43,9 +46,6 @@ private:
     size_t nSpec;
     size_t nPoints;
     size_t nVars; // == nSpec + 2
-
-    // Cantera data
-    CanteraGas* gas;
 
     dvector rho; // mixture density [kg/m^3]
     dvector Wmx; // mixture molecular weight [kg/kmol]

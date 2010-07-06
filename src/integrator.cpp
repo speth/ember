@@ -1,5 +1,8 @@
 #include "integrator.h"
 
+using std::cout;
+using std::endl;
+
 Integrator::Integrator()
     : t(0)
 {
@@ -101,6 +104,7 @@ void BDFIntegrator::set_size(int N_in, int upper_bw_in, int lower_bw_in)
     LU = new sdBandMatrix(N, upper_bw, lower_bw);
     A = new sdBandMatrix(N, upper_bw, lower_bw);
     p.resize(N);
+    y.resize(N);
 }
 
 void BDFIntegrator::set_y0(const dvector& y0)
@@ -130,6 +134,7 @@ const dvector& BDFIntegrator::get_ydot()
 {
     myODE.get_A(*A);
     sdBandMatrix& AA = *A;
+    myODE.get_C(c);
 
     // TODO: Use something more clever for the Matrix-vector product here
     // Why doesn't sundials provide DAXPY?
@@ -137,7 +142,7 @@ const dvector& BDFIntegrator::get_ydot()
     ydot.resize(N);
 
     ydot[0] = AA(0,0)*y[0] + AA(0,1)*y[1] + c[0];
-    for (size_t i=0; i<N-1; i++) {
+    for (size_t i=1; i<N-1; i++) {
         ydot[i] = AA(i,i-1)*y[i-1] + AA(i,i)*y[i] + AA(i,i+1)*y[i+1] + c[i];
     }
     ydot[N-1] = AA(N-1,N-2)*y[N-2] + AA(N-1,N-1)*y[N-1] + c[N-1];

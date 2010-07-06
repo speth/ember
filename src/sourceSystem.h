@@ -9,6 +9,8 @@ class SourceSystem : public sdODE
 {
     // This is the system representing the (chemical) source term at a point
 public:
+    SourceSystem();
+
     // The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
 
@@ -33,12 +35,14 @@ public:
     // The sum of the terms held constant for each component in this system
     dvector C;
 
+    // Cantera data
+    CanteraGas* gas;
+
     // other parameters
     size_t nSpec;
 
 private:
-    // Cantera data
-    CanteraGas* gas;
+
 
     // Physical properties
     double rho; // density [kg/m^3]

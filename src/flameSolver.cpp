@@ -37,6 +37,7 @@ void FlameSolver::initialize(void)
     // Cantera initialization
     gas.initialize();
     nSpec = gas.nSpec;
+    nVars = nSpec + 2;
     W.resize(nSpec);
     gas.getMolecularWeights(W);
 
@@ -47,10 +48,12 @@ void FlameSolver::initialize(void)
         generateProfile();
     }
 
+    nPoints = x.size();
     convectionTerm.Yleft = Yleft;
     convectionTerm.Tleft = Tleft;
+    convectionTerm.gas = &gas;
 
-    for (size_t i=0; i<nSpec; i++) {
+    for (size_t k=0; k<nVars; k++) {
         DiffusionSystem* term = new DiffusionSystem();
         BDFIntegrator* integrator = new BDFIntegrator(*term);
         diffusionTerms.push_back(term);
@@ -155,6 +158,7 @@ void FlameSolver::run(void)
             sourceSolvers[j].t0 = t;
             sourceSolvers[j].initialize();
             sourceTerms[j].C.assign(nVars, 0);
+            sourceTerms[j].strainFunction.pin(t);
         }
 
         // Diffusion solvers
@@ -213,7 +217,7 @@ void FlameSolver::run(void)
             sourceTerms[j].f(tNow, sourceSolvers[j].y, ydotSource);
             momentumProd[j] = ydotSource[kMomentum];
             energyProd[j] = ydotSource[kEnergy];
-            for (size_t k=0; k<nPoints; k++) {
+            for (size_t k=0; k<nSpec; k++) {
                 speciesProd(k,j) = ydotSource[kSpecies+k];
             }
         }
@@ -321,11 +325,11 @@ void FlameSolver::run(void)
         }
 
         for (size_t j=0; j<nPoints; j++) {
-            U[j] = convectionTerm.U[j] + sourceTerms[j].U + diffusionTerms[kMomentum].y[j] - 2*Uextrap[j];
-            T[j] = convectionTerm.T[j] + sourceTerms[j].T + diffusionTerms[kEnergy].y[j] - 2*Textrap[j];
+            U[j] = convectionTerm.U[j] + sourceTerms[j].U + diffusionSolvers[kMomentum].y[j] - 2*Uextrap[j];
+            T[j] = convectionTerm.T[j] + sourceTerms[j].T + diffusionSolvers[kEnergy].y[j] - 2*Textrap[j];
             for (size_t k=0; k<nSpec; k++) {
                 Y(k,j) = convectionTerm.Y(k,j) + sourceTerms[j].Y[k] +
-                         diffusionTerms[kSpecies+k].y[j] - 2*Yextrap(k,j);
+                         diffusionSolvers[kSpecies+k].y[j] - 2*Yextrap(k,j);
             }
         }
 
@@ -563,6 +567,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("wdot", wDot);
         outFile.writeArray2D("rhoD", rhoD);
         outFile.writeVector("lambda", lambda);
+
         outFile.writeVector("cp", cp);
         outFile.writeVector("mu", mu);
         outFile.writeVector("Wmx", Wmx);
@@ -663,6 +668,8 @@ void FlameSolver::resizeAuxiliary()
             // Create and initialize the new SourceSystem
             SourceSystem* system = new SourceSystem();
             system->resize(nSpec);
+            system->gas = &gas;
+            system->strainFunction = strainfunc;
 
             // Create and initialize the new Sundials solver
             sundialsCVODE* solver = new sundialsCVODE(nVars);
@@ -687,7 +694,18 @@ void FlameSolver::resizeAuxiliary()
         sourceSolvers.erase(sourceSolvers.begin()+nPoints, sourceSolvers.end());
     }
 
+    // Resize solution vector for diffusion systems / solvers
+    for (size_t k=0; k<nVars; k++) {
+        diffusionSolvers[k].set_size(nPoints, 1, 1);
+        diffusionTerms[k].B.resize(nPoints);
+        diffusionTerms[k].C.resize(nPoints);
+        diffusionTerms[k].D.resize(nPoints);
+        diffusionTerms[k].grid = grid;
+    }
+
     convectionTerm.resize(nSpec, nPoints);
+    convectionTerm.grid = grid;
+
     delete convectionSolver;
     convectionSolver = new sundialsCVODE(N);
     convectionSolver->setODE(&convectionTerm);
@@ -945,6 +963,7 @@ void FlameSolver::generateProfile(void)
         jm = 0;
     }
 
+    // TODO: Generate a better profile for the curved flame case
     dvector V(nPoints);
     V[jm] = 0;
     for (size_t j=jm+1; j<nPoints; j++) {
@@ -956,6 +975,8 @@ void FlameSolver::generateProfile(void)
             V[j-1] = V[j] + rho[j-1]*U[j-1]*(x[j]-x[j-1]);
         }
     }
+
+    rVzero = V[0];
 }
 
 void FlameSolver::loadProfile(void)

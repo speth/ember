@@ -1,7 +1,8 @@
 #include "convectionSystem.h"
 
 ConvectionSystem::ConvectionSystem()
-    : nSpec(0)
+    : gas(NULL)
+    , nSpec(0)
     , nPoints(0)
     , nVars(0)
 {
@@ -141,7 +142,7 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
 
     nSpec = new_nSpec;
     nPoints = new_nPoints;
-    nVars = nPoints + 2;
+    nVars = nSpec + 2;
     U.resize(nPoints);
     dUdt.resize(nPoints);
     dUdx.resize(nPoints);

@@ -25,9 +25,6 @@ public:
     // Provides the constant term to the integrator
     void get_C(dvector& y);
 
-    // The current solution vector
-    dvector y;
-
     // the coefficients of the ODE
     dvector B; // pre-factor
     dvector C; // constant term
