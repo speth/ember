@@ -33,6 +33,7 @@ void DataFile::writeScalar(const std::string& name, const double x)
 
     dataset = get_dataset(name, datatype, dataspace);
     H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, &x);
+    H5Dclose(dataset);
 }
 
 double DataFile::readScalar(const std::string& name)
