@@ -27,6 +27,7 @@ void FlameSolver::setOptions(const configOptions& _options)
     tEnd = options.tEnd;
 
     gas.setOptions(_options);
+    grid.setOptions(_options);
 }
 
 void FlameSolver::initialize(void)
@@ -48,7 +49,7 @@ void FlameSolver::initialize(void)
         generateProfile();
     }
 
-    nPoints = x.size();
+    grid.setSize(x.size());
     convectionTerm.Yleft = Yleft;
     convectionTerm.Tleft = Tleft;
     convectionTerm.gas = &gas;
@@ -98,6 +99,13 @@ void FlameSolver::run(void)
 
         tIDA1 = clock();
 
+        if (grid.updated) {
+            grid.updated = false;
+            for (size_t k=0; k<nVars; k++) {
+                diffusionTerms[k].grid = grid;
+            }
+            convectionTerm.grid = grid;
+        }
         // Allocate the solvers and arrays for auxiliary variables
         resizeAuxiliary();
 
@@ -397,15 +405,6 @@ void FlameSolver::run(void)
             tRegrid = t + options.regridTimeInterval;
             nRegrid = 0;
 
-            // dampVal sets a limit on the maximum grid size
-            for (size_t j=0; j<nPoints; j++) {
-                double num = min(mu[j],lambda[j]/cp[j]);
-                for (size_t k=0; k<nSpec; k++) {
-                    num = min(num, rhoD(k,j));
-                }
-                grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
-            }
-
             // "rollVectorVector"
             vector<dvector> currentSolution;
             vector<dvector> currentSolutionDot; // TODO: Remove this, as we don't need ydot anymore
@@ -424,13 +423,24 @@ void FlameSolver::run(void)
                 currentSolutionDot.push_back(dtmp);
             }
 
-            bool regridFlag = grid.regrid(currentSolution, currentSolutionDot);
-            bool adaptFlag = grid.adapt(currentSolution, currentSolutionDot);
+            grid.regrid(currentSolution, currentSolutionDot);
+
+            grid.dampVal.resize(grid.x.size());
+            cout << nPoints << endl;
+            // dampVal sets a limit on the maximum grid size
+            for (size_t j=0; j<nPoints; j++) {
+                double num = min(mu[j],lambda[j]/cp[j]);
+                for (size_t k=0; k<nSpec; k++) {
+                    num = min(num, rhoD(k,j));
+                }
+                grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
+            }
+
+            grid.adapt(currentSolution, currentSolutionDot);
 
             // Perform updates that are necessary if the grid has changed
-            if (adaptFlag || regridFlag) {
+            if (grid.updated) {
                 nIntegrate = 0;
-                nPoints = grid.jj+1;
                 cout << "Grid size: " << nPoints << " points." << endl;
 
                 // "unrollVectorVector"
@@ -448,6 +458,7 @@ void FlameSolver::run(void)
                     gas.setStateMass(&Y(0,j), T[j]);
                     gas.getMassFractions(&Y(0,j));
                 }
+                writeStateFile("postAdapt");
             }
 
         }
@@ -648,7 +659,7 @@ void FlameSolver::resizeAuxiliary()
 {
     perfTimerResize.start();
     size_t nPointsOld = rho.size();
-    nPoints = T.size();
+    grid.setSize(T.size());
 
     if (nPoints == nPointsOld) {
         return; // nothing to do
@@ -860,7 +871,7 @@ void FlameSolver::generateProfile(void)
 
     // Set up a CanteraGas object to use for calculating the initial profiles
     nSpec = gas.nSpec;
-    nPoints = options.nPoints;
+    grid.setSize(options.nPoints);
 
     // Create a uniform initial grid
     x.resize(nPoints);
@@ -1030,7 +1041,7 @@ void FlameSolver::loadProfile(void)
     DataFile infile(inputFilename);
     x = infile.readVector("x");
 
-    nPoints = x.size();
+    grid.setSize(x.size());
 
     U = infile.readVector("U");
     T = infile.readVector("T");

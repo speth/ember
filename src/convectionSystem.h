@@ -44,7 +44,6 @@ private:
     void rV2V();
 
     size_t nSpec;
-    size_t nPoints;
     size_t nVars; // == nSpec + 2
 
     dvector rho; // mixture density [kg/m^3]

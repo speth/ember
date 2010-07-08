@@ -9,7 +9,7 @@ namespace BoundaryCondition {
 class oneDimGrid
 {
 public:
-    oneDimGrid(configOptions& theOptions);
+    oneDimGrid();
 
     dvector x; // The grid points
     dvector dampVal; // ratio of convective to diffusive coefficients (e.g. nu/v)
@@ -19,6 +19,8 @@ public:
     size_t kQdot; // index into solutionState of the heat release rate
 
     // Parameters for controlling internal grid points:
+    double vtol_in;
+    double dvtol_in;
     dvector vtol; // relative solution variable tolerance for point insertion
     dvector dvtol; // global derivative solution variable tolerance for point insertion
     double absvtol; // absolute tolerance (ignore components with range smaller than this)
@@ -31,6 +33,9 @@ public:
     // Parameters for controlling exterior grid points:
     bool fixedBurnedVal;
     bool unburnedLeft;
+    bool fixedLeftLoc;
+    bool twinFlame;
+    bool curvedFlame;
 
     double boundaryTol;
     double boundaryTolRm;
@@ -46,15 +51,19 @@ public:
     size_t nPoints; // number of grid point
     size_t jj; // index of last grid point ( = nPoints-1)
 
+    bool updated; // true if the grid changed on the last call to adapt or regrid
+
     // Update the grid based on the solutionState, and adjust it to fit
     // on the new grid. Each element of the solutionState is a vector
     // containing the value of a solution variable at each grid point.
     // Return value is true if the grid has been modified
     // adapt inserts and removes points within the problem domain
     // regrid inserts and removes points at the ends of the problem domain
-    bool adapt(vector<dvector>& y, vector<dvector>& ydot);
-    bool regrid(vector<dvector>& y, vector<dvector>& ydot);
+    void adapt(vector<dvector>& y, vector<dvector>& ydot);
+    void regrid(vector<dvector>& y, vector<dvector>& ydot);
+    void setOptions(const configOptions& options);
     void updateValues(void);
+    void setSize(const size_t N);
 
     void updateBoundaryIndices(void);
 
@@ -78,7 +87,6 @@ class GridBased
 {
 public:
     GridBased();
-    configOptions options;
 
     // the grid:
     oneDimGrid grid;

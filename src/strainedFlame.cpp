@@ -41,8 +41,10 @@ int main(int argc, char** argv)
         cout << err.getError() << " on line " << err.getLine() << endl;
     } catch (debugException& e) {
         cout << e.errorString << endl;
-//    } catch (...) {
-//        cout << "I have no idea what went wrong!" << endl;
+        throw;
+    } catch (...) {
+        cout << "I have no idea what went wrong!" << endl;
+        throw;
     }
 
     return 0;

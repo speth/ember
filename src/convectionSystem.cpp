@@ -3,7 +3,6 @@
 ConvectionSystem::ConvectionSystem()
     : gas(NULL)
     , nSpec(0)
-    , nPoints(0)
     , nVars(0)
 {
 }
@@ -142,7 +141,7 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
     }
 
     nSpec = new_nSpec;
-    nPoints = new_nPoints;
+    grid.setSize(new_nPoints);
     nVars = nSpec + 2;
     U.resize(nPoints);
     dUdt.resize(nPoints);

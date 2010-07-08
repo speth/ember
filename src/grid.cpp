@@ -6,16 +6,39 @@ using std::endl;
 using namespace mathUtils;
 using std::max; using std::min;
 
-oneDimGrid::oneDimGrid(configOptions& theOptions)
-    : leftBC(BoundaryCondition::FixedValue)
+oneDimGrid::oneDimGrid()
+    : updated(true)
+    , leftBC(BoundaryCondition::FixedValue)
     , rightBC(BoundaryCondition::FixedValue)
-    , options(theOptions)
 {
+}
+
+void oneDimGrid::setOptions(const configOptions& options)
+{
+    vtol_in = options.vtol;
+    dvtol_in = options.dvtol;
+    absvtol = options.absvtol;
+    rmTol = options.rmTol;
+    uniformityTol = options.uniformityTol;
+    gridMin = options.gridMin;
+    gridMax = options.gridMax;
+    dampConst = options.dampConst;
+    centerGridMin = options.centerGridMin;
+
+    fixedBurnedVal = options.fixedBurnedVal;
+    unburnedLeft = options.unburnedLeft;
+    fixedLeftLoc = options.fixedLeftLoc;
+    twinFlame = options.twinFlame;
+    curvedFlame = options.curvedFlame;
+
+    boundaryTol = options.boundaryTol;
+    boundaryTolRm = options.boundaryTolRm;
+    addPointCount = options.addPointCount;
+    alpha = options.gridAlpha;
 }
 
 void oneDimGrid::updateValues()
 {
-    jj = nPoints - 1;
     // Derived mesh sizes
     hh.resize(jj);
     cfm.resize(jj);
@@ -43,7 +66,13 @@ void oneDimGrid::updateValues()
     }
 }
 
-bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
+void oneDimGrid::setSize(const size_t N)
+{
+    nPoints = N;
+    jj = N-1;
+}
+
+void oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 {
     // This function takes the unadapted solution vector y, analyzes it,
     // and returns an updated solution vector. It tries to remove
@@ -72,20 +101,18 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
     //  are satisfied for all components at a point, it is removed.
 
     nVars = y.size();
-    jj = y[0].size()-1;
+    setSize(y[0].size());
 
     vtol.resize(nVars);
     dvtol.resize(nVars);
     for (size_t k=0; k<nVars; k++) {
-        vtol[k] = options.vtol;
-        dvtol[k] = options.dvtol;
+        vtol[k] = vtol_in;
+        dvtol[k] = dvtol_in;
     }
 
     // Used for informational purposes only
     std::vector<int> insertionIndicies;
     std::vector<int> removalIndices;
-
-    bool gridUpdated = false; // flag if adaption has occurred
 
     // *** Grid point insertion algorithm
 
@@ -174,7 +201,7 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
         // Special minimum grid size for flames pinned at x=0
         if (j == 0 && leftBC == BoundaryCondition::ControlVolume) {
-            double xLeftMin = min(options.centerGridMin, 0.005*x[jj]);
+            double xLeftMin = min(centerGridMin, 0.005*x[jj]);
             if (hh[j] < xLeftMin) {
                 insert = false;
                 if (debugParameters::debugAdapt) {
@@ -197,8 +224,8 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
             // Insert a new point
             insertionIndicies.push_back(j);
             addPoint(j, y, ydot);
-            gridUpdated = true;
-            jj++;
+            updated = true;
+            setSize(nPoints+1);
             j+=2;
         } else {
             // No insertion; step to the next point.
@@ -310,8 +337,8 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         if (remove) {
             removalIndices.push_back(j);
             removePoint(j, y, ydot);
-            jj--;
-            gridUpdated = true;
+            setSize(nPoints-1);
+            updated = true;
         } else {
             j++;
         }
@@ -325,13 +352,10 @@ bool oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         cout << removalIndices[removalIndices.size()-1] << endl;
     }
 
-    if (gridUpdated) {
+    if (updated) {
         updateValues();
         updateBoundaryIndices();
     }
-
-    nPoints = jj + 1;
-    return gridUpdated;
 }
 
 void oneDimGrid::addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot)
@@ -339,6 +363,7 @@ void oneDimGrid::addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot
       dvector::iterator iter;
     double xInsert = 0.5*(x[jInsert+1]+x[jInsert]);
 
+    cout << "oneDimGrid::addPoint: " << x.size() << ", " << dampVal.size() << endl;
     dampVal.insert(dampVal.begin()+jInsert+1, mathUtils::splines(x,dampVal, xInsert));
 
     vector<dvector>::iterator i;
@@ -417,7 +442,7 @@ bool oneDimGrid::addRight(vector<dvector>& y, vector<dvector>& ydot)
                 y[k].push_back(y[k][jj]);
                 ydot[k].push_back(ydot[k][jj]);
             }
-            jj++;
+            setSize(nPoints+1);
         }
         updateBoundaryIndices();
     }
@@ -434,7 +459,7 @@ bool oneDimGrid::addLeft(vector<dvector>& y, vector<dvector>& ydot)
     int djMom = 1;
 
     bool pointAdded = false;
-    if (!options.fixedLeftLoc) {
+    if (!fixedLeftLoc) {
         for (size_t k=0; k<nVars; k++) {
             if (k==kQdot) {
                 continue;
@@ -453,7 +478,7 @@ bool oneDimGrid::addLeft(vector<dvector>& y, vector<dvector>& ydot)
         }
     }
 
-    if (options.fixedLeftLoc && leftBC != BoundaryCondition::ControlVolume) {
+    if (fixedLeftLoc && leftBC != BoundaryCondition::ControlVolume) {
         if (!pointAdded && debugParameters::debugRegrid) {
             cout << "Regrid: Adding point to force left boundary toward x = 0" << endl;
         }
@@ -469,12 +494,12 @@ bool oneDimGrid::addLeft(vector<dvector>& y, vector<dvector>& ydot)
         // Add point to the left.
         for (size_t i=0; i<addPointCount; i++) {
             double xLeft = x[0]-hh[0];
-            if (options.twinFlame || options.curvedFlame) {
+            if (twinFlame || curvedFlame) {
                 if (x[0] == 0) {
                     break;
                 }
 
-                double xLeftMin = std::min(options.centerGridMin, 0.005*x[jj]);
+                double xLeftMin = std::min(centerGridMin, 0.005*x[jj]);
                 if (xLeft < 0.0) {
                     xLeft = 0.0;
                 } else if (xLeft < xLeftMin) {
@@ -489,7 +514,7 @@ bool oneDimGrid::addLeft(vector<dvector>& y, vector<dvector>& ydot)
                 y[k].insert(y[k].begin(),y[k][0]);
                 ydot[k].insert(ydot[k].begin(),ydot[k][0]);
             }
-            jj++;
+            setSize(nPoints+1);
         }
         updateBoundaryIndices();
     }
@@ -529,7 +554,7 @@ bool oneDimGrid::removeRight(vector<dvector>& y, vector<dvector>& ydot)
 
     if (pointRemoved) {
         removePoint(jj,y,ydot);
-        jj--;
+        setSize(nPoints-1);
         updateBoundaryIndices();
     }
 
@@ -544,7 +569,7 @@ bool oneDimGrid::removeLeft(vector<dvector>& y, vector<dvector>& ydot)
 
     // Don't remove points if the location of the left boundary is fixed
     bool pointRemoved = true; // assume removal
-    if (options.fixedLeftLoc) {
+    if (fixedLeftLoc) {
         if (pointRemoved && debugParameters::debugRegrid) {
             cout << "Regrid: left removal prevented by fixed left boundary" << endl;
         }
@@ -573,7 +598,7 @@ bool oneDimGrid::removeLeft(vector<dvector>& y, vector<dvector>& ydot)
 
     if (pointRemoved) {
         removePoint(0,y,ydot);
-        jj--;
+        setSize(nPoints-1);
         updateBoundaryIndices();
     }
 
@@ -581,12 +606,12 @@ bool oneDimGrid::removeLeft(vector<dvector>& y, vector<dvector>& ydot)
 }
 
 
-bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
+void oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
 {
     nVars = y.size();
     kQdot = nVars-1;
 
-    jj = y[0].size()-1;
+    setSize(y[0].size());
 
     bool rightAddition = addRight(y, ydot);
     bool leftAddition = addLeft(y, ydot);
@@ -628,15 +653,12 @@ bool oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
         cout << "Removed " << leftRemovalCount << " point" << suffix << " from the left side." << endl;
     }
 
-    bool gridUpdated = (leftAddition || rightAddition || leftRemoval || rightRemoval);
+    updated = (updated || leftAddition || rightAddition || leftRemoval || rightRemoval);
 
-    if (gridUpdated) {
+    if (updated) {
         updateValues();
         updateBoundaryIndices();
     }
-
-    nPoints = jj + 1;
-    return gridUpdated;
 }
 
 void oneDimGrid::updateBoundaryIndices(void) {
@@ -650,8 +672,7 @@ void oneDimGrid::updateBoundaryIndices(void) {
 }
 
 GridBased::GridBased()
-    : grid(options)
-    , x(grid.x)
+    : x(grid.x)
     , r(grid.r)
     , rphalf(grid.rphalf)
     , hh(grid.hh)
