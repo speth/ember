@@ -452,7 +452,7 @@ void FlameSolver::run(void)
                     U[j] = currentSolution[kMomentum][j];
                     T[j] = currentSolution[kEnergy][j];
                     for (size_t k=0; k<nSpec; k++) {
-                        Y(k,j) = currentSolution[k][j];
+                        Y(k,j) = currentSolution[kSpecies+k][j];
                     }
                     // Correct the drift of the total mass fractions
                     gas.setStateMass(&Y(0,j), T[j]);
