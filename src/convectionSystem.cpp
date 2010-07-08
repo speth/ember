@@ -37,12 +37,13 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
                 dYdx(k,j) = (Y(k,j) - Y(k,j-1)) / hh[j-1];
             }
         }
-        rV[j+1] = rV[j] - hh[j] * ((rV[j] * dTdx[j] + rphalf[j] * Tconst[j]) * rho[j] / T[j]);
+        rV[j+1] = rV[j] - hh[j] * (rV[j] * dTdx[j] - rphalf[j] * rho[j] * Tconst[j]) / T[j];
         rV[j+1] -= hh[j] * rho[j] * U[j] * rphalf[j];
         for (size_t k=0; k<nSpec; k++) {
-            rV[j+1] -= hh[j] * (rV[j] * dYdx(k,j) + rphalf[j] * Yconst(k,j))
-                       * rho[j] * Wmx[j] / W[k];
+            rV[j+1] -= hh[j] * (rV[j] * dYdx(k,j) + rphalf[j] * rho[j] * Yconst(k,j))
+                       * Wmx[j] / W[k];
         }
+
     }
 
     rV2V();
@@ -50,7 +51,7 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     // *** Calculate dY/dt, dU/dt, dT/dt
 
     // Left boundary conditions
-    dUdt[0] = -Uconst[0]; // zero-gradient condition for U no matter what
+    dUdt[0] = Uconst[0]; // zero-gradient condition for U no matter what
 
     if (grid.leftBC == BoundaryCondition::FixedValue) {
         dTdt[0] = 0;
@@ -61,38 +62,38 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         double rVzero_mod = std::max(rV[0], 0.0);
 
-        dTdt[0] = -rVzero_mod * (T[0] - Tleft) / (rho[0] * centerVol) - Tconst[0];
+        dTdt[0] = -rVzero_mod * (T[0] - Tleft) / (rho[0] * centerVol) + Tconst[0];
         for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,0) = -rVzero_mod * (Y(k,0) - Yleft[k]) / (rho[0] * centerVol) - Yconst(k,0);
+            dYdt(k,0) = -rVzero_mod * (Y(k,0) - Yleft[k]) / (rho[0] * centerVol) + Yconst(k,0);
         }
 
     } else { // grid.leftBC == BoundaryCondition::ZeroGradient
-        dTdt[0] = -Tconst[0];
+        dTdt[0] = Tconst[0];
         for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,0) = -Yconst(k,0);
+            dYdt(k,0) = Yconst(k,0);
         }
     }
 
     // Intermediate points
     for (size_t j=1; j<jj; j++) {
-        dUdt[j] = -(V[j] * dUdx[j]) / rho[j] - Uconst[j];
-        dTdt[j] = -(V[j] * dTdx[j]) / rho[j] - Tconst[j];
+        dUdt[j] = -V[j] * dUdx[j] / rho[j] + Uconst[j];
+        dTdt[j] = -V[j] * dTdx[j] / rho[j] + Tconst[j];
         for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,j) = -(V[j] * dYdx(k,j)) / rho[j] - Yconst(k,j);
+            dYdt(k,j) = -V[j] * dYdx(k,j) / rho[j] + Yconst(k,j);
         }
     }
 
     // Right boundary values
-    dUdt[jj] = -Uconst[jj]; // zero-gradient condition for U no matter what
+    dUdt[jj] = Uconst[jj]; // zero-gradient condition for U no matter what
     if (grid.rightBC == BoundaryCondition::FixedValue) {
         dTdt[jj] = 0;
         for (size_t k=0; k<nSpec; k++) {
             dYdt(k,jj) = 0;
         }
     } else { // grid.leftBC == BoundaryCondition::ZeroGradient
-        dTdt[jj] = -Tconst[jj];
+        dTdt[jj] = Tconst[jj];
         for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,jj) = -Yconst(k,jj);
+            dYdt(k,jj) = Yconst(k,jj);
         }
     }
 
