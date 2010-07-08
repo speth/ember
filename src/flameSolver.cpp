@@ -230,8 +230,8 @@ void FlameSolver::run(void)
 
         for (size_t k=0; k<nSpec; k++) {
             const dvector& ydotDiff = diffusionSolvers[kSpecies+k].get_ydot();
-            // const_cast required because Array2D::setColumn is missing a const qualifier
-            speciesDiff.setColumn(k, const_cast<double*>(&ydotDiff[0]));
+            // const_cast required because Array2D::setRow is missing a const qualifier
+            speciesDiff.setRow(k, const_cast<double*>(&ydotDiff[0]));
         }
 
         // *** Use the time derivatives to calculate the extrapolated values
