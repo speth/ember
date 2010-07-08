@@ -91,6 +91,8 @@ void FlameSolver::run(void)
     tPrev = t;
     aPrev = strainfunc.a(t);
 
+    resizeAuxiliary();
+
     if (options.outputProfiles) {
         writeStateFile();
     }
@@ -98,16 +100,6 @@ void FlameSolver::run(void)
     while (t < tEnd) {
 
         tIDA1 = clock();
-
-        if (grid.updated) {
-            grid.updated = false;
-            for (size_t k=0; k<nVars; k++) {
-                diffusionTerms[k].grid = grid;
-            }
-            convectionTerm.grid = grid;
-        }
-        // Allocate the solvers and arrays for auxiliary variables
-        resizeAuxiliary();
 
         // Calculate auxiliary data
         for (size_t j=0; j<nPoints; j++) {
@@ -290,12 +282,13 @@ void FlameSolver::run(void)
 
         int cvode_flag = 0;
         try {
+            cout << "Source: ";
             for (size_t j=0; j<nPoints; j++) {
-                cout << "Starting: j=" << j;
+                cout << j << " ";
                 cout.flush();
                 cvode_flag |= sourceSolvers[j].integrateToTime(tNext);
-                cout << "...done." << endl;
             }
+            cout << "done." << endl;
 
             for (size_t k=0; k<nVars; k++) {
                 diffusionSolvers[k].integrateToTime(tNext);
@@ -440,6 +433,7 @@ void FlameSolver::run(void)
 
             // Perform updates that are necessary if the grid has changed
             if (grid.updated) {
+                grid.updated = false;
                 nIntegrate = 0;
                 cout << "Grid size: " << nPoints << " points." << endl;
 
@@ -458,6 +452,16 @@ void FlameSolver::run(void)
                     gas.setStateMass(&Y(0,j), T[j]);
                     gas.getMassFractions(&Y(0,j));
                 }
+
+                // Assign the new grid to the terms that need it
+                for (size_t k=0; k<nVars; k++) {
+                    diffusionTerms[k].grid = grid;
+                }
+                convectionTerm.grid = grid;
+
+                // Allocate the solvers and arrays for auxiliary variables
+                resizeAuxiliary();
+
                 writeStateFile("postAdapt");
             }
 
