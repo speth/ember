@@ -2,8 +2,10 @@
 #include "sundialsUtils.h"
 #include "debugUtils.h"
 #include <map>
+#include <limits>
 
 using std::cout; using std::endl;
+const double NaN = std::numeric_limits<double>::quiet_NaN();
 
 double mathUtils::maxval(const dvector& v)
 {

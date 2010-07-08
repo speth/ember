@@ -16,6 +16,8 @@ using Cantera::Array2D;
 using std::vector;
 typedef std::vector<double> dvector;
 
+extern const double NaN;
+
 namespace mathUtils
 {
     double maxval(const dvector& v);

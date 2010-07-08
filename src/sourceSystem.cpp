@@ -3,13 +3,15 @@
 
 SourceSystem::SourceSystem()
     : gas(NULL)
+    , U(NaN)
+    , T(NaN)
 {
 }
 
 void SourceSystem::resize(size_t new_nSpec)
 {
     nSpec = new_nSpec;
-    Y.resize(nSpec);
+    Y.resize(nSpec, NaN);
     dYdt.resize(nSpec);
     cpSpec.resize(nSpec);
     wDot.resize(nSpec);
