@@ -136,10 +136,6 @@ void ConvectionSystem::roll_ydot(sdVector& ydot) const
 
 void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
 {
-    if (new_nSpec == nSpec && new_nPoints == nPoints) {
-        return;
-    }
-
     nSpec = new_nSpec;
     grid.setSize(new_nPoints);
     nVars = nSpec + 2;
