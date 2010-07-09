@@ -49,15 +49,11 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
 
     // *** Calculate dY/dt, dU/dt, dT/dt
 
-    // Left boundary conditions
+    // Left boundary conditions.
+    // Convection term only contributes in the ControlVolume case
     dUdt[0] = Uconst[0]; // zero-gradient condition for U no matter what
 
-    if (grid.leftBC == BoundaryCondition::FixedValue) {
-        dTdt[0] = 0;
-        for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,0) = 0;
-        }
-    } else if (grid.leftBC == BoundaryCondition::ControlVolume) {
+    if (grid.leftBC == BoundaryCondition::ControlVolume) {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         double rVzero_mod = std::max(rV[0], 0.0);
 
@@ -66,7 +62,7 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
             dYdt(k,0) = -rVzero_mod * (Y(k,0) - Yleft[k]) / (rho[0] * centerVol) + Yconst(k,0);
         }
 
-    } else { // grid.leftBC == BoundaryCondition::ZeroGradient
+    } else { // FixedValue or ZeroGradient
         dTdt[0] = Tconst[0];
         for (size_t k=0; k<nSpec; k++) {
             dYdt(k,0) = Yconst(k,0);
@@ -83,17 +79,12 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     }
 
     // Right boundary values
-    dUdt[jj] = Uconst[jj]; // zero-gradient condition for U no matter what
-    if (grid.rightBC == BoundaryCondition::FixedValue) {
-        dTdt[jj] = 0;
-        for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,jj) = 0;
-        }
-    } else { // grid.leftBC == BoundaryCondition::ZeroGradient
-        dTdt[jj] = Tconst[jj];
-        for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,jj) = Yconst(k,jj);
-        }
+    // Convection term has nothing to contribute in any case,
+    // So only the value from the other terms remains
+    dUdt[jj] = Uconst[jj];
+    dTdt[jj] = Tconst[jj];
+    for (size_t k=0; k<nSpec; k++) {
+        dYdt(k,jj) = Yconst(k,jj);
     }
 
     roll_ydot(ydot);
