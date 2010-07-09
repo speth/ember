@@ -148,9 +148,9 @@ private:
     void printPerfString(const std::string& label, const perfTimer& T) const;
 
     // Subdivided governing equation components
-    dvector energyDiff, energyConv, energyProd;
-    dvector momentumDiff, momentumConv, momentumProd;
-    Array2D speciesDiff, speciesConv, speciesProd;
+    dvector dTdt_diff, dTdt_conv, dTdt_prod;
+    dvector dUdt_diff, dUdt_conv, dUdt_prod;
+    Array2D dYdt_diff, dYdt_conv, dYdt_prod;
 
     int alpha;
 

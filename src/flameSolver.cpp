@@ -206,10 +206,10 @@ void FlameSolver::run(void)
         sdVector ydotConv(nVars*nPoints);
         convectionTerm.f(tNow, yConv, ydotConv);
         for (size_t j=0; j<nPoints; j++) {
-            momentumConv[j] = ydotConv[nVars*j+kMomentum];
-            energyConv[j] = ydotConv[nVars*j+kEnergy];
+            dUdt_conv[j] = ydotConv[nVars*j+kMomentum];
+            dTdt_conv[j] = ydotConv[nVars*j+kEnergy];
             for (size_t k=0; k<nSpec; k++) {
-                speciesConv(k,j) = ydotConv[nVars*j+kSpecies+k];
+                dYdt_conv(k,j) = ydotConv[nVars*j+kSpecies+k];
             }
         }
 
@@ -217,30 +217,30 @@ void FlameSolver::run(void)
         sdVector ydotSource(nVars);
         for (size_t j=0; j<nPoints; j++) {
             sourceTerms[j].f(tNow, sourceSolvers[j].y, ydotSource);
-            momentumProd[j] = ydotSource[kMomentum];
-            energyProd[j] = ydotSource[kEnergy];
+            dUdt_prod[j] = ydotSource[kMomentum];
+            dTdt_prod[j] = ydotSource[kEnergy];
             for (size_t k=0; k<nSpec; k++) {
-                speciesProd(k,j) = ydotSource[kSpecies+k];
+                dYdt_prod(k,j) = ydotSource[kSpecies+k];
             }
         }
 
         // Diffusion solvers
-        momentumDiff = diffusionSolvers[kMomentum].get_ydot();
-        energyDiff = diffusionSolvers[kEnergy].get_ydot();
+        dUdt_diff = diffusionSolvers[kMomentum].get_ydot();
+        dTdt_diff = diffusionSolvers[kEnergy].get_ydot();
 
         for (size_t k=0; k<nSpec; k++) {
             const dvector& ydotDiff = diffusionSolvers[kSpecies+k].get_ydot();
             // const_cast required because Array2D::setRow is missing a const qualifier
-            speciesDiff.setRow(k, const_cast<double*>(&ydotDiff[0]));
+            dYdt_diff.setRow(k, const_cast<double*>(&ydotDiff[0]));
         }
 
         // *** Use the time derivatives to calculate the extrapolated values
         //     for the state variables
-        Uextrap = U + (momentumProd + momentumDiff + momentumConv)*dt;
-        Textrap = T + (energyProd + energyDiff + energyConv)*dt;
+        Uextrap = U + (dUdt_prod + dUdt_diff + dUdt_conv)*dt;
+        Textrap = T + (dTdt_prod + dTdt_diff + dTdt_conv)*dt;
         for (size_t j=0; j<nPoints; j++) {
             for (size_t k=0; k<nSpec; k++) {
-                Yextrap(k,j) = Y(k,j) + (speciesProd(k,j) + speciesDiff(k,j) + speciesConv(k,j)) * dt;
+                Yextrap(k,j) = Y(k,j) + (dYdt_prod(k,j) + dYdt_diff(k,j) + dYdt_conv(k,j)) * dt;
             }
         }
 
@@ -248,31 +248,31 @@ void FlameSolver::run(void)
         // for each term
 
         // Convection term
-        convectionTerm.Uconst = momentumProd + momentumDiff;
-        convectionTerm.Tconst = energyProd + energyDiff;
+        convectionTerm.Uconst = dUdt_prod + dUdt_diff;
+        convectionTerm.Tconst = dTdt_prod + dTdt_diff;
         for (size_t j=0; j<nPoints; j++) {
             for (size_t k=0; k<nSpec; k++) {
-                convectionTerm.Yconst(k,j) = speciesProd(k,j) + speciesDiff(k,j);
+                convectionTerm.Yconst(k,j) = dYdt_prod(k,j) + dYdt_diff(k,j);
             }
         }
 
         // Source terms
         for (size_t j=0; j<nPoints; j++) {
             SourceSystem& term = sourceTerms[j];
-            term.C[kMomentum] = momentumConv[j] + momentumDiff[j];
-            term.C[kEnergy] = energyConv[j] + energyDiff[j];
+            term.C[kMomentum] = dUdt_conv[j] + dUdt_diff[j];
+            term.C[kEnergy] = dTdt_conv[j] + dTdt_diff[j];
             for (size_t k=0; k<nSpec; k++) {
-                term.C[kSpecies+k] = speciesConv(k,j) + speciesDiff(k,j);
+                term.C[kSpecies+k] = dYdt_conv(k,j) + dYdt_diff(k,j);
             }
         }
 
         // Diffusion terms
-        diffusionTerms[kMomentum].C = momentumConv + momentumProd;
-        diffusionTerms[kEnergy].C = energyConv + energyProd;
+        diffusionTerms[kMomentum].C = dUdt_conv + dUdt_prod;
+        diffusionTerms[kEnergy].C = dTdt_conv + dTdt_prod;
         for (size_t k=0; k<nSpec; k++) {
             dvector& C = diffusionTerms[kSpecies+k].C;
             for (size_t j=0; j<nPoints; j++) {
-                C[j] = speciesConv(k,j) + speciesProd(k,j);
+                C[j] = dYdt_conv(k,j) + dYdt_prod(k,j);
             }
         }
 
@@ -635,15 +635,15 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
     }
 
     if (options.outputResidualComponents || errorFile) {
-        outFile.writeVector("resEnergyDiff", energyDiff);
-        outFile.writeVector("resEnergyConv", energyConv);
-        outFile.writeVector("resEnergyProd", energyProd);
-        outFile.writeVector("resMomentumDiff", momentumDiff);
-        outFile.writeVector("resMomentumConv", momentumConv);
-        outFile.writeVector("resMomentumProd", momentumProd);
-        outFile.writeArray2D("resSpeciesDiff", speciesDiff);
-        outFile.writeArray2D("resSpeciesConv", speciesConv);
-        outFile.writeArray2D("resSpeciesProd", speciesProd);
+        outFile.writeVector("dTdt_diff", dTdt_diff);
+        outFile.writeVector("dTdt_conv", dTdt_conv);
+        outFile.writeVector("dTdt_prod", dTdt_prod);
+        outFile.writeVector("dUdt_diff", dUdt_diff);
+        outFile.writeVector("dUdt_conv", dUdt_conv);
+        outFile.writeVector("dUdt_prod", dUdt_prod);
+        outFile.writeArray2D("dYdt_diff", dYdt_diff);
+        outFile.writeArray2D("dYdt_conv", dYdt_conv);
+        outFile.writeArray2D("dYdt_prod", dYdt_prod);
     }
 
     outFile.close();
@@ -681,17 +681,17 @@ void FlameSolver::resizeAuxiliary()
     dTdt.resize(nPoints,0);
     dYdt.resize(nSpec,nPoints);
 
-    energyDiff.resize(nPoints,0);
-    energyConv.resize(nPoints,0);
-    energyProd.resize(nPoints,0);
+    dTdt_diff.resize(nPoints,0);
+    dTdt_conv.resize(nPoints,0);
+    dTdt_prod.resize(nPoints,0);
 
-    momentumDiff.resize(nPoints,0);
-    momentumConv.resize(nPoints,0);
-    momentumProd.resize(nPoints,0);
+    dUdt_diff.resize(nPoints,0);
+    dUdt_conv.resize(nPoints,0);
+    dUdt_prod.resize(nPoints,0);
 
-    speciesDiff.resize(nSpec,nPoints,0);
-    speciesConv.resize(nSpec,nPoints,0);
-    speciesProd.resize(nSpec,nPoints,0);
+    dYdt_diff.resize(nSpec,nPoints,0);
+    dYdt_conv.resize(nSpec,nPoints,0);
+    dYdt_prod.resize(nSpec,nPoints,0);
 
     rho.resize(nPoints);
     Wmx.resize(nPoints);
