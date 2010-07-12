@@ -39,6 +39,10 @@ public:
     // Cantera data
     CanteraGas* gas;
 
+    // Auxiliary variables
+    dvector V; // mass flux [kg/m^2*s]
+    dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
+
 private:
     void V2rV();
     void rV2V();
@@ -48,11 +52,9 @@ private:
 
     dvector rho; // mixture density [kg/m^3]
     dvector Wmx; // mixture molecular weight [kg/kmol]
-    dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
     dvector W; // species molecular weights [kg/kmol]
 
     // variables used internally
-    dvector V; // mass flux [kg/m^2*s]
     dvector dUdx;
     dvector dTdx;
     Array2D dYdx;

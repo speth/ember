@@ -583,6 +583,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
     }
 
     if (options.outputAuxiliaryVariables || errorFile) {
+        outFile.writeVector("V", convectionTerm.V);
         outFile.writeArray2D("Yextrap", Yextrap);
         outFile.writeVector("Textrap", Textrap);
         outFile.writeVector("Uextrap", Uextrap);
