@@ -29,16 +29,20 @@ int main(int argc, char** argv)
         inputFile = "input.txt"; // default input filename
     }
 
+    strainedFlame(inputFile);
+
     try {
-        strainedFlame(inputFile);
+//        strainedFlame(inputFile);
         //chemistryTest();
         //miscTest();
     }
     catch (Cantera::CanteraError) {
         Cantera::showErrors(cout);
+        throw;
     } catch (libconfig::ParseException err) {
         cout << "Error in config file \"" << inputFile << "\": ";
         cout << err.getError() << " on line " << err.getLine() << endl;
+        throw;
     } catch (debugException& e) {
         cout << e.errorString << endl;
         throw;

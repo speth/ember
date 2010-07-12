@@ -99,6 +99,18 @@ void FlameSolver::run(void)
 
     while (t < tEnd) {
 
+        // Debug sanity check
+        bool error = false;
+        for (size_t j=0; j<nPoints; j++) {
+            if (T[j] < 295 || T[j] > 3000) {
+                cout << "WARNING: Unexpected Temperature: T = " << T[j] << "at j = " << j << endl;
+                error = true;
+            }
+        }
+        if (error) {
+            writeStateFile();
+        }
+
         tIDA1 = clock();
 
         // Calculate auxiliary data
@@ -276,19 +288,14 @@ void FlameSolver::run(void)
             }
         }
 
-        cout << "START OF INTEGRATION" << endl;
         // *** Take one global timestep
         double tNext = tNow + dt;
 
         int cvode_flag = 0;
         try {
-            cout << "Source: ";
             for (size_t j=0; j<nPoints; j++) {
-                cout << j << " ";
-                cout.flush();
                 cvode_flag |= sourceSolvers[j].integrateToTime(tNext);
             }
-            cout << "done." << endl;
 
             for (size_t k=0; k<nVars; k++) {
                 diffusionSolvers[k].integrateToTime(tNext);
