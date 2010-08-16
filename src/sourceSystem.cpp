@@ -39,10 +39,10 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     double dadt = strainFunction.dadt(t);
 
     // *** Calculate the time derivatives
-    dUdt = - U*U + rhou/rho*(dadt + a*a) + C[kMomentum];
-    dTdt = qDot/(rho*cp) + C[kEnergy];
+    dUdt = - U*U + rhou/rho*(dadt + a*a) + splitConst[kMomentum] + splitLinear[kMomentum]*U;
+    dTdt = qDot/(rho*cp) + splitConst[kEnergy] + splitLinear[kEnergy]*T;
     for (size_t k=0; k<nSpec; k++) {
-        dYdt[k] = wDot[k]*W[k]/rho + C[kSpecies+k];
+        dYdt[k] = wDot[k]*W[k]/rho + splitConst[kSpecies+k] + splitLinear[kSpecies+k];
     }
 
     roll_ydot(ydot);
@@ -129,6 +129,18 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
 
     // dMomentum/dT
     J(kMomentum, kEnergy) = -A*drhodT/(rho*rho);
+
+    if (updateDiagonalJac) {
+        for (size_t k=0; k<nVars+2; k++) {
+            diagonalJac[k] = J(k,k);
+        }
+        updateDiagonalJac = false;
+    }
+
+    // contribution from the split terms
+    for (size_t k=0; k<nVars+2; k++) {
+        J(k,k) += splitLinear[k];
+    }
 
     return 0;
 }

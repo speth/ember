@@ -27,6 +27,9 @@ public:
 
     // the coefficients of the ODE
     dvector B; // pre-factor
-    dvector C; // constant term
     dvector D; // "diffusion" coefficient
+
+    // Diagonalized, linear approximations for terms neglected by splitting
+    dvector splitConst; // constant terms
+    dvector splitLinear; // diagonal jacobian components
 };

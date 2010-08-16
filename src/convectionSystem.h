@@ -6,7 +6,6 @@
 #include "grid.h"
 #include "chemistry0d.h"
 
-
 class ConvectionSystem  : public sdODE, public GridBased
 {
     // This is the system representing convection of all state variables in the domain.
@@ -15,7 +14,9 @@ public:
 
     // The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
-    // This uses an explicit integrator, so no Jacobian/Preconditioner is necessary
+    // This uses an explicit integrator, so the full Jacobian is not needed. However,
+    // we still need the diagonal elements to implement the splitting method
+    void get_diagonal(const realtype t, dvector& dU, dvector& dT, Array2D& dY);
 
     void unroll_y(const sdVector& y); // fill in current state variables from sdvector
     void roll_y(sdVector& y) const; // fill in sdvector with current state variables
@@ -31,9 +32,17 @@ public:
     dvector Yleft; // Mass fraction left boundary values
     double rVzero; // mass flux boundary value at j=0
 
-    // The sum of the terms held constant for each variable in this system
-    dvector Uconst;
+    // Diagonalized, linear approximations for terms neglected by splitting
+    dvector splitConstU;
+    dvector splitConstT;
+    Array2D splitConstY;
+    dvector splitLinearU;
+    dvector splitLinearT;
+    Array2D splitLinearY;
+
+    // Temporaries for the neglected terms
     dvector Tconst;
+    dvector Uconst;
     Array2D Yconst;
 
     // Cantera data

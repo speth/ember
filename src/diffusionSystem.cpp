@@ -7,7 +7,6 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
     int N = D.size();
     dvector c1(N);
     dvector c2(N);
-    dvector c3(N);
     for (int j=0; j<N-1; j++) {
         c1[j] = 0.5*B[j]/(dlj[j]*r[j]);
         c2[j] = rphalf[j]*(D[j]+D[j+1])/hh[j];
@@ -52,9 +51,14 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
         A(j,j) = -c1[j]*(c2[j-1] + c2[j]);
         A(j,j+1) = c1[j]*c2[j];
     }
+
+    // Contribution from splitting
+    for (int j=0; j<N; j++) {
+        A(j,j) += splitLinear[j];
+    }
 }
 
 void DiffusionSystem::get_C(dvector& other_c)
 {
-    other_c.assign(C.begin(), C.end());
+    other_c.assign(splitConst.begin(), splitConst.end());
 }

@@ -149,6 +149,14 @@ const dvector& BDFIntegrator::get_ydot()
     return ydot;
 }
 
+void BDFIntegrator::get_diagonal(dvector& d)
+{
+    // Assume that A has already been updated
+    for (int i=0; i<N; i++) {
+        d[i] = A(i,i);
+    }
+}
+
 void BDFIntegrator::step()
 {
     if (stepCount == 0) {

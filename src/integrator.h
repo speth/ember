@@ -87,6 +87,7 @@ public:
     void initialize();
 
     const dvector& get_ydot();
+    void get_diagonal(dvector& d) const;
 
     // Actually do the integration
     void step(); // take a single step

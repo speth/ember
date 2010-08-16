@@ -19,6 +19,15 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     }
     gas->getMolecularWeights(W);
 
+    // Update split terms
+    for (size_t j=0; j<nPoints; j++) {
+        Uconst[j] = splitConstU[j] + splitLinearU[j] * U[j];
+        Tconst[j] = splitConstT[j] + splitLinearT[j] * T[j];
+        for (size_t k=0; k<nSpec; k++) {
+            Yconst(k,j) = splitConstY(k,j) + splitLinear(k,j) * Y(k,j);
+        }
+    }
+
     // *** Calculate V ***
     rV[0] = rVzero;
     for (size_t j=0; j<nPoints-1; j++) {
@@ -36,13 +45,13 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
                 dYdx(k,j) = (Y(k,j) - Y(k,j-1)) / hh[j-1];
             }
         }
+
         rV[j+1] = rV[j] - hh[j] * (rV[j] * dTdx[j] - rphalf[j] * rho[j] * Tconst[j]) / T[j];
         rV[j+1] -= hh[j] * rho[j] * U[j] * rphalf[j];
         for (size_t k=0; k<nSpec; k++) {
             rV[j+1] -= hh[j] * (rV[j] * dYdx(k,j) + rphalf[j] * rho[j] * Yconst(k,j))
                        * Wmx[j] / W[k];
         }
-
     }
 
     rV2V();
@@ -91,6 +100,50 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     return 0;
 }
 
+void ConvectionSystem::get_diagonal(const realtype t, dvector& linearU,
+                                    dvector& linearT, Array2D& linearY)
+{
+    // Assume that f has just been called and that all auxiliary
+    // arrays are in a consistent state.
+
+    // Left boundary conditions.
+    // Convection term only contributes in the ControlVolume case
+
+    // dUdot/dU
+    linearU[0] = 0;
+
+    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+        double centerVol = pow(x[1],alpha+1) / (alpha+1);
+        double rVzero_mod = std::max(rV[0], 0.0);
+
+        // dTdot/dT
+        linearT[0] = -rVzero_mod / (rho[0] * centerVol);
+
+        for (size_t k=0; k<nSpec; k++) {
+            // dYdot/dY
+            linearY(k,0) = -rVzero_mod / (rho[0] * centerVol);
+        }
+
+    } else { // FixedValue or ZeroGradient
+        linearT[0] = 0;
+        for (size_t k=0; k<nSpec; k++) {
+            linearY(k,0) = 0;
+        }
+    }
+
+    // Intermediate points
+    for (size_t j=1; j<jj; j++) {
+        // depends on upwinding to calculated dT/dx etc.
+        double value = (rV[j] < 0 || j == 0) ? V[j] / (rho[j] * hh[j])
+                                             : -V[j] / (rho[j] * hh[j-1]);
+        linearU[j] = value;
+        linearT[j] = value;
+        for (size_t k=0; k<nSpec; k++) {
+            linearY(k,j) = value;
+        }
+    }
+}
+
 void ConvectionSystem::unroll_y(const sdVector& y)
 {
     for (size_t j=0; j<nPoints; j++) {
@@ -122,7 +175,6 @@ void ConvectionSystem::roll_ydot(sdVector& ydot) const
             ydot[j*nVars+kSpecies+k] = dYdt(k,j);
         }
     }
-
 }
 
 void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
@@ -134,11 +186,15 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
     dUdt.resize(nPoints);
     dUdx.resize(nPoints);
     Uconst.resize(nPoints);
+    splitConstU.resize(nPoints);
+    splitLinearU.resize(nPoints);
 
     T.resize(nPoints);
     dTdt.resize(nPoints);
     dTdx.resize(nPoints);
     Tconst.resize(nPoints);
+    splitConstT.resize(nPoints);
+    splitLinearT.resize(nPoints);
 
     rho.resize(nPoints);
     Wmx.resize(nPoints);
@@ -150,6 +206,8 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
     dYdt.resize(nSpec, nPoints);
     dYdx.resize(nSpec, nPoints);
     Yconst.resize(nSpec, nPoints);
+    splitConstY.resize(nSpec, nPoints);
+    splitLinearY.resize(nSpec, nPoints);
 }
 
 void ConvectionSystem::V2rV(void)

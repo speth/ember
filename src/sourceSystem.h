@@ -35,8 +35,13 @@ public:
     double T, dTdt; // temperature
     dvector Y, dYdt; // species mass fractions
 
-    // The sum of the terms held constant for each component in this system
-    dvector C;
+    // Diagonalized, linear approximations for terms neglected by splitting
+    dvector splitConst; // constant terms
+    dvector splitLinear; // diagonal jacobian components
+
+    // Diagonal Jacobian elements for this this term
+    dvector diagonalJac;
+    bool updateDiagonalJac;
 
     // Cantera data
     CanteraGas* gas;
