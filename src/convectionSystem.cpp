@@ -24,7 +24,7 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
         Uconst[j] = splitConstU[j] + splitLinearU[j] * U[j];
         Tconst[j] = splitConstT[j] + splitLinearT[j] * T[j];
         for (size_t k=0; k<nSpec; k++) {
-            Yconst(k,j) = splitConstY(k,j) + splitLinear(k,j) * Y(k,j);
+            Yconst(k,j) = splitConstY(k,j) + splitLinearY(k,j) * Y(k,j);
         }
     }
 

@@ -87,7 +87,7 @@ public:
     void initialize();
 
     const dvector& get_ydot();
-    void get_diagonal(dvector& d) const;
+    const dvector& get_diagonal();
 
     // Actually do the integration
     void step(); // take a single step
@@ -103,4 +103,5 @@ private:
     int upper_bw, lower_bw; // bandwidth of the Jacobian
     dvector yprev; // previous solution
     dvector c;
+    dvector Adiag; // diagonal components of A
 };

@@ -2,9 +2,9 @@
 #include "readConfig.h"
 
 SourceSystem::SourceSystem()
-    : gas(NULL)
-    , U(NaN)
+    : U(NaN)
     , T(NaN)
+    , gas(NULL)
 {
 }
 
@@ -16,7 +16,8 @@ void SourceSystem::resize(size_t new_nSpec)
     cpSpec.resize(nSpec);
     wDot.resize(nSpec);
     hk.resize(nSpec);
-    C.resize(nSpec+2);
+    splitConst.resize(nSpec+2);
+    splitLinear.resize(nSpec+2);
 }
 
 int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
@@ -131,14 +132,14 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     J(kMomentum, kEnergy) = -A*drhodT/(rho*rho);
 
     if (updateDiagonalJac) {
-        for (size_t k=0; k<nVars+2; k++) {
+        for (size_t k=0; k<nSpec+2; k++) {
             diagonalJac[k] = J(k,k);
         }
         updateDiagonalJac = false;
     }
 
     // contribution from the split terms
-    for (size_t k=0; k<nVars+2; k++) {
+    for (size_t k=0; k<nSpec+2; k++) {
         J(k,k) += splitLinear[k];
     }
 
