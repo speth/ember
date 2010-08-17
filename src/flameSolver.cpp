@@ -336,6 +336,7 @@ void FlameSolver::run(void)
         diffusionTerms[kMomentum].splitConst = constUconv + constUprod;
         diffusionTerms[kMomentum].splitLinear = linearUconv + linearUprod;
         diffusionTerms[kEnergy].splitConst = constTconv + constTprod;
+        diffusionTerms[kEnergy].splitLinear = linearTconv + linearTprod;
         for (size_t k=0; k<nSpec; k++) {
             dvector& splitConst = diffusionTerms[kSpecies+k].splitConst;
             dvector& splitLinear = diffusionTerms[kSpecies+k].splitLinear;

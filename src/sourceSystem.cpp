@@ -43,7 +43,7 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     dUdt = - U*U + rhou/rho*(dadt + a*a) + splitConst[kMomentum] + splitLinear[kMomentum]*U;
     dTdt = qDot/(rho*cp) + splitConst[kEnergy] + splitLinear[kEnergy]*T;
     for (size_t k=0; k<nSpec; k++) {
-        dYdt[k] = wDot[k]*W[k]/rho + splitConst[kSpecies+k] + splitLinear[kSpecies+k];
+        dYdt[k] = wDot[k]*W[k]/rho + splitConst[kSpecies+k] + splitLinear[kSpecies+k]*Y[k];
     }
 
     roll_ydot(ydot);
