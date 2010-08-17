@@ -147,10 +147,15 @@ private:
     void printPerformanceStats(void);
     void printPerfString(const std::string& label, const perfTimer& T) const;
 
-    // Subdivided governing equation components
-    dvector dTdt_diff, dTdt_conv, dTdt_prod;
-    dvector dUdt_diff, dUdt_conv, dUdt_prod;
-    Array2D dYdt_diff, dYdt_conv, dYdt_prod;
+    // Subdivided governing equation constant terms
+    dvector constTdiff, constTconv, constTprod;
+    dvector constUdiff, constUconv, constUprod;
+    Array2D constYdiff, constYconv, constYprod;
+
+    // Subdivided governing equation linear terms
+    dvector linearTdiff, linearTconv, linearTprod;
+    dvector linearUdiff, linearUconv, linearUprod;
+    Array2D linearYdiff, linearYconv, linearYprod;
 
     int alpha;
 
