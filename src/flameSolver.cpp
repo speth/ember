@@ -285,28 +285,23 @@ void FlameSolver::run(void)
         // This is the exact solution to the linearized problem
         for (size_t j=0; j<nPoints; j++) {
             double K = constUprod[j] + constUdiff[j] + constUconv[j];
-            double L = linearUconv[j] + linearUdiff[j] + linearUprod[j];
-            if (L*dt < 1e-10) {
-                L = 1e-10/dt;
-            }
-            Uextrap[j] = U[j]*exp(L*dt) + K/L*(exp(L*dt)-1);
+            double L = linearUprod[j] + linearUdiff[j] + linearUconv[j];
+            double L2; // L2 handles the limit as L->0 for the second term in the solution
+            L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
+
+            Uextrap[j] = U[j]*exp(L*dt) + K/L2*(exp(L2*dt)-1);
 
             K = constTprod[j] + constTdiff[j] + constTconv[j];
-            L = linearTconv[j] + linearTdiff[j] + linearTprod[j];
-            if (L*dt < 1e-10) {
-                L = 1e-10/dt;
-            }
-            Textrap[j] = T[j]*exp(L*dt) + K/L*(exp(L*dt)-1);
+            L = linearTprod[j] + linearTdiff[j] + linearTconv[j];
+            L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
+            Textrap[j] = T[j]*exp(L*dt) + K/L2*(exp(L2*dt)-1);
 
             for (size_t k=0; k<nSpec; k++) {
                 K = constYprod(k,j) + constYdiff(k,j) + constYconv(k,j);
                 L = linearYconv(k,j) + linearYdiff(k,j) + linearYprod(k,j);
-                if (L*dt < 1e-10) {
-                    L = 1e-10/dt;
-                }
-                Yextrap(k,j) = Y(k,j)*exp(L*dt) + K/L*(exp(L*dt)-1);
+                L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
+                Yextrap(k,j) = Y(k,j)*exp(L*dt) + K/L2*(exp(L2*dt)-1);
             }
-
         }
 
         // *** Calculate the constant and linear terms for each system of
@@ -714,6 +709,17 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("dYdt_diff", constYdiff);
         outFile.writeArray2D("dYdt_conv", constYconv);
         outFile.writeArray2D("dYdt_prod", constYprod);
+
+        outFile.writeVector("linearTdiff", linearTdiff);
+        outFile.writeVector("linearTconv", linearTconv);
+        outFile.writeVector("linearTprod", linearTprod);
+        outFile.writeVector("linearUdiff", linearUdiff);
+        outFile.writeVector("linearUconv", linearUconv);
+        outFile.writeVector("linearUprod", linearUprod);
+        outFile.writeArray2D("linearYdiff", linearYdiff);
+        outFile.writeArray2D("linearYconv", linearYconv);
+        outFile.writeArray2D("linearYprod", linearYprod);
+
     }
 
     outFile.close();
