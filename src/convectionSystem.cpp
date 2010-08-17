@@ -49,7 +49,7 @@ int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
         rV[j+1] = rV[j] - hh[j] * (rV[j] * dTdx[j] - rphalf[j] * rho[j] * Tconst[j]) / T[j];
         rV[j+1] -= hh[j] * rho[j] * U[j] * rphalf[j];
         for (size_t k=0; k<nSpec; k++) {
-            rV[j+1] -= hh[j] * (rV[j] * dYdx(k,j) + rphalf[j] * rho[j] * Yconst(k,j))
+            rV[j+1] -= hh[j] * (rV[j] * dYdx(k,j) - rphalf[j] * rho[j] * Yconst(k,j))
                        * Wmx[j] / W[k];
         }
     }

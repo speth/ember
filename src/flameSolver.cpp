@@ -314,7 +314,7 @@ void FlameSolver::run(void)
         convectionTerm.splitLinearT = linearTprod + linearTdiff;
         for (size_t j=0; j<nPoints; j++) {
             for (size_t k=0; k<nSpec; k++) {
-                convectionTerm.Yconst(k,j) = constYprod(k,j) + constYdiff(k,j);
+                convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j);
                 convectionTerm.splitLinearY(k,j) = linearYprod(k,j) + linearYdiff(k,j);
             }
         }
@@ -719,7 +719,6 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("linearYdiff", linearYdiff);
         outFile.writeArray2D("linearYconv", linearYconv);
         outFile.writeArray2D("linearYprod", linearYprod);
-
     }
 
     outFile.close();
