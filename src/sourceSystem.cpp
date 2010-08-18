@@ -4,6 +4,7 @@
 SourceSystem::SourceSystem()
     : U(NaN)
     , T(NaN)
+    , updateDiagonalJac(false)
     , gas(NULL)
 {
 }
@@ -18,6 +19,7 @@ void SourceSystem::resize(size_t new_nSpec)
     hk.resize(nSpec);
     splitConst.resize(nSpec+2);
     splitLinear.resize(nSpec+2);
+    diagonalJac.resize(nSpec+2, 0);
 }
 
 int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
@@ -131,13 +133,6 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     // dMomentum/dT
     J(kMomentum, kEnergy) = -A*drhodT/(rho*rho);
 
-    if (updateDiagonalJac) {
-        for (size_t k=0; k<nSpec+2; k++) {
-            diagonalJac[k] = J(k,k);
-        }
-        updateDiagonalJac = false;
-    }
-
     // contribution from the split terms
     for (size_t k=0; k<nSpec+2; k++) {
         J(k,k) += splitLinear[k];
@@ -165,6 +160,14 @@ int SourceSystem::fdJacobian(const realtype t, const sdVector& y, const sdVector
             J(k,i) = (ydot2[k]-ydot[k])/dy;
         }
     }
+
+    if (updateDiagonalJac) {
+        for (size_t k=0; k<nSpec+2; k++) {
+            diagonalJac[k] = J(k,k);
+        }
+        updateDiagonalJac = false;
+    }
+
     return 0;
 }
 

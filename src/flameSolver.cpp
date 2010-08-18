@@ -235,15 +235,16 @@ void FlameSolver::run(void)
 
         // Source solvers
         sdVector ydotSource(nVars);
+        sdMatrix Jtmp(nVars, nVars);
         for (size_t j=0; j<nPoints; j++) {
             sourceTerms[j].updateDiagonalJac = true;
             sourceTerms[j].f(tNow, sourceSolvers[j].y, ydotSource);
+            sourceTerms[j].denseJacobian(tNow, sourceSolvers[j].y, ydotSource, Jtmp);
             constUprod[j] = ydotSource[kMomentum];
             constTprod[j] = ydotSource[kEnergy];
             for (size_t k=0; k<nSpec; k++) {
                 constYprod(k,j) = ydotSource[kSpecies+k];
-                linearYprod.data().assign(sourceTerms[j].diagonalJac.begin(),
-                                          sourceTerms[j].diagonalJac.end());
+                linearYprod(k,j) = sourceTerms[j].diagonalJac[kSpecies+k];
             }
         }
 
