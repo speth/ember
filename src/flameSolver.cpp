@@ -205,7 +205,7 @@ void FlameSolver::run(void)
 
         // TODO: Use timestep that is based on each component's diffusivity
         for (size_t k=0; k<nVars; k++) {
-            diffusionSolvers[k].set_dt(options.globalTimestep/64);
+            diffusionSolvers[k].set_dt(options.diffusionTimestep);
         }
 
         for (size_t k=0; k<nVars; k++) {

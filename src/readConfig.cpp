@@ -17,7 +17,7 @@ void configOptions::readOptionsFile(const std::string& filename)
     } else {
         throw debugException("configOptions::readOptionsFile: Error: Input file \"" + filename + "\" does not exist.");
     }
-    
+
     cout << std::boolalpha; // prints "true" and "false" rather than 1 and 0
     cfg.setAutoConvert(true);
 
@@ -144,6 +144,7 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("times.integratorRestartInterval",integratorRestartInterval, 200);
     readOption("times.maxTimestep",maxTimestep, 1.0e-3);
     readOption("times.globalTimestep", globalTimestep, 1.0e-4);
+    readOption("times.diffusionTimestep", diffusionTimestep, 1.0e-6);
 
     readOption("debug.adaptation",debugParameters::debugAdapt, false);
     readOption("debug.regridding",debugParameters::debugRegrid, false);

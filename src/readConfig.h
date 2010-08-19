@@ -8,7 +8,7 @@ extern const size_t kMomentum, kEnergy, kSpecies; // indices of the respective e
 class configOptions
 {
 public:
-    // Populate the members of this class with the contents of the configuration file 
+    // Populate the members of this class with the contents of the configuration file
     void readOptionsFile(const std::string& filename);
 
     std::string inputDir;
@@ -39,6 +39,7 @@ public:
     double profileTimeInterval;
     double maxTimestep;
     double globalTimestep; // timestep size for the outer solver
+    double diffusionTimestep; // timestep for diffusion solver
 
     double idaRelTol;
     double idaRelTolLow;
@@ -69,7 +70,7 @@ public:
     double uniformityTol, absvtol;
     double boundaryTol, boundaryTolRm;
     int addPointCount;
-    
+
     double tStart, tEnd;
 
     int gridAlpha; // 1 for curved flames, 0 for planar flames
