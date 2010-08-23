@@ -8,12 +8,10 @@ CanteraGas::CanteraGas()
     , kinetics(NULL)
     , transport(NULL)
 {
-    std:: cout << "CanteraGas::CanteraGas()" << std::endl;
 }
 
 CanteraGas::~CanteraGas()
 {
-    std:: cout << "CanteraGas::~CanteraGas()" << std::endl;
     Cantera::close_XML_File(mechanismFile);
     //phaseXmlNode->unlock();
     //rootXmlNode->unlock();
@@ -33,7 +31,6 @@ void CanteraGas::setOptions(const configOptions& options)
 
 void CanteraGas::initialize()
 {
-    std:: cout << "CanteraGas::initialize()" << std::endl;
     // XML Information File
     if (!boost::filesystem::exists(mechanismFile)) {
         throw debugException("Error: Cantera input file \"" + mechanismFile + "\" not found.");
