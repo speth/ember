@@ -1134,11 +1134,18 @@ void FlameSolver::loadProfile(void)
     x = infile.readVector("x");
 
     grid.setSize(x.size());
+    grid.alpha = (options.curvedFlame) ? 1 : 0;
+    grid.unburnedLeft = options.unburnedLeft;
+    grid.updateValues();
+    grid.updateBoundaryIndices();
 
     U = infile.readVector("U");
     T = infile.readVector("T");
     Y = infile.readArray2D("Y");
     tNow = infile.readScalar("t");
+
+    dvector V = infile.readVector("V");
+    rVzero = V[0];
 
     if (!options.fileNumberOverride) {
         options.outputFileNumber = (int) infile.readScalar("fileNumber");
