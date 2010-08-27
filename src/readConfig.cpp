@@ -104,7 +104,7 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("grid.regridding.boundaryTolRm", boundaryTolRm, 5.0e-6);
     readOption("grid.regridding.addPointCount", addPointCount, 2);
 
-    readOption("times.tStart", tStart, 0.0e0);
+    haveTStart = readOption("times.tStart", tStart, 0.0e0);
     readOption("terminationCondition.tEnd", tEnd, 10);
 
     readOption("general.fixedBurnedVal", fixedBurnedVal, true);

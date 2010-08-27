@@ -72,6 +72,7 @@ public:
     int addPointCount;
 
     double tStart, tEnd;
+    bool haveTStart;
 
     int gridAlpha; // 1 for curved flames, 0 for planar flames
 

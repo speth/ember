@@ -1143,6 +1143,10 @@ void FlameSolver::loadProfile(void)
     T = infile.readVector("T");
     Y = infile.readArray2D("Y");
     tNow = infile.readScalar("t");
+    if (!options.haveTStart) {
+        // If tStart is not in the input file, use the time from the restart file.
+        tStart = tNow;
+    }
 
     dvector V = infile.readVector("V");
     rVzero = V[0];
