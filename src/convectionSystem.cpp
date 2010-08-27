@@ -212,6 +212,7 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
 
 void ConvectionSystem::V2rV(void)
 {
+    V[0] = rV[0];
     if (alpha == 0) {
         for (size_t j=1; j<nPoints; j++) {
             rV[j] = V[j];
@@ -225,6 +226,7 @@ void ConvectionSystem::V2rV(void)
 
 void ConvectionSystem::rV2V(void)
 {
+    V[0] = rV[0];
     if (alpha == 0) {
         for (size_t j=1; j<nPoints; j++) {
             V[j] = rV[j];
