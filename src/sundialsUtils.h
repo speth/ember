@@ -114,8 +114,12 @@ public:
 
     int integrateToTime(realtype t);
 
+    // optional output functions
     int getRootInfo();
     void printStats();
+    long int getNumSteps(); // cumulative number of internal steps
+    int getLastOrder(); // order used during the last step
+    realtype getLastStep(); // step size used for the last step
 
     // Check function return value...
     //   opt == 0 means SUNDIALS function allocates memory so check if

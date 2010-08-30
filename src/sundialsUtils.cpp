@@ -149,6 +149,27 @@ void sundialsCVODE::printStats(void)
      nni, ncfn, netf, nge);
 }
 
+long int sundialsCVODE::getNumSteps()
+{
+    long int n;
+    CVodeGetNumSteps(sundialsMem, &n);
+    return n;
+}
+
+int sundialsCVODE::getLastOrder()
+{
+    int n;
+    CVodeGetLastOrder(sundialsMem, &n);
+    return n;
+}
+
+realtype sundialsCVODE::getLastStep()
+{
+    realtype h;
+    CVodeGetLastStep(sundialsMem, &h);
+    return h;
+}
+
 int sundialsCVODE::check_flag(void *flagvalue, const char *funcname, int opt)
 {
   int *errflag;

@@ -266,7 +266,6 @@ void FlameSolver::run(void)
         }
 
         sdVector ydotConv(nVars*nPoints);
-        convectionTerm.bogosity = false;
         convectionTerm.f(tNow, yConv, ydotConv);
         // TODO: Can this loop just be replaced by copying dUdt etc. from the system?
         for (size_t j=0; j<nPoints; j++) {
@@ -414,13 +413,14 @@ void FlameSolver::run(void)
             nCurrentState++;
 
             if (debugParameters::debugTimesteps) {
-                cout << "t = " << format("%8.6f") % t;
-                cout << "  (dt = " << format("%9.3e") % dt;
-                cout << ")" << endl;
+                int nSteps = convectionSolver->getNumSteps();
+                int order = convectionSolver->getLastOrder();
+                cout << format("t = %8.6f (dt = %9.3e) [C: %i, %i]") %
+                        t % dt % nSteps % order << endl;
             }
         } else {
-            cout << "CVODE Solver failed at time t = " << format("%8.6f") % t;
-            cout << "  (dt = " << format("%9.3e") % dt << ")" << endl;
+            cout << format("CVODE Solver failed at time t = %8.6f (dt = %9.3e)") %
+                    t % dt << endl;
             writeStateFile("errorOutput",true);
             break;
         }
@@ -463,7 +463,7 @@ void FlameSolver::run(void)
                     writeStateFile();
                 }
                 runTime.stop();
-                cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
+                cout << format ("Runtime: %f seconds.") % runTime.getTime() << endl;
                 return;
             }
         }
@@ -517,9 +517,8 @@ void FlameSolver::run(void)
             }
 
             grid.regrid(currentSolution, currentSolutionDot);
-
             grid.dampVal.resize(grid.x.size());
-            cout << nPoints << endl;
+
             // dampVal sets a limit on the maximum grid size
             for (size_t j=0; j<nPoints; j++) {
                 double num = min(mu[j],lambda[j]/cp[j]);
@@ -535,7 +534,7 @@ void FlameSolver::run(void)
             if (grid.updated) {
                 grid.updated = false;
                 nIntegrate = 0;
-                cout << "Grid size: " << nPoints << " points." << endl;
+                cout << format("Grid size: %i points.") % nPoints << endl;
 
                 // "unrollVectorVector"
                 U.resize(nPoints);
