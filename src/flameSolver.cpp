@@ -242,6 +242,8 @@ void FlameSolver::run(void)
             sourceTerms[j].denseJacobian(tNow, sourceSolvers[j].y, ydotSource, Jtmp);
             constUprod[j] = ydotSource[kMomentum];
             constTprod[j] = ydotSource[kEnergy];
+            linearUprod[j] = sourceTerms[j].diagonalJac[kMomentum];
+            linearTprod[j] = sourceTerms[j].diagonalJac[kEnergy];
             for (size_t k=0; k<nSpec; k++) {
                 constYprod(k,j) = ydotSource[kSpecies+k];
                 linearYprod(k,j) = sourceTerms[j].diagonalJac[kSpecies+k];
