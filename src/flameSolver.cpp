@@ -220,19 +220,6 @@ void FlameSolver::run(void)
         // approximation used in the other terms, as well as the
         // "predicted" values Uextrap, Textrap, and Yextrap
 
-        // Convection solver
-        sdVector ydotConv(nVars*nPoints);
-        convectionTerm.f(tNow, yConv, ydotConv);
-        // TODO: Can this loop just be replaced by copying dUdt etc. from the system?
-        for (size_t j=0; j<nPoints; j++) {
-            constUconv[j] = ydotConv[nVars*j+kMomentum];
-            constTconv[j] = ydotConv[nVars*j+kEnergy];
-            for (size_t k=0; k<nSpec; k++) {
-                constYconv(k,j) = ydotConv[nVars*j+kSpecies+k];
-            }
-        }
-        convectionTerm.get_diagonal(tNow, linearUconv, linearTconv, linearYconv);
-
         // Source solvers
         sdVector ydotSource(nVars);
         sdMatrix Jtmp(nVars, nVars);
@@ -264,6 +251,32 @@ void FlameSolver::run(void)
             constYdiff.setRow(k, const_cast<double*>(&constantTerm[0]));
             linearYdiff.setRow(k, const_cast<double*>(&linearTerm[0]));
         }
+
+        // Convection solver
+
+        // Because the convection solver includes the continuity equation containing
+        // drho/dt, we need to include the time derivatives from the other terms when
+        // evaluating the derivatives of this term, then subtract them from the output
+        convectionTerm.splitConstU = constUprod + constUdiff;
+        convectionTerm.splitConstT = constTprod + constTdiff;
+        for (size_t j=0; j<nPoints; j++) {
+            for (size_t k=0; k<nSpec; k++) {
+                convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j);
+            }
+        }
+
+        sdVector ydotConv(nVars*nPoints);
+        convectionTerm.bogosity = false;
+        convectionTerm.f(tNow, yConv, ydotConv);
+        // TODO: Can this loop just be replaced by copying dUdt etc. from the system?
+        for (size_t j=0; j<nPoints; j++) {
+            constUconv[j] = ydotConv[nVars*j+kMomentum] - convectionTerm.splitConstU[j];
+            constTconv[j] = ydotConv[nVars*j+kEnergy] - convectionTerm.splitConstT[j];
+            for (size_t k=0; k<nSpec; k++) {
+                constYconv(k,j) = ydotConv[nVars*j+kSpecies+k] - convectionTerm.splitConstY(k,j);
+            }
+        }
+        convectionTerm.get_diagonal(tNow, linearUconv, linearTconv, linearYconv);
 
         // *** Use the time derivatives to calculate the values for the
         //     state variables based on the diagonalized approximation
