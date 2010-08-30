@@ -278,6 +278,25 @@ void FlameSolver::run(void)
         }
         convectionTerm.get_diagonal(tNow, linearUconv, linearTconv, linearYconv);
 
+        // Store the time derivatives for output files
+        // TODO: Only do this if we're actually about to write an output file
+        dUdtprod = constUprod;
+        dUdtdiff = constUdiff;
+        dUdtconv = constUconv;
+        dTdtprod = constTprod;
+        dTdtconv = constTconv;
+        dTdtdiff=  constTdiff;
+        dYdtprod.resize(nSpec, nPoints);
+        dYdtconv.resize(nSpec, nPoints);
+        dYdtdiff.resize(nSpec, nPoints);
+        for (size_t j=0; j<nPoints; j++) {
+            for (size_t k=0; k<nSpec; k++) {
+                dYdtprod(k,j) = constYprod(k,j);
+                dYdtconv(k,j) = constYconv(k,j);
+                dYdtdiff(k,j) = constYdiff(k,j);
+            }
+        }
+
         // *** Use the time derivatives to calculate the values for the
         //     state variables based on the diagonalized approximation
 
@@ -717,15 +736,25 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
     }
 
     if (options.outputResidualComponents || errorFile) {
-        outFile.writeVector("dTdt_diff", constTdiff);
-        outFile.writeVector("dTdt_conv", constTconv);
-        outFile.writeVector("dTdt_prod", constTprod);
-        outFile.writeVector("dUdt_diff", constUdiff);
-        outFile.writeVector("dUdt_conv", constUconv);
-        outFile.writeVector("dUdt_prod", constUprod);
-        outFile.writeArray2D("dYdt_diff", constYdiff);
-        outFile.writeArray2D("dYdt_conv", constYconv);
-        outFile.writeArray2D("dYdt_prod", constYprod);
+        outFile.writeVector("constTdiff", constTdiff);
+        outFile.writeVector("constTconv", constTconv);
+        outFile.writeVector("constTprod", constTprod);
+        outFile.writeVector("constUdiff", constUdiff);
+        outFile.writeVector("constUconv", constUconv);
+        outFile.writeVector("constUprod", constUprod);
+        outFile.writeArray2D("constYdiff", constYdiff);
+        outFile.writeArray2D("constYconv", constYconv);
+        outFile.writeArray2D("constYprod", constYprod);
+
+        outFile.writeVector("dTdtdiff", dTdtdiff);
+        outFile.writeVector("dTdtconv", dTdtconv);
+        outFile.writeVector("dTdtprod", dTdtprod);
+        outFile.writeVector("dUdtdiff", dUdtdiff);
+        outFile.writeVector("dUdtconv", dUdtconv);
+        outFile.writeVector("dUdtprod", dUdtprod);
+        outFile.writeArray2D("dYdtdiff", dYdtdiff);
+        outFile.writeArray2D("dYdtconv", dYdtconv);
+        outFile.writeArray2D("dYdtprod", dYdtprod);
 
         outFile.writeVector("linearTdiff", linearTdiff);
         outFile.writeVector("linearTconv", linearTconv);

@@ -157,6 +157,11 @@ private:
     dvector linearUdiff, linearUconv, linearUprod;
     Array2D linearYdiff, linearYconv, linearYprod;
 
+    // instantaneous Time derivatives (for output purposes)
+    dvector dTdtdiff, dTdtconv, dTdtprod;
+    dvector dUdtdiff, dUdtconv, dUdtprod;
+    Array2D dYdtdiff, dYdtconv, dYdtprod;
+
     int alpha;
 
     double centerVol, centerArea;
