@@ -164,20 +164,24 @@ void BDFIntegrator::step()
     if (stepCount == 0) {
         yprev.assign(y.begin(), y.end());
 
+        // Take 8 substeps using first-order BDF
         myODE.get_A(*A);
         myODE.get_C(c);
         BandCopy(A->forSundials(), LU->forSundials(), upper_bw, lower_bw);
         sdBandMatrix& M = *LU;
         for (int i=0; i<N; i++) {
-            M(i,i) -= 1/h;
+            M(i,i) -= 1.0/(h/8.0);
         }
         BandGBTRF(LU->forSundials(), &p[0]);
 
-        // y_n -> y_n+1
-        for (int i=0; i<N; i++) {
-            y[i] = -y[i]/h - c[i];
+        for (int j=0; j<8; j++) {
+            // y_n -> y_n+1
+            for (int i=0; i<N; i++) {
+                y[i] = -y[i]/(h/8.0) - c[i];
+            }
+            BandGBTRS(LU->forSundials(), &p[0], &y[0]);
         }
-        BandGBTRS(LU->forSundials(), &p[0], &y[0]);
+
     } else {
         if (stepCount == 1) {
             BandCopy(A->forSundials(), LU->forSundials(), upper_bw, lower_bw);
