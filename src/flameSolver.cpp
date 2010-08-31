@@ -133,7 +133,7 @@ void FlameSolver::run(void)
         }
 
         updateLeftBC();
-        updateDiffusionFluxes();
+        updateMinorTerms();
         if (options.xFlameControl) {
             update_xStag(t, true); // calculate the value of rVzero
         }
@@ -258,10 +258,10 @@ void FlameSolver::run(void)
         // drho/dt, we need to include the time derivatives from the other terms when
         // evaluating the derivatives of this term, then subtract them from the output
         convectionTerm.splitConstU = constUprod + constUdiff;
-        convectionTerm.splitConstT = constTprod + constTdiff;
+        convectionTerm.splitConstT = constTprod + constTdiff + constTminor;
         for (size_t j=0; j<nPoints; j++) {
             for (size_t k=0; k<nSpec; k++) {
-                convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j);
+                convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j) + constYminor(k,j);
             }
         }
 
@@ -325,13 +325,13 @@ void FlameSolver::run(void)
 
             Uextrap[j] = U[j]*exp(L*dt) + K/L2*(exp(L2*dt)-1);
 
-            K = constTprod[j] + constTdiff[j] + constTconv[j];
+            K = constTprod[j] + constTdiff[j] + constTconv[j] + constTminor[j];
             L = linearTprod[j] + linearTdiff[j] + linearTconv[j];
             L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
             Textrap[j] = T[j]*exp(L*dt) + K/L2*(exp(L2*dt)-1);
 
             for (size_t k=0; k<nSpec; k++) {
-                K = constYprod(k,j) + constYdiff(k,j) + constYconv(k,j);
+                K = constYprod(k,j) + constYdiff(k,j) + constYconv(k,j) + constYminor(k,j);
                 L = linearYconv(k,j) + linearYdiff(k,j) + linearYprod(k,j);
                 L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
                 Yextrap(k,j) = Y(k,j)*exp(L*dt) + K/L2*(exp(L2*dt)-1);
@@ -344,11 +344,11 @@ void FlameSolver::run(void)
         // Convection term
         convectionTerm.splitConstU = constUprod + constUdiff;
         convectionTerm.splitLinearU = linearUprod + linearUdiff;
-        convectionTerm.splitConstT = constTprod + constTdiff;
+        convectionTerm.splitConstT = constTprod + constTdiff + constTminor;
         convectionTerm.splitLinearT = linearTprod + linearTdiff;
         for (size_t j=0; j<nPoints; j++) {
             for (size_t k=0; k<nSpec; k++) {
-                convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j);
+                convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j) + constYminor(k,j);
                 convectionTerm.splitLinearY(k,j) = linearYprod(k,j) + linearYdiff(k,j);
             }
         }
@@ -358,10 +358,10 @@ void FlameSolver::run(void)
             SourceSystem& term = sourceTerms[j];
             term.splitConst[kMomentum] = constUconv[j] + constUdiff[j];
             term.splitLinear[kMomentum] = linearUconv[j] + linearUdiff[j];
-            term.splitConst[kEnergy] = constTconv[j] + constTdiff[j];
+            term.splitConst[kEnergy] = constTconv[j] + constTdiff[j] + constTminor[j];
             term.splitLinear[kEnergy] = linearTconv[j] + linearTdiff[j];
             for (size_t k=0; k<nSpec; k++) {
-                term.splitConst[kSpecies+k] = constYconv(k,j) + constYdiff(k,j);
+                term.splitConst[kSpecies+k] = constYconv(k,j) + constYdiff(k,j) + constYminor(k,j);
                 term.splitLinear[kSpecies+k] = linearYconv(k,j) + linearYdiff(k,j);
             }
         }
@@ -369,13 +369,13 @@ void FlameSolver::run(void)
         // Diffusion terms
         diffusionTerms[kMomentum].splitConst = constUconv + constUprod;
         diffusionTerms[kMomentum].splitLinear = linearUconv + linearUprod;
-        diffusionTerms[kEnergy].splitConst = constTconv + constTprod;
+        diffusionTerms[kEnergy].splitConst = constTconv + constTprod + constTminor;
         diffusionTerms[kEnergy].splitLinear = linearTconv + linearTprod;
         for (size_t k=0; k<nSpec; k++) {
             dvector& splitConst = diffusionTerms[kSpecies+k].splitConst;
             dvector& splitLinear = diffusionTerms[kSpecies+k].splitLinear;
             for (size_t j=0; j<nPoints; j++) {
-                splitConst[j] = constYconv(k,j) + constYprod(k,j);
+                splitConst[j] = constYconv(k,j) + constYprod(k,j) + constYminor(k,j);
                 splitLinear[j] = linearYconv(k,j) + linearYprod(k,j);
             }
         }
@@ -704,7 +704,6 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeVector("rphalf", grid.rphalf);
         outFile.writeScalar("Tleft", Tleft);
         outFile.writeVector("Yleft", Yleft);
-        outFile.writeVector("sumcpj", sumcpj);
 
         dvector Uprod(nPoints);
         dvector Tprod(nPoints);
@@ -744,6 +743,8 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("constYdiff", constYdiff);
         outFile.writeArray2D("constYconv", constYconv);
         outFile.writeArray2D("constYprod", constYprod);
+        outFile.writeArray2D("constYminor", constYminor);
+        outFile.writeVector("constTminor", constTminor);
 
         outFile.writeVector("dTdtdiff", dTdtdiff);
         outFile.writeVector("dTdtconv", dTdtconv);
@@ -822,12 +823,14 @@ void FlameSolver::resizeAuxiliary()
     linearYconv.resize(nSpec,nPoints,0);
     linearYprod.resize(nSpec,nPoints,0);
 
+    constTminor.resize(nPoints,0);
+    constYminor.resize(nSpec, nPoints, 0);
+
     rho.resize(nPoints);
     Wmx.resize(nPoints);
     mu.resize(nPoints);
     lambda.resize(nPoints);
     cp.resize(nPoints);
-    sumcpj.resize(nPoints);
     jCorr.resize(nPoints);
     qDot.resize(nPoints);
     cpSpec.resize(nSpec, nPoints);
@@ -907,26 +910,30 @@ void FlameSolver::resizeAuxiliary()
     perfTimerResize.stop();
 }
 
-void FlameSolver::updateDiffusionFluxes()
+void FlameSolver::updateMinorTerms()
 {
     for (size_t j=0; j<jj; j++) {
-        sumcpj[j] = 0;
+        jCorr[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
             jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1)) * ((Y(k,j+1)-Y(k,j))/hh[j]) -
                 0.5*(rhoD(k,j)*Y(k,j)/Wmx[j]+Y(k,j+1)*rhoD(k,j+1)/Wmx[j+1])*(Wmx[j+1]-Wmx[j])/hh[j];
             jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
                 * (T[j+1]-T[j])/hh[j];
-        }
-
-        jCorr[j] = 0;
-        for (size_t k=0; k<nSpec; k++) {
-            jCorr[j] -= jFick(k,j);
-        }
-        for (size_t k=0; k<nSpec; k++) {
-            jFick(k,j) += 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]; // correction to ensure that sum of mass fractions equals 1
-            sumcpj[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j) + jSoret(k,j));
+            jCorr[j] -= jFick(k,j) + jSoret(k,j);
         }
     }
+
+    for (size_t j=1; j<jj; j++) {
+        constTminor[j] = 0;
+        for (size_t k=0; k<nSpec; k++) {
+            constYminor(k,j) = 0.5/(r[j]*rho[j]*dlj[j]) *
+                (rphalf[j]*(Y(k,j)+Y(k,j+1))*jCorr[j] - rphalf[j-1]*(Y(k,j-1)+Y(k,j))*jCorr[j-1]);
+            constYminor(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
+                (rphalf[j]*jSoret(k,j) - rphalf[j-1]*jSoret(k,j-1));
+            constTminor[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j) + jSoret(k,j));
+        }
+    }
+
 }
 
 void FlameSolver::updateLeftBC()

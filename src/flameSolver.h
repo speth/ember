@@ -78,7 +78,7 @@ private:
     dvector Yu, Yb, Yleft, Yright;
 
     void resizeAuxiliary(); // Handle resizing of data structures as grid size changes
-    void updateDiffusionFluxes(); // calculates values of jFick, jSoret, sumcpj, and jCorr
+    void updateMinorTerms(); // calculates values of jFick, jSoret, sumcpj, and jCorr
     void updateLeftBC();
 
     // Utility functions for adaptation & regridding
@@ -113,7 +113,6 @@ private:
     dvector jCorr; // Correction to ensure sum of mass fractions = 1
     dvector qDot; // Heat release rate [W/m^3]
     Array2D wDot; // species production rates [mol/m^3*s]
-    dvector sumcpj;
     dvector Wmx;
     dvector W;
     dvector mu;
@@ -125,6 +124,9 @@ private:
     Array2D hk;
     Array2D jFick;
     Array2D jSoret;
+
+    Array2D constYminor;
+    dvector constTminor;
 
     // Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;
