@@ -694,8 +694,9 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeVector("mu", mu);
         outFile.writeVector("Wmx", Wmx);
         outFile.writeVector("W", W);
-//        outFile.writeArray2D("jFick", jFick);
-//        outFile.writeArray2D("jSoret", jSoret);
+        outFile.writeVector("sumcpj", sumcpj);
+        outFile.writeArray2D("jFick", jFick);
+        outFile.writeArray2D("jSoret", jSoret);
 //        outFile.writeVector("qFourier",qFourier);
         outFile.writeVector("cfp", grid.cfp);
         outFile.writeVector("cf", grid.cf);
@@ -832,6 +833,7 @@ void FlameSolver::resizeAuxiliary()
     lambda.resize(nPoints);
     cp.resize(nPoints);
     jCorr.resize(nPoints);
+    sumcpj.resize(nPoints);
     qDot.resize(nPoints);
     cpSpec.resize(nSpec, nPoints);
     rhoD.resize(nSpec, nPoints);
@@ -840,6 +842,7 @@ void FlameSolver::resizeAuxiliary()
     hk.resize(nSpec, nPoints);
     jFick.resize(nSpec, nPoints);
     jSoret.resize(nSpec, nPoints);
+    jWmx.resize(nSpec, nPoints);
 
     grid.jj = nPoints-1;
     grid.updateBoundaryIndices();
@@ -915,25 +918,29 @@ void FlameSolver::updateMinorTerms()
     for (size_t j=0; j<jj; j++) {
         jCorr[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
-            jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1)) * ((Y(k,j+1)-Y(k,j))/hh[j]) -
-                0.5*(rhoD(k,j)*Y(k,j)/Wmx[j]+Y(k,j+1)*rhoD(k,j+1)/Wmx[j+1])*(Wmx[j+1]-Wmx[j])/hh[j];
+            jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1)) * ((Y(k,j+1)-Y(k,j))/hh[j]);
             jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
                 * (T[j+1]-T[j])/hh[j];
-            jCorr[j] -= jFick(k,j) + jSoret(k,j);
+            jWmx(k,j) = - 0.5*(rhoD(k,j)*Y(k,j)/Wmx[j]+Y(k,j+1)*rhoD(k,j+1)/Wmx[j+1])*(Wmx[j+1]-Wmx[j])/hh[j];
+            jCorr[j] -= jFick(k,j) + jSoret(k,j) + jWmx(k,j);
+
         }
     }
 
     for (size_t j=1; j<jj; j++) {
-        constTminor[j] = 0;
+        sumcpj[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
-            constYminor(k,j) = 0.5/(r[j]*rho[j]*dlj[j]) *
+            constYminor(k,j) = - 0.5/(r[j]*rho[j]*dlj[j]) *
                 (rphalf[j]*(Y(k,j)+Y(k,j+1))*jCorr[j] - rphalf[j-1]*(Y(k,j-1)+Y(k,j))*jCorr[j-1]);
-            constYminor(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
+            constYminor(k,j) += 1/(r[j]*rho[j]*dlj[j]) *
                 (rphalf[j]*jSoret(k,j) - rphalf[j-1]*jSoret(k,j-1));
-            constTminor[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j) + jSoret(k,j));
+            constYminor(k,j) += 1/(r[j]*rho[j]*dlj[j]) *
+                (rphalf[j]*jWmx(k,j) - rphalf[j-1]*jWmx(k,j-1));
+            sumcpj[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j) + jSoret(k,j) + jWmx(k,j) + 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]);
         }
+        double dTdx = cfm[j]*T[j-1] + cf[j]*T[j] + cfp[j]*T[j+1];
+        constTminor[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * dTdx / (cp[j]*rho[j]);
     }
-
 }
 
 void FlameSolver::updateLeftBC()

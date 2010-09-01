@@ -111,9 +111,10 @@ private:
     // Auxiliary variables:
     dvector rho; // density [kg/m^3]
     dvector jCorr; // Correction to ensure sum of mass fractions = 1
+    dvector sumcpj; // part of the enthalpy flux term
     dvector qDot; // Heat release rate [W/m^3]
     Array2D wDot; // species production rates [mol/m^3*s]
-    dvector Wmx;
+    dvector Wmx; // mixture molecular weight
     dvector W;
     dvector mu;
     dvector lambda;
@@ -124,6 +125,7 @@ private:
     Array2D hk;
     Array2D jFick;
     Array2D jSoret;
+    Array2D jWmx; // diffusion flux proportional to gradient in Wmx
 
     Array2D constYminor;
     dvector constTminor;
