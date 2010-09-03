@@ -127,8 +127,8 @@ private:
     Array2D jSoret;
     Array2D jWmx; // diffusion flux proportional to gradient in Wmx
 
-    Array2D constYminor;
-    dvector constTminor;
+    Array2D constYminor, linearYminor;
+    dvector constTminor, linearTminor;
 
     // Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;
