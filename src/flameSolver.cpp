@@ -697,6 +697,8 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeVector("sumcpj", sumcpj);
         outFile.writeArray2D("jFick", jFick);
         outFile.writeArray2D("jSoret", jSoret);
+        outFile.writeArray2D("jWmx", jWmx);
+        outFile.writeVector("jCorr", jCorr);
 //        outFile.writeVector("qFourier",qFourier);
         outFile.writeVector("cfp", grid.cfp);
         outFile.writeVector("cf", grid.cf);
@@ -932,9 +934,9 @@ void FlameSolver::updateMinorTerms()
         for (size_t k=0; k<nSpec; k++) {
             constYminor(k,j) = - 0.5/(r[j]*rho[j]*dlj[j]) *
                 (rphalf[j]*(Y(k,j)+Y(k,j+1))*jCorr[j] - rphalf[j-1]*(Y(k,j-1)+Y(k,j))*jCorr[j-1]);
-            constYminor(k,j) += 1/(r[j]*rho[j]*dlj[j]) *
+            constYminor(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
                 (rphalf[j]*jSoret(k,j) - rphalf[j-1]*jSoret(k,j-1));
-            constYminor(k,j) += 1/(r[j]*rho[j]*dlj[j]) *
+            constYminor(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
                 (rphalf[j]*jWmx(k,j) - rphalf[j-1]*jWmx(k,j-1));
             sumcpj[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j) + jSoret(k,j) + jWmx(k,j) + 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]);
         }
