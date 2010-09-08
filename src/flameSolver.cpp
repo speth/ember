@@ -11,6 +11,7 @@ using boost::format;
 
 FlameSolver::FlameSolver()
     : convectionSolver(NULL)
+    , jCorrSolver(jCorrSystem)
 {
 }
 
@@ -919,6 +920,15 @@ void FlameSolver::resizeAuxiliary()
         }
     }
 
+    // Resize the jCorr stabilizer
+    jCorrSystem.grid = grid;
+    jCorrSystem.B.resize(nPoints);
+    jCorrSystem.splitConst.resize(nPoints);
+    jCorrSystem.splitLinear.resize(nPoints);
+    jCorrSystem.D.resize(nPoints);
+    jCorrSolver.set_size(nPoints, 1, 1);
+
+    // All done
     perfTimerResize.stop();
 }
 
@@ -935,6 +945,20 @@ void FlameSolver::updateMinorTerms()
             jCorr[j] -= jFick(k,j) + jSoret(k,j) + jWmx(k,j);
         }
     }
+
+    // Add a bit of artificial diffusion to jCorr to improve stability
+    jCorrSolver.y = jCorr;
+    for (size_t j=0; j<jj; j++) {
+        jCorrSystem.B[j] = lambda[j]/(rho[j]*cp[j]); // treat as Le = 1
+        jCorrSystem.D[j] = 1.0;
+    }
+    jCorrSystem.splitConst.assign(nPoints,0);
+    jCorrSystem.splitLinear.assign(nPoints,0);
+    jCorrSolver.t = 0;
+    jCorrSolver.set_dt(options.diffusionTimestep);
+    jCorrSolver.initialize();
+    jCorrSolver.integrateToTime(options.globalTimestep);
+    jCorr = jCorrSolver.y;
 
     for (size_t j=1; j<jj; j++) {
         sumcpj[j] = 0;

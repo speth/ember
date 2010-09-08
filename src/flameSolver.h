@@ -129,6 +129,8 @@ private:
 
     Array2D constYminor, linearYminor;
     dvector constTminor, linearTminor;
+    DiffusionSystem jCorrSystem;
+    BDFIntegrator jCorrSolver;
 
     // Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;
