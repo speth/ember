@@ -60,6 +60,7 @@ public:
 
     // Diffusion coefficients for calculating j[k] = - rho * D[k] * grad(Y[k])
     void getWeightedDiffusionCoefficientsMass(double* rhoD);
+    void getWeightedDiffusionCoefficientsMass(dvector& rhoD);
 
     void getThermalDiffusionCoefficients(dvector& Dkt) const;
     void getThermalDiffusionCoefficients(double* Dkt) const;
