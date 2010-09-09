@@ -78,7 +78,7 @@ private:
     dvector Yu, Yb, Yleft, Yright;
 
     void resizeAuxiliary(); // Handle resizing of data structures as grid size changes
-    void updateMinorTerms(); // calculates values of jFick, jSoret, sumcpj, and jCorr
+    void updateCrossTerms(); // calculates values of cross-component terms: jSoret, sumcpj, and jCorr
     void updateLeftBC();
 
     // Utility functions for adaptation & regridding
