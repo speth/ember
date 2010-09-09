@@ -60,6 +60,9 @@ void CanteraGas::initialize()
     transFac->deleteFactory();
 
     nSpec = thermo.nSpecies();
+    Dbin.resize(nSpec,nSpec,0);
+    X.resize(nSpec,0);
+    Y.resize(nSpec,0);
 }
 
 void CanteraGas::setStateMass(const dvector& Y_in, const double T)
@@ -161,7 +164,7 @@ double CanteraGas::getThermalConductivity() const
     }
 }
 
-void CanteraGas::getDiffusionCoefficients(dvector& Dkm) const
+void CanteraGas::getDiffusionCoefficientsMole(dvector& Dkm) const
 {
     if (usingMultiTransport) {
         transport->getMixDiffCoeffs(&Dkm[0]);
@@ -170,7 +173,7 @@ void CanteraGas::getDiffusionCoefficients(dvector& Dkm) const
     }
 }
 
-void CanteraGas::getDiffusionCoefficients(double* Dkm) const
+void CanteraGas::getDiffusionCoefficientsMole(double* Dkm) const
 {
     if (usingMultiTransport) {
         transport->getMixDiffCoeffs(Dkm);
@@ -180,7 +183,7 @@ void CanteraGas::getDiffusionCoefficients(double* Dkm) const
 }
 
 
-void CanteraGas::getWeightedDiffusionCoefficients(dvector& rhoD) const
+void CanteraGas::getWeightedDiffusionCoefficientsMole(dvector& rhoD) const
 {
     if (usingMultiTransport) {
         transport->getMixDiffCoeffs(&rhoD[0]);
@@ -197,7 +200,7 @@ void CanteraGas::getWeightedDiffusionCoefficients(dvector& rhoD) const
     }
 }
 
-void CanteraGas::getWeightedDiffusionCoefficients(double* rhoD) const
+void CanteraGas::getWeightedDiffusionCoefficientsMole(double* rhoD) const
 {
     if (usingMultiTransport) {
         transport->getMixDiffCoeffs(rhoD);
@@ -213,6 +216,30 @@ void CanteraGas::getWeightedDiffusionCoefficients(double* rhoD) const
         }
     }
 }
+
+void CanteraGas::getWeightedDiffusionCoefficientsMass(double* rhoD)
+{
+    thermo.getMassFractions(&Y[0]);
+    thermo.getMoleFractions(&X[0]);
+    transport->getBinaryDiffCoeffs(nSpec, &Dbin(0,0));
+    double rho = thermo.density();
+
+    // See Kee, p. 528, Eq. 12.178
+    for (size_t k=0; k<nSpec; k++) {
+        double sum1 = 0;
+        double sum2 = 0;
+
+        for (size_t i=0; i<nSpec; i++) {
+            if (i==k) {
+                continue;
+            }
+            sum1 += X[i]/Dbin(k,i);
+            sum2 += Y[i]/Dbin(k,i);
+        }
+        rhoD[k] = rho/(sum1 + X[k]/(1-Y[k])*sum2);
+    }
+}
+
 
 void CanteraGas::getThermalDiffusionCoefficients(dvector& Dkt) const
 {

@@ -122,7 +122,7 @@ void FlameSolver::run(void)
             lambda[j] = gas.getThermalConductivity();
             cp[j] = gas.getSpecificHeatCapacity();
             mu[j] = gas.getViscosity();
-            gas.getWeightedDiffusionCoefficients(&rhoD(0,j));
+            gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j));
             gas.getThermalDiffusionCoefficients(&Dkt(0,j));
             gas.getSpecificHeatCapacities(&cpSpec(0,j));
             gas.getReactionRates(&wDot(0,j));
@@ -700,7 +700,6 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeVector("sumcpj", sumcpj);
         outFile.writeArray2D("jFick", jFick);
         outFile.writeArray2D("jSoret", jSoret);
-        outFile.writeArray2D("jWmx", jWmx);
         outFile.writeVector("jCorr", jCorr);
 //        outFile.writeVector("qFourier",qFourier);
         outFile.writeVector("cfp", grid.cfp);
@@ -852,7 +851,6 @@ void FlameSolver::resizeAuxiliary()
     hk.resize(nSpec, nPoints);
     jFick.resize(nSpec, nPoints);
     jSoret.resize(nSpec, nPoints);
-    jWmx.resize(nSpec, nPoints);
 
     grid.jj = nPoints-1;
     grid.updateBoundaryIndices();
@@ -940,9 +938,7 @@ void FlameSolver::updateMinorTerms()
             jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1)) * ((Y(k,j+1)-Y(k,j))/hh[j]);
             jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
                 * (T[j+1]-T[j])/hh[j];
-            jWmx(k,j) = - 0.5*(rhoD(k,j)*Y(k,j)/Wmx[j] + Y(k,j+1)*rhoD(k,j+1)/Wmx[j+1]) *
-                    (Wmx[j+1]-Wmx[j])/hh[j];
-            jCorr[j] -= jFick(k,j) + jSoret(k,j) + jWmx(k,j);
+            jCorr[j] -= jFick(k,j) + jSoret(k,j);
         }
     }
 
@@ -967,16 +963,11 @@ void FlameSolver::updateMinorTerms()
                 (rphalf[j]*(Y(k,j)+Y(k,j+1))*jCorr[j] - rphalf[j-1]*(Y(k,j-1)+Y(k,j))*jCorr[j-1]);
             constYminor(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
                 (rphalf[j]*jSoret(k,j) - rphalf[j-1]*jSoret(k,j-1));
-            constYminor(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
-                (rphalf[j]*jWmx(k,j) - rphalf[j-1]*jWmx(k,j-1));
             sumcpj[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j)
-                    + jSoret(k,j) + jWmx(k,j) + 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]);
+                    + jSoret(k,j) + 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]);
 
             linearYminor(k,j) = -0.5/(r[j]*rho[j]*dlj[j]) *
                     (rphalf[j]*jCorr[j] - rphalf[j-1]*jCorr[j-1]);
-            linearYminor(k,j) += 0.5/(r[j]*rho[j]*dlj[j]) *
-                    (rphalf[j]*rhoD(k,j)/Wmx[j]*(Wmx[j+1]-Wmx[j])/hh[j] -
-                     rphalf[j-1]*rhoD(k,j-1)/Wmx[j-1]*(Wmx[j]-Wmx[j-1])/hh[j-1]);
         }
         double dTdx = cfm[j]*T[j-1] + cf[j]*T[j] + cfp[j]*T[j+1];
         constTminor[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * dTdx / (cp[j]*rho[j]);

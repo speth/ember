@@ -51,10 +51,16 @@ public:
 
     double getViscosity() const;
     double getThermalConductivity() const;
-    void getDiffusionCoefficients(dvector& Dkm) const;
-    void getDiffusionCoefficients(double* Dkm) const;
-    void getWeightedDiffusionCoefficients(dvector& rhoD) const;
-    void getWeightedDiffusionCoefficients(double* rhoD) const;
+
+    // Diffusion coefficients for calculating v[k] = -D[k] / X[k] * grad(X[k])
+    void getDiffusionCoefficientsMole(dvector& Dkm) const;
+    void getDiffusionCoefficientsMole(double* Dkm) const;
+    void getWeightedDiffusionCoefficientsMole(dvector& rhoD) const;
+    void getWeightedDiffusionCoefficientsMole(double* rhoD) const;
+
+    // Diffusion coefficients for calculating j[k] = - rho * D[k] * grad(Y[k])
+    void getWeightedDiffusionCoefficientsMass(double* rhoD);
+
     void getThermalDiffusionCoefficients(dvector& Dkt) const;
     void getThermalDiffusionCoefficients(double* Dkt) const;
 
@@ -80,4 +86,8 @@ private:
 
     Cantera::GasKinetics* kinetics;
     Cantera::Transport* transport;
+
+    Array2D Dbin; // binary diffusion coefficients for species k
+    dvector X; // mole fractions
+    dvector Y; // mass fractions
 };

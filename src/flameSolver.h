@@ -125,7 +125,6 @@ private:
     Array2D hk;
     Array2D jFick;
     Array2D jSoret;
-    Array2D jWmx; // diffusion flux proportional to gradient in Wmx
 
     Array2D constYminor, linearYminor;
     dvector constTminor, linearTminor;
