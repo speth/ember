@@ -126,8 +126,8 @@ private:
     Array2D jFick;
     Array2D jSoret;
 
-    Array2D constYminor, linearYminor;
-    dvector constTminor, linearTminor;
+    Array2D constYcross, linearYcross;
+    dvector constTcross, linearTcross;
     DiffusionSystem jCorrSystem;
     BDFIntegrator jCorrSolver;
 
