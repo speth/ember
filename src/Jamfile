@@ -3,11 +3,9 @@
 project
     : requirements <include>/opt/cantera-gcc/include
                    <include>/opt/sundials-2.4.0-gcc/include
-                   <include>/opt/matlab2009a/extern/include
 
 		   <search>/opt/cantera-gcc/lib
 		   <search>/opt/sundials-2.4.0-gcc/lib
-		   <search>/opt/matlab2009a/bin/glnxa64
 
 #		   <variant>release
 		   <debug-symbols>on
@@ -19,8 +17,6 @@ alias cantera : equil kinetics transport thermo tpx ctnumerics
 
 lib sundials_cvode sundials_ida sundials_nvecserial ;
 alias sundials : sundials_cvode sundials_ida sundials_nvecserial : <link>static ;
-
-lib icui18n icuio icuuc icudata ut mat mx ;
 
 lib hdf5 ;
 
