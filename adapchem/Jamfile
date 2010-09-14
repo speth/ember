@@ -10,4 +10,4 @@ obj wrappers : wrappers.f90 ;
 
 lib adapchem : ckcompat.cpp wrappers adapchem1 cklib gfortran : <link>static ;
 
-install ../lib : adapchem ;
+# install ../lib : adapchem ;

@@ -2,6 +2,9 @@
 
 #include <iostream>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/shared_ptr.hpp>
+
+#include "../adapchem/ckcompat.h"
 
 #include "readConfig.h"
 #include "sundialsUtils.h"
@@ -142,6 +145,8 @@ private:
 
     // Cantera data
     CanteraGas gas;
+
+    boost::shared_ptr<ChemkinGas> ckGas;
 
     void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); // [m]

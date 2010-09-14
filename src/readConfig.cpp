@@ -45,6 +45,10 @@ void configOptions::readOptionsFile(const std::string& filename)
         throw debugException("configOptions::readOptionsFile: Invalid Transport Model specified (general.transportModel).");
     }
 
+    // Chemkin/AdapChem
+    usingAdapChem = readOption("chemistry.chemkinMechanismFile", chemkinMechanismFile, "");
+    chemkinMechanismFile = inputDir + "/" + chemkinMechanismFile;
+
     // Grid
     readOption("initialCondition.nPoints", nPoints, 50);
     readOption("initialCondition.xLeft", xLeft, -0.005);

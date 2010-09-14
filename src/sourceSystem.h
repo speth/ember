@@ -4,6 +4,9 @@
 #include "sundialsUtils.h"
 #include "chemistry0d.h"
 #include "strainFunction.h"
+#include "../adapchem/ckcompat.h"
+
+#include <boost/shared_ptr.hpp>
 
 class SourceSystem : public sdODE
 {
@@ -45,6 +48,8 @@ public:
 
     // Cantera data
     CanteraGas* gas;
+    boost::shared_ptr<ChemkinGas> ckGas;
+    bool usingAdapChem;
 
     // other parameters
     size_t nSpec;

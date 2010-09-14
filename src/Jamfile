@@ -22,7 +22,7 @@ lib hdf5 ;
 
 lib config++ lapack blas boost_filesystem ;
 
-exe 1dflameV2 : [ glob *.cpp ] cantera sundials lapack blas config++ boost_filesystem hdf5
+exe 1dflameV2 : [ glob *.cpp ] cantera sundials lapack blas config++ boost_filesystem hdf5 ../adapchem//adapchem
 	      ;
 
 install ../bin : 1dflameV2 ;

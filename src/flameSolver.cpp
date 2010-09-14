@@ -43,6 +43,12 @@ void FlameSolver::initialize(void)
     W.resize(nSpec);
     gas.getMolecularWeights(W);
 
+    // Chemkin & Adapchem Initialization
+    if (options.usingAdapChem) {
+        ckGas.reset(new ChemkinGas(options.chemkinMechanismFile));
+        ckGas->setPressure(options.pressure);
+    }
+
     // Initial Conditions
     if (options.haveRestartFile) {
         loadProfile();
@@ -125,7 +131,12 @@ void FlameSolver::run(void)
             gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j));
             gas.getThermalDiffusionCoefficients(&Dkt(0,j));
             gas.getSpecificHeatCapacities(&cpSpec(0,j));
-            gas.getReactionRates(&wDot(0,j));
+            if (options.usingAdapChem) {
+                ckGas->setStateMass(&Y(0,j), T[j]);
+                ckGas->getReactionRates(&wDot(0,j));
+            } else {
+                gas.getReactionRates(&wDot(0,j));
+            }
             gas.getEnthalpies(&hk(0,j));
             qDot[j] = 0;
             for (size_t k=0; k<nSpec; k++) {
@@ -861,6 +872,8 @@ void FlameSolver::resizeAuxiliary()
             SourceSystem* system = new SourceSystem();
             system->resize(nSpec);
             system->gas = &gas;
+            system->ckGas = ckGas;
+            system->usingAdapChem = options.usingAdapChem;
             system->strainFunction = strainfunc;
             system->rhou = rhou;
             system->W = W;
