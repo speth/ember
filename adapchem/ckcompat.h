@@ -51,8 +51,10 @@ public:
     ChemkinGas(const std::string& filename, bool quiet=false);
 
     void setStatePTY(double P, double T, const double* const Y);
+    void setPressure(double P);
+    void setStateMass(const double* const Y, double T);
 
-    void wdot(double* wdot);
+    void getReactionRates(double* wdot);
 
 private:
     // Chemkin's work arrays

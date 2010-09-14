@@ -53,7 +53,25 @@ void ChemkinGas::setStatePTY(double P, double T, const double* const Y)
     }
 }
 
-void ChemkinGas::wdot(double* wdot)
+void ChemkinGas::setStateMass(const double* const Y, double T)
+{
+    _T = T;
+    for (int k=0; k<_nSpec; k++) {
+        _Y[k] = Y[k];
+    }
+}
+
+void ChemkinGas::setPressure(double P)
+{
+    #ifdef CKCOMPAT_USE_MKS
+        _P = P*10;
+    #else
+        _P = P;
+    #endif
+}
+
+
+void ChemkinGas::getReactionRates(double* wdot)
 {
     ckwyp_(&_P, &_T, &_Y[0], _iptr, _rptr, wdot);
 
