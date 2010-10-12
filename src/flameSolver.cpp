@@ -870,7 +870,9 @@ void FlameSolver::resizeAuxiliary()
 
     grid.jj = nPoints-1;
     grid.updateBoundaryIndices();
-    ckGas->setGridSize(nPoints);
+    if (options.usingAdapChem) {
+        ckGas->setGridSize(nPoints);
+    }
 
     if (nPoints > nPointsOld) {
         for (size_t j=nPointsOld; j<nPoints; j++) {
