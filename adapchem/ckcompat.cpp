@@ -120,7 +120,7 @@ AdapChem::AdapChem(const std::string& filename, bool quiet)
     int mm, ii, nfit;
     ckindx_(_iptr, _rptr, &mm, &_nSpec, &ii, &nfit);
     _Y.resize(_nSpec);
-    _iSpecies.resize(_nSpec);
+
     _wdot.resize(_nSpec);
 
     adapchemini_();
@@ -145,6 +145,9 @@ void AdapChem::incrementStep()
 void AdapChem::setGridSize(int nGrid) {
     _nGrid = nGrid;
     _nGridm1 = _nGrid - 1;
+
+    _iSpecies.resize(_nGrid);
+    _keepSpecies.resize(_nSpec);
 }
 
 void AdapChem::initializeStep(double P, double T, const double* const Y, int iGrid)
@@ -222,13 +225,6 @@ void AdapChem::getReactionRates(double* wdot)
 {
     callAdapChem(1);
 
-//    for (int k=0; k<_nSpec; k++) {
-//        #ifdef CKCOMPAT_USE_MKS
-//            wdot[k] = 1000.0*_wdot[k];
-//        #else
-//            wdot[k] = _wdot[k];
-//        #endif
-//    }
     const std::vector<size_t>& iSpec = _iSpecies[_iGrid];
     for (size_t i=0; i<iSpec.size(); i++) {
         #ifdef CKCOMPAT_USE_MKS
@@ -242,7 +238,8 @@ void AdapChem::getReactionRates(double* wdot)
 
 void AdapChem::callAdapChem(int jSolv)
 {
-    adapchem_(&_iGrid, &_nGrid, &_nGridm1,
+    int igridTmp = _iGrid+1; // Fortran is 1-indexed...
+    adapchem_(&igridTmp, &_nGrid, &_nGridm1,
               &_P, &_T, &_Y[0],
               _iptr, _rptr,
               &_wdot[0], &_keepSpecies[0], &jSolv);
