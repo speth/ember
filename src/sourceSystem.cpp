@@ -29,7 +29,7 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     // *** Update auxiliary data ***
     gas->setStateMass(Y, T);
     if (usingAdapChem) {
-        ckGas->setStateMass(&Y[0], T);
+        ckGas->setStateMass(&Y[0], T, j);
         ckGas->getReactionRates(&wDot[0]);
     } else {
         gas->getReactionRates(wDot);
@@ -86,7 +86,7 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     dvector wDot2(nSpec);
 
     if (usingAdapChem) {
-        ckGas->setStateMass(&Y[0], TplusdT);
+        ckGas->setStateMass(&Y[0], TplusdT, j);
         ckGas->getReactionRates(&wDot2[0]);
     } else {
         gas->setStateMass(Y, TplusdT);
@@ -109,7 +109,7 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     for (size_t k=0; k<nSpec; k++) {
         YplusdY[k] = (abs(Y[k]) > eps/2) ? Y[k]*(1+eps) : eps;
         if (usingAdapChem) {
-            ckGas->setStateMass(&YplusdY[0], T);
+            ckGas->setStateMass(&YplusdY[0], T, j);
             ckGas->getReactionRates(&wDot2[0]);
         } else {
             gas->setStateMass(YplusdY, T);

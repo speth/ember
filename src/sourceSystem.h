@@ -48,11 +48,12 @@ public:
 
     // Cantera data
     CanteraGas* gas;
-    boost::shared_ptr<ChemkinGas> ckGas;
+    boost::shared_ptr<AdapChem> ckGas;
     bool usingAdapChem;
 
     // other parameters
     size_t nSpec;
+    int j; // grid index for this system
     dvector W; // species molecular weights [kg/kmol]
     double rhou; // density of the unburned mixture
 

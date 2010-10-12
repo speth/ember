@@ -146,7 +146,7 @@ private:
     // Cantera data
     CanteraGas gas;
 
-    boost::shared_ptr<ChemkinGas> ckGas;
+    boost::shared_ptr<AdapChem> ckGas;
 
     void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); // [m]

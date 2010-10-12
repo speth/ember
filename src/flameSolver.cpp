@@ -45,7 +45,7 @@ void FlameSolver::initialize(void)
 
     // Chemkin & Adapchem Initialization
     if (options.usingAdapChem) {
-        ckGas.reset(new ChemkinGas(options.chemkinMechanismFile));
+        ckGas.reset(new AdapChem(options.chemkinMechanismFile));
         ckGas->setPressure(options.pressure);
     }
 
@@ -119,6 +119,9 @@ void FlameSolver::run(void)
         }
 
         tIDA1 = clock();
+        if (options.usingAdapChem) {
+            ckGas->incrementStep();
+        }
 
         // Calculate auxiliary data
         for (size_t j=0; j<nPoints; j++) {
@@ -132,7 +135,7 @@ void FlameSolver::run(void)
             gas.getThermalDiffusionCoefficients(&Dkt(0,j));
             gas.getSpecificHeatCapacities(&cpSpec(0,j));
             if (options.usingAdapChem) {
-                ckGas->setStateMass(&Y(0,j), T[j]);
+                ckGas->initializeStep(&Y(0,j), T[j], j);
                 ckGas->getReactionRates(&wDot(0,j));
             } else {
                 gas.getReactionRates(&wDot(0,j));
@@ -481,6 +484,8 @@ void FlameSolver::run(void)
                 return;
             }
         }
+
+        // call ckGas::adapBox
 
         // *** Save the current integral and profile data
         //     in files that are automatically overwritten,
@@ -865,9 +870,10 @@ void FlameSolver::resizeAuxiliary()
 
     grid.jj = nPoints-1;
     grid.updateBoundaryIndices();
+    ckGas->setGridSize(nPoints);
 
     if (nPoints > nPointsOld) {
-        for (size_t i=nPointsOld; i<nPoints; i++) {
+        for (size_t j=nPointsOld; j<nPoints; j++) {
             // Create and initialize the new SourceSystem
             SourceSystem* system = new SourceSystem();
             system->resize(nSpec);
@@ -877,6 +883,7 @@ void FlameSolver::resizeAuxiliary()
             system->strainFunction = strainfunc;
             system->rhou = rhou;
             system->W = W;
+            system->j = j;
 
             // Create and initialize the new Sundials solver
             sundialsCVODE* solver = new sundialsCVODE(nVars);
