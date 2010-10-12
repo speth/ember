@@ -10,7 +10,6 @@ ConvectionSystem::ConvectionSystem()
 int ConvectionSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
 {
     unroll_y(y);
-
     // *** Update auxiliary data ***
     for (size_t j=0; j<nPoints; j++) {
         gas->setStateMass(&Y(0,j), T[j]);

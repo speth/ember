@@ -8,6 +8,7 @@
 #include <boost/filesystem.hpp>
 
 using boost::format;
+static const bool VERY_VERBOSE = true;
 
 FlameSolver::FlameSolver()
     : convectionSolver(NULL)
@@ -400,17 +401,24 @@ void FlameSolver::run(void)
         // *** Take one global timestep
         double tNext = tNow + dt;
 
+        if (VERY_VERBOSE) cout << "Starting Integration" << endl;
         int cvode_flag = 0;
         try {
+            if (VERY_VERBOSE) cout << "Source terms: j = ";
             for (size_t j=0; j<nPoints; j++) {
+                if (VERY_VERBOSE) cout << j << " ";
+                if (VERY_VERBOSE) cout.flush();
                 cvode_flag |= sourceSolvers[j].integrateToTime(tNext);
             }
+            if (VERY_VERBOSE) cout << endl;
 
+            if (VERY_VERBOSE) cout << "Diffusion terms" << endl;
             for (size_t k=0; k<nVars; k++) {
                 diffusionSolvers[k].integrateToTime(tNext);
             }
+            if (VERY_VERBOSE) cout << "Convection term" << endl;
             cvode_flag |= convectionSolver->integrateToTime(tNext);
-
+            if (VERY_VERBOSE) cout << "Done with integration." << endl;
         } catch (Cantera::CanteraError) {
             writeStateFile("errorOutput", true);
             cout << "Integration failed at t = " << tNow << std::endl;
