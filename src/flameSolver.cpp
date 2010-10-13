@@ -401,24 +401,39 @@ void FlameSolver::run(void)
         // *** Take one global timestep
         double tNext = tNow + dt;
 
-        if (VERY_VERBOSE) cout << "Starting Integration" << endl;
+        if (VERY_VERBOSE) {
+            cout << "Starting Integration:";
+            cout.flush();
+        }
         int cvode_flag = 0;
         try {
-            if (VERY_VERBOSE) cout << "Source terms: j = ";
+            if (VERY_VERBOSE) {
+                cout << "source terms...";
+                cout.flush();
+            }
+
             for (size_t j=0; j<nPoints; j++) {
-                if (VERY_VERBOSE) cout << j << " ";
-                if (VERY_VERBOSE) cout.flush();
                 cvode_flag |= sourceSolvers[j].integrateToTime(tNext);
             }
-            if (VERY_VERBOSE) cout << endl;
 
-            if (VERY_VERBOSE) cout << "Diffusion terms" << endl;
+            if (VERY_VERBOSE) {
+                cout << "diffusion terms...";
+                cout.flush();
+            }
+
             for (size_t k=0; k<nVars; k++) {
                 diffusionSolvers[k].integrateToTime(tNext);
             }
-            if (VERY_VERBOSE) cout << "Convection term" << endl;
+
+            if (VERY_VERBOSE) {
+                cout << "convection term...";
+                cout.flush();
+            }
+
             cvode_flag |= convectionSolver->integrateToTime(tNext);
-            if (VERY_VERBOSE) cout << "Done with integration." << endl;
+            if (VERY_VERBOSE) {
+                cout << "done!" << endl;
+            }
         } catch (Cantera::CanteraError) {
             writeStateFile("errorOutput", true);
             cout << "Integration failed at t = " << tNow << std::endl;
@@ -937,9 +952,10 @@ void FlameSolver::resizeAuxiliary()
     delete convectionSolver;
     convectionSolver = new sundialsCVODE(N);
     convectionSolver->setODE(&convectionTerm);
+    convectionSolver->setBandwidth(0,0);
     convectionSolver->reltol = options.idaRelTol;
-    convectionSolver->linearMultistepMethod = CV_ADAMS;
-    convectionSolver->nonlinearSolverMethod = CV_FUNCTIONAL;
+    convectionSolver->linearMultistepMethod = CV_BDF;
+    convectionSolver->nonlinearSolverMethod = CV_NEWTON;
     for (size_t j=0; j<nPoints; j++) {
         convectionSolver->abstol[nVars*j+kMomentum] = options.idaMomentumAbsTol;
         convectionSolver->abstol[nVars*j+kEnergy] = options.idaEnergyAbsTol;

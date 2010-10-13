@@ -143,6 +143,54 @@ void ConvectionSystem::get_diagonal(const realtype t, dvector& linearU,
     }
 }
 
+int ConvectionSystem::bandedJacobian(const realtype t, const sdVector& y,
+                                     const sdVector& ydot, sdBandMatrix& J)
+{
+    // Assume that f has just been called and that all auxiliary
+    // arrays are in a consistent state.
+
+    // Left boundary conditions.
+    // Convection term only contributes in the ControlVolume case
+
+    // dUdot/dU
+    J(0*nVars+kMomentum, 0*nVars+kMomentum) = splitLinearU[0];
+
+    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+        double centerVol = pow(x[1],alpha+1) / (alpha+1);
+        double rVzero_mod = std::max(rV[0], 0.0);
+
+        // dTdot/dT
+        J(0*nVars+kEnergy, 0*nVars+kEnergy) =
+                -rVzero_mod / (rho[0] * centerVol) + splitLinearT[0];
+
+        for (size_t k=0; k<nSpec; k++) {
+            // dYdot/dY
+            J(0*nVars+kSpecies+k, 0*nVars+kSpecies+k) =
+                    -rVzero_mod / (rho[0] * centerVol) + splitLinearY(k,0);
+        }
+
+    } else { // FixedValue or ZeroGradient
+        J(0*nVars+kEnergy, 0*nVars+kEnergy) = splitLinearT[0];
+        for (size_t k=0; k<nSpec; k++) {
+            J(0*nVars+kSpecies+k, 0*nVars+kSpecies+k) = splitLinearY(k,0);
+        }
+    }
+
+    // Intermediate points
+    for (size_t j=1; j<jj; j++) {
+        // depends on upwinding to calculated dT/dx etc.
+        double value = (rV[j] < 0 || j == 0) ? V[j] / (rho[j] * hh[j])
+                                             : -V[j] / (rho[j] * hh[j-1]);
+        J(j*nVars+kMomentum, j*nVars+kMomentum) = value + splitLinearU[j];
+        J(j*nVars+kEnergy, j*nVars+kEnergy) = value + splitLinearT[j];
+        for (size_t k=0; k<nSpec; k++) {
+            J(j*nVars+kSpecies+k, j*nVars+kSpecies+k) = value + splitLinearY(k,j);
+        }
+    }
+
+    return 0;
+}
+
 void ConvectionSystem::unroll_y(const sdVector& y)
 {
     for (size_t j=0; j<nPoints; j++) {

@@ -18,6 +18,8 @@ public:
     // we still need the diagonal elements to implement the splitting method
     void get_diagonal(const realtype t, dvector& dU, dvector& dT, Array2D& dY);
 
+    int bandedJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdBandMatrix& J);
+
     void unroll_y(const sdVector& y); // fill in current state variables from sdvector
     void roll_y(sdVector& y) const; // fill in sdvector with current state variables
     void roll_ydot(sdVector& ydot) const; // fill in sdvector with current time derivatives

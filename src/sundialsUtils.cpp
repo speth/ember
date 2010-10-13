@@ -9,8 +9,8 @@ using std::endl;
 sundialsCVODE::sundialsCVODE(unsigned int n)
     : y(n)
     , abstol(n)
-    , bandwidth_upper(0)
-    , bandwidth_lower(0)
+    , bandwidth_upper(-1)
+    , bandwidth_lower(-1)
     , initialized(false)
 {
     nEq = n;
@@ -66,7 +66,7 @@ void sundialsCVODE::initialize()
         }
     }
 
-    if (bandwidth_upper == 0 && bandwidth_lower == 0) {
+    if (bandwidth_upper == -1 && bandwidth_lower == -1) {
         // Call CVDense to specify the CVDENSE dense linear solver
         flag = CVDense(sundialsMem, nEq);
         if (check_flag(&flag, "CVDense", 1)) {
