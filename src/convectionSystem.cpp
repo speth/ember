@@ -190,6 +190,13 @@ int ConvectionSystem::bandedJacobian(const realtype t, const sdVector& y,
         }
     }
 
+    // Right boundary conditions
+    J(jj*nVars+kMomentum, jj*nVars+kMomentum) = splitLinearU[jj];
+    J(jj*nVars+kEnergy, jj*nVars+kEnergy) = splitLinearT[jj];
+    for (size_t k=0; k<nSpec; k++) {
+        J(jj*nVars+kSpecies+k, jj*nVars+kSpecies+k) = splitLinearY(k,jj);
+    }
+
     return 0;
 }
 
