@@ -5,6 +5,7 @@
 #include "chemistry0d.h"
 #include "strainFunction.h"
 #include "../adapchem/ckcompat.h"
+#include "perfTimer.h"
 
 #include <boost/shared_ptr.hpp>
 
@@ -50,6 +51,8 @@ public:
     CanteraGas* gas;
     boost::shared_ptr<AdapChem> ckGas;
     bool usingAdapChem;
+    perfTimer* reactionRatesTimer;
+    perfTimer* thermoTimer;
 
     // other parameters
     size_t nSpec;

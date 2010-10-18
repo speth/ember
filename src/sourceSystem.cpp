@@ -27,6 +27,7 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     unroll_y(y);
 
     // *** Update auxiliary data ***
+    reactionRatesTimer->start();
     gas->setStateMass(Y, T);
     if (usingAdapChem) {
         ckGas->setStateMass(&Y[0], T, j);
@@ -34,9 +35,13 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     } else {
         gas->getReactionRates(wDot);
     }
+    reactionRatesTimer->stop();
+
+    thermoTimer->start();
     gas->getEnthalpies(hk);
     rho = gas->getDensity();
     cp = gas->getSpecificHeatCapacity();
+    thermoTimer->stop();
 
     qDot = 0.0;
     for (size_t k=0; k<nSpec; k++) {
@@ -70,8 +75,10 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     double A = a*a + dadt;
 
     // Additional properties not needed for the normal function evaluations:
+    thermoTimer->start();
     gas->getSpecificHeatCapacities(cpSpec);
     Wmx = gas->getMixtureMolecularWeight();
+    thermoTimer->stop();
 
     // The constant "800" here has been empirically determined to give
     // good performance for typical test cases. This value can have
@@ -85,6 +92,7 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     dvector dwdT(nSpec);
     dvector wDot2(nSpec);
 
+    reactionRatesTimer->start();
     if (usingAdapChem) {
         ckGas->setStateMass(&Y[0], TplusdT, j);
         ckGas->getReactionRates(&wDot2[0]);
@@ -92,6 +100,7 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
         gas->setStateMass(Y, TplusdT);
         gas->getReactionRates(wDot2);
     }
+    reactionRatesTimer->stop();
 
     for (size_t k=0; k<nSpec; k++) {
         dwdT[k] = (wDot2[k]-wDot[k])/(TplusdT-T);
@@ -108,6 +117,7 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
 
     for (size_t k=0; k<nSpec; k++) {
         YplusdY[k] = (abs(Y[k]) > eps/2) ? Y[k]*(1+eps) : eps;
+        reactionRatesTimer->start();
         if (usingAdapChem) {
             ckGas->setStateMass(&YplusdY[0], T, j);
             ckGas->getReactionRates(&wDot2[0]);
@@ -115,6 +125,7 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
             gas->setStateMass(YplusdY, T);
             gas->getReactionRates(wDot2);
         }
+        reactionRatesTimer->stop();
 
         for (size_t i=0; i<nSpec; i++) {
             dwdY(i,k) = (wDot2[i]-wDot[i])/(YplusdY[k]-Y[k]);

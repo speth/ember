@@ -177,6 +177,14 @@ private:
     double centerVol, centerArea;
 
     // Performance Timers
-    perfTimer perfTimerResFunc, perfTimerPrecondSetup, perfTimerPrecondSolve, perfTimerTransportProps;
-    perfTimer perfTimerRxnRates, perfTimerResize, perfTimerLU;
+    // Just the total time:
+    perfTimer totalTimer;
+
+    // These add up to the total run time:
+    perfTimer resizeTimer, splitTimer, combineTimer,
+              reactionTimer, diffusionTimer, convectionTimer,
+              regridTimer;
+
+    // These account for special parts of the code
+    perfTimer reactionRatesTimer, transportTimer, thermoTimer;
 };

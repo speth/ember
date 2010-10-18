@@ -8,7 +8,7 @@
 #include <boost/filesystem.hpp>
 
 using boost::format;
-static const bool VERY_VERBOSE = true;
+static const bool VERY_VERBOSE = false;
 
 FlameSolver::FlameSolver()
     : convectionSolver(NULL)
@@ -61,6 +61,7 @@ void FlameSolver::initialize(void)
     convectionTerm.Yleft = Yleft;
     convectionTerm.Tleft = Tleft;
     convectionTerm.gas = &gas;
+    convectionTerm.thermoTimer = &thermoTimer;
 
     for (size_t k=0; k<nVars; k++) {
         DiffusionSystem* term = new DiffusionSystem();
@@ -75,8 +76,7 @@ void FlameSolver::initialize(void)
 void FlameSolver::run(void)
 {
     clock_t tIDA1, tIDA2;
-    perfTimer runTime;
-    runTime.start();
+    totalTimer.start();
 
     double t = tStart;
     double dt;
@@ -126,26 +126,34 @@ void FlameSolver::run(void)
 
         // Calculate auxiliary data
         for (size_t j=0; j<nPoints; j++) {
+            thermoTimer.start();
             gas.setStateMass(&Y(0,j), T[j]);
             rho[j] = gas.getDensity();
             Wmx[j] = gas.getMixtureMolecularWeight();
-            lambda[j] = gas.getThermalConductivity();
             cp[j] = gas.getSpecificHeatCapacity();
+            gas.getSpecificHeatCapacities(&cpSpec(0,j));
+            gas.getEnthalpies(&hk(0,j));
+            thermoTimer.stop();
+
+            transportTimer.start();
+            lambda[j] = gas.getThermalConductivity();
             mu[j] = gas.getViscosity();
             gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j));
             gas.getThermalDiffusionCoefficients(&Dkt(0,j));
-            gas.getSpecificHeatCapacities(&cpSpec(0,j));
+            transportTimer.stop();
+
+            reactionRatesTimer.start();
             if (options.usingAdapChem) {
                 ckGas->initializeStep(&Y(0,j), T[j], j);
                 ckGas->getReactionRates(&wDot(0,j));
             } else {
                 gas.getReactionRates(&wDot(0,j));
             }
-            gas.getEnthalpies(&hk(0,j));
             qDot[j] = 0;
             for (size_t k=0; k<nSpec; k++) {
                 qDot[j] -= wDot(k,j)*hk(k,j);
             }
+            reactionRatesTimer.stop();
         }
 
         updateLeftBC();
@@ -156,6 +164,7 @@ void FlameSolver::run(void)
         convectionTerm.rVzero = rVzero;
         dt = options.globalTimestep;
 
+        splitTimer.start();
         // *** Set the initial conditions and auxiliary variables for each
         // solver/system, and set the value of the "constant" term(s) to zero
 
@@ -397,10 +406,10 @@ void FlameSolver::run(void)
                 splitLinear[j] = linearYconv(k,j) + linearYprod(k,j) + linearYcross(k,j);
             }
         }
+        splitTimer.stop();
 
         // *** Take one global timestep
         double tNext = tNow + dt;
-
         if (VERY_VERBOSE) {
             cout << "Starting Integration:";
             cout.flush();
@@ -412,25 +421,31 @@ void FlameSolver::run(void)
                 cout.flush();
             }
 
+            reactionTimer.start();
             for (size_t j=0; j<nPoints; j++) {
                 cvode_flag |= sourceSolvers[j].integrateToTime(tNext);
             }
+            reactionTimer.stop();
 
             if (VERY_VERBOSE) {
                 cout << "diffusion terms...";
                 cout.flush();
             }
 
+            diffusionTimer.start();
             for (size_t k=0; k<nVars; k++) {
                 diffusionSolvers[k].integrateToTime(tNext);
             }
+            diffusionTimer.stop();
 
             if (VERY_VERBOSE) {
                 cout << "convection term...";
                 cout.flush();
             }
 
+            convectionTimer.start();
             cvode_flag |= convectionSolver->integrateToTime(tNext);
+            convectionTimer.stop();
             if (VERY_VERBOSE) {
                 cout << "done!" << endl;
             }
@@ -443,6 +458,7 @@ void FlameSolver::run(void)
         tNow = tNext;
         aPrev = strainfunc.a(t);
 
+        combineTimer.start();
         cvode_flag = CV_SUCCESS; // CHARGE!
         if (cvode_flag == CV_SUCCESS) {
             nOutput++;
@@ -480,6 +496,7 @@ void FlameSolver::run(void)
                          diffusionSolvers[kSpecies+k].y[j] - 2*Yextrap(k,j);
             }
         }
+        combineTimer.stop();
 
         if (t > tOutput || nOutput >= options.outputStepInterval) {
             timeVector.push_back(t);
@@ -502,8 +519,8 @@ void FlameSolver::run(void)
                 if (options.outputProfiles) {
                     writeStateFile();
                 }
-                runTime.stop();
-                cout << format ("Runtime: %f seconds.") % runTime.getTime() << endl;
+                totalTimer.stop();
+                cout << format ("Runtime: %f seconds.") % totalTimer.getTime() << endl;
                 return;
             }
         }
@@ -537,6 +554,7 @@ void FlameSolver::run(void)
         }
 
         if (t > tRegrid || nRegrid >= options.regridStepInterval) {
+            regridTimer.start();
             tRegrid = t + options.regridTimeInterval;
             nRegrid = 0;
 
@@ -605,7 +623,7 @@ void FlameSolver::run(void)
 
                 writeStateFile("postAdapt");
             }
-
+            regridTimer.stop();
         }
 
         tIDA2 = clock();
@@ -622,9 +640,8 @@ void FlameSolver::run(void)
         writeStateFile();
     }
 
-    runTime.stop();
-    cout << "Runtime: " << runTime.getTime() << " seconds." << endl;
-
+    totalTimer.stop();
+    cout << "Runtime: " << totalTimer.getTime() << " seconds." << endl;
 }
 
 bool FlameSolver::checkTerminationCondition(void)
@@ -829,7 +846,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
 
 void FlameSolver::resizeAuxiliary()
 {
-    perfTimerResize.start();
+    resizeTimer.start();
     size_t nPointsOld = rho.size();
     grid.setSize(T.size());
 
@@ -905,6 +922,8 @@ void FlameSolver::resizeAuxiliary()
             system->gas = &gas;
             system->ckGas = ckGas;
             system->usingAdapChem = options.usingAdapChem;
+            system->thermoTimer = &thermoTimer;
+            system->reactionRatesTimer = &reactionRatesTimer;
             system->strainFunction = strainfunc;
             system->rhou = rhou;
             system->W = W;
@@ -973,7 +992,7 @@ void FlameSolver::resizeAuxiliary()
     jCorrSolver.set_size(nPoints, 1, 1);
 
     // All done
-    perfTimerResize.stop();
+    resizeTimer.stop();
 }
 
 void FlameSolver::updateCrossTerms()
@@ -1404,14 +1423,17 @@ dvector FlameSolver::calculateReactantMixture(void)
 
 void FlameSolver::printPerformanceStats(void)
 {
-    cout << endl << " **Performance Stats**:  time  (call count)" << endl;
-    printPerfString("         General Setup: ", perfTimerResize);
-    printPerfString("  Preconditioner Setup: ", perfTimerPrecondSetup);
-    printPerfString("  Factorizing Jacobian: ", perfTimerLU);
-    printPerfString("  Preconditioner Solve: ", perfTimerPrecondSolve);
-    printPerfString("   Residual Evaluation: ", perfTimerResFunc);
-    printPerfString("        Reaction Rates: ", perfTimerRxnRates);
-    printPerfString("  Transport Properties: ", perfTimerTransportProps);
+    cout << endl << " *** Performance Stats ***       time (call count)" << endl;
+    printPerfString("                General Setup: ", resizeTimer);
+    printPerfString("             Split Term Setup: ", splitTimer);
+    printPerfString("    Reaction Term Integration: ", reactionTimer);
+    printPerfString("   Diffusion Term Integration: ", diffusionTimer);
+    printPerfString("  Convection Term Integration: ", convectionTimer);
+    printPerfString("     Split Term Recombination: ", combineTimer);
+    cout << endl << " Subcomponents:" << endl;
+    printPerfString("               Reaction Rates: ", reactionRatesTimer);
+    printPerfString("         Transport Properties: ", transportTimer);
+    printPerfString("     Thermodynamic Properties: ", thermoTimer);
     cout << endl;
 }
 

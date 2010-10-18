@@ -5,6 +5,7 @@
 #include "strainFunction.h"
 #include "grid.h"
 #include "chemistry0d.h"
+#include "perfTimer.h"
 
 class ConvectionSystem  : public sdODE, public GridBased
 {
@@ -53,6 +54,8 @@ public:
     // Auxiliary variables
     dvector V; // mass flux [kg/m^2*s]
     dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
+
+    perfTimer* thermoTimer;
 
 private:
     void V2rV();
