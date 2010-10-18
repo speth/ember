@@ -6,14 +6,14 @@ C     oluwoleo@mit.edu
 C	Adaptive Chemistry package to be interfaced with any CFD solver
 C     for efficient simulation of reacting flows using CHEMKIN-like
 C     routines
-C     To use, substitute call to
-C     CHEMKIN routine CKWYP(P,T,Y,ICKWRK,RCKWRK,WDOT)
-C     with a call to
+C     To use, substitute call to 
+C     CHEMKIN routine CKWYP(P,T,Y,ICKWRK,RCKWRK,WDOT) 
+C     with a call to 
 C     adapchem2(igrid,igridTot,igm1,p,t,y,ickwrk,rckwrk,wdot,ispecies,jsolv)
 C     where 'igrid' is the current grid point address/number
 C           'igridTot' is the total number of grid points
-C           'igm1' is set to a value different from igrid to distinguish differnt stages of the solver
-C     The additional input "ispecies"
+C           'igm1' is set to a value different from igrid to distinguish differnt stages of the solver    
+C     The additional input "ispecies" 
 C     is an array of binary values 0/1 where ispecies(k) = 1 if species
 C     k is chemically active or ispecies(k) = 0 if species k is chemically
 C     inactive (i.e. no wdot(j) is changed with change in y(k))
@@ -29,8 +29,8 @@ C     solver has completed all operations for the previous step and is
 C     starting a new iteration (or integration) step.
 C     'resid_tol' is the steady-state convergence tolerance:
 C     steady state when max(|dT/dt|,|dC/dt|)<resid_tol
-C     This should give you an idea of where to insert the common block
-C     in your CFD solver
+C     This should give you an idea of where to insert the common block 
+C     in your CFD solver 
 C     resid_tol should ONLY be changed by adapchem routine
 C *********************************************************************
 C
@@ -64,9 +64,9 @@ C                   cgs units - moles/(cm**3*sec)
 C                   Data type - real array
 C                   Dimension WDOT(*) at least KK, the total number of
 C                   species.
-c       March 22/2010--Luwi Oluwole:
+c       March 22/2010--Luwi Oluwole: 
 c                      jsolv= -1 ===> load reduced models only; then return
-c                      jsolv = 0 ===> don't calculate reaction rates;
+c                      jsolv = 0 ===> don't calculate reaction rates; 
 c                                     only return reduced model species (binary) array
 c                      jsolv = 1 ===> calculate reaction rates
 C
@@ -82,8 +82,7 @@ C Including Chemkin common block for array address
 C Including array boundary size related parameters
 	include 'ackparams.i'
 	dimension cfull(kmax), yfull(kmax), yinert(kmax,nptmax)
-	dimension nur(imax,nm+1), iModel(NPTMAX)
-	dimension iicount(nptmax), iCall(1)
+	dimension nur(imax,nm+1), iModel(NPTMAX), iicount(nptmax), iCall(1)
 	dimension nus(kmax,nm+1)! species binary array
 	dimension modelSize(nm+1,2)
 	save igrTotm1, jfindmod
@@ -97,11 +96,11 @@ C Including array boundary size related parameters
 	common/adpchm6/ iModel, iicount
 	common/saveNUR/ nur, modelSize
 	common/saveNUS/ nus
-	common/inert/ yinert
+	common/inert/ yinert 
         common/adpchm7/ inewlib, iCall
 !       <Luwi===9/2/2010====>
-c	common /mpi/ noprocs,nidproc
-	common /adpmpi/ noprocs,nidproc
+c	common /mpi/ noprocs,nidproc 
+	common /adpmpi/ noprocs,nidproc 
 	common/adpchm8/ iadapnew
 	if (jsolv .eq. -1) then
 !	This call is supposed to load new model library
@@ -151,19 +150,19 @@ C     On first call, initialize, read inputs, and save data
 C********NOTE: OLDER VERSIONS ASSUME ARRAYS (eg. ICAL()) ARE ALWAYS INITIALIZED
 C              TO 0 BY YOUR COMPILER. I.E. ICAL(I) = 0 FORALL I
 C     </initialize>
-C
+C       
 C     is a new model needed?
 	if(jsolv .eq. -1) then
 C     this call is to load reduced models only; then return
 	   jfindmod = 1
 	   iwritesize = 0
-	else
+	else	      
 	   call needmodel(igrid,igridTot,igrTotm1,nsteps,icount,icountm1,
      & jfindmod,iwritesize,jprint,nprint,iicount)
 	endif
 C     record model usage statistics to date
 	if(iwritesize.eq.1) then
-	   call sizewrite(nFull,nRed,iSizeTot,icountTot,ii,kk)
+!Luwi--10/15/10--don't write stats!	   call sizewrite(nFull,nRed,iSizeTot,icountTot,ii,kk)
 C     <modelLibrary>
 C     skip the following if a new model library is being constructed
 	   if(inewlib.gt.0) goto 007
@@ -191,7 +190,7 @@ C      Find smallest valid reduced model
 	   iSizeTot = iSizeTot + modelSize(imodNum,2)!computes avg number of species
 	   icountTot = icountTot + 1
 	endif
-C     Once models obtained for all grid points, don't search for new models
+C     Once models obtained for all grid points, don't search for new models 
 C     again until retired models or new mesh.
 C     </Update models>
 
@@ -209,7 +208,7 @@ C     after prior failed attempt
  	   imodNum = iModel(igrid)
 	   imodSize = modelSize(imodNum,1)
 	   kmodSize = modelSize(imodNum,2)
-
+     
 C       chemkin call uses species from reduced-order ODE mapped into full concentration array
 C
 	   call ackwc(imodSize,p,t,cfull,nur(1,imodNum),nus(1,imodNum),
@@ -326,7 +325,7 @@ C     </modelLib>
 	print*,'nsteps= ',nsteps
 	print*,'rmaxfull= ',rmaxfull
 	print*,'reading models.chem...'
-
+	
 	open(1, file='models.chem', status='old')
 	read (1,*) ii, kk!Luwi-9/2/10-kfuel not needed/used!, kfuel
 C     closed in subroutine findModel
@@ -352,7 +351,7 @@ C**********************************************************************
 	write(2,1) nint(dble(iSizeTot)/dble(icountTot)),
      &dble(iSizeTot)/dble(icountTot*kk)*100.
 	write(3,2) nFull, nRed
-
+	
     1	format(I4,2X,F5.1)
     2	format(I10,2X,I10)
 
@@ -373,8 +372,8 @@ C     for use during the adaptive chemistry calculation
       common /saveNUR/ NUR, modelSize
 	character line*12
 C     Columns of NUR(,) contain all models including full model
-C     Columns of rangeLo and rangeHi contain valid ranges of reduced
-C     models beginning in column 2
+C     Columns of rangeLo and rangeHi contain valid ranges of reduced 
+C     models beginning in column 2       
 C     all reduced models are stored in order of increasing size
 C     <O.Oluwole--6/26/2008>
 C     Aerodyne Research, Inc.
@@ -422,7 +421,7 @@ C     look for model size
 		         ifoundSize = 1
 		     endif
 	      elseif(ifoundSize.eq.1) then !found number of reactions; need number of species
-C     look for model species size
+C     look for model species size  
 		  if(line(2:9).eq.'Contains'.or.line(2:9).eq.'Includes') then
 		      backspace(lin)
 		      read(lin,*) line, imodelSize
@@ -430,7 +429,7 @@ C     look for model species size
 		  elseif(line(:6).eq.'REGION') then
 C     model size not specified; never look for model size
 		      ireadSize = 0
-		  endif
+		  endif	      
 	      endif
 	   endif
 	   if(line(:6).eq.'REGION') then
@@ -472,14 +471,14 @@ C     save data for use on subsequent calls
 	if(iCall.eq.2) goto 007
 C     On first call, read and save model library
 	call readModels(lin,kk,ii,rangeLo,rangeHi,nModels)
-	close(lin)
+	close(lin)	
 	iCall = 2
 C     <modelLib: signal completion of model library upload>
 	open(78,file='donemodels',status='new')
 	close(78)
 	if(jsolv .eq. -1) then
         return ! Luwi--4/23/2010--this call was for loading models only
-        endif
+        endif        
 C     </modelLib>
   007	continue
 C
@@ -577,15 +576,15 @@ C     no further operations necessary for 0-reaction model
      6             RCKWRK(NcI1), NRNU, ICKWRK(IcRNU), RCKWRK(NcRNU))
 C
 C
-      CALL ACKRATX (p,rckwrk(NcRU),nur, NII, NKK, MXSP, MXTB, T, C,
+      CALL ACKRATX (p,rckwrk(NcRU),nur, NII, NKK, MXSP, MXTB, T, C, 
      $             ICKWRK(IcNS),
      1             ICKWRK(IcNU), ICKWRK(IcNK), NPAR+1, RCKWRK(NcCO),
-     2             NFAL, ICKWRK(IcFL), ICKWRK(IcFO), ICKWRK(IcKF), NFAR,
-     3             RCKWRK(NcFL), NTHB, ICKWRK(IcTB), ICKWRK(IcKN),
-     4             RCKWRK(NcKT), ICKWRK(IcKT), RCKWRK(NcKF),
-     5             RCKWRK(NcKR), RCKWRK(NcI1), RCKWRK(NcI2),
+     2             NFAL, ICKWRK(IcFL), ICKWRK(IcFO), ICKWRK(IcKF), NFAR, 
+     3             RCKWRK(NcFL), NTHB, ICKWRK(IcTB), ICKWRK(IcKN), 
+     4             RCKWRK(NcKT), ICKWRK(IcKT), RCKWRK(NcKF), 
+     5             RCKWRK(NcKR), RCKWRK(NcI1), RCKWRK(NcI2), 
      6             RCKWRK(NcI3), NRNU, ICKWRK(IcRNU), RCKWRK(NcRNU),
-     7             NORD, ICKWRK(IcORD), MXORD, ICKWRK(IcKOR),
+     7             NORD, ICKWRK(IcORD), MXORD, ICKWRK(IcKOR), 
      8             RCKWRK(NcKOR),
      $             ispecies)
 C
@@ -630,12 +629,12 @@ C     <Luwi Oluwole: 3/22/2010--reduced species wdot>
 	   endif
 	enddo
 C     </Luwi>
-
+  
       RETURN
       END
 
 C**********************************************************************
-	SUBROUTINE ACKRATT(nur,RCKWRK, ICKWRK, II, MAXSP, RU, PATM, T,
+	SUBROUTINE ACKRATT(nur,RCKWRK, ICKWRK, II, MAXSP, RU, PATM, T, 
      1              NSPEC, NU, NUNK, NPAR, PAR, NREV, IREV, RPAR, NLAN,
      2              NLAR, ILAN, PLT, NRLT, IRLT, RPLT, SMH, RKFT,
      3              RKRT, EQK, NRNU, IRNU, RNU)
@@ -742,9 +741,9 @@ C
 
 C**********************************************************************
 	SUBROUTINE ACKRATX
-     &	(p,ru,nur,II, KK, MAXSP, MAXTB, T, C, NSPEC, NU,
-     1     NUNK, NPAR, PAR, NFAL, IFAL, IFOP, KFAL, NFAR, FPAR,
-     2     NTHB, ITHB, NTBS, AIK, NKTB, RKFT, RKRT, RKF,
+     &	(p,ru,nur,II, KK, MAXSP, MAXTB, T, C, NSPEC, NU, 
+     1     NUNK, NPAR, PAR, NFAL, IFAL, IFOP, KFAL, NFAR, FPAR, 
+     2     NTHB, ITHB, NTBS, AIK, NKTB, RKFT, RKRT, RKF, 
      3     RKR, CTB, NRNU, IRNU, RNU, NORD, IORD, MXORD,
      4     KORD, RORD, ispecies)
 C*****precision > double
@@ -821,7 +820,7 @@ C
 C              8-PARAMETER SRI FORM
 C
                   XP = 1.0/(1.0 + PRLOG**2)
-                  FC = ((FPAR(4,N)*EXP(-FPAR(5,N)/T)
+                  FC = ((FPAR(4,N)*EXP(-FPAR(5,N)/T) 
      1                   + EXP(-T/FPAR(6,N))) **XP)
      2                  * FPAR(7,N) * T**FPAR(8,N)
 C
@@ -861,14 +860,14 @@ C
          IF (NU(1,I) .NE. 0) THEN
             RKF(I) = RKFT(I)*C(NUNK(1,I))**IABS(NU(1,I))
 	    ispecies(nunk(1,i)) = 1
-
+	    
             RKR(I) = RKRT(I)*C(NUNK(4,I))**NU(4,I)
 	    ispecies(nunk(4,i)) = 1
 
             IF (NUNK(2,I) .NE. 0) THEN
                RKF(I)= RKF(I) * C(NUNK(2,I))**IABS(NU(2,I))
 	       ispecies(nunk(2,i)) = 1
-
+	       
                IF (NUNK(3,I) .NE. 0) then
 		  RKF(I) = RKF(I) * C(NUNK(3,I))**IABS(NU(3,I))
 		  ispecies(nunk(3,i)) = 1
@@ -1080,7 +1079,7 @@ C
       END
 
 C**********************************************************************
-C Initialize variables
+C Initialize variables 
       subroutine adapchemINI()
 	dimension icall(1)
 	common/adpchm7/ inewlib, iCall
@@ -1089,7 +1088,7 @@ C Initialize variables
 !       <Luwi--9/2/2010-->
 	icall(1) = 0
 !       </Luwi>
-      end
+      end   
 
 
 C**********************************************************************
