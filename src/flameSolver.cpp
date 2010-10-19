@@ -798,6 +798,14 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeVector("Uextrap", Uextrap);
         outFile.writeVector("Textrap", Textrap);
         outFile.writeArray2D("Yextrap", Yextrap);
+
+        if (options.usingAdapChem) {
+            dvector nSpecReduced(nPoints);
+            for (size_t j=0; j<nPoints; j++) {
+                nSpecReduced[j] = ckGas->getNumSpec(j);
+            }
+            outFile.writeVector("nSpecReduced", nSpecReduced);
+        }
     }
 
     if (options.outputResidualComponents || errorFile) {

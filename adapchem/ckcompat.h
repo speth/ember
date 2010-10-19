@@ -101,6 +101,8 @@ public:
     void setPressure(double P);
     void getReactionRates(double* wdot);
 
+    // Functions for informational purposes:
+    size_t getNumSpec(size_t iGrid); // number of species in reduced model at grid point iGrid
 
 private:
     // Chemkin's work arrays

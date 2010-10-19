@@ -232,6 +232,16 @@ void AdapChem::getReactionRates(double* wdot)
 }
 
 
+size_t AdapChem::getNumSpec(size_t iGrid)
+{
+    if (iGrid >= _nGrid) {
+        return 0;
+    } else {
+        return _iSpecies[iGrid].size();
+    }
+}
+
+
 void AdapChem::callAdapChem(int jSolv)
 {
     int igridTmp = _iGrid+1; // Fortran is 1-indexed...
