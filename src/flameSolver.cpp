@@ -122,6 +122,11 @@ void FlameSolver::run(void)
         tIDA1 = clock();
         if (options.usingAdapChem) {
             ckGas->incrementStep();
+
+            // Because AdapChem only assigns values for species in the
+            // reduced mechanisms, we need to zero the reaction rates
+            // whenever the mechansim at each point could change.
+            wDot.data().assign(wDot.data().size(), 0);
         }
 
         // Calculate auxiliary data
@@ -201,6 +206,7 @@ void FlameSolver::run(void)
             sourceSolvers[j].initialize();
             sourceTerms[j].splitConst.assign(nVars, 0);
             sourceTerms[j].splitLinear.assign(nVars, 0);
+            sourceTerms[j].wDot.assign(nSpec, 0);
             sourceTerms[j].strainFunction.pin(t);
         }
 

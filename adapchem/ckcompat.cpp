@@ -1,6 +1,7 @@
 #include "ckcompat.h"
 #include <iostream>
 
+
 ChemkinGas::ChemkinGas(const std::string& filename, bool quiet)
 {
     int input_unit = 555;
@@ -39,19 +40,16 @@ ChemkinGas::ChemkinGas(const std::string& filename, bool quiet)
     _Y.resize(_nSpec);
 }
 
+
 void ChemkinGas::setStatePTY(double P, double T, const double* const Y)
 {
-    #ifdef CKCOMPAT_USE_MKS
-        _P = P*10;
-    #else
-        _P = P;
-    #endif
-
+    setPressure(P);
     _T = T;
     for (int k=0; k<_nSpec; k++) {
         _Y[k] = Y[k];
     }
 }
+
 
 void ChemkinGas::setStateMass(const double* const Y, double T)
 {
@@ -60,6 +58,7 @@ void ChemkinGas::setStateMass(const double* const Y, double T)
         _Y[k] = Y[k];
     }
 }
+
 
 void ChemkinGas::setPressure(double P)
 {
@@ -81,7 +80,6 @@ void ChemkinGas::getReactionRates(double* wdot)
         }
     #endif
 }
-
 
 
 AdapChem::AdapChem(const std::string& filename, bool quiet)
@@ -127,20 +125,24 @@ AdapChem::AdapChem(const std::string& filename, bool quiet)
     adpchm2_.icount = 0;
 }
 
+
 AdapChem::~AdapChem()
 {
     adapchemend_();
 }
+
 
 double AdapChem::getRelTol() const
 {
     return adpchm1_.resid_tol;
 }
 
+
 void AdapChem::incrementStep()
 {
     adpchm2_.icount += 1;
 }
+
 
 void AdapChem::setGridSize(int nGrid) {
     _nGrid = nGrid;
@@ -150,10 +152,22 @@ void AdapChem::setGridSize(int nGrid) {
     _keepSpecies.resize(_nSpec);
 }
 
+
 void AdapChem::initializeStep(double P, double T, const double* const Y, int iGrid)
 {
+    setPressure(P);
+    initializeStep(Y, T, iGrid);
+}
+
+
+void AdapChem::initializeStep(const double* const Y, double T, int iGrid)
+{
     _iGrid = iGrid;
-    setStatePTY(P, T, Y, iGrid);
+    _T = T;
+    for (int k=0; k<_nSpec; k++) {
+        _Y[k] = Y[k];
+    }
+
     callAdapChem(-1);
     callAdapChem(0);
 
@@ -164,50 +178,32 @@ void AdapChem::initializeStep(double P, double T, const double* const Y, int iGr
             _iSpecies[iGrid].push_back(i);
         }
     }
-}
 
-void AdapChem::initializeStep(const double* const Y, double T, int iGrid)
-{
-    _iGrid = iGrid;
-    setStateMass(Y, T, iGrid);
-    callAdapChem(-1);
-    callAdapChem(0);
-
-    // Store the indices of species that are being kept at this point
-    _iSpecies[_iGrid].clear();
-    for (int i=0; i<_nSpec; i++) {
-        if (_keepSpecies[i]) {
-            _iSpecies[iGrid].push_back(i);
-        }
+    // If the next call to AdapChem is getReactionRates, the reduced species
+    // vector must be in place.
+    const std::vector<size_t>& iSpec = _iSpecies[iGrid];
+    for (size_t i=0; i<iSpec.size(); i++) {
+        _Y[i] = Y[iSpec[i]];
     }
 }
 
 
 void AdapChem::setStatePTY(double P, double T, const double* const Y, int iGrid)
 {
-    #ifdef CKCOMPAT_USE_MKS
-        _P = P*10;
-    #else
-        _P = P;
-    #endif
-
-    _T = T;
-    for (int k=0; k<_nSpec; k++) {
-        _Y[k] = Y[k];
-    }
-
-    _iGrid = iGrid;
+    setPressure(P);
+    setStateMass(Y, T, iGrid);
 }
 
 
 void AdapChem::setStateMass(const double* const Y, double T, int iGrid)
 {
     _T = T;
-    for (int k=0; k<_nSpec; k++) {
-        _Y[k] = Y[k];
-    }
-
     _iGrid = iGrid;
+
+    const std::vector<size_t>& iSpec = _iSpecies[iGrid];
+    for (size_t i=0; i<iSpec.size(); i++) {
+        _Y[i] = Y[iSpec[i]];
+    }
 }
 
 
@@ -233,8 +229,8 @@ void AdapChem::getReactionRates(double* wdot)
             wdot[iSpec[i]] = _wdot[i];
         #endif
     }
-
 }
+
 
 void AdapChem::callAdapChem(int jSolv)
 {

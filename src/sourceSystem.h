@@ -60,6 +60,10 @@ public:
     dvector W; // species molecular weights [kg/kmol]
     double rhou; // density of the unburned mixture
 
+    // Other quantities
+    dvector wDot; // species net production rates [kmol/m^3*s]
+    double qDot; // heat release rate per unit volume [W/m^3]
+
 private:
     // Physical properties
     double rho; // density [kg/m^3]
@@ -68,7 +72,4 @@ private:
     double Wmx; // mixture molecular weight [kg/mol]
     dvector hk; // species enthalpies [J/kmol]
 
-    // Other quantities
-    dvector wDot; // species net production rates [kmol/m^3*s]
-    double qDot; // heat release rate per unit volume [W/m^3]
 };
