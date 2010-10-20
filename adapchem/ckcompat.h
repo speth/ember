@@ -133,4 +133,5 @@ private:
     int _iGrid;
 
     void callAdapChem(int jSolv);
+    void removeTempFiles();
 };

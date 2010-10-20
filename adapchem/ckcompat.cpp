@@ -1,5 +1,6 @@
 #include "ckcompat.h"
 #include <iostream>
+#include <boost/filesystem.hpp>
 
 
 ChemkinGas::ChemkinGas(const std::string& filename, bool quiet)
@@ -96,6 +97,7 @@ AdapChem::AdapChem(const std::string& filename, bool quiet)
         output_unit = 6; // STDOUT
     }
 
+    removeTempFiles();
     int len_iwork;
     int len_rwork;
     int len_cwork;
@@ -129,6 +131,7 @@ AdapChem::AdapChem(const std::string& filename, bool quiet)
 AdapChem::~AdapChem()
 {
     adapchemend_();
+    removeTempFiles();
 }
 
 
@@ -249,4 +252,16 @@ void AdapChem::callAdapChem(int jSolv)
               &_P, &_T, &_Y[0],
               _iptr, _rptr,
               &_wdot[0], &_keepSpecies[0], &jSolv);
+}
+
+
+void AdapChem::removeTempFiles()
+{
+    // Clean up temporary files created by AdapChem
+    if (boost::filesystem::exists("donemodels")) {
+        boost::filesystem::remove("donemodels");
+    }
+    if (boost::filesystem::exists("full.rstart")) {
+        boost::filesystem::remove("full.rstart");
+    }
 }
