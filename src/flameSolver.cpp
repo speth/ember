@@ -252,19 +252,16 @@ void FlameSolver::run(void)
         // "predicted" values Uextrap, Textrap, and Yextrap
 
         // Source solvers
+        // Here, we only compute the constant term, which is needed to calculate
+        // the convection solver's constant term. The linear term is calculated
+        // only while integrating the source systems.
         sdVector ydotSource(nVars);
-        sdMatrix Jtmp(nVars, nVars);
         for (size_t j=0; j<nPoints; j++) {
-            sourceTerms[j].updateDiagonalJac = true;
             sourceTerms[j].f(tNow, sourceSolvers[j].y, ydotSource);
-            sourceTerms[j].denseJacobian(tNow, sourceSolvers[j].y, ydotSource, Jtmp);
             constUprod[j] = ydotSource[kMomentum];
             constTprod[j] = ydotSource[kEnergy];
-            linearUprod[j] = sourceTerms[j].diagonalJac[kMomentum];
-            linearTprod[j] = sourceTerms[j].diagonalJac[kEnergy];
             for (size_t k=0; k<nSpec; k++) {
                 constYprod(k,j) = ydotSource[kSpecies+k];
-                linearYprod(k,j) = sourceTerms[j].diagonalJac[kSpecies+k];
             }
         }
 
@@ -310,18 +307,14 @@ void FlameSolver::run(void)
 
         // Store the time derivatives for output files
         // TODO: Only do this if we're actually about to write an output file
-        dUdtprod = constUprod;
         dUdtdiff = constUdiff;
         dUdtconv = constUconv;
-        dTdtprod = constTprod;
         dTdtconv = constTconv;
         dTdtdiff=  constTdiff;
-        dYdtprod.resize(nSpec, nPoints);
         dYdtconv.resize(nSpec, nPoints);
         dYdtdiff.resize(nSpec, nPoints);
         for (size_t j=0; j<nPoints; j++) {
             for (size_t k=0; k<nSpec; k++) {
-                dYdtprod(k,j) = constYprod(k,j);
                 dYdtconv(k,j) = constYconv(k,j);
                 dYdtdiff(k,j) = constYdiff(k,j);
             }
@@ -331,62 +324,22 @@ void FlameSolver::run(void)
         //     state variables based on the diagonalized approximation
 
         // Offset the value of the linear terms at the current solution
-        constUprod -= linearUprod*U;
         constUconv -= linearUconv*U;
         constUdiff -= linearUdiff*U;
 
-        constTprod -= linearTprod*T;
         constTconv -= linearTconv*T;
         constTdiff -= linearTdiff*T;
         constTcross -= linearTcross*T;
 
         for (size_t j=0; j<nPoints; j++) {
             for (size_t k=0; k<nSpec; k++) {
-                constYprod(k,j) -= linearYprod(k,j)*Y(k,j);
                 constYconv(k,j) -= linearYconv(k,j)*Y(k,j);
                 constYdiff(k,j) -= linearYdiff(k,j)*Y(k,j);
                 constYcross(k,j) -= linearYcross(k,j)*Y(k,j);
             }
         }
 
-        // This is the exact solution to the linearized problem
-        for (size_t j=0; j<nPoints; j++) {
-            double K = constUprod[j] + constUdiff[j] + constUconv[j];
-            double L = linearUprod[j] + linearUdiff[j] + linearUconv[j];
-            double L2; // L2 handles the limit as L->0 for the second term in the solution
-            L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
-
-            Uextrap[j] = U[j]*exp(L*dt) + K/L2*(exp(L2*dt)-1);
-
-            K = constTprod[j] + constTdiff[j] + constTconv[j] + constTcross[j];
-            L = linearTprod[j] + linearTdiff[j] + linearTconv[j] + linearTcross[j];
-            L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
-            Textrap[j] = T[j]*exp(L*dt) + K/L2*(exp(L2*dt)-1);
-
-            for (size_t k=0; k<nSpec; k++) {
-                K = constYprod(k,j) + constYdiff(k,j) + constYconv(k,j) + constYcross(k,j);
-                L = linearYconv(k,j) + linearYdiff(k,j) + linearYprod(k,j) + linearYcross(k,j);
-                L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
-                Yextrap(k,j) = Y(k,j)*exp(L*dt) + K/L2*(exp(L2*dt)-1);
-            }
-        }
-
-        // *** Calculate the constant and linear terms for each system of
-        //     equations.
-
-        // Convection term
-        convectionTerm.splitConstU = constUprod + constUdiff;
-        convectionTerm.splitLinearU = linearUprod + linearUdiff;
-        convectionTerm.splitConstT = constTprod + constTdiff + constTcross;
-        convectionTerm.splitLinearT = linearTprod + linearTdiff;
-        for (size_t j=0; j<nPoints; j++) {
-            for (size_t k=0; k<nSpec; k++) {
-                convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j) + constYcross(k,j);
-                convectionTerm.splitLinearY(k,j) = linearYprod(k,j) + linearYdiff(k,j) + linearYcross(k,j);
-            }
-        }
-
-        // Source terms
+        // Source terms: calculate constant and linear terms
         for (size_t j=0; j<nPoints; j++) {
             SourceSystem& term = sourceTerms[j];
             term.splitConst[kMomentum] = constUconv[j] + constUdiff[j];
@@ -399,7 +352,66 @@ void FlameSolver::run(void)
             }
         }
 
-        // Diffusion terms
+        splitTimer.stop();
+
+        if (VERY_VERBOSE) {
+            cout << "Starting Integration: source terms...";
+            cout.flush();
+        }
+
+        double tNext = tNow + dt;
+        // Source solvers: Integrate, and extract the linear terms
+        // needed by the diffusion/convection solvers
+        reactionTimer.start();
+        for (size_t j=0; j<nPoints; j++) {
+            sourceTerms[j].updateDiagonalJac = true;
+            sourceSolvers[j].integrateToTime(tNext);
+            linearUprod[j] = sourceTerms[j].diagonalJac[kMomentum];
+            linearTprod[j] = sourceTerms[j].diagonalJac[kEnergy];
+            for (size_t k=0; k<nSpec; k++) {
+                linearYprod(k,j) = sourceTerms[j].diagonalJac[kSpecies+k];
+            }
+        }
+        reactionTimer.stop();
+
+        splitTimer.resume();
+        // Store the time derivatives for output files
+        // TODO: Only do this if we're actually about to write an output file
+        dUdtprod = constUprod;
+        dTdtprod = constTprod;
+        dYdtprod.resize(nSpec, nPoints);
+        for (size_t j=0; j<nPoints; j++) {
+            for (size_t k=0; k<nSpec; k++) {
+                dYdtprod(k,j) = constYprod(k,j);
+            }
+        }
+
+        // *** Use the time derivatives to calculate the values for the
+        //     state variables based on the diagonalized approximation
+
+        // Offset the value of the linear terms at the current solution
+        constUprod -= linearUprod*U;
+        constTprod -= linearTprod*T;
+
+        for (size_t j=0; j<nPoints; j++) {
+            for (size_t k=0; k<nSpec; k++) {
+                constYprod(k,j) -= linearYprod(k,j)*Y(k,j);
+            }
+        }
+
+        // Convection term: Calculate constant & linear terms
+        convectionTerm.splitConstU = constUprod + constUdiff;
+        convectionTerm.splitLinearU = linearUprod + linearUdiff;
+        convectionTerm.splitConstT = constTprod + constTdiff + constTcross;
+        convectionTerm.splitLinearT = linearTprod + linearTdiff;
+        for (size_t j=0; j<nPoints; j++) {
+            for (size_t k=0; k<nSpec; k++) {
+                convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j) + constYcross(k,j);
+                convectionTerm.splitLinearY(k,j) = linearYprod(k,j) + linearYdiff(k,j) + linearYcross(k,j);
+            }
+        }
+
+        // Diffusion terms: Calculate constant & linear terms
         diffusionTerms[kMomentum].splitConst = constUconv + constUprod;
         diffusionTerms[kMomentum].splitLinear = linearUconv + linearUprod;
         diffusionTerms[kEnergy].splitConst = constTconv + constTprod + constTcross;
@@ -414,30 +426,13 @@ void FlameSolver::run(void)
         }
         splitTimer.stop();
 
-        // *** Take one global timestep
-        double tNext = tNow + dt;
-        if (VERY_VERBOSE) {
-            cout << "Starting Integration:";
-            cout.flush();
-        }
+        // *** Take one global timestep: diffusion / convection solvers
         int cvode_flag = 0;
         try {
-            if (VERY_VERBOSE) {
-                cout << "source terms...";
-                cout.flush();
-            }
-
-            reactionTimer.start();
-            for (size_t j=0; j<nPoints; j++) {
-                cvode_flag |= sourceSolvers[j].integrateToTime(tNext);
-            }
-            reactionTimer.stop();
-
             if (VERY_VERBOSE) {
                 cout << "diffusion terms...";
                 cout.flush();
             }
-
             diffusionTimer.start();
             for (size_t k=0; k<nVars; k++) {
                 diffusionSolvers[k].integrateToTime(tNext);
@@ -460,12 +455,11 @@ void FlameSolver::run(void)
             cout << "Integration failed at t = " << tNow << std::endl;
         }
 
+        combineTimer.start();
         t = tNext;
         tNow = tNext;
         aPrev = strainfunc.a(t);
 
-        combineTimer.start();
-        cvode_flag = CV_SUCCESS; // CHARGE!
         if (cvode_flag == CV_SUCCESS) {
             nOutput++;
             nRegrid++;
@@ -485,6 +479,28 @@ void FlameSolver::run(void)
                     t % dt << endl;
             writeStateFile("errorOutput",true);
             break;
+        }
+
+        // This is the exact solution to the linearized problem
+        for (size_t j=0; j<nPoints; j++) {
+            double K = constUprod[j] + constUdiff[j] + constUconv[j];
+            double L = linearUprod[j] + linearUdiff[j] + linearUconv[j];
+            double L2; // L2 handles the limit as L->0 for the second term in the solution
+            L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
+
+            Uextrap[j] = U[j]*exp(L*dt) + K/L2*(exp(L2*dt)-1);
+
+            K = constTprod[j] + constTdiff[j] + constTconv[j] + constTcross[j];
+            L = linearTprod[j] + linearTdiff[j] + linearTconv[j] + linearTcross[j];
+            L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
+            Textrap[j] = T[j]*exp(L*dt) + K/L2*(exp(L2*dt)-1);
+
+            for (size_t k=0; k<nSpec; k++) {
+                K = constYprod(k,j) + constYdiff(k,j) + constYconv(k,j) + constYcross(k,j);
+                L = linearYconv(k,j) + linearYdiff(k,j) + linearYprod(k,j) + linearYcross(k,j);
+                L2 = (abs(L*dt) < 1e-10) ? 1e-10/dt : L;
+                Yextrap(k,j) = Y(k,j)*exp(L*dt) + K/L2*(exp(L2*dt)-1);
+            }
         }
 
         // *** Combine the solutions from the split integrators and form
