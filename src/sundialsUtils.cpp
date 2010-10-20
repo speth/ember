@@ -11,7 +11,7 @@ sundialsCVODE::sundialsCVODE(unsigned int n)
     , abstol(n)
     , bandwidth_upper(-1)
     , bandwidth_lower(-1)
-    , initialized(false)
+    , _initialized(false)
 {
     nEq = n;
     sundialsMem = NULL;
@@ -28,7 +28,7 @@ sundialsCVODE::~sundialsCVODE(void)
 
 void sundialsCVODE::initialize()
 {
-    if (initialized) {
+    if (_initialized) {
         // Starting over with a new IC, but the same ODE
         flag = CVodeReInit(sundialsMem, t0, y.forSundials());
         if (check_flag(&flag, "CVodeReInit", 1)) {
@@ -92,7 +92,12 @@ void sundialsCVODE::initialize()
         }
     }
 
-    initialized = true;
+    _initialized = true;
+}
+
+bool sundialsCVODE::initialized() const
+{
+    return _initialized;
 }
 
 void sundialsCVODE::setBandwidth(int upper, int lower)

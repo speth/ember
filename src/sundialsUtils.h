@@ -111,6 +111,7 @@ public:
     // Call initialize() before using integrateToTime to integrate.
     // Integration may be restarted by reassigning y and t0 and calling initialize again.
     void initialize();
+    bool initialized() const;
 
     int integrateToTime(realtype t);
 
@@ -155,7 +156,7 @@ private:
     int bandwidth_upper;
     int bandwidth_lower;
 
-    bool initialized;
+    bool _initialized;
 };
 
 

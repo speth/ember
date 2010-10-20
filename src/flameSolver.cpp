@@ -822,6 +822,15 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
             }
             outFile.writeVector("nSpecReduced", nSpecReduced);
         }
+
+        // Number of timesteps in the chemistry solver in the last global timestep
+        dvector chemSteps(nPoints, 0);
+        for (size_t j=0; j<nPoints; j++) {
+            if (sourceSolvers[j].initialized()) {
+                chemSteps[j] = sourceSolvers[j].getNumSteps();
+            }
+        }
+        outFile.writeVector("chemSteps", chemSteps);
     }
 
     if (options.outputResidualComponents || errorFile) {
