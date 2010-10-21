@@ -81,7 +81,6 @@ void FlameSolver::initialize(void)
 
 void FlameSolver::run(void)
 {
-    clock_t tIDA1, tIDA2;
     totalTimer.start();
 
     double t = tStart;
@@ -117,7 +116,8 @@ void FlameSolver::run(void)
         bool error = false;
         for (size_t j=0; j<nPoints; j++) {
             if (T[j] < 295 || T[j] > 3000) {
-                cout << "WARNING: Unexpected Temperature: T = " << T[j] << "at j = " << j << endl;
+                cout << format("WARNING: Unexpected Temperature: T = %f at j = %i")
+                        % T[j] % j << endl;
                 error = true;
             }
         }
@@ -125,7 +125,6 @@ void FlameSolver::run(void)
             writeStateFile();
         }
 
-        tIDA1 = clock();
         if (options.usingAdapChem) {
             ckGas->incrementStep();
 
@@ -542,13 +541,11 @@ void FlameSolver::run(void)
         if (nTerminate >= options.terminateStepInterval) {
             nTerminate = 0;
             if (checkTerminationCondition()) {
-                tIDA2 = clock();
-                //theSolver.printStats(tIDA2-tIDA1);
                 if (options.outputProfiles) {
                     writeStateFile();
                 }
                 totalTimer.stop();
-                cout << format ("Runtime: %f seconds.") % totalTimer.getTime() << endl;
+                cout << format("Runtime: %f seconds.") % totalTimer.getTime() << endl;
                 return;
             }
         }
@@ -573,8 +570,6 @@ void FlameSolver::run(void)
         // *** Save flame profiles
         if (t > tProfile || nProfile >= options.profileStepInterval) {
             if (options.outputProfiles) {
-//                sdVector resTemp(theSys.N);
-//                theSys.f(t, theSolver.y, theSolver.ydot, resTemp);
                 writeStateFile();
             }
             tProfile = t + options.profileTimeInterval;
@@ -654,10 +649,6 @@ void FlameSolver::run(void)
             regridTimer.stop();
         }
 
-        tIDA2 = clock();
-        // *** This is the end for the current instance of the IDA solver
-        // theSolver.printStats(tIDA2-tIDA1);
-
         if (debugParameters::debugPerformanceStats) {
             printPerformanceStats();
         }
@@ -680,8 +671,8 @@ bool FlameSolver::checkTerminationCondition(void)
 
         if (j1 == -1)
         {
-            cout << "Continuing integration: t (" << format("%8.6f") % (tNow-timeVector[0]) <<
-                ") < terminationPeriod (" << format("%8.6f") % options.terminationPeriod << ")" << endl;
+            cout << format("Continuing integration: t (%8.6f) < terminationPeriod (%8.6f)")
+                    % (tNow-timeVector[0]) % options.terminationPeriod << endl;
             return false;
         }
 
@@ -693,8 +684,8 @@ bool FlameSolver::checkTerminationCondition(void)
         }
         hrrError /= (j2-j1+1);
 
-        cout << "Heat release rate deviation =  " << format("%6.3f") % (hrrError/qMean*100) << "%    ";
-        cout << "hrrError = " << format("%9.4e") % hrrError << endl;
+        cout << format("Heat release rate deviation = %6.3f%%. hrrError = %9.4e")
+                % (hrrError/qMean*100) % hrrError << endl;
 
         if (hrrError/abs(qMean) < options.terminationTolerance) {
             cout << "Terminating integration: ";
@@ -708,7 +699,7 @@ bool FlameSolver::checkTerminationCondition(void)
           cout << "Terminating integration: Maximum integration time reached." << endl;
           return true;
         } else {
-            cout << "Continuing integration. t = "<< format("%8.6f") % (tNow-timeVector[0]) << endl;
+            cout << format("Continuing integration. t = %8.6f") % (tNow-timeVector[0]) << endl;
         }
 
     }
@@ -785,7 +776,6 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("jFick", jFick);
         outFile.writeArray2D("jSoret", jSoret);
         outFile.writeVector("jCorr", jCorr);
-//        outFile.writeVector("qFourier",qFourier);
         outFile.writeVector("cfp", grid.cfp);
         outFile.writeVector("cf", grid.cf);
         outFile.writeVector("cfm", grid.cfm);
