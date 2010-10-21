@@ -22,10 +22,10 @@ double mathUtils::maxval(const dvector& v)
 
 double mathUtils::minval(const dvector& v)
 {
-    dvector::const_iterator i;
-    double val = *v.begin();
-    for (i=v.begin(); i!=v.end(); i++) {
-        val = std::min(*i,val);
+    double val = v[0];
+    dvector::const_iterator iter;
+    for (iter=v.begin(); iter!=v.end(); iter++) {
+        val = std::min(*iter,val);
     }
     return val;
 }

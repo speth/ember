@@ -1,6 +1,9 @@
 #include "grid.h"
 #include "debugUtils.h"
 
+#include <boost/foreach.hpp>
+#define foreach BOOST_FOREACH
+
 using std::cout;
 using std::endl;
 using namespace mathUtils;
@@ -360,16 +363,14 @@ void oneDimGrid::adapt(vector<dvector>& y)
 
 void oneDimGrid::addPoint(int jInsert, vector<dvector>& y)
 {
-      dvector::iterator iter;
     double xInsert = 0.5*(x[jInsert+1]+x[jInsert]);
 
     cout << "oneDimGrid::addPoint: " << x.size() << ", " << dampVal.size() << endl;
     dampVal.insert(dampVal.begin()+jInsert+1, mathUtils::splines(x,dampVal, xInsert));
 
-    vector<dvector>::iterator i;
-    for (i=y.begin(); i!=y.end(); i++) {
-        double yNew = mathUtils::splines(x,*i, xInsert);
-        i->insert(i->begin()+jInsert+1, yNew);
+    foreach(dvector& row, y) {
+        double yNew = mathUtils::splines(x, row, xInsert);
+        row.insert(row.begin()+jInsert+1, yNew);
     }
 
     x.insert(x.begin()+jInsert+1, xInsert);
@@ -378,9 +379,8 @@ void oneDimGrid::addPoint(int jInsert, vector<dvector>& y)
 void oneDimGrid::removePoint(int jRemove, vector<dvector>& y)
 {
     x.erase(x.begin() + jRemove);
-    vector<dvector>::iterator i;
-    for (i=y.begin(); i!=y.end(); i++) {
-        i->erase(i->begin() + jRemove);
+    foreach(dvector& row, y) {
+        row.erase(row.begin() + jRemove);
     }
 }
 
