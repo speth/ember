@@ -59,8 +59,8 @@ public:
     // Return value is true if the grid has been modified
     // adapt inserts and removes points within the problem domain
     // regrid inserts and removes points at the ends of the problem domain
-    void adapt(vector<dvector>& y, vector<dvector>& ydot);
-    void regrid(vector<dvector>& y, vector<dvector>& ydot);
+    void adapt(vector<dvector>& y);
+    void regrid(vector<dvector>& y);
     void setOptions(const configOptions& options);
     void updateValues(void);
     void setSize(const size_t N);
@@ -73,13 +73,13 @@ public:
 private:
     configOptions options;
 
-    void removePoint(int jRemove, vector<dvector>& y, vector<dvector>& ydot);
-    void addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot);
+    void removePoint(int jRemove, vector<dvector>& y);
+    void addPoint(int jInsert, vector<dvector>& y);
 
-    bool removeRight(vector<dvector>& y, vector<dvector>& ydot);
-    bool removeLeft(vector<dvector>& y, vector<dvector>& ydot);
-    bool addRight(vector<dvector>& y, vector<dvector>& ydot);
-    bool addLeft(vector<dvector>& y, vector<dvector>& ydot);
+    bool removeRight(vector<dvector>& y);
+    bool removeLeft(vector<dvector>& y);
+    bool addRight(vector<dvector>& y);
+    bool addLeft(vector<dvector>& y);
 };
 
 

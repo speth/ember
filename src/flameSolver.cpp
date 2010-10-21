@@ -86,6 +86,7 @@ void FlameSolver::run(void)
     double t = tStart;
     double dt;
 
+    long int nTotal = 0; // total number of timesteps taken
     int nRegrid = 0; // number of time steps since regridding/adaptation
     int nOutput = 0; // number of time steps since storing integral flame parameters
     int nProfile = 0; // number of time steps since saving flame profiles
@@ -583,11 +584,8 @@ void FlameSolver::run(void)
 
             // "rollVectorVector"
             vector<dvector> currentSolution;
-            vector<dvector> currentSolutionDot; // TODO: Remove this, as we don't need ydot anymore
             currentSolution.push_back(U);
             currentSolution.push_back(T);
-            currentSolutionDot.push_back(dUdt);
-            currentSolutionDot.push_back(dTdt);
             for (size_t k=0; k<nSpec; k++) {
                 dvector tmp(nPoints);
                 dvector dtmp(nPoints);
@@ -596,10 +594,9 @@ void FlameSolver::run(void)
                     dtmp[j] = dYdt(k,j);
                 }
                 currentSolution.push_back(tmp);
-                currentSolutionDot.push_back(dtmp);
             }
 
-            grid.regrid(currentSolution, currentSolutionDot);
+            grid.regrid(currentSolution);
             grid.dampVal.resize(grid.x.size());
 
             // dampVal sets a limit on the maximum grid size
@@ -611,7 +608,7 @@ void FlameSolver::run(void)
                 grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
             }
 
-            grid.adapt(currentSolution, currentSolutionDot);
+            grid.adapt(currentSolution);
 
             // Perform updates that are necessary if the grid has changed
             if (grid.updated) {
@@ -649,9 +646,10 @@ void FlameSolver::run(void)
             regridTimer.stop();
         }
 
-        if (debugParameters::debugPerformanceStats) {
+        if (debugParameters::debugPerformanceStats && (nTotal % 10 == 0)) {
             printPerformanceStats();
         }
+        nTotal++;
     }
 
     // *** Integration has reached the termination condition
@@ -660,6 +658,7 @@ void FlameSolver::run(void)
     }
 
     totalTimer.stop();
+    printPerformanceStats();
     cout << "Runtime: " << totalTimer.getTime() << " seconds." << endl;
 }
 

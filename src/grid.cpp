@@ -72,7 +72,7 @@ void oneDimGrid::setSize(const size_t N)
     jj = N-1;
 }
 
-void oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
+void oneDimGrid::adapt(vector<dvector>& y)
 {
     // This function takes the unadapted solution vector y, analyzes it,
     // and returns an updated solution vector. It tries to remove
@@ -223,7 +223,7 @@ void oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
         if (insert) {
             // Insert a new point
             insertionIndicies.push_back(j);
-            addPoint(j, y, ydot);
+            addPoint(j, y);
             updated = true;
             setSize(nPoints+1);
             j+=2;
@@ -336,7 +336,7 @@ void oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
 
         if (remove) {
             removalIndices.push_back(j);
-            removePoint(j, y, ydot);
+            removePoint(j, y);
             setSize(nPoints-1);
             updated = true;
         } else {
@@ -358,7 +358,7 @@ void oneDimGrid::adapt(vector<dvector>& y, vector<dvector>& ydot)
     }
 }
 
-void oneDimGrid::addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot)
+void oneDimGrid::addPoint(int jInsert, vector<dvector>& y)
 {
       dvector::iterator iter;
     double xInsert = 0.5*(x[jInsert+1]+x[jInsert]);
@@ -367,34 +367,24 @@ void oneDimGrid::addPoint(int jInsert, vector<dvector>& y, vector<dvector>& ydot
     dampVal.insert(dampVal.begin()+jInsert+1, mathUtils::splines(x,dampVal, xInsert));
 
     vector<dvector>::iterator i;
-    double yNew, ydotNew;
-
     for (i=y.begin(); i!=y.end(); i++) {
-        yNew = mathUtils::splines(x,*i, xInsert);
+        double yNew = mathUtils::splines(x,*i, xInsert);
         i->insert(i->begin()+jInsert+1, yNew);
-    }
-
-    for (i=ydot.begin(); i!=ydot.end(); i++) {
-        ydotNew = mathUtils::splines(x,*i, xInsert);
-        i->insert(i->begin()+jInsert+1, ydotNew);
     }
 
     x.insert(x.begin()+jInsert+1, xInsert);
 }
 
-void oneDimGrid::removePoint(int jRemove, vector<dvector>& y, vector<dvector>& ydot)
+void oneDimGrid::removePoint(int jRemove, vector<dvector>& y)
 {
     x.erase(x.begin() + jRemove);
     vector<dvector>::iterator i;
     for (i=y.begin(); i!=y.end(); i++) {
         i->erase(i->begin() + jRemove);
     }
-    for (i=ydot.begin(); i!=ydot.end(); i++) {
-        i->erase(i->begin() + jRemove);
-    }
 }
 
-bool oneDimGrid::addRight(vector<dvector>& y, vector<dvector>& ydot)
+bool oneDimGrid::addRight(vector<dvector>& y)
 {
     // *** Criteria for addition to right (j==jj) ***
 
@@ -440,7 +430,6 @@ bool oneDimGrid::addRight(vector<dvector>& y, vector<dvector>& ydot)
             for (size_t k=0; k<nVars; k++) {
                 // keep constant boundary value
                 y[k].push_back(y[k][jj]);
-                ydot[k].push_back(ydot[k][jj]);
             }
             setSize(nPoints+1);
         }
@@ -451,7 +440,7 @@ bool oneDimGrid::addRight(vector<dvector>& y, vector<dvector>& ydot)
 
 }
 
-bool oneDimGrid::addLeft(vector<dvector>& y, vector<dvector>& ydot)
+bool oneDimGrid::addLeft(vector<dvector>& y)
 {
     // *** Criteria for addition to the left (j==0) ***
 
@@ -512,7 +501,6 @@ bool oneDimGrid::addLeft(vector<dvector>& y, vector<dvector>& ydot)
             for (size_t k=0; k<nVars; k++) {
                 // keep constant boundary value
                 y[k].insert(y[k].begin(),y[k][0]);
-                ydot[k].insert(ydot[k].begin(),ydot[k][0]);
             }
             setSize(nPoints+1);
         }
@@ -522,7 +510,7 @@ bool oneDimGrid::addLeft(vector<dvector>& y, vector<dvector>& ydot)
     return pointAdded;
 }
 
-bool oneDimGrid::removeRight(vector<dvector>& y, vector<dvector>& ydot)
+bool oneDimGrid::removeRight(vector<dvector>& y)
 {
     // *** Criteria for removal from the right (j==jj) ***
 
@@ -553,7 +541,7 @@ bool oneDimGrid::removeRight(vector<dvector>& y, vector<dvector>& ydot)
     }
 
     if (pointRemoved) {
-        removePoint(jj,y,ydot);
+        removePoint(jj,y);
         setSize(nPoints-1);
         updateBoundaryIndices();
     }
@@ -561,7 +549,7 @@ bool oneDimGrid::removeRight(vector<dvector>& y, vector<dvector>& ydot)
     return pointRemoved;
 }
 
-bool oneDimGrid::removeLeft(vector<dvector>& y, vector<dvector>& ydot)
+bool oneDimGrid::removeLeft(vector<dvector>& y)
 {
     // *** Criteria for removal from the left (j==0) ***
     int djMom = 2;
@@ -597,7 +585,7 @@ bool oneDimGrid::removeLeft(vector<dvector>& y, vector<dvector>& ydot)
     }
 
     if (pointRemoved) {
-        removePoint(0,y,ydot);
+        removePoint(0,y);
         setSize(nPoints-1);
         updateBoundaryIndices();
     }
@@ -606,15 +594,15 @@ bool oneDimGrid::removeLeft(vector<dvector>& y, vector<dvector>& ydot)
 }
 
 
-void oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
+void oneDimGrid::regrid(vector<dvector>& y)
 {
     nVars = y.size();
     kQdot = nVars-1;
 
     setSize(y[0].size());
 
-    bool rightAddition = addRight(y, ydot);
-    bool leftAddition = addLeft(y, ydot);
+    bool rightAddition = addRight(y);
+    bool leftAddition = addLeft(y);
 
     bool rightRemoval = false;
     bool leftRemoval = false;
@@ -624,7 +612,7 @@ void oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
     if (!rightAddition) {
         bool continueRemoval = true;
         while (continueRemoval) {
-            continueRemoval = removeRight(y, ydot);
+            continueRemoval = removeRight(y);
             if (continueRemoval) {
                 rightRemoval = true;
                 rightRemovalCount++;
@@ -640,7 +628,7 @@ void oneDimGrid::regrid(vector<dvector>& y, vector<dvector>& ydot)
     if (!leftAddition) {
         bool continueRemoval = true;
         while (continueRemoval) {
-            continueRemoval = removeLeft(y, ydot);
+            continueRemoval = removeLeft(y);
             if (continueRemoval) {
                 leftRemoval = true;
                 leftRemovalCount++;
