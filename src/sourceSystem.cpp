@@ -169,6 +169,7 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
 
 int SourceSystem::fdJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J)
 {
+    jacobianTimer->start();
     sdVector yplusdy(y.length());
     sdVector ydot2(y.length());
     size_t nVars = nSpec+2;
@@ -193,6 +194,7 @@ int SourceSystem::fdJacobian(const realtype t, const sdVector& y, const sdVector
         }
         updateDiagonalJac = false;
     }
+    jacobianTimer->stop();
 
     return 0;
 }

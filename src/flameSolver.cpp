@@ -969,6 +969,7 @@ void FlameSolver::resizeAuxiliary()
             system->usingAdapChem = options.usingAdapChem;
             system->thermoTimer = &thermoTimer;
             system->reactionRatesTimer = &reactionRatesTimer;
+            system->jacobianTimer = &jacobianTimer;
             system->strainFunction = strainfunc;
             system->rhou = rhou;
             system->W = W;
@@ -1468,7 +1469,7 @@ dvector FlameSolver::calculateReactantMixture(void)
 
 void FlameSolver::printPerformanceStats(void)
 {
-    cout << endl << " *** Performance Stats ***       time (call count)" << endl;
+    cout << endl << "   *** Performance Stats ***       time   ( call count )" << endl;
     printPerfString("                General Setup: ", resizeTimer);
     printPerfString("             Split Term Setup: ", splitTimer);
     printPerfString("    Reaction Term Integration: ", reactionTimer);
@@ -1479,10 +1480,11 @@ void FlameSolver::printPerformanceStats(void)
     printPerfString("               Reaction Rates: ", reactionRatesTimer);
     printPerfString("         Transport Properties: ", transportTimer);
     printPerfString("     Thermodynamic Properties: ", thermoTimer);
+    printPerfString("   Source Jacobian Evaluation: ", jacobianTimer);
     cout << endl;
 }
 
 void FlameSolver::printPerfString(const std::string& label, const perfTimer& T) const
 {
-    cout << label << mathUtils::stringify(T.getTime(),6) << " (" << T.getCallCount() << ")" << endl;
+    cout << format("%s %9.3f (%12i)") % label % T.getTime() % T.getCallCount() << endl;
 }

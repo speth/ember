@@ -187,4 +187,5 @@ private:
 
     // These account for special parts of the code
     perfTimer reactionRatesTimer, transportTimer, thermoTimer;
+    perfTimer jacobianTimer;
 };

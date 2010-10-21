@@ -53,6 +53,7 @@ public:
     bool usingAdapChem;
     perfTimer* reactionRatesTimer;
     perfTimer* thermoTimer;
+    perfTimer* jacobianTimer;
 
     // other parameters
     size_t nSpec;
