@@ -46,8 +46,14 @@ void configOptions::readOptionsFile(const std::string& filename)
     }
 
     // Chemkin/AdapChem
-    usingAdapChem = readOption("chemistry.chemkinMechanismFile", chemkinMechanismFile, "");
-    chemkinMechanismFile = inputDir + "/" + chemkinMechanismFile;
+    usingAdapChem = readOption("adapchem.mechanism", chemkinMechanismFile, "");
+    if (usingAdapChem) {
+        readOption("adapchem.input", adapchemInputFile, "adapchem.in");
+        readOption("adapchem.models", adapchemModelsFile, "models.chem");
+        readOption("adapchem.defaultModel", adapchemDefaultModelFile, "default.model");
+        readOption("adapchem.donemodels", adapchemDonemodelsFile, "donemodels");
+        readOption("adapchem.restart", adapchemRestartFile, "full.rstrt");
+    }
 
     // Grid
     readOption("initialCondition.nPoints", nPoints, 50);

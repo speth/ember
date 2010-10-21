@@ -46,7 +46,13 @@ void FlameSolver::initialize(void)
 
     // Chemkin & Adapchem Initialization
     if (options.usingAdapChem) {
-        ckGas.reset(new AdapChem(options.chemkinMechanismFile));
+        ckGas.reset(new AdapChem(options.inputDir+"/"+options.chemkinMechanismFile,
+                                 true,
+                                 options.inputDir+"/"+options.adapchemInputFile,
+                                 options.inputDir+"/"+options.adapchemModelsFile,
+                                 options.inputDir+"/"+options.adapchemDefaultModelFile,
+                                 options.outputDir+"/"+options.adapchemDonemodelsFile,
+                                 options.outputDir+"/"+options.adapchemRestartFile));
         ckGas->setPressure(options.pressure);
     }
 

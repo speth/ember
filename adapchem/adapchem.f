@@ -290,6 +290,8 @@ C************************************************************************
       dimension iModel(*), iicount(*), iCall(1)
       character line*5
 
+      include 'filenames.i'
+
 C       initialize and set defaults on number of steps between modelUsage write
       jprint = 0
       nprint = 1
@@ -307,7 +309,7 @@ C     modelUsage:
          iicount(j) = 0
       end do
       print*,'reading adapchem.in...'
-      open(7, file='adapchem.in', status='old')
+      open(7, file=adapchem_in, status='old')
       do while(7.gt.0)
          read(7,*) line
          if(line(:3).eq.'END') goto 005
@@ -327,7 +329,7 @@ C     </modelLib>
       print*,'rmaxfull= ',rmaxfull
       print*,'reading models.chem...'
 
-      open(1, file='models.chem', status='old')
+      open(1, file=models_chem, status='old')
       read (1,*) ii, kk!Luwi-9/2/10-kfuel not needed/used!, kfuel
 C     closed in subroutine findModel
 !       <Luwi--9/3/2010-- avoiding multiple file copies in parallel code>
@@ -366,6 +368,7 @@ C     This subroutine reads in the reduced models in the model library
 C     for use during the adaptive chemistry calculation
       implicit double precision (a-h,o-z), integer (i-n)
       include 'ackparams.i'
+      include 'filenames.i'
       dimension rangeLo(kmax+1,nm+1), rangeHi(kmax+1,nm+1)
       dimension modelSize(nm+1,2)
       dimension NUR(imax,nm+1), NUS(kmax,nm+1)
@@ -387,7 +390,7 @@ C     where user wishes to specify a maximum model size to be used over the
 C     course of the Adaptive Chemistry simulation. Adaptive Chemistry should
 C     evaluate and report the error of the skeletal model at the end of the
 C     steady-state simulation
-      open(4,file='default.model',status='old')
+      open(4,file=default_model, status='old')
       read(4,*) ivalr, ivals
       if(ivalr.eq.ii) then
 C     default is full model
@@ -464,6 +467,7 @@ C     at a given set of species concentrations and temperature
 C     Luwi Oluwole 6/10/2004
       implicit double precision (a-h,o-z), integer (i-n)
       include 'ackparams.i'
+      include 'filenames.i'
       dimension C(kk)
       dimension rangeLo(kmax+1,nm+1), rangeHi(kmax+1,nm+1)
 C     save data for use on subsequent calls
@@ -475,7 +479,7 @@ C     On first call, read and save model library
       close(lin)
       iCall = 2
 C     <modelLib: signal completion of model library upload>
-      open(78,file='donemodels',status='new')
+      open(78,file=donemodels,status='unknown')
       close(78)
       if(jsolv .eq. -1) then
         return ! Luwi--4/23/2010--this call was for loading models only
@@ -1095,6 +1099,49 @@ C Initialize variables
 C**********************************************************************
 C create an empty file to signal terminating model library generation script
       subroutine adapchemEND()
-         open(unit=78, file='full.rstrt',status='new')
+         include 'filenames.i'
+         open(unit=78, file=full_rstrt, status='unknown')
            close(78)
+      end
+
+C Functions for setting filenames
+      subroutine ac_set_modelschem(filename)
+          character*(*) filename
+          include 'filenames.i'
+          models_chem = filename
+      end
+
+      subroutine ac_set_adapchemin(filename)
+          character*(*) filename
+          include 'filenames.i'
+          adapchem_in = filename
+      end
+
+      subroutine ac_set_fullrstrt(filename)
+          character*(*) filename
+          include 'filenames.i'
+          full_rstrt = filename
+      end
+
+      subroutine ac_set_defaultmodel(filename)
+          character*(*) filename
+          include 'filenames.i'
+          default_model = filename
+      end
+
+      subroutine ac_set_donemodels(filename)
+          character*(*) filename
+          include 'filenames.i'
+          donemodels = filename
+      end
+
+C     Set default file names
+      subroutine ac_set_default_filenames()
+          include 'filenames.i'
+
+	      models_chem = 'models.chem'
+	      adapchem_in = 'adapchem.in'
+	      full_rstrt = 'full.rstrt'
+	      default_model = 'default.model'
+	      donemodels = 'donemodels'
       end

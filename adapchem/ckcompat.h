@@ -34,6 +34,13 @@ extern "C"
     extern void adapbox_(int* igridTot, int* nmaxbox, double* Y,
                          double* P, double* T, double* rwork, double* iwork);
 
+    // Setting adapchem's file locations
+    extern void ac_set_modelschem_(const char* name, int len_name);
+    extern void ac_set_adapchemin_(const char* name, int len_name);
+    extern void ac_set_fullrstrt_(const char* name, int len_name);
+    extern void ac_set_defaultmodel_(const char* name, int len_name);
+    extern void ac_set_donemodels_(const char* name, int len_name);
+
     // COMMON blocks defined by AdapChem:
     extern struct {
         double resid_tol;
@@ -78,7 +85,13 @@ private:
 class AdapChem
 {
 public:
-    AdapChem(const std::string& filename, bool quiet=false);
+    AdapChem(const std::string& mechanism_file,
+             bool quiet=false,
+             const std::string& adapchem_file="adapchem.in",
+             const std::string& models_file="models.chem",
+             const std::string& defaultmodel_file="default.model",
+             const std::string& donemodels_file="donemodels",
+             const std::string& fullrstrt_file="full.rstrt");
     ~AdapChem();
 
     double getRelTol() const;
@@ -125,6 +138,10 @@ private:
 
     // production rate, but only for species included in model
     std::vector<double> _wdot;
+
+    // temp file names
+    std::string _donemodels_file;
+    std::string _fullrstrt_file;
 
     // current state: pressure, temperature, mass fraction, and grid point index
     double _P;

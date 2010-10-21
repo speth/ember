@@ -51,8 +51,15 @@ public:
     std::string gasMechanismFile;
     std::string gasPhaseID;
     bool usingMultiTransport;
-    std::string chemkinMechanismFile;
+
+    // Adapchem configuration
     bool usingAdapChem;
+    std::string chemkinMechanismFile;
+    std::string adapchemInputFile;
+    std::string adapchemModelsFile;
+    std::string adapchemDefaultModelFile;
+    std::string adapchemDonemodelsFile;
+    std::string adapchemRestartFile;
 
     std::string fuel; // molar composition of the fuel
     std::string oxidizer; // molar composition of the oxidizer

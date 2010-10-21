@@ -19,7 +19,19 @@ chemistry:
 {
     mechanismFile = "gri30syngas.xml";
     phaseID = "syngas";
+    transportModel = "Multi";
 };
+
+// Exclude this section to use Cantera to evaluate reaction rates instead
+adapchem:
+{
+    mechanism = "chem.bin";
+    input = "adapchem.in";
+    models = "models.chem";
+    defaultModel = "default.model";
+    donemodels = "donemodels";
+    restart = "full.rstrt";
+}
 
 grid:
 {

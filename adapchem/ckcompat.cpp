@@ -83,10 +83,18 @@ void ChemkinGas::getReactionRates(double* wdot)
 }
 
 
-AdapChem::AdapChem(const std::string& filename, bool quiet)
+AdapChem::AdapChem(const std::string& mechanism_file,
+                   bool quiet,
+                   const std::string& adapchem_file,
+                   const std::string& models_file,
+                   const std::string& defaultmodel_file,
+                   const std::string& donemodels_file,
+                   const std::string& fullrstrt_file)
 {
     int input_unit = 555;
-    f90_open_unformatted_(&input_unit, const_cast<char*>(filename.c_str()), filename.length());
+    f90_open_unformatted_(&input_unit,
+                          const_cast<char*>(mechanism_file.c_str()),
+                          mechanism_file.length());
 
     int output_unit;
     if (quiet) {
@@ -96,6 +104,14 @@ AdapChem::AdapChem(const std::string& filename, bool quiet)
     } else {
         output_unit = 6; // STDOUT
     }
+
+    _fullrstrt_file = fullrstrt_file;
+    _donemodels_file = donemodels_file;
+    ac_set_adapchemin_(adapchem_file.c_str(), adapchem_file.length());
+    ac_set_modelschem_(models_file.c_str(), models_file.length());
+    ac_set_fullrstrt_(fullrstrt_file.c_str(), fullrstrt_file.length());
+    ac_set_defaultmodel_(defaultmodel_file.c_str(), defaultmodel_file.length());
+    ac_set_donemodels_(donemodels_file.c_str(), donemodels_file.length());
 
     removeTempFiles();
     int len_iwork;
@@ -258,10 +274,10 @@ void AdapChem::callAdapChem(int jSolv)
 void AdapChem::removeTempFiles()
 {
     // Clean up temporary files created by AdapChem
-    if (boost::filesystem::exists("donemodels")) {
-        boost::filesystem::remove("donemodels");
+    if (boost::filesystem::exists(_donemodels_file)) {
+        boost::filesystem::remove(_donemodels_file);
     }
-    if (boost::filesystem::exists("full.rstart")) {
-        boost::filesystem::remove("full.rstart");
+    if (boost::filesystem::exists(_fullrstrt_file)) {
+        boost::filesystem::remove(_fullrstrt_file);
     }
 }
