@@ -111,7 +111,7 @@ void FlameSolver::run(void)
         writeStateFile();
     }
 
-    while (t < tEnd) {
+    while (true) {
 
         // Debug sanity check
         bool error = false;
@@ -539,16 +539,16 @@ void FlameSolver::run(void)
 
         // *** Periodic check for terminating the integration
         //     (based on steady heat release rate, etc.)
+        //     Quit now to skip grid adaptation on the last step
         if (nTerminate >= options.terminateStepInterval) {
             nTerminate = 0;
             if (checkTerminationCondition()) {
-                if (options.outputProfiles) {
-                    writeStateFile();
-                }
-                totalTimer.stop();
-                cout << format("Runtime: %f seconds.") % totalTimer.getTime() << endl;
-                return;
+                break;
             }
+        }
+
+        if (t >= tEnd) {
+            break;
         }
 
         // call ckGas::adapBox
@@ -659,7 +659,8 @@ void FlameSolver::run(void)
 
     totalTimer.stop();
     printPerformanceStats();
-    cout << "Runtime: " << totalTimer.getTime() << " seconds." << endl;
+    cout << format("Runtime: %f seconds.") % totalTimer.getTime() << endl;
+
 }
 
 bool FlameSolver::checkTerminationCondition(void)
