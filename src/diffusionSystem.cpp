@@ -1,5 +1,9 @@
 #include "diffusionSystem.h"
 
+DiffusionSystem::DiffusionSystem()
+{
+}
+
 void DiffusionSystem::get_A(sdBandMatrix& A)
 {
     // Build the matrix A describing the linear ODE
@@ -61,4 +65,11 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
 void DiffusionSystem::get_C(dvector& other_c)
 {
     other_c.assign(splitConst.begin(), splitConst.end());
+}
+
+void DiffusionSystem::setGrid(const oneDimGrid& other)
+{
+    GridBased::setGrid(other);
+    jLeft = 0;
+    jRight = jj;
 }

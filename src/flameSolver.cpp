@@ -634,9 +634,9 @@ void FlameSolver::run(void)
 
                 // Assign the new grid to the terms that need it
                 for (size_t k=0; k<nVars; k++) {
-                    diffusionTerms[k].grid = grid;
+                    diffusionTerms[k].setGrid(grid);
                 }
-                convectionTerm.grid = grid;
+                convectionTerm.setGrid(grid);
 
                 // Allocate the solvers and arrays for auxiliary variables
                 resizeAuxiliary();
@@ -998,11 +998,11 @@ void FlameSolver::resizeAuxiliary()
         diffusionTerms[k].splitConst.resize(nPoints);
         diffusionTerms[k].splitLinear.resize(nPoints);
         diffusionTerms[k].D.resize(nPoints);
-        diffusionTerms[k].grid = grid;
+        diffusionTerms[k].setGrid(grid);
     }
 
     convectionTerm.resize(nSpec, nPoints);
-    convectionTerm.grid = grid;
+    convectionTerm.setGrid(grid);
 
     delete convectionSolver;
     convectionSolver = new sundialsCVODE(N);
@@ -1020,7 +1020,7 @@ void FlameSolver::resizeAuxiliary()
     }
 
     // Resize the jCorr stabilizer
-    jCorrSystem.grid = grid;
+    jCorrSystem.setGrid(grid);
     jCorrSystem.B.resize(nPoints);
     jCorrSystem.splitConst.resize(nPoints);
     jCorrSystem.splitLinear.resize(nPoints);

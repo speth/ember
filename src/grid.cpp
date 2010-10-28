@@ -673,3 +673,8 @@ GridBased::GridBased()
     , jj(grid.jj)
 {
 }
+
+void GridBased::setGrid(const oneDimGrid& other)
+{
+    grid = other;
+}

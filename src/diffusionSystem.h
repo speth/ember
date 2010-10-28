@@ -18,12 +18,15 @@ class DiffusionSystem : public LinearODE, public GridBased
     // the diffusion coefficients D, and the finite difference formula used.
 
 public:
+    DiffusionSystem();
 
     // Provide the matrix associated with the ODE to the integrator
     void get_A(sdBandMatrix& J);
 
     // Provides the constant term to the integrator
     void get_C(dvector& y);
+
+    void setGrid(const oneDimGrid& grid);
 
     // the coefficients of the ODE
     dvector B; // pre-factor
@@ -32,4 +35,7 @@ public:
     // Diagonalized, linear approximations for terms neglected by splitting
     dvector splitConst; // constant terms
     dvector splitLinear; // diagonal jacobian components
+
+    size_t jLeft;
+    size_t jRight;
 };

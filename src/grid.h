@@ -88,10 +88,12 @@ class GridBased
 public:
     GridBased();
 
+    virtual void setGrid(const oneDimGrid& grid);
+
+protected:
     // the grid:
     oneDimGrid grid;
 
-protected:
     // local names for some things that are part of the grid:
     dvector& x;
     dvector& r;
