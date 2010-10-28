@@ -36,6 +36,8 @@ public:
     dvector splitConst; // constant terms
     dvector splitLinear; // diagonal jacobian components
 
+    // Integrate only over the range [jLeft,jRight]
+    // All inputs and outputs, except for the grid, cover only this range
     size_t jLeft;
     size_t jRight;
 };
