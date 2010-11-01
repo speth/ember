@@ -582,6 +582,13 @@ void FlameSolver::run(void)
             tRegrid = t + options.regridTimeInterval;
             nRegrid = 0;
 
+            // If the left grid point moves, a new boundary value for rVzero
+            // needs to be calculated from the mass flux V on the current grid points
+            dvector x_prev = grid.x;
+            sdVector ydot_tmp(convectionSolver->y.length());
+            convectionTerm.f(t, convectionSolver->y, ydot_tmp);
+            dvector& V_prev = convectionTerm.V;
+
             // "rollVectorVector"
             vector<dvector> currentSolution;
             currentSolution.push_back(U);
@@ -637,6 +644,9 @@ void FlameSolver::run(void)
                     diffusionTerms[k].setGrid(grid);
                 }
                 convectionTerm.setGrid(grid);
+
+                // Update the mass flux at the left boundary
+                rVzero = mathUtils::interp1(x_prev, V_prev, grid.x[0]);
 
                 // Allocate the solvers and arrays for auxiliary variables
                 resizeAuxiliary();
