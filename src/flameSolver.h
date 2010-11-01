@@ -134,6 +134,14 @@ private:
     DiffusionSystem jCorrSystem;
     BDFIntegrator jCorrSolver;
 
+    // Solver used to determine the subdomain on which to evaluate the
+    // transport term for each species
+    DiffusionSystem diffusionTestTerm;
+    BDFIntegrator diffusionTestSolver;
+    vector<size_t> transportStartIndices; // index of leftmost grid point for each component
+    vector<size_t> transportStopIndices; // index of rightmost grid point for each component
+    vector<size_t> nPointsTransport; // number of grid points for transport of each component
+
     // Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;
 
@@ -156,6 +164,8 @@ private:
 
     void printPerformanceStats(void);
     void printPerfString(const std::string& label, const perfTimer& T) const;
+
+    void updateTransportDomain();
 
     // Subdivided governing equation constant terms
     dvector constTdiff, constTconv, constTprod;
