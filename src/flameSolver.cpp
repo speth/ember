@@ -216,11 +216,40 @@ void FlameSolver::run(void)
             }
         }
 
-        // constYconv and constYprod are needed to determine the region
-        // where the diffusion term needs to be integrated for each species
-        updateTransportDomain();
+        // Convection solver: Initialization
+        sdVector& yConv = convectionSolver->y;
+        for (size_t j=0; j<nPoints; j++) {
+            yConv[nVars*j+kMomentum] = U[j];
+            yConv[nVars*j+kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                yConv[nVars*j+kSpecies+k] = Y(k,j);
+            }
+        }
+        convectionSolver->t0 = t;
+        convectionSolver->maxNumSteps = 1000000;
+        convectionSolver->minStep = 1e-16;
+        convectionSolver->initialize();
 
-        // Diffusion solvers
+        convectionTerm.splitConstU.assign(nPoints, 0);
+        convectionTerm.splitLinearU.assign(nPoints, 0);
+        convectionTerm.splitConstT.assign(nPoints, 0);
+        convectionTerm.splitLinearT.assign(nPoints, 0);
+        convectionTerm.splitConstY.data().assign(nPoints*nSpec, 0);
+        convectionTerm.splitLinearY.data().assign(nPoints*nSpec, 0);
+
+        // TODO: Use timestep that is based on each component's diffusivity
+        for (size_t k=0; k<nVars; k++) {
+            diffusionSolvers[k].set_dt(options.diffusionTimestep);
+        }
+
+        for (size_t k=0; k<nVars; k++) {
+            diffusionTerms[k].splitConst.assign(nPointsTransport[k], 0);
+            diffusionTerms[k].splitLinear.assign(nPointsTransport[k], 0);
+            diffusionSolvers[k].t = t;
+            diffusionSolvers[k].initialize();
+        }
+
+        // Diffusion solvers: Energy and Momentum
         dvector& yDiff_U = diffusionSolvers[kMomentum].y;
         dvector& yDiff_T = diffusionSolvers[kEnergy].y;
         for (size_t j=0; j<nPoints; j++) {
@@ -234,6 +263,16 @@ void FlameSolver::run(void)
             diffusionTerms[kEnergy].D[j] = lambda[j];
         }
 
+        constUdiff = diffusionSolvers[kMomentum].get_ydot();
+        constTdiff = diffusionSolvers[kEnergy].get_ydot();
+        linearUdiff = diffusionSolvers[kMomentum].get_diagonal();
+        linearTdiff = diffusionSolvers[kEnergy].get_diagonal();
+
+        // constYconv and constYprod are needed to determine the region
+        // where the diffusion term needs to be integrated for each species
+        updateTransportDomain();
+
+        // Diffusion solvers: Species
         for (size_t k=0; k<nSpec; k++) {
             dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
             DiffusionSystem& sys = diffusionTerms[kSpecies+k];
@@ -251,23 +290,6 @@ void FlameSolver::run(void)
                 i++;
             }
         }
-
-        // TODO: Use timestep that is based on each component's diffusivity
-        for (size_t k=0; k<nVars; k++) {
-            diffusionSolvers[k].set_dt(options.diffusionTimestep);
-        }
-
-        for (size_t k=0; k<nVars; k++) {
-            diffusionTerms[k].splitConst.assign(nPointsTransport[k], 0);
-            diffusionTerms[k].splitLinear.assign(nPointsTransport[k], 0);
-            diffusionSolvers[k].t = t;
-            diffusionSolvers[k].initialize();
-        }
-
-        constUdiff = diffusionSolvers[kMomentum].get_ydot();
-        constTdiff = diffusionSolvers[kEnergy].get_ydot();
-        linearUdiff = diffusionSolvers[kMomentum].get_diagonal();
-        linearTdiff = diffusionSolvers[kEnergy].get_diagonal();
 
         dvector Ydiff_tmp(nVars);
         for (size_t k=0; k<nSpec; k++) {
@@ -305,28 +327,8 @@ void FlameSolver::run(void)
             }
         }
 
-        // Convection solver
 
-        sdVector& yConv = convectionSolver->y;
-        for (size_t j=0; j<nPoints; j++) {
-            yConv[nVars*j+kMomentum] = U[j];
-            yConv[nVars*j+kEnergy] = T[j];
-            for (size_t k=0; k<nSpec; k++) {
-                yConv[nVars*j+kSpecies+k] = Y(k,j);
-            }
-        }
-        convectionSolver->t0 = t;
-        convectionSolver->maxNumSteps = 1000000;
-        convectionSolver->minStep = 1e-16;
-        convectionSolver->initialize();
-
-        convectionTerm.splitConstU.assign(nPoints, 0);
-        convectionTerm.splitLinearU.assign(nPoints, 0);
-        convectionTerm.splitConstT.assign(nPoints, 0);
-        convectionTerm.splitLinearT.assign(nPoints, 0);
-        convectionTerm.splitConstY.data().assign(nPoints*nSpec, 0);
-        convectionTerm.splitLinearY.data().assign(nPoints*nSpec, 0);
-
+        // Convection solver: constant determination
         // Because the convection solver includes the continuity equation containing
         // drho/dt, we need to include the time derivatives from the other terms when
         // evaluating the derivatives of this term, then subtract them from the output
@@ -1582,19 +1584,49 @@ void FlameSolver::updateTransportDomain()
     diffusionTestSolver.initialize();
 
     for (size_t k=0; k<nSpec; k++) {
-        // evaluate the full transport term for each species
+        // evaluate the full diffusion term for each species
         for (size_t j=0; j<nPoints; j++) {
             diffusionTestSolver.y[j] = Y(k,j);
             diffusionTestTerm.B[j] = 1/rho[j];
             diffusionTestTerm.D[j] = rhoD(k,j);
         }
-        dvector dYkdt_diff = diffusionTestSolver.get_ydot();
+        const dvector& dYkdt_diff = diffusionTestSolver.get_ydot();
+        constYdiff.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
+    }
 
+    // Evaluate the full convection term
+    // Because the convection solver includes the continuity equation containing
+    // drho/dt, we need to include the time derivatives from the other terms when
+    // evaluating the derivatives of this term, then subtract them from the output
+    sdVector& yConv = convectionSolver->y;
+    convectionTerm.splitConstU = constUprod + constUdiff;
+    convectionTerm.splitConstT = constTprod + constTdiff + constTcross;
+    for (size_t j=0; j<nPoints; j++) {
+        yConv[nVars*j+kMomentum] = U[j];
+        yConv[nVars*j+kEnergy] = T[j];
+        for (size_t k=0; k<nSpec; k++) {
+            yConv[nVars*j+kSpecies+k] = Y(k,j);
+            convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j) +
+                                              constYcross(k,j);
+        }
+    }
+
+    sdVector ydotConv(nVars*nPoints);
+    convectionTerm.f(tNow, yConv, ydotConv);
+    for (size_t j=0; j<nPoints; j++) {
+        constUconv[j] = ydotConv[nVars*j+kMomentum] - convectionTerm.splitConstU[j];
+        constTconv[j] = ydotConv[nVars*j+kEnergy] - convectionTerm.splitConstT[j];
+        for (size_t k=0; k<nSpec; k++) {
+            constYconv(k,j) = ydotConv[nVars*j+kSpecies+k] - convectionTerm.splitConstY(k,j);
+        }
+    }
+
+    for (size_t k=0; k<nSpec; k++) {
         // Find the left boundary for species k
         int jStart = jj;
         for (size_t j=0; j<nPoints; j++) {
-            if (abs(dYkdt_diff[j]) > options.adapchem_atol ||
-                abs(constYprod(k,j)) > options.adapchem_atol) {
+            if (abs(constYdiff(k,j)) > options.adapchem_atol ||
+                abs(constYprod(k,j)+constYconv(k,j)) > options.adapchem_atol) {
                 jStart = j;
                 break;
             }
@@ -1605,8 +1637,8 @@ void FlameSolver::updateTransportDomain()
         // Find the right boundary for species k
         size_t jStop = jStart;
         for (int j=jj; j>jStart; j--) {
-            if (abs(dYkdt_diff[j]) > options.adapchem_atol ||
-                abs(constYprod(k,j)) > options.adapchem_atol) {
+            if (abs(constYdiff(k,j)) > options.adapchem_atol ||
+                abs(constYprod(k,j)+constYconv(k,j)) > options.adapchem_atol) {
                 jStop = j;
                 break;
             }
