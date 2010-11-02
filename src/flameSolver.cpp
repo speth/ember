@@ -189,6 +189,23 @@ void FlameSolver::run(void)
         // Here, we only compute the constant term, which is needed to calculate
         // the convection solver's constant term. The linear term is calculated
         // only while integrating the source systems.
+
+        // Source solvers initialization
+        for (size_t j=0; j<nPoints; j++) {
+            sdVector& ySource = sourceSolvers[j].y;
+            ySource[kMomentum] = U[j];
+            ySource[kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                ySource[kSpecies+k] = Y(k,j);
+            }
+            sourceSolvers[j].t0 = t;
+            sourceSolvers[j].initialize();
+            sourceTerms[j].splitConst.assign(nVars, 0);
+            sourceTerms[j].splitLinear.assign(nVars, 0);
+            sourceTerms[j].wDot.assign(nSpec, 0);
+            sourceTerms[j].strainFunction.pin(t);
+        }
+
         sdVector ydotSource(nVars);
         for (size_t j=0; j<nPoints; j++) {
             sourceTerms[j].f(tNow, sourceSolvers[j].y, ydotSource);
@@ -198,51 +215,6 @@ void FlameSolver::run(void)
                 constYprod(k,j) = ydotSource[kSpecies+k];
             }
         }
-
-        // Convection solver
-
-        sdVector& yConv = convectionSolver->y;
-        for (size_t j=0; j<nPoints; j++) {
-            yConv[nVars*j+kMomentum] = U[j];
-            yConv[nVars*j+kEnergy] = T[j];
-            for (size_t k=0; k<nSpec; k++) {
-                yConv[nVars*j+kSpecies+k] = Y(k,j);
-            }
-        }
-        convectionSolver->t0 = t;
-        convectionSolver->maxNumSteps = 1000000;
-        convectionSolver->minStep = 1e-16;
-        convectionSolver->initialize();
-
-        convectionTerm.splitConstU.assign(nPoints, 0);
-        convectionTerm.splitLinearU.assign(nPoints, 0);
-        convectionTerm.splitConstT.assign(nPoints, 0);
-        convectionTerm.splitLinearT.assign(nPoints, 0);
-        convectionTerm.splitConstY.data().assign(nPoints*nSpec, 0);
-        convectionTerm.splitLinearY.data().assign(nPoints*nSpec, 0);
-
-        // Because the convection solver includes the continuity equation containing
-        // drho/dt, we need to include the time derivatives from the other terms when
-        // evaluating the derivatives of this term, then subtract them from the output
-        convectionTerm.splitConstU = constUprod + constUdiff;
-        convectionTerm.splitConstT = constTprod + constTdiff + constTcross;
-        for (size_t j=0; j<nPoints; j++) {
-            for (size_t k=0; k<nSpec; k++) {
-                convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j) + constYcross(k,j);
-            }
-        }
-
-        sdVector ydotConv(nVars*nPoints);
-        convectionTerm.f(tNow, yConv, ydotConv);
-        // TODO: Can this loop just be replaced by copying dUdt etc. from the system?
-        for (size_t j=0; j<nPoints; j++) {
-            constUconv[j] = ydotConv[nVars*j+kMomentum] - convectionTerm.splitConstU[j];
-            constTconv[j] = ydotConv[nVars*j+kEnergy] - convectionTerm.splitConstT[j];
-            for (size_t k=0; k<nSpec; k++) {
-                constYconv(k,j) = ydotConv[nVars*j+kSpecies+k] - convectionTerm.splitConstY(k,j);
-            }
-        }
-        convectionTerm.get_diagonal(tNow, linearUconv, linearTconv, linearYconv);
 
         // constYconv and constYprod are needed to determine the region
         // where the diffusion term needs to be integrated for each species
@@ -266,6 +238,9 @@ void FlameSolver::run(void)
             dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
             DiffusionSystem& sys = diffusionTerms[kSpecies+k];
             size_t i = 0;
+            sys.jLeft = transportStartIndices[kSpecies+k];
+            sys.jRight = transportStopIndices[kSpecies+k];
+
             for (size_t j = transportStartIndices[kSpecies+k];
                  j <= transportStopIndices[kSpecies+k];
                  j++)
@@ -318,7 +293,7 @@ void FlameSolver::run(void)
                 }
 
                 // right excluded region
-                for (size_t j=transportStopIndices[k]; j<nPoints; j++) {
+                for (size_t j=transportStopIndices[k]+1; j<nPoints; j++) {
                     constYdiff(k,j) = 0;
                     linearYdiff(k,j) = 0;
                 }
@@ -329,6 +304,51 @@ void FlameSolver::run(void)
                 linearYdiff.setRow(k, const_cast<double*>(&linearTerm[0]));
             }
         }
+
+        // Convection solver
+
+        sdVector& yConv = convectionSolver->y;
+        for (size_t j=0; j<nPoints; j++) {
+            yConv[nVars*j+kMomentum] = U[j];
+            yConv[nVars*j+kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                yConv[nVars*j+kSpecies+k] = Y(k,j);
+            }
+        }
+        convectionSolver->t0 = t;
+        convectionSolver->maxNumSteps = 1000000;
+        convectionSolver->minStep = 1e-16;
+        convectionSolver->initialize();
+
+        convectionTerm.splitConstU.assign(nPoints, 0);
+        convectionTerm.splitLinearU.assign(nPoints, 0);
+        convectionTerm.splitConstT.assign(nPoints, 0);
+        convectionTerm.splitLinearT.assign(nPoints, 0);
+        convectionTerm.splitConstY.data().assign(nPoints*nSpec, 0);
+        convectionTerm.splitLinearY.data().assign(nPoints*nSpec, 0);
+
+        // Because the convection solver includes the continuity equation containing
+        // drho/dt, we need to include the time derivatives from the other terms when
+        // evaluating the derivatives of this term, then subtract them from the output
+        convectionTerm.splitConstU = constUprod + constUdiff;
+        convectionTerm.splitConstT = constTprod + constTdiff + constTcross;
+        for (size_t j=0; j<nPoints; j++) {
+            for (size_t k=0; k<nSpec; k++) {
+                convectionTerm.splitConstY(k,j) = constYprod(k,j) + constYdiff(k,j) + constYcross(k,j);
+            }
+        }
+
+        sdVector ydotConv(nVars*nPoints);
+        convectionTerm.f(tNow, yConv, ydotConv);
+        // TODO: Can this loop just be replaced by copying dUdt etc. from the system?
+        for (size_t j=0; j<nPoints; j++) {
+            constUconv[j] = ydotConv[nVars*j+kMomentum] - convectionTerm.splitConstU[j];
+            constTconv[j] = ydotConv[nVars*j+kEnergy] - convectionTerm.splitConstT[j];
+            for (size_t k=0; k<nSpec; k++) {
+                constYconv(k,j) = ydotConv[nVars*j+kSpecies+k] - convectionTerm.splitConstY(k,j);
+            }
+        }
+        convectionTerm.get_diagonal(tNow, linearUconv, linearTconv, linearYconv);
 
         // Store the time derivatives for output files
         // TODO: Only do this if we're actually about to write an output file
@@ -364,22 +384,6 @@ void FlameSolver::run(void)
             }
         }
 
-        // Source solvers initialization
-        for (size_t j=0; j<nPoints; j++) {
-            sdVector& ySource = sourceSolvers[j].y;
-            ySource[kMomentum] = U[j];
-            ySource[kEnergy] = T[j];
-            for (size_t k=0; k<nSpec; k++) {
-                ySource[kSpecies+k] = Y(k,j);
-            }
-            sourceSolvers[j].t0 = t;
-            sourceSolvers[j].initialize();
-            sourceTerms[j].splitConst.assign(nVars, 0);
-            sourceTerms[j].splitLinear.assign(nVars, 0);
-            sourceTerms[j].wDot.assign(nSpec, 0);
-            sourceTerms[j].strainFunction.pin(t);
-        }
-
         // Source terms: calculate constant and linear terms
         for (size_t j=0; j<nPoints; j++) {
             SourceSystem& term = sourceTerms[j];
@@ -406,7 +410,14 @@ void FlameSolver::run(void)
         reactionTimer.start();
         for (size_t j=0; j<nPoints; j++) {
             sourceTerms[j].updateDiagonalJac = true;
-            sourceSolvers[j].integrateToTime(tNext);
+
+            int err = sourceSolvers[j].integrateToTime(tNext);
+            if (err) {
+                cout << "Error at j = " << j << endl;
+                cout << "T = " << sourceTerms[j].T << endl;
+                cout << "U = " << sourceTerms[j].U << endl;
+                cout << "Y = " << sourceTerms[j].Y << endl;
+            }
             linearUprod[j] = sourceTerms[j].diagonalJac[kMomentum];
             linearTprod[j] = sourceTerms[j].diagonalJac[kEnergy];
             for (size_t k=0; k<nSpec; k++) {
@@ -1583,7 +1594,7 @@ void FlameSolver::updateTransportDomain()
         int jStart = jj;
         for (size_t j=0; j<nPoints; j++) {
             if (abs(dYkdt_diff[j]) > options.adapchem_atol ||
-                abs(constYconv(k,j)+constYprod(k,j)) > options.adapchem_atol) {
+                abs(constYprod(k,j)) > options.adapchem_atol) {
                 jStart = j;
                 break;
             }
@@ -1595,7 +1606,7 @@ void FlameSolver::updateTransportDomain()
         size_t jStop = jStart;
         for (int j=jj; j>jStart; j--) {
             if (abs(dYkdt_diff[j]) > options.adapchem_atol ||
-                abs(constYconv(k,j)+constYprod(k,j)) > options.adapchem_atol) {
+                abs(constYprod(k,j)) > options.adapchem_atol) {
                 jStop = j;
                 break;
             }
