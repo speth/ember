@@ -886,6 +886,17 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
             }
         }
         outFile.writeVector("chemSteps", chemSteps);
+
+        if (options.transportElimination) {
+            dvector jStart, jStop;
+            for (size_t k=0; k<nSpec; k++) {
+                jStart.push_back(transportStartIndices[kSpecies+k]);
+                jStop.push_back(transportStopIndices[kSpecies+k]);
+            }
+            outFile.writeVector("transportStartIndices", jStart);
+            outFile.writeVector("transportStopIndices", jStop);
+        }
+
     }
 
     if (options.outputResidualComponents || errorFile) {
