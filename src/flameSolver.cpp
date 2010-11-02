@@ -237,12 +237,10 @@ void FlameSolver::run(void)
         convectionTerm.splitConstY.data().assign(nPoints*nSpec, 0);
         convectionTerm.splitLinearY.data().assign(nPoints*nSpec, 0);
 
-        // TODO: Use timestep that is based on each component's diffusivity
-        for (size_t k=0; k<nVars; k++) {
-            diffusionSolvers[k].set_dt(options.diffusionTimestep);
-        }
 
         for (size_t k=0; k<nVars; k++) {
+            // TODO: Use timestep that is based on each component's diffusivity
+            diffusionSolvers[k].set_dt(options.diffusionTimestep);
             diffusionTerms[k].splitConst.assign(nPointsTransport[k], 0);
             diffusionTerms[k].splitLinear.assign(nPointsTransport[k], 0);
             diffusionSolvers[k].t = t;
@@ -250,12 +248,9 @@ void FlameSolver::run(void)
         }
 
         // Diffusion solvers: Energy and Momentum
-        dvector& yDiff_U = diffusionSolvers[kMomentum].y;
-        dvector& yDiff_T = diffusionSolvers[kEnergy].y;
+        diffusionSolvers[kMomentum].y = U;
+        diffusionSolvers[kEnergy].y = T;
         for (size_t j=0; j<nPoints; j++) {
-            yDiff_U[j] = U[j];
-            yDiff_T[j] = T[j];
-
             diffusionTerms[kMomentum].B[j] = 1/rho[j];
             diffusionTerms[kEnergy].B[j] = 1/(rho[j]*cp[j]);
 
@@ -358,14 +353,8 @@ void FlameSolver::run(void)
         dUdtconv = constUconv;
         dTdtconv = constTconv;
         dTdtdiff=  constTdiff;
-        dYdtconv.resize(nSpec, nPoints);
-        dYdtdiff.resize(nSpec, nPoints);
-        for (size_t j=0; j<nPoints; j++) {
-            for (size_t k=0; k<nSpec; k++) {
-                dYdtconv(k,j) = constYconv(k,j);
-                dYdtdiff(k,j) = constYdiff(k,j);
-            }
-        }
+        dYdtconv = constYconv;
+        dYdtdiff = constYdiff;
 
         // *** Use the time derivatives to calculate the values for the
         //     state variables based on the diagonalized approximation
@@ -433,12 +422,7 @@ void FlameSolver::run(void)
         // TODO: Only do this if we're actually about to write an output file
         dUdtprod = constUprod;
         dTdtprod = constTprod;
-        dYdtprod.resize(nSpec, nPoints);
-        for (size_t j=0; j<nPoints; j++) {
-            for (size_t k=0; k<nSpec; k++) {
-                dYdtprod(k,j) = constYprod(k,j);
-            }
-        }
+        dYdtprod = constYprod;
 
         // *** Use the time derivatives to calculate the values for the
         //     state variables based on the diagonalized approximation
