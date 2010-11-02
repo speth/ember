@@ -38,8 +38,8 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
             A(1,2) = c1[1]*c2[1];
         }
     } else {
-        // boundary value is fixed
-        jStart = jLeft + 1;
+        // truncated domain -- boundary value is fixed
+        jStart = 1;
     }
 
     // Right boundary value
@@ -56,8 +56,8 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
             A(N-2,N-2) = -c1[N-2]*c2[N-3];
         }
     } else {
-        // boundary value is fixed
-        jStop = jRight;
+        // truncated domain -- boundary value is fixed
+        jStop = N-1;
     }
 
     // Intermediate points

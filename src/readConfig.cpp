@@ -53,8 +53,9 @@ void configOptions::readOptionsFile(const std::string& filename)
         readOption("adapchem.defaultModel", adapchemDefaultModelFile, "default.model");
         readOption("adapchem.donemodels", adapchemDonemodelsFile, "donemodels");
         readOption("adapchem.restart", adapchemRestartFile, "full.rstrt");
-        readOption("adapchem.atol", adapchem_atol, 1e-8);
     }
+    // Transport elimination
+    readOption("adapchem.atol", adapchem_atol, 1e-8);
     readOption("adapchem.transportElimination", transportElimination, false);
 
     // Grid

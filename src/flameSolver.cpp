@@ -248,6 +248,17 @@ void FlameSolver::run(void)
         }
 
         // Diffusion solvers: Energy and Momentum
+        diffusionSolvers[kMomentum].set_size(nPoints, 1, 1);
+        diffusionTerms[kMomentum].B.resize(nPoints);
+        diffusionTerms[kMomentum].splitConst.resize(nPoints);
+        diffusionTerms[kMomentum].splitLinear.resize(nPoints);
+        diffusionTerms[kMomentum].D.resize(nPoints);
+        diffusionSolvers[kEnergy].set_size(nPoints, 1, 1);
+        diffusionTerms[kEnergy].B.resize(nPoints);
+        diffusionTerms[kEnergy].splitConst.resize(nPoints);
+        diffusionTerms[kEnergy].splitLinear.resize(nPoints);
+        diffusionTerms[kEnergy].D.resize(nPoints);
+
         diffusionSolvers[kMomentum].y = U;
         diffusionSolvers[kEnergy].y = T;
         for (size_t j=0; j<nPoints; j++) {
@@ -286,31 +297,30 @@ void FlameSolver::run(void)
             }
         }
 
-        dvector Ydiff_tmp(nVars);
         for (size_t k=0; k<nSpec; k++) {
             const dvector& constantTerm = diffusionSolvers[kSpecies+k].get_ydot();
             const dvector& linearTerm = diffusionSolvers[kSpecies+k].get_diagonal();
 
             if (options.transportElimination) {
                 // left excluded region
-                for (size_t j=0; j<transportStartIndices[k]; j++) {
+                for (size_t j=0; j<transportStartIndices[kSpecies+k]; j++) {
                     constYdiff(k,j) = 0;
                     linearYdiff(k,j) = 0;
                 }
 
                 // transport solution region
                 size_t i = 0;
-                for (size_t j = transportStartIndices[k];
-                     j <= transportStopIndices[k];
+                for (size_t j = transportStartIndices[kSpecies+k];
+                     j <= transportStopIndices[kSpecies+k];
                      j++)
                 {
                     constYdiff(k,j) = constantTerm[i];
-                    linearYdiff(k,j) = constantTerm[i];
+                    linearYdiff(k,j) = linearTerm[i];
                     i++;
                 }
 
                 // right excluded region
-                for (size_t j=transportStopIndices[k]+1; j<nPoints; j++) {
+                for (size_t j=transportStopIndices[kSpecies+k]+1; j<nPoints; j++) {
                     constYdiff(k,j) = 0;
                     linearYdiff(k,j) = 0;
                 }
@@ -557,7 +567,7 @@ void FlameSolver::run(void)
             U[j] = convectionTerm.U[j] + sourceTerms[j].U + diffusionSolvers[kMomentum].y[j] - 2*Uextrap[j];
             T[j] = convectionTerm.T[j] + sourceTerms[j].T + diffusionSolvers[kEnergy].y[j] - 2*Textrap[j];
             for (size_t k=0; k<nSpec; k++) {
-                Y(k,j) = convectionTerm.Y(k,j) + sourceTerms[j].Y[k] - 2*Yextrap(k,j);
+                Y(k,j) = convectionTerm.Y(k,j) + sourceTerms[j].Y[k] - Yextrap(k,j);
             }
         }
 
@@ -568,7 +578,7 @@ void FlameSolver::run(void)
                  j <= transportStopIndices[kSpecies+k];
                  j++)
             {
-                Y(k,j) += solver.y[i];
+                Y(k,j) += solver.y[i] - Yextrap(k,j);
                 i++;
             }
         }
@@ -845,14 +855,27 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
 
         dvector Uprod(nPoints);
         dvector Tprod(nPoints);
-        Array2D Ydiff(nSpec, nPoints), Yprod(nSpec, nPoints);
+        Array2D Ydiff(nSpec, nPoints, 0), Yprod(nSpec, nPoints, 0);
 
         for (size_t j=0; j<nPoints; j++) {
             Uprod[j] = sourceTerms[j].U;
             Tprod[j] = sourceTerms[j].T;
             for (size_t k=0; k<nSpec; k++) {
                 Yprod(k,j) = sourceTerms[j].Y[k];
-                Ydiff(k,j) = diffusionSolvers[kSpecies+k].y[j];
+            }
+        }
+
+        for (size_t k=0; k<nSpec; k++) {
+            size_t i = 0;
+            if (diffusionSolvers[kSpecies+k].y.empty()) {
+                continue;
+            }
+            for (size_t j = transportStartIndices[kSpecies+k];
+                 j <= transportStopIndices[kSpecies+k];
+                 j++)
+            {
+                Ydiff(k,j) = diffusionSolvers[kSpecies+k].y[i];
+                i++;
             }
         }
 
