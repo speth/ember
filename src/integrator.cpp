@@ -94,7 +94,7 @@ BDFIntegrator::~BDFIntegrator()
     delete A;
 }
 
-void BDFIntegrator::set_size(int N_in, int upper_bw_in, int lower_bw_in)
+void BDFIntegrator::resize(int N_in, int upper_bw_in, int lower_bw_in)
 {
     N = N_in;
     upper_bw = upper_bw_in;
@@ -106,6 +106,8 @@ void BDFIntegrator::set_size(int N_in, int upper_bw_in, int lower_bw_in)
     A = new sdBandMatrix(N, upper_bw, lower_bw);
     p.resize(N);
     y.resize(N);
+
+    myODE.resize(N);
 }
 
 void BDFIntegrator::set_y0(const dvector& y0)

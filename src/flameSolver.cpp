@@ -248,12 +248,8 @@ void FlameSolver::run(void)
         }
 
         // Diffusion solvers: Energy and Momentum
-        diffusionSolvers[kMomentum].set_size(nPoints, 1, 1);
-        diffusionTerms[kMomentum].B.resize(nPoints);
-        diffusionTerms[kMomentum].D.resize(nPoints);
-        diffusionSolvers[kEnergy].set_size(nPoints, 1, 1);
-        diffusionTerms[kEnergy].B.resize(nPoints);
-        diffusionTerms[kEnergy].D.resize(nPoints);
+        diffusionSolvers[kMomentum].resize(nPoints, 1, 1);
+        diffusionSolvers[kEnergy].resize(nPoints, 1, 1);
 
         diffusionSolvers[kMomentum].y = U;
         diffusionSolvers[kEnergy].y = T;
@@ -1086,20 +1082,11 @@ void FlameSolver::resizeAuxiliary()
     // With transport species elimination enabled, this is done later
     // to handle the varying number of grid points for each species
     if (options.transportElimination) {
-        diffusionTestSolver.set_size(nPoints, 1, 1);
-        diffusionTestTerm.B.resize(nPoints);
-        diffusionTestTerm.splitConst.resize(nPoints);
-        diffusionTestTerm.splitLinear.resize(nPoints);
-        diffusionTestTerm.D.resize(nPoints);
+        diffusionTestSolver.resize(nPoints, 1, 1);
         diffusionTestTerm.setGrid(grid);
     } else {
         for (size_t k=0; k<nVars; k++) {
-            diffusionSolvers[k].set_size(nPoints, 1, 1);
-            // TODO: Refactor this into class DiffusionSystem
-            diffusionTerms[k].B.resize(nPoints);
-            diffusionTerms[k].splitConst.resize(nPoints);
-            diffusionTerms[k].splitLinear.resize(nPoints);
-            diffusionTerms[k].D.resize(nPoints);
+            diffusionSolvers[k].resize(nPoints, 1, 1);
         }
     }
     for (size_t k=0; k<nVars; k++) {
@@ -1125,12 +1112,8 @@ void FlameSolver::resizeAuxiliary()
     }
 
     // Resize the jCorr stabilizer
+    jCorrSolver.resize(nPoints, 1, 1);
     jCorrSystem.setGrid(grid);
-    jCorrSystem.B.resize(nPoints);
-    jCorrSystem.splitConst.resize(nPoints);
-    jCorrSystem.splitLinear.resize(nPoints);
-    jCorrSystem.D.resize(nPoints);
-    jCorrSolver.set_size(nPoints, 1, 1);
 
     // All done
     resizeTimer.stop();
@@ -1664,12 +1647,7 @@ void FlameSolver::updateTransportDomain()
     }
 
     for (size_t k=0; k<nVars; k++) {
-        // size the Diffusion system appropriately
-        diffusionSolvers[k].set_size(nPointsTransport[k], 1, 1);
-        // TODO: Refactor this into class DiffusionSystem
-        diffusionTerms[k].B.resize(nPointsTransport[k]);
-        diffusionTerms[k].splitConst.resize(nPointsTransport[k]);
-        diffusionTerms[k].splitLinear.resize(nPointsTransport[k]);
-        diffusionTerms[k].D.resize(nPointsTransport[k]);
+        // size the Diffusion systems appropriately
+        diffusionSolvers[k].resize(nPointsTransport[k], 1, 1);
     }
 }

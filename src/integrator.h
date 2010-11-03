@@ -20,6 +20,7 @@ public:
     // ODE defined as ydot = f(t,y) = J*y + c
     virtual void get_A(sdBandMatrix& J) = 0;
     virtual void get_C(dvector& y) = 0;
+    virtual void resize(int N) {}
 };
 
 
@@ -80,7 +81,7 @@ public:
     ~BDFIntegrator();
 
     // Setup
-    void set_size(int N, int upper_bw, int lower_bw);
+    void resize(int N, int upper_bw, int lower_bw);
     void set_y0(const dvector& y0);
     void set_t0(const double t0);
     void set_dt(const double h);

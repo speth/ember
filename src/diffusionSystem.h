@@ -28,6 +28,8 @@ public:
 
     void setGrid(const oneDimGrid& grid);
 
+    void resize(int N);
+
     // the coefficients of the ODE
     dvector B; // pre-factor
     dvector D; // "diffusion" coefficient
