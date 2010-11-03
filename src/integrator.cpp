@@ -9,20 +9,16 @@ Integrator::Integrator()
 {
 }
 
-void Integrator::set_h(double dt)
-{
-    h = dt;
-}
-
 void Integrator::set_y0(const dvector& y0)
 {
     N = y0.size();
     y.assign(y0.begin(), y0.end());
 }
 
-void Integrator::set_t0(const double t0)
+void Integrator::initialize(const double t0, const double h_)
 {
     t = t0;
+    h = h_;
 }
 
 double Integrator::get_h() const
@@ -116,21 +112,11 @@ void BDFIntegrator::set_y0(const dvector& y0)
     stepCount = 0;
 }
 
-void BDFIntegrator::set_t0(const double t0)
+void BDFIntegrator::initialize(const double t0, const double h_)
 {
-    Integrator::set_t0(t0);
+    Integrator::initialize(t0, h_);
     stepCount = 0;
-}
-
-void BDFIntegrator::set_dt(const double h_in)
-{
-    Integrator::set_h(h_in);
-    stepCount = 0;
-}
-
-void BDFIntegrator::initialize()
-{
-    stepCount = 0;
+    myODE.initialize();
 }
 
 const dvector& BDFIntegrator::get_ydot()

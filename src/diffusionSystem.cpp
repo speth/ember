@@ -87,10 +87,17 @@ void DiffusionSystem::setGrid(const oneDimGrid& other)
     jRight = jj;
 }
 
-void DiffusionSystem::resize(int N)
+void DiffusionSystem::resize(int N_)
 {
+    N = N_;
     B.resize(N);
     D.resize(N);
     splitConst.resize(N);
     splitLinear.resize(N);
+}
+
+void DiffusionSystem::initialize()
+{
+    splitConst.assign(N, 0);
+    splitLinear.assign(N, 0);
 }

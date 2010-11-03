@@ -27,8 +27,8 @@ public:
     void get_C(dvector& y);
 
     void setGrid(const oneDimGrid& grid);
-
     void resize(int N);
+    void initialize();
 
     // the coefficients of the ODE
     dvector B; // pre-factor
@@ -42,4 +42,7 @@ public:
     // All inputs and outputs, except for the grid, cover only this range
     size_t jLeft;
     size_t jRight;
+
+    // Number of points in the region to be solved (= jRight - jLeft + 1)
+    int N;
 };

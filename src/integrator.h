@@ -21,6 +21,7 @@ public:
     virtual void get_A(sdBandMatrix& J) = 0;
     virtual void get_C(dvector& y) = 0;
     virtual void resize(int N) {}
+    virtual void initialize() {}
 };
 
 
@@ -31,10 +32,8 @@ public:
     ~Integrator() { };
 
     // Initialization - Each of these must be called before starting integration
-    virtual void set_h(double dt);
     virtual void set_y0(const dvector& y0);
-    virtual void set_t0(const double t0);
-    virtual void initialize() { }
+    virtual void initialize(const double t0, const double h);
 
     // Accessor functions
     double get_h() const;
@@ -83,9 +82,7 @@ public:
     // Setup
     void resize(int N, int upper_bw, int lower_bw);
     void set_y0(const dvector& y0);
-    void set_t0(const double t0);
-    void set_dt(const double h);
-    void initialize();
+    void initialize(const double t0, const double h);
 
     const dvector& get_ydot();
     const dvector& get_diagonal();

@@ -80,6 +80,7 @@ public:
     virtual int g(realtype t, sdVector& y, realtype* gOut) {return 0;}
     virtual int denseJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J) {return -1;}
     virtual int bandedJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdBandMatrix& J) {return -1;}
+    virtual void initialize() {}
     virtual ~sdODE(void) {}
 };
 

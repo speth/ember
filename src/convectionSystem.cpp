@@ -266,6 +266,17 @@ void ConvectionSystem::resize(const size_t new_nSpec, const size_t new_nPoints)
     splitLinearY.resize(nSpec, nPoints);
 }
 
+void ConvectionSystem::initialize()
+{
+    splitConstU.assign(nPoints, 0);
+    splitLinearU.assign(nPoints, 0);
+
+    splitConstT.assign(nPoints, 0);
+    splitLinearT.assign(nPoints, 0);
+    splitConstY.data().assign(nPoints*nSpec, 0);
+    splitLinearY.data().assign(nPoints*nSpec, 0);
+}
+
 void ConvectionSystem::V2rV(void)
 {
     V[0] = rV[0];

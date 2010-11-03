@@ -26,6 +26,7 @@ public:
     void roll_ydot(sdVector& ydot) const; // fill in sdvector with current time derivatives
 
     void resize(const size_t nSpec, const size_t nPoints);
+    void initialize();
 
     dvector U, dUdt;
     dvector T, dTdt;

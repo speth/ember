@@ -92,6 +92,8 @@ void sundialsCVODE::initialize()
         }
     }
 
+    theODE->initialize();
+
     _initialized = true;
 }
 

@@ -200,8 +200,6 @@ void FlameSolver::run(void)
             }
             sourceSolvers[j].t0 = t;
             sourceSolvers[j].initialize();
-            sourceTerms[j].splitConst.assign(nVars, 0);
-            sourceTerms[j].splitLinear.assign(nVars, 0);
             sourceTerms[j].wDot.assign(nSpec, 0);
             sourceTerms[j].strainFunction.pin(t);
         }
@@ -230,21 +228,9 @@ void FlameSolver::run(void)
         convectionSolver->minStep = 1e-16;
         convectionSolver->initialize();
 
-        convectionTerm.splitConstU.assign(nPoints, 0);
-        convectionTerm.splitLinearU.assign(nPoints, 0);
-        convectionTerm.splitConstT.assign(nPoints, 0);
-        convectionTerm.splitLinearT.assign(nPoints, 0);
-        convectionTerm.splitConstY.data().assign(nPoints*nSpec, 0);
-        convectionTerm.splitLinearY.data().assign(nPoints*nSpec, 0);
-
-
         for (size_t k=0; k<nVars; k++) {
             // TODO: Use timestep that is based on each component's diffusivity
-            diffusionSolvers[k].set_dt(options.diffusionTimestep);
-            diffusionTerms[k].splitConst.assign(nPointsTransport[k], 0);
-            diffusionTerms[k].splitLinear.assign(nPointsTransport[k], 0);
-            diffusionSolvers[k].t = t;
-            diffusionSolvers[k].initialize();
+            diffusionSolvers[k].initialize(t, options.diffusionTimestep);
         }
 
         // Diffusion solvers: Energy and Momentum
@@ -1137,11 +1123,8 @@ void FlameSolver::updateCrossTerms()
         jCorrSystem.B[j] = lambda[j]/(rho[j]*cp[j]); // treat as Le = 1
         jCorrSystem.D[j] = 1.0;
     }
-    jCorrSystem.splitConst.assign(nPoints,0);
-    jCorrSystem.splitLinear.assign(nPoints,0);
-    jCorrSolver.t = 0;
-    jCorrSolver.set_dt(options.diffusionTimestep);
-    jCorrSolver.initialize();
+
+    jCorrSolver.initialize(0, options.diffusionTimestep);
     jCorrSolver.integrateToTime(options.globalTimestep);
     jCorr = jCorrSolver.y;
 
@@ -1574,11 +1557,9 @@ void FlameSolver::updateTransportDomain()
     }
 
     // TODO: Use timestep that is based on each component's diffusivity
-    diffusionTestSolver.set_dt(options.diffusionTimestep);
     diffusionTestTerm.splitConst.assign(nPoints, 0);
     diffusionTestTerm.splitLinear.assign(nPoints, 0);
-    diffusionTestSolver.t = 0;
-    diffusionTestSolver.initialize();
+    diffusionTestSolver.initialize(0, options.diffusionTimestep);
 
     for (size_t k=0; k<nSpec; k++) {
         // evaluate the full diffusion term for each species
