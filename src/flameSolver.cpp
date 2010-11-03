@@ -250,13 +250,9 @@ void FlameSolver::run(void)
         // Diffusion solvers: Energy and Momentum
         diffusionSolvers[kMomentum].set_size(nPoints, 1, 1);
         diffusionTerms[kMomentum].B.resize(nPoints);
-        diffusionTerms[kMomentum].splitConst.resize(nPoints);
-        diffusionTerms[kMomentum].splitLinear.resize(nPoints);
         diffusionTerms[kMomentum].D.resize(nPoints);
         diffusionSolvers[kEnergy].set_size(nPoints, 1, 1);
         diffusionTerms[kEnergy].B.resize(nPoints);
-        diffusionTerms[kEnergy].splitConst.resize(nPoints);
-        diffusionTerms[kEnergy].splitLinear.resize(nPoints);
         diffusionTerms[kEnergy].D.resize(nPoints);
 
         diffusionSolvers[kMomentum].y = U;
@@ -468,8 +464,8 @@ void FlameSolver::run(void)
             dvector& splitConst = diffusionTerms[kSpecies+k].splitConst;
             dvector& splitLinear = diffusionTerms[kSpecies+k].splitLinear;
             size_t i = 0;
-            for (size_t j = transportStartIndices[k];
-                 j <= transportStopIndices[k];
+            for (size_t j = transportStartIndices[kSpecies+k];
+                 j <= transportStopIndices[kSpecies+k];
                  j++)
             {
                 splitConst[i] = constYconv(k,j) + constYprod(k,j) + constYcross(k,j);
