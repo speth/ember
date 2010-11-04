@@ -28,6 +28,8 @@ sundialsCVODE::~sundialsCVODE(void)
 
 void sundialsCVODE::initialize()
 {
+    theODE->initialize();
+
     if (_initialized) {
         // Starting over with a new IC, but the same ODE
         flag = CVodeReInit(sundialsMem, t0, y.forSundials());
@@ -91,8 +93,6 @@ void sundialsCVODE::initialize()
             throw debugException("sundialsCVODE::initialize: error in CVDlsSetBandJacFn");
         }
     }
-
-    theODE->initialize();
 
     _initialized = true;
 }

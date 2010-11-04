@@ -22,6 +22,13 @@ void SourceSystem::resize(size_t new_nSpec)
     diagonalJac.resize(nSpec+2, 0);
 }
 
+void SourceSystem::initialize()
+{
+    size_t nVars = splitConst.size();
+    splitConst.assign(nVars, 0);
+    splitLinear.assign(nVars, 0);
+}
+
 int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
 {
     unroll_y(y);

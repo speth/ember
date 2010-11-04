@@ -1557,8 +1557,6 @@ void FlameSolver::updateTransportDomain()
     }
 
     // TODO: Use timestep that is based on each component's diffusivity
-    diffusionTestTerm.splitConst.assign(nPoints, 0);
-    diffusionTestTerm.splitLinear.assign(nPoints, 0);
     diffusionTestSolver.initialize(0, options.diffusionTimestep);
 
     for (size_t k=0; k<nSpec; k++) {

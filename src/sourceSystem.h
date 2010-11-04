@@ -30,6 +30,7 @@ public:
 
     // Setup functions
     void resize(size_t nSpec);
+    void initialize();
 
     // A class that provides the strain rate and its time derivative
     StrainFunction strainFunction;
