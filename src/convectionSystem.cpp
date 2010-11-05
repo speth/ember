@@ -304,3 +304,259 @@ void ConvectionSystem::rV2V(void)
         }
     }
 }
+
+
+
+ConvectionSystemUTW::ConvectionSystemUTW()
+    : gas(NULL)
+    , nVars(3)
+{
+}
+
+int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
+{
+    unroll_y(y);
+    // *** Update auxiliary data ***
+    for (size_t j=0; j<nPoints; j++) {
+        rho[j] = gas->pressure*Wmx[j]/(Cantera::GasConstant*T[j]);
+    }
+
+    // Update split terms
+    for (size_t j=0; j<nPoints; j++) {
+        Uconst[j] = splitConstU[j] + splitLinearU[j] * U[j];
+        Tconst[j] = splitConstT[j] + splitLinearT[j] * T[j];
+    }
+
+    // *** Calculate V ***
+    rV[0] = rVzero;
+    for (size_t j=0; j<nPoints-1; j++) {
+        // Compute the upwinded convective derivative
+        if (rV[j] < 0 || j == 0) {
+            dTdx[j] = (T[j+1] - T[j]) / hh[j];
+            dUdx[j] = (U[j+1] - U[j]) / hh[j];
+            dWdx[j] = (Wmx[j+1] - Wmx[j]) / hh[j];
+        } else {
+            dTdx[j] = (T[j] - T[j-1]) / hh[j-1];
+            dUdx[j] = (U[j] - U[j-1]) / hh[j-1];
+            dWdx[j] = (Wmx[j] - Wmx[j-1]) / hh[j-1];
+        }
+
+        rV[j+1] = rV[j] - hh[j] * (rV[j] * dTdx[j] - rphalf[j] * rho[j] * Tconst[j]) / T[j];
+        rV[j+1] += hh[j] * (rV[j] * DWdx[j] - rphalf[j] * rho[j] * splitConstW[j]) / Wmx[j];
+        rV[j+1] -= hh[j] * rho[j] * U[j] * rphalf[j];
+    }
+
+    rV2V();
+
+    // *** Calculate dW/dt, dU/dt, dT/dt
+
+    // Left boundary conditions.
+    // Convection term only contributes in the ControlVolume case
+    dUdt[0] = Uconst[0]; // zero-gradient condition for U no matter what
+
+    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+        double centerVol = pow(x[1],alpha+1) / (alpha+1);
+        double rVzero_mod = std::max(rV[0], 0.0);
+
+        dTdt[0] = -rVzero_mod * (T[0] - Tleft) / (rho[0] * centerVol) + Tconst[0];
+        dWdt[0] = -rVzero_mod * (Wmx[0] - Wleft) / (rho[0] * centerVol) + splitConstW[0];
+
+    } else { // FixedValue or ZeroGradient
+        dTdt[0] = Tconst[0];
+        dWdt[0] = splitConstW[0];
+    }
+
+    // Intermediate points
+    for (size_t j=1; j<jj; j++) {
+        dUdt[j] = -V[j] * dUdx[j] / rho[j] + Uconst[j];
+        dTdt[j] = -V[j] * dTdx[j] / rho[j] + Tconst[j];
+        dWdt[j] = -V[j] * dWdx[j] / rho[j] + splitConstW[0];
+    }
+
+    // Right boundary values
+    // Convection term has nothing to contribute in any case,
+    // So only the value from the other terms remains
+    dUdt[jj] = Uconst[jj];
+    dTdt[jj] = Tconst[jj];
+    dWdt[jj] = splitConstW[jj];
+
+    roll_ydot(ydot);
+    return 0;
+}
+
+void ConvectionSystemUTW::get_diagonal(const realtype t, dvector& linearU,
+                                    dvector& linearT, dvector& linearW)
+{
+    // Assume that f has just been called and that all auxiliary
+    // arrays are in a consistent state.
+
+    // Left boundary conditions.
+    // Convection term only contributes in the ControlVolume case
+
+    // dUdot/dU
+    linearU[0] = 0;
+
+    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+        double centerVol = pow(x[1],alpha+1) / (alpha+1);
+        double rVzero_mod = std::max(rV[0], 0.0);
+
+        // dTdot/dT
+        linearT[0] = -rVzero_mod / (rho[0] * centerVol);
+
+        // dWdot/dW
+        linearW(k,0) = - rVzero_mod / (rho[0] * centerVol);
+
+    } else { // FixedValue or ZeroGradient
+        linearT[0] = 0;
+        linearW[0] = 0;
+    }
+
+    // Intermediate points
+    for (size_t j=1; j<jj; j++) {
+        // depends on upwinding to calculated dT/dx etc.
+        double value = (rV[j] < 0 || j == 0) ? V[j] / (rho[j] * hh[j])
+                                             : -V[j] / (rho[j] * hh[j-1]);
+        linearU[j] = value;
+        linearT[j] = value;
+        linearW[j] = value;
+    }
+}
+
+int ConvectionSystemUTW::bandedJacobian(const realtype t, const sdVector& y,
+                                     const sdVector& ydot, sdBandMatrix& J)
+{
+    // Assume that f has just been called and that all auxiliary
+    // arrays are in a consistent state.
+
+    // Left boundary conditions.
+    // Convection term only contributes in the ControlVolume case
+
+    // dUdot/dU
+    J(0*nVars+kMomentum, 0*nVars+kMomentum) = splitLinearU[0];
+
+    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+        double centerVol = pow(x[1],alpha+1) / (alpha+1);
+        double rVzero_mod = std::max(rV[0], 0.0);
+
+        // dTdot/dT
+        J(0*nVars+kEnergy, 0*nVars+kEnergy) =
+                -rVzero_mod / (rho[0] * centerVol) + splitLinearT[0];
+
+        // dWdot/dW
+        J(0*nVars+kWmx, 0*nVars+kWmx) = -rVzero_mod / (rho[0] * centerVol);
+
+    } else { // FixedValue or ZeroGradient
+        J(0*nVars+kEnergy, 0*nVars+kEnergy) = splitLinearT[0];
+        // J(0*nVars+kWmx, 0*nVars+kWmx) = 0;
+    }
+
+    // Intermediate points
+    for (size_t j=1; j<jj; j++) {
+        // depends on upwinding to calculated dT/dx etc.
+        double value = (rV[j] < 0 || j == 0) ? V[j] / (rho[j] * hh[j])
+                                             : -V[j] / (rho[j] * hh[j-1]);
+        J(j*nVars+kMomentum, j*nVars+kMomentum) = value + splitLinearU[j];
+        J(j*nVars+kEnergy, j*nVars+kEnergy) = value + splitLinearT[j];
+        J(j*nVars+kWmx, j*nVars+kWmx) = value;
+    }
+
+    // Right boundary conditions
+    J(jj*nVars+kMomentum, jj*nVars+kMomentum) = splitLinearU[jj];
+    J(jj*nVars+kEnergy, jj*nVars+kEnergy) = splitLinearT[jj];
+    // J(jj*nVars+kWmx, jj*nVars+kWmx) = 0;
+
+    return 0;
+}
+
+void ConvectionSystemUTW::unroll_y(const sdVector& y)
+{
+    for (size_t j=0; j<nPoints; j++) {
+        T[j] = y[j*nVars+kEnergy];
+        U[j] = y[j*nVars+kMomentum];
+        Wmx[j] = y[j*nVars+kWmx];
+    }
+}
+
+void ConvectionSystemUTW::roll_y(sdVector& y) const
+{
+    for (size_t j=0; j<nPoints; j++) {
+        y[j*nVars+kEnergy] = T[j];
+        y[j*nVars+kMomentum] = U[j];
+        y[j*nVars+kWmx] = Wmx[j];
+    }
+}
+
+void ConvectionSystemUTW::roll_ydot(sdVector& ydot) const
+{
+    for (size_t j=0; j<nPoints; j++) {
+        ydot[j*nVars+kEnergy] = dTdt[j];
+        ydot[j*nVars+kMomentum] = dUdt[j];
+        ydot[j*nVars+kWmx] = dWdt[j];
+    }
+}
+
+void ConvectionSystemUTW::resize(const size_t new_nPoints)
+{
+    grid.setSize(new_nPoints);
+    rho.resize(nPoints);
+    rV.resize(nPoints);
+    V.resize(nPoints);
+    W.resize(nSpec);
+
+    U.resize(nPoints);
+    dUdt.resize(nPoints);
+    dUdx.resize(nPoints);
+    Uconst.resize(nPoints);
+    splitConstU.resize(nPoints);
+    splitLinearU.resize(nPoints);
+
+    T.resize(nPoints);
+    dTdt.resize(nPoints);
+    dTdx.resize(nPoints);
+    Tconst.resize(nPoints);
+    splitConstT.resize(nPoints);
+    splitLinearT.resize(nPoints);
+
+    Wmx.resize(nPoints);
+    dWdt.resize(nPoints);
+    dWdx.resize(nPoints);
+    Wconst.resize(nPoints);
+    splitConstW.resize(nPoints);
+}
+
+void ConvectionSystemUTW::initialize()
+{
+    splitConstU.assign(nPoints, 0);
+    splitLinearU.assign(nPoints, 0);
+    splitConstT.assign(nPoints, 0);
+    splitLinearT.assign(nPoints, 0);
+    splitConstW.assign(nPoints, 0);
+}
+
+void ConvectionSystemUTW::V2rV(void)
+{
+    V[0] = rV[0];
+    if (alpha == 0) {
+        for (size_t j=1; j<nPoints; j++) {
+            rV[j] = V[j];
+        }
+    } else {
+        for (size_t j=1; j<nPoints; j++) {
+            rV[j] = x[j]*V[j];
+        }
+    }
+}
+
+void ConvectionSystemUTW::rV2V(void)
+{
+    V[0] = rV[0];
+    if (alpha == 0) {
+        for (size_t j=1; j<nPoints; j++) {
+            V[j] = rV[j];
+        }
+    } else {
+        for (size_t j=1; j<nPoints; j++) {
+            V[j] = rV[j]/x[j];
+        }
+    }
+}

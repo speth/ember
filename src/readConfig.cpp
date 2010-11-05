@@ -264,3 +264,4 @@ bool configOptions::readOptionQuietDefault(const std::string name, T1& value, co
 const size_t kMomentum = 0;
 const size_t kEnergy = 1;
 const size_t kSpecies = 2;
+const size_t kWmx = 2; // never used in the same systems as kSpecies
