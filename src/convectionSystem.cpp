@@ -342,7 +342,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
         }
 
         rV[j+1] = rV[j] - hh[j] * (rV[j] * dTdx[j] - rphalf[j] * rho[j] * Tconst[j]) / T[j];
-        rV[j+1] += hh[j] * (rV[j] * DWdx[j] - rphalf[j] * rho[j] * splitConstW[j]) / Wmx[j];
+        rV[j+1] += hh[j] * (rV[j] * dWdx[j] - rphalf[j] * rho[j] * splitConstW[j]) / Wmx[j];
         rV[j+1] -= hh[j] * rho[j] * U[j] * rphalf[j];
     }
 
@@ -404,7 +404,7 @@ void ConvectionSystemUTW::get_diagonal(const realtype t, dvector& linearU,
         linearT[0] = -rVzero_mod / (rho[0] * centerVol);
 
         // dWdot/dW
-        linearW(k,0) = - rVzero_mod / (rho[0] * centerVol);
+        linearW[0] = - rVzero_mod / (rho[0] * centerVol);
 
     } else { // FixedValue or ZeroGradient
         linearT[0] = 0;
@@ -501,7 +501,6 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     rho.resize(nPoints);
     rV.resize(nPoints);
     V.resize(nPoints);
-    W.resize(nSpec);
 
     U.resize(nPoints);
     dUdt.resize(nPoints);
@@ -520,7 +519,6 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     Wmx.resize(nPoints);
     dWdt.resize(nPoints);
     dWdx.resize(nPoints);
-    Wconst.resize(nPoints);
     splitConstW.resize(nPoints);
 }
 
@@ -559,4 +557,125 @@ void ConvectionSystemUTW::rV2V(void)
             V[j] = rV[j]/x[j];
         }
     }
+}
+
+
+ConvectionSystemY::ConvectionSystemY()
+{
+}
+
+int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
+{
+    // *** Calculate v (= V/rho) ***
+    // TODO: Needs to be implemented. Interpolate from solution of ConvectionSystemUTW
+
+    // *** Calculate dY/dt
+
+    // Left boundary conditions.
+    // Convection term only contributes in the ControlVolume case
+    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+        double centerVol = pow(x[1],alpha+1) / (alpha+1);
+        // Note: v[0] actually contains r*v[0] in this case
+        double rvzero_mod = std::max(v[0], 0.0);
+
+        ydot[0] = -rvzero_mod * (y[0] - Yleft) / centerVol
+                + splitConstY[0] + splitLinearY[0] * y[0];
+    } else { // FixedValue or ZeroGradient
+        ydot[0] = splitConstY[0] + splitLinearY[0] * y[0];
+    }
+
+    // Intermediate points
+    double dYdx;
+    for (size_t j=1; j<jj; j++) {
+        if (v[j] < 0) {
+            dYdx = (y[j+1] - y[j]) / hh[j];
+        } else {
+            dYdx = (y[j] - y[j-1]) / hh[j-1];
+        }
+
+        ydot[j] = -v[j] * dYdx + splitConstY[j] + splitLinearY[j] * y[j];
+    }
+
+    // Right boundary values
+    // Convection term has nothing to contribute in any case,
+    // So only the value from the other terms remains
+    ydot[jj] = splitConstY[jj] + splitLinearY[jj] * y[jj];
+
+    return 0;
+}
+
+void ConvectionSystemY::get_diagonal(const realtype t, dvector& linearY)
+{
+    // Assume that f has just been called and that all auxiliary
+    // arrays are in a consistent state.
+
+
+    // Left boundary conditions.
+    // Convection term only contributes in the ControlVolume case
+
+    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+        double centerVol = pow(x[1],alpha+1) / (alpha+1);
+        // Note: v[0] actually contains r*v[0] in this case
+        double rvzero_mod = std::max(v[0], 0.0);
+
+        linearY[0] = -rvzero_mod / centerVol;
+
+    } else { // FixedValue or ZeroGradient
+        linearY[0] = 0;
+    }
+
+    // Intermediate points
+    for (size_t j=1; j<jj; j++) {
+        // depends on upwinding to calculated dT/dx etc.
+        linearY[j] = (v[j] < 0 || j == 0) ? v[j] / hh[j]
+                                          : -v[j] / hh[j-1];
+    }
+}
+
+int ConvectionSystemY::bandedJacobian(const realtype t, const sdVector& y,
+                                     const sdVector& ydot, sdBandMatrix& J)
+{
+    // Assume that f has just been called and that all auxiliary
+    // arrays are in a consistent state.
+
+    // Left boundary condition.
+    // Convection term only contributes in the ControlVolume case
+
+    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+        double centerVol = pow(x[1],alpha+1) / (alpha+1);
+        double rvzero_mod = std::max(v[0], 0.0);
+
+        J(0,0) = -rvzero_mod / centerVol + splitLinearY[0];
+
+    } else { // FixedValue or ZeroGradient
+        J(0,0) = splitLinearY[0];
+    }
+
+    // Intermediate points
+    for (size_t j=1; j<jj; j++) {
+        // depends on upwinding to calculated dT/dx etc.
+        double value = (v[j] < 0 || j == 0) ? v[j] / hh[j]
+                                            : -v[j] / hh[j-1];
+        J(j,j) = value + splitLinearY[j];
+    }
+
+    // Right boundary condition
+    J(jj,jj) = splitLinearY[jj];
+
+    return 0;
+}
+
+void ConvectionSystemY::resize(const size_t new_nPoints)
+{
+    grid.setSize(new_nPoints);
+
+    v.resize(nPoints);
+    splitConstY.resize(nPoints);
+    splitLinearY.resize(nPoints);
+}
+
+void ConvectionSystemY::initialize()
+{
+    splitConstY.assign(nPoints, 0);
+    splitLinearY.assign(nPoints, 0);
 }

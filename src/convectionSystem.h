@@ -131,7 +131,6 @@ private:
     size_t nVars; // == 3
 
     dvector rho; // mixture density [kg/m^3]
-    dvector W; // species molecular weights [kg/kmol]
 
     // variables used internally
     dvector dUdx;
@@ -149,22 +148,18 @@ public:
 
     // The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
-    void get_diagonal(const realtype t, dvector& dU, dvector& dT, Array2D& dY);
+    void get_diagonal(const realtype t, dvector& dy);
     int bandedJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdBandMatrix& J);
 
     void resize(const size_t nPoints);
     void initialize();
 
+    double Yleft;
+
     // Diagonalized, linear approximations for terms neglected by splitting
     dvector splitConstY;
     dvector splitLinearY;
 
-    // Temporaries for the neglected terms
-    dvector Yconst;
-
-    // Auxiliary variables
-    dvector v; // velocity [m/s]
-
 private:
-    dvector dYdx;
+    dvector v; // axial (normal) velocity [m/s]
 };
