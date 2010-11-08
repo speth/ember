@@ -1,5 +1,8 @@
 #include "convectionSystem.h"
 
+#include <boost/foreach.hpp>
+#define foreach BOOST_FOREACH
+
 ConvectionSystem::ConvectionSystem()
     : gas(NULL)
     , nSpec(0)
@@ -577,7 +580,6 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         // Note: v[0] actually contains r*v[0] in this case
         double rvzero_mod = std::max(v[0], 0.0);
-
         ydot[0] = -rvzero_mod * (y[0] - Yleft) / centerVol
                 + splitConstY[0] + splitLinearY[0] * y[0];
     } else { // FixedValue or ZeroGradient
@@ -678,4 +680,290 @@ void ConvectionSystemY::initialize()
 {
     splitConstY.assign(nPoints, 0);
     splitLinearY.assign(nPoints, 0);
+}
+
+
+void ConvectionSystemY::update_v(const double t)
+{
+    if (vInterp->size() == 1) {
+        // vInterp only has one data point
+        const dvector& vLeft = vInterp->begin()->second;
+        size_t i = 0;
+        for (size_t j=startIndex; j<=stopIndex; j++) {
+            v[i] = vLeft[j];
+            i++;
+        }
+        return;
+    }
+
+    // Find the value of v by interpolating between values contained in vInterp
+    vecInterpolator::iterator iLeft = vInterp->lower_bound(t);
+    vecInterpolator::iterator iRight = iLeft;
+    iRight++;
+    if (iRight == vInterp->end()) {
+        iLeft--;
+        iRight--;
+    }
+    const dvector& vLeft = iLeft->second;
+    const dvector& vRight = iRight->second;
+
+    // Linear interpolation
+    double s = (t-iLeft->first)/(iRight->first - iLeft->first);
+    size_t i = 0;
+    for (size_t j=startIndex; j<=stopIndex; j++) {
+        v[i] = vLeft[j]*(1-s) + vRight[j]*s;
+    }
+}
+
+ConvectionSystemSplit::ConvectionSystemSplit()
+    : nSpec(0)
+    , nVars(3)
+    , nPointsUTW(0)
+{
+}
+
+void ConvectionSystemSplit::get_diagonal
+(const realtype t, dvector& dU, dvector& dT, Array2D& dY)
+{
+}
+
+void ConvectionSystemSplit::setGrid(const oneDimGrid& grid)
+{
+    GridBased::setGrid(grid);
+    utwSystem.setGrid(grid);
+    foreach (ConvectionSystemY& system, speciesSystems) {
+        system.setGrid(grid);
+    }
+}
+
+void ConvectionSystemSplit::setGas(CanteraGas& gas_)
+{
+    gas = &gas_;
+}
+
+void ConvectionSystemSplit::resize
+(const size_t nPointsUTWNew, const vector<size_t>& nPointsSpecNew, const size_t nSpecNew)
+{
+    // Create or destroy the necessary speciesSystems if nSpec has changed
+    if (nSpec != nSpecNew) {
+        speciesSystems.resize(nSpecNew);
+        nSpec = nSpecNew;
+    }
+
+    if (speciesSolvers.size() != nSpec) {
+        // Create speciesSolvers from scratch if the number of species has changed
+        speciesSolvers.clear();
+        nPointsSpec = nPointsSpecNew;
+        for (size_t k=0; k<nSpec; k++) {
+            speciesSolvers.push_back(new sundialsCVODE(nPointsSpec[k]));
+            configureSolver(speciesSolvers[k], k);
+        }
+    } else {
+        // Replace the solvers where the number of points has changed
+        for (size_t k=0; k<nSpec; k++) {
+            if (nPointsSpec[k] != nPointsSpecNew[k]) {
+                speciesSolvers.replace(k, new sundialsCVODE(nPointsSpecNew[k]));
+                nPointsSpec[k] = nPointsSpecNew[k];
+                configureSolver(speciesSolvers[k], k);
+            }
+        }
+        nPointsSpec = nPointsSpecNew;
+    }
+
+    // Recreate the UTW solver if necessary
+    if (nPointsUTW != nPointsUTWNew) {
+        nPointsUTW = nPointsUTWNew;
+        utwSolver.reset(new sundialsCVODE(3*nPointsUTW));
+        utwSolver->setODE(&utwSystem);
+        utwSolver->setBandwidth(0,0);
+        utwSolver->reltol = reltol;
+        utwSolver->linearMultistepMethod = CV_BDF;
+        utwSolver->nonlinearSolverMethod = CV_NEWTON;
+        for (size_t j=0; j<nPointsUTW; j++) {
+            utwSolver->abstol[3*j+kMomentum] = abstolU;
+            utwSolver->abstol[3*j+kEnergy] = abstolT;
+            utwSolver->abstol[3*j+kWmx] = abstolW;
+        }
+    }
+}
+
+void ConvectionSystemSplit::setSpeciesDomains
+(vector<size_t>& startIndices_, vector<size_t>& stopIndices_)
+{
+    startIndices = &startIndices_;
+    stopIndices = &stopIndices_;
+}
+
+void ConvectionSystemSplit::setState(const dvector& U_, const dvector& T_, Array2D& Y_)
+{
+    U = U_;
+    T = T_;
+    Y = Y_;
+
+    for (size_t j=0; j<nPointsUTW; j++) {
+        utwSolver->y[3*j+kMomentum] = U[j];
+        utwSolver->y[3*j+kEnergy] = T[j];
+        gas->setStateMass(&Y(0,j), T[j]);
+        utwSolver->y[3*j+kWmx] = gas->getMixtureMolecularWeight();
+    }
+
+    for (size_t k=0; k<nSpec; k++) {
+        size_t i = 0;
+        for (size_t j=(*startIndices)[k]; j<=(*stopIndices)[k]; j++) {
+            speciesSolvers[k].y[i] = Y(k,j);
+            i++;
+        }
+    }
+}
+
+void ConvectionSystemSplit::setLeftBC(const double Tleft, const dvector& Yleft_)
+{
+    utwSystem.Tleft = Tleft;
+    Yleft = Yleft;
+}
+
+void ConvectionSystemSplit::set_rVzero(const double rVzero)
+{
+    utwSystem.rVzero = rVzero;
+}
+
+void ConvectionSystemSplit::initialize(const double t0)
+{
+    // Initialize systems
+    utwSystem.initialize();
+
+    foreach (ConvectionSystemY& system, speciesSystems) {
+        system.initialize();
+    }
+
+    // Initialize solvers
+    utwSolver->t0 = t0;
+    utwSolver->maxNumSteps = 1000000;
+    utwSolver->minStep = 1e-16;
+    utwSolver->initialize();
+
+    foreach (sundialsCVODE& solver, speciesSolvers) {
+        solver.t0 = t0;
+        solver.maxNumSteps = 1000000;
+        solver.minStep = 1e-16;
+        solver.initialize();
+    }
+}
+
+void ConvectionSystemSplit::evaluate()
+{
+    sdVector ydotUTW(nVars*nSpec);
+    utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
+
+    boost::shared_ptr<vecInterpolator> vInterp;
+    vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V));
+
+    V = utwSystem.V;
+    dUdt = utwSystem.dUdt;
+    dTdt = utwSystem.dTdt;
+
+    dYdt.data().clear();
+    dYdt.resize(nSpec, nPoints, 0);
+    for (size_t k=0; k<nSpec; k++) {
+        sdVector ydotk(nPointsSpec[k]);
+        speciesSystems[k].f(speciesSolvers[k].tInt, speciesSolvers[k].y, ydotk);
+        size_t i = 0;
+        for (size_t j=(*startIndices)[k]; j<=(*stopIndices)[k]; j++) {
+            dYdt(k,j) = ydotk[i];
+            i++;
+        }
+    }
+}
+
+void ConvectionSystemSplit::setSplitConstU(const dvector& constU)
+{
+    utwSystem.splitConstU = constU;
+}
+
+void ConvectionSystemSplit::setSplitConstT(const dvector& constT)
+{
+    utwSystem.splitConstT = constT;
+}
+
+void ConvectionSystemSplit::setSplitConstY(const Array2D& constY)
+{
+    for (size_t k=0; k<nSpec; k++) {
+        size_t i = 0;
+        for (size_t j=(*startIndices)[k]; j<=(*stopIndices)[k]; j++) {
+            speciesSystems[k].splitConstY[i] = constY(k,j);
+            i++;
+        }
+    }
+}
+
+void ConvectionSystemSplit::setSplitLinearU(const dvector& LinearU)
+{
+    utwSystem.splitLinearU = LinearU;
+}
+
+void ConvectionSystemSplit::setSplitLinearT(const dvector& LinearT)
+{
+    utwSystem.splitLinearT = LinearT;
+}
+
+void ConvectionSystemSplit::setSplitLinearY(const Array2D& LinearY)
+{
+    for (size_t k=0; k<nSpec; k++) {
+        size_t i = 0;
+        for (size_t j=(*startIndices)[k]; j<=(*stopIndices)[k]; j++) {
+            speciesSystems[k].splitLinearY[i] = LinearY(k,j);
+            i++;
+        }
+    }
+}
+
+void ConvectionSystemSplit::integrateToTime(const double tf)
+{
+    // Integrate the UTW system while storing the value of v after each timestep
+    boost::shared_ptr<vecInterpolator> vInterp(new vecInterpolator());
+    vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
+    int cvode_flag = CV_SUCCESS;
+    while (cvode_flag != CV_TSTOP_RETURN) {
+        utwSolver->integrateOneStep(tf);
+        vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
+    }
+
+    // Integrate the species systems
+    for (size_t k=0; k<nSpec; k++) {
+        speciesSystems[k].vInterp = vInterp;
+        speciesSolvers[k].integrateToTime(tf);
+    }
+}
+
+void ConvectionSystemSplit::unroll_y()
+{
+    for (size_t j=0; j<nPoints; j++) {
+        T[j] = utwSolver->y[j*nVars+kEnergy];
+        U[j] = utwSolver->y[j*nVars+kMomentum];
+    }
+
+    for (size_t k=0; k<nSpec; k++) {
+        size_t i = 0;
+        for (size_t j=(*startIndices)[k]; j<=(*stopIndices)[k]; j++) {
+            Y(k,j) = speciesSolvers[k].y[i];
+            i++;
+        }
+    }
+}
+
+void ConvectionSystemSplit::configureSolver(sundialsCVODE& solver, const size_t k)
+{
+    solver.setODE(&speciesSystems[k]);
+    solver.setBandwidth(0,0);
+    solver.reltol = reltol;
+    for (size_t j=0; j<nPointsSpec[k]; j++) {
+        solver.abstol[j] = abstolY;
+    }
+    solver.linearMultistepMethod = CV_BDF;
+    solver.nonlinearSolverMethod = CV_NEWTON;
+
+    speciesSystems[k].resize(nPointsSpec[k]);
+    speciesSystems[k].startIndex = (*startIndices)[k];
+    speciesSystems[k].stopIndex = (*stopIndices)[k];
+    speciesSystems[k].Yleft = Yleft[k];
 }

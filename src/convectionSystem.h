@@ -7,6 +7,9 @@
 #include "chemistry0d.h"
 #include "perfTimer.h"
 
+#include <boost/shared_ptr.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
+
 class ConvectionSystem  : public sdODE, public GridBased
 {
     // This is the system representing convection of all state variables in the domain.
@@ -121,6 +124,7 @@ public:
     // Auxiliary variables
     dvector V; // mass flux [kg/m^2*s]
     dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
+    dvector rho; // mixture density [kg/m^3]
 
     perfTimer* thermoTimer;
 
@@ -130,14 +134,13 @@ private:
 
     size_t nVars; // == 3
 
-    dvector rho; // mixture density [kg/m^3]
-
     // variables used internally
     dvector dUdx;
     dvector dTdx;
     dvector dWdx;
 };
 
+typedef std::map<double, dvector> vecInterpolator;
 
 class ConvectionSystemY : public sdODE, public GridBased
 {
@@ -160,6 +163,81 @@ public:
     dvector splitConstY;
     dvector splitLinearY;
 
+    size_t startIndex;
+    size_t stopIndex;
+
+    boost::shared_ptr<vecInterpolator> vInterp; // axial (normal) velocity [m/s] at various times
+
 private:
-    dvector v; // axial (normal) velocity [m/s]
+    void update_v(const double t);
+    dvector v;
+};
+
+
+class ConvectionSystemSplit : public GridBased
+{
+    // System which combines a ConvectionSystemUTW objects and several
+    // ConvectionSystemY objects that together represent the complete
+    // convection term for all components.
+public:
+    ConvectionSystemSplit();
+
+    void get_diagonal(const realtype t, dvector& dU, dvector& dT, Array2D& dY);
+
+    void setGrid(const oneDimGrid& grid);
+    void setGas(CanteraGas& gas);
+    void resize(const size_t nPointsUTW, const vector<size_t>& nPointsSpec, const size_t nSpec);
+    void setSpeciesDomains(vector<size_t>& startIndices, vector<size_t>& stopIndices);
+    void setState(const dvector& U, const dvector& T, Array2D& Y);
+    void setLeftBC(const double Tleft, const dvector& Yleft);
+    void set_rVzero(const double rVzero);
+    void initialize(const double t0);
+    void evaluate(); // evaluate time derivatives and mass flux at the current state
+
+    // Diagonalized, linear approximations for terms neglected by splitting
+    void setSplitConstU(const dvector& constU);
+    void setSplitConstT(const dvector& constT);
+    void setSplitConstY(const Array2D& constY);
+    void setSplitLinearU(const dvector& linearU);
+    void setSplitLinearT(const dvector& linearT);
+    void setSplitLinearY(const Array2D& linearY);
+
+    void integrateToTime(const double tf);
+    void unroll_y(); // convert the solver's solution vectors to the full U, Y, and T
+
+    double reltol; // integrator relative tolerance
+    double abstolU; // velocity absolute tolerance
+    double abstolT; // temperature absolute tolerance
+    double abstolW; // molecular weight absolute tolerance
+    double abstolY; // mass fraction absolute tolerance
+
+    dvector U;
+    dvector T;
+    Array2D Y;
+
+    // Time derivatives and mass flux are updated by evaluate()
+    dvector V;
+    dvector dUdt;
+    dvector dTdt;
+    Array2D dYdt;
+
+private:
+    // set parameters of a new species solver
+    void configureSolver(sundialsCVODE& solver, const size_t k);
+
+    ConvectionSystemUTW utwSystem;
+    boost::shared_ptr<sundialsCVODE> utwSolver;
+    boost::ptr_vector<ConvectionSystemY> speciesSystems;
+    boost::ptr_vector<sundialsCVODE> speciesSolvers;
+
+    dvector Yleft;
+
+    size_t nSpec;
+    size_t nVars;
+    size_t nPointsUTW;
+    vector<size_t> nPointsSpec;
+
+    vector<size_t>* startIndices; // index of leftmost grid point for each component (U,T,Yk)
+    vector<size_t>* stopIndices; // index of rightmost grid point for each component (U,T,Yk)
+    CanteraGas* gas;
 };
