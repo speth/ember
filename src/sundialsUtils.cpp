@@ -114,6 +114,13 @@ int sundialsCVODE::integrateToTime(realtype t)
     return flag;
 }
 
+int sundialsCVODE::integrateOneStep(realtype tf)
+{
+    CVodeSetStopTime(sundialsMem, tf);
+    flag = CVode(sundialsMem, tf, y.forSundials(), &tInt, CV_ONE_STEP);
+    return flag;
+}
+
 int sundialsCVODE::getRootInfo(void)
 {
     flagr = CVodeGetRootInfo(sundialsMem, &rootsFound[0]);

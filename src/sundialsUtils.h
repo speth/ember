@@ -114,7 +114,8 @@ public:
     void initialize();
     bool initialized() const;
 
-    int integrateToTime(realtype t);
+    int integrateToTime(realtype t); // Take as many steps as needed to reach t (up to maxNumSteps)
+    int integrateOneStep(realtype tf);  // Take one step towards tf without stepping past it
 
     // optional output functions
     int getRootInfo();
@@ -192,7 +193,7 @@ public:
 
     void initialize(void);
     int integrateToTime(realtype t);
-    int integrateOneStep(void);
+    int integrateOneStep();
     void setDAE(sdDAE* newDAE);
     int getRootInfo();
     void printStats(clock_t dt = 0);
