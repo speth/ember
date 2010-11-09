@@ -89,7 +89,7 @@ public:
     int f(const realtype t, const sdVector& y, sdVector& ydot);
     // This uses an explicit integrator, so the full Jacobian is not needed. However,
     // we still need the diagonal elements to implement the splitting method
-    void get_diagonal(const realtype t, dvector& dU, dvector& dT, dvector& dW);
+    void get_diagonal(const realtype t, dvector& dU, dvector& dT);
     int bandedJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdBandMatrix& J);
 
     void unroll_y(const sdVector& y); // fill in current state variables from sdvector

@@ -387,8 +387,8 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     return 0;
 }
 
-void ConvectionSystemUTW::get_diagonal(const realtype t, dvector& linearU,
-                                    dvector& linearT, dvector& linearW)
+void ConvectionSystemUTW::get_diagonal
+(const realtype t, dvector& linearU, dvector& linearT)
 {
     // Assume that f has just been called and that all auxiliary
     // arrays are in a consistent state.
@@ -406,12 +406,8 @@ void ConvectionSystemUTW::get_diagonal(const realtype t, dvector& linearU,
         // dTdot/dT
         linearT[0] = -rVzero_mod / (rho[0] * centerVol);
 
-        // dWdot/dW
-        linearW[0] = - rVzero_mod / (rho[0] * centerVol);
-
     } else { // FixedValue or ZeroGradient
         linearT[0] = 0;
-        linearW[0] = 0;
     }
 
     // Intermediate points
@@ -421,7 +417,6 @@ void ConvectionSystemUTW::get_diagonal(const realtype t, dvector& linearU,
                                              : -V[j] / (rho[j] * hh[j-1]);
         linearU[j] = value;
         linearT[j] = value;
-        linearW[j] = value;
     }
 }
 
@@ -570,38 +565,39 @@ ConvectionSystemY::ConvectionSystemY()
 int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
 {
     // *** Calculate v (= V/rho) ***
-    // TODO: Needs to be implemented. Interpolate from solution of ConvectionSystemUTW
+    update_v(t);
 
     // *** Calculate dY/dt
 
     // Left boundary conditions.
     // Convection term only contributes in the ControlVolume case
-    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+    if (startIndex == 0 && grid.leftBC == BoundaryCondition::ControlVolume) {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         // Note: v[0] actually contains r*v[0] in this case
         double rvzero_mod = std::max(v[0], 0.0);
         ydot[0] = -rvzero_mod * (y[0] - Yleft) / centerVol
                 + splitConstY[0] + splitLinearY[0] * y[0];
-    } else { // FixedValue or ZeroGradient
+    } else { // FixedValue, ZeroGradient, or truncated domain
         ydot[0] = splitConstY[0] + splitLinearY[0] * y[0];
     }
 
     // Intermediate points
     double dYdx;
-    for (size_t j=1; j<jj; j++) {
-        if (v[j] < 0) {
-            dYdx = (y[j+1] - y[j]) / hh[j];
+    size_t i = 1;
+    for (size_t j=startIndex+1; j<stopIndex; j++) {
+        if (v[i] < 0) {
+            dYdx = (y[i+1] - y[i]) / hh[j];
         } else {
-            dYdx = (y[j] - y[j-1]) / hh[j-1];
+            dYdx = (y[i] - y[i-1]) / hh[j-1];
         }
-
-        ydot[j] = -v[j] * dYdx + splitConstY[j] + splitLinearY[j] * y[j];
+        ydot[i] = -v[i] * dYdx + splitConstY[i] + splitLinearY[i] * y[i];
+        i++;
     }
 
     // Right boundary values
     // Convection term has nothing to contribute in any case,
     // So only the value from the other terms remains
-    ydot[jj] = splitConstY[jj] + splitLinearY[jj] * y[jj];
+    ydot[i] = splitConstY[i] + splitLinearY[i] * y[i];
 
     return 0;
 }
@@ -611,27 +607,29 @@ void ConvectionSystemY::get_diagonal(const realtype t, dvector& linearY)
     // Assume that f has just been called and that all auxiliary
     // arrays are in a consistent state.
 
-
     // Left boundary conditions.
     // Convection term only contributes in the ControlVolume case
 
-    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+    if (startIndex == 0 && grid.leftBC == BoundaryCondition::ControlVolume) {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         // Note: v[0] actually contains r*v[0] in this case
         double rvzero_mod = std::max(v[0], 0.0);
 
         linearY[0] = -rvzero_mod / centerVol;
 
-    } else { // FixedValue or ZeroGradient
+    } else { // FixedValue, ZeroGradient, or truncated domain
         linearY[0] = 0;
     }
 
     // Intermediate points
-    for (size_t j=1; j<jj; j++) {
+    size_t i = 1;
+    for (size_t j=startIndex+1; j<stopIndex; j++) {
         // depends on upwinding to calculated dT/dx etc.
-        linearY[j] = (v[j] < 0 || j == 0) ? v[j] / hh[j]
-                                          : -v[j] / hh[j-1];
+        linearY[i] = (v[i] < 0) ? v[i] / hh[j]
+                                : -v[i] / hh[j-1];
+        i++;
     }
+    linearY[i] = 0;
 }
 
 int ConvectionSystemY::bandedJacobian(const realtype t, const sdVector& y,
@@ -643,26 +641,28 @@ int ConvectionSystemY::bandedJacobian(const realtype t, const sdVector& y,
     // Left boundary condition.
     // Convection term only contributes in the ControlVolume case
 
-    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+    if (startIndex == 0 && grid.leftBC == BoundaryCondition::ControlVolume) {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         double rvzero_mod = std::max(v[0], 0.0);
 
         J(0,0) = -rvzero_mod / centerVol + splitLinearY[0];
 
-    } else { // FixedValue or ZeroGradient
+    } else { // FixedValue, ZeroGradient or truncated domain
         J(0,0) = splitLinearY[0];
     }
 
     // Intermediate points
-    for (size_t j=1; j<jj; j++) {
+    size_t i = 1;
+    for (size_t j=startIndex+1; j<stopIndex; j++) {
         // depends on upwinding to calculated dT/dx etc.
-        double value = (v[j] < 0 || j == 0) ? v[j] / hh[j]
-                                            : -v[j] / hh[j-1];
-        J(j,j) = value + splitLinearY[j];
+        double value = (v[i] < 0) ? v[i] / hh[j]
+                                  : -v[i] / hh[j-1];
+        J(i,i) = value + splitLinearY[i];
+        i++;
     }
 
     // Right boundary condition
-    J(jj,jj) = splitLinearY[jj];
+    J(i,i) = splitLinearY[i];
 
     return 0;
 }
@@ -725,6 +725,18 @@ ConvectionSystemSplit::ConvectionSystemSplit()
 void ConvectionSystemSplit::get_diagonal
 (const realtype t, dvector& dU, dvector& dT, Array2D& dY)
 {
+    // Called after evaluate()
+    utwSystem.get_diagonal(t, dU, dT);
+
+    for (size_t k=0; k<nSpec; k++) {
+        dvector dYk(nPointsSpec[k], 0);
+        speciesSystems[k].get_diagonal(t, dYk);
+        size_t i = 0;
+        for (size_t j=(*startIndices)[k]; j<(*stopIndices)[k]; j++) {
+            dY(k,j) = dYk[i];
+            i++;
+        }
+    }
 }
 
 void ConvectionSystemSplit::setGrid(const oneDimGrid& grid)

@@ -22,7 +22,7 @@
 					<folderInfo id="0.1056017304." name="/" resourcePath="">
 						<toolChain id="org.eclipse.cdt.build.core.prefbase.toolchain.519884198" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.519884198.1827946377" name=""/>
-							<builder buildPath="${workspace_loc:/1dflameV2}" command="bjam" enableCleanBuild="false" enabledIncrementalBuild="true" id="org.eclipse.cdt.build.core.settings.default.builder.1139915151" incrementalBuildTarget="release" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<builder arguments="-j8" buildPath="${workspace_loc:/1dflameV2}" command="bjam" enableCleanBuild="false" enabledIncrementalBuild="true" id="org.eclipse.cdt.build.core.settings.default.builder.1139915151" incrementalBuildTarget="release" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.libs.397740050" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.1552018393" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1940242630" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths"/>
@@ -40,9 +40,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="0.1056017304.794724643" name="flameSolver-old.cxx" rcbsApplicability="disable" resourcePath="src/flameSolver-old.cxx" toolsToInvoke="org.eclipse.cdt.build.core.settings.holder.1806339154.1647923749">
-						<tool id="org.eclipse.cdt.build.core.settings.holder.1806339154.1647923749" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder.1806339154"/>
-					</fileInfo>
 					<sourceEntries>
 						<entry excluding="src/flameSys_old.cxx|src/flameSolver-old.cxx|git.org" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
