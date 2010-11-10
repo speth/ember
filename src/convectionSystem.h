@@ -185,7 +185,9 @@ public:
     void get_diagonal(const realtype t, dvector& dU, dvector& dT, Array2D& dY);
 
     void setGrid(const oneDimGrid& grid);
+    void setTolerances(const configOptions& options);
     void setGas(CanteraGas& gas);
+    void setThermoTimer(perfTimer& timer);
     void resize(const size_t nPointsUTW, const vector<size_t>& nPointsSpec, const size_t nSpec);
     void setSpeciesDomains(vector<size_t>& startIndices, vector<size_t>& stopIndices);
     void setState(const dvector& U, const dvector& T, Array2D& Y);
@@ -195,6 +197,8 @@ public:
     void evaluate(); // evaluate time derivatives and mass flux at the current state
 
     // Diagonalized, linear approximations for terms neglected by splitting
+    void setSplitConst(const dvector& constU, const dvector& constT, const Array2D& constY);
+    void setSplitLinear(const dvector& linearU, const dvector& linearT, const Array2D& linearY);
     void setSplitConstU(const dvector& constU);
     void setSplitConstT(const dvector& constT);
     void setSplitConstY(const Array2D& constY);
@@ -204,12 +208,7 @@ public:
 
     void integrateToTime(const double tf);
     void unroll_y(); // convert the solver's solution vectors to the full U, Y, and T
-
-    double reltol; // integrator relative tolerance
-    double abstolU; // velocity absolute tolerance
-    double abstolT; // temperature absolute tolerance
-    double abstolW; // molecular weight absolute tolerance
-    double abstolY; // mass fraction absolute tolerance
+    int getNumSteps();
 
     dvector U;
     dvector T;
@@ -225,6 +224,13 @@ private:
     // set parameters of a new species solver
     void configureSolver(sundialsCVODE& solver, const size_t k);
 
+    // CVODE integration tolerances
+    double reltol; // relative tolerance
+    double abstolU; // velocity absolute tolerance
+    double abstolT; // temperature absolute tolerance
+    double abstolW; // molecular weight absolute tolerance
+    double abstolY; // mass fraction absolute tolerance
+
     ConvectionSystemUTW utwSystem;
     boost::shared_ptr<sundialsCVODE> utwSolver;
     boost::ptr_vector<ConvectionSystemY> speciesSystems;
@@ -239,5 +245,7 @@ private:
 
     vector<size_t>* startIndices; // index of leftmost grid point for each component (U,T,Yk)
     vector<size_t>* stopIndices; // index of rightmost grid point for each component (U,T,Yk)
+
     CanteraGas* gas;
+    perfTimer* thermoTimer;
 };

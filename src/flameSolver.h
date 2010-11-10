@@ -66,11 +66,11 @@ public:
 private:
     boost::ptr_vector<SourceSystem> sourceTerms; // One for each grid point
     boost::ptr_vector<DiffusionSystem> diffusionTerms; // One for each species (plus T and U)
-    ConvectionSystem convectionTerm;
 
     boost::ptr_vector<sundialsCVODE> sourceSolvers; // One for each grid point
     boost::ptr_vector<BDFIntegrator> diffusionSolvers; // One for each state variable
-    sundialsCVODE* convectionSolver;
+
+    ConvectionSystemSplit convectionSystem; // term + solver
 
     double tPrev;
     double aPrev;

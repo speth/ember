@@ -685,6 +685,8 @@ void ConvectionSystemY::initialize()
 
 void ConvectionSystemY::update_v(const double t)
 {
+    assert(vInterp->size() > 0);
+
     if (vInterp->size() == 1) {
         // vInterp only has one data point
         const dvector& vLeft = vInterp->begin()->second;
@@ -698,6 +700,10 @@ void ConvectionSystemY::update_v(const double t)
 
     // Find the value of v by interpolating between values contained in vInterp
     vecInterpolator::iterator iLeft = vInterp->lower_bound(t);
+    if (iLeft == vInterp->end()) {
+        // In this case, we're actually extrapolating past the rightmost point
+        iLeft--;
+    }
     vecInterpolator::iterator iRight = iLeft;
     iRight++;
     if (iRight == vInterp->end()) {
@@ -709,6 +715,7 @@ void ConvectionSystemY::update_v(const double t)
 
     // Linear interpolation
     double s = (t-iLeft->first)/(iRight->first - iLeft->first);
+
     size_t i = 0;
     for (size_t j=startIndex; j<=stopIndex; j++) {
         v[i] = vLeft[j]*(1-s) + vRight[j]*s;
@@ -748,9 +755,24 @@ void ConvectionSystemSplit::setGrid(const oneDimGrid& grid)
     }
 }
 
+void ConvectionSystemSplit::setTolerances(const configOptions& options)
+{
+    reltol = options.idaRelTol;
+    abstolU = options.idaMomentumAbsTol;
+    abstolT = options.idaEnergyAbsTol;
+    abstolW = options.idaSpeciesAbsTol * 20;
+    abstolY = options.idaSpeciesAbsTol;
+}
+
 void ConvectionSystemSplit::setGas(CanteraGas& gas_)
 {
     gas = &gas_;
+    utwSystem.gas = &gas_;
+}
+
+void ConvectionSystemSplit::setThermoTimer(perfTimer& timer)
+{
+    thermoTimer = &timer;
 }
 
 void ConvectionSystemSplit::resize
@@ -796,7 +818,10 @@ void ConvectionSystemSplit::resize
             utwSolver->abstol[3*j+kEnergy] = abstolT;
             utwSolver->abstol[3*j+kWmx] = abstolW;
         }
+        utwSystem.resize(nPointsUTW);
     }
+
+    nPoints = nPointsUTWNew;
 }
 
 void ConvectionSystemSplit::setSpeciesDomains
@@ -831,7 +856,7 @@ void ConvectionSystemSplit::setState(const dvector& U_, const dvector& T_, Array
 void ConvectionSystemSplit::setLeftBC(const double Tleft, const dvector& Yleft_)
 {
     utwSystem.Tleft = Tleft;
-    Yleft = Yleft;
+    Yleft = Yleft_;
 }
 
 void ConvectionSystemSplit::set_rVzero(const double rVzero)
@@ -864,10 +889,10 @@ void ConvectionSystemSplit::initialize(const double t0)
 
 void ConvectionSystemSplit::evaluate()
 {
-    sdVector ydotUTW(nVars*nSpec);
+    sdVector ydotUTW(nVars*nPoints);
     utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
 
-    boost::shared_ptr<vecInterpolator> vInterp;
+    boost::shared_ptr<vecInterpolator> vInterp(new vecInterpolator());
     vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V));
 
     V = utwSystem.V;
@@ -876,8 +901,9 @@ void ConvectionSystemSplit::evaluate()
 
     dYdt.data().clear();
     dYdt.resize(nSpec, nPoints, 0);
+    sdVector ydotk(nPoints);
     for (size_t k=0; k<nSpec; k++) {
-        sdVector ydotk(nPointsSpec[k]);
+        speciesSystems[k].vInterp = vInterp;
         speciesSystems[k].f(speciesSolvers[k].tInt, speciesSolvers[k].y, ydotk);
         size_t i = 0;
         for (size_t j=(*startIndices)[k]; j<=(*stopIndices)[k]; j++) {
@@ -908,6 +934,14 @@ void ConvectionSystemSplit::setSplitConstY(const Array2D& constY)
     }
 }
 
+void ConvectionSystemSplit::setSplitConst
+(const dvector& constU, const dvector& constT, const Array2D& constY)
+{
+    setSplitConstU(constU);
+    setSplitConstT(constT);
+    setSplitConstY(constY);
+}
+
 void ConvectionSystemSplit::setSplitLinearU(const dvector& LinearU)
 {
     utwSystem.splitLinearU = LinearU;
@@ -929,6 +963,14 @@ void ConvectionSystemSplit::setSplitLinearY(const Array2D& LinearY)
     }
 }
 
+void ConvectionSystemSplit::setSplitLinear
+(const dvector& linearU, const dvector& linearT, const Array2D& linearY)
+{
+    setSplitLinearU(linearU);
+    setSplitLinearT(linearT);
+    setSplitLinearY(linearY);
+}
+
 void ConvectionSystemSplit::integrateToTime(const double tf)
 {
     // Integrate the UTW system while storing the value of v after each timestep
@@ -936,7 +978,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
     vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
     int cvode_flag = CV_SUCCESS;
     while (cvode_flag != CV_TSTOP_RETURN) {
-        utwSolver->integrateOneStep(tf);
+        cvode_flag = utwSolver->integrateOneStep(tf);
         vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
     }
 
@@ -945,6 +987,15 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
         speciesSystems[k].vInterp = vInterp;
         speciesSolvers[k].integrateToTime(tf);
     }
+}
+
+int ConvectionSystemSplit::getNumSteps()
+{
+    int nSteps = utwSolver->getNumSteps();
+    foreach (sundialsCVODE& solver, speciesSolvers) {
+        nSteps += solver.getNumSteps();
+    }
+    return nSteps;
 }
 
 void ConvectionSystemSplit::unroll_y()
