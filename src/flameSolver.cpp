@@ -330,7 +330,7 @@ void FlameSolver::run(void)
             }
         }
 
-        convectionSystem.setSplitConst(Utmp, Ttmp, Ytmp);
+        convectionSystem.setSplitConst(Utmp, Ttmp, Ytmp, false);
 
         convectionSystem.evaluate();
         constUconv = convectionSystem.dUdt - Utmp;
@@ -348,7 +348,7 @@ void FlameSolver::run(void)
         dUdtdiff = constUdiff;
         dUdtconv = constUconv;
         dTdtconv = constTconv;
-        dTdtdiff=  constTdiff;
+        dTdtdiff = constTdiff;
         dYdtconv = constYconv;
         dYdtdiff = constYdiff;
 
@@ -442,7 +442,7 @@ void FlameSolver::run(void)
             }
         }
         convectionSystem.setSplitConst(constUprod + constUdiff,
-            constTprod + constTdiff + constTcross, Ytmp);
+            constTprod + constTdiff + constTcross, Ytmp, true);
         convectionSystem.setSplitLinear(linearUprod + linearUdiff,
             linearTprod + linearTdiff, YtmpLinear);
 
@@ -872,6 +872,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("Yconv", convectionSystem.Y);
         outFile.writeArray2D("Ydiff", Ydiff);
         outFile.writeArray2D("Yprod", Yprod);
+        outFile.writeVector("Wconv", convectionSystem.Wmx);
 
         outFile.writeVector("Uextrap", Uextrap);
         outFile.writeVector("Textrap", Textrap);
@@ -928,6 +929,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("dYdtdiff", dYdtdiff);
         outFile.writeArray2D("dYdtconv", dYdtconv);
         outFile.writeArray2D("dYdtprod", dYdtprod);
+        outFile.writeVector("dWdtconv", convectionSystem.dWdt);
 
         outFile.writeVector("linearTdiff", linearTdiff);
         outFile.writeVector("linearTconv", linearTconv);
@@ -1574,7 +1576,7 @@ void FlameSolver::updateTransportDomain()
             Ytmp(k,j) = constYprod(k,j) + constYdiff(k,j) + constYcross(k,j);
         }
     }
-    convectionSystem.setSplitConst(Utmp, Ttmp, Ytmp);
+    convectionSystem.setSplitConst(Utmp, Ttmp, Ytmp, false);
 
     convectionSystem.evaluate();
     constUconv = convectionSystem.dUdt - Utmp;

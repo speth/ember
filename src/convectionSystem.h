@@ -197,11 +197,12 @@ public:
     void evaluate(); // evaluate time derivatives and mass flux at the current state
 
     // Diagonalized, linear approximations for terms neglected by splitting
-    void setSplitConst(const dvector& constU, const dvector& constT, const Array2D& constY);
+    // 'offset' indicates whether constant the values have been offset by the linear term times the current value
+    void setSplitConst(const dvector& constU, const dvector& constT, const Array2D& constY, bool offset);
     void setSplitLinear(const dvector& linearU, const dvector& linearT, const Array2D& linearY);
     void setSplitConstU(const dvector& constU);
     void setSplitConstT(const dvector& constT);
-    void setSplitConstY(const Array2D& constY);
+    void setSplitConstY(const Array2D& constY, bool offset);
     void setSplitLinearU(const dvector& linearU);
     void setSplitLinearT(const dvector& linearT);
     void setSplitLinearY(const Array2D& linearY);
@@ -212,12 +213,14 @@ public:
 
     dvector U;
     dvector T;
+    dvector Wmx;
     Array2D Y;
 
     // Time derivatives and mass flux are updated by evaluate()
     dvector V;
     dvector dUdt;
     dvector dTdt;
+    dvector dWdt;
     Array2D dYdt;
 
 private:
@@ -237,6 +240,7 @@ private:
     boost::ptr_vector<sundialsCVODE> speciesSolvers;
 
     dvector Yleft;
+    dvector W;
 
     size_t nSpec;
     size_t nVars;

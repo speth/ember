@@ -726,6 +726,10 @@ ConvectionSystemSplit::ConvectionSystemSplit()
     : nSpec(0)
     , nVars(3)
     , nPointsUTW(0)
+    , startIndices(NULL)
+    , stopIndices(NULL)
+    , gas(NULL)
+    , thermoTimer(NULL)
 {
 }
 
@@ -782,6 +786,10 @@ void ConvectionSystemSplit::resize
     if (nSpec != nSpecNew) {
         speciesSystems.resize(nSpecNew);
         nSpec = nSpecNew;
+        if (gas) {
+            W.resize(nSpec);
+            gas->getMolecularWeights(W);
+        }
     }
 
     if (speciesSolvers.size() != nSpec) {
@@ -819,9 +827,12 @@ void ConvectionSystemSplit::resize
             utwSolver->abstol[3*j+kWmx] = abstolW;
         }
         utwSystem.resize(nPointsUTW);
+        Wmx.resize(nPointsUTW);
     }
 
     nPoints = nPointsUTWNew;
+
+
 }
 
 void ConvectionSystemSplit::setSpeciesDomains
@@ -841,7 +852,7 @@ void ConvectionSystemSplit::setState(const dvector& U_, const dvector& T_, Array
         utwSolver->y[3*j+kMomentum] = U[j];
         utwSolver->y[3*j+kEnergy] = T[j];
         gas->setStateMass(&Y(0,j), T[j]);
-        utwSolver->y[3*j+kWmx] = gas->getMixtureMolecularWeight();
+        utwSolver->y[3*j+kWmx] = Wmx[j] = gas->getMixtureMolecularWeight();
     }
 
     for (size_t k=0; k<nSpec; k++) {
@@ -898,6 +909,7 @@ void ConvectionSystemSplit::evaluate()
     V = utwSystem.V;
     dUdt = utwSystem.dUdt;
     dTdt = utwSystem.dTdt;
+    dWdt = utwSystem.dWdt;
 
     dYdt.data().clear();
     dYdt.resize(nSpec, nPoints, 0);
@@ -923,7 +935,7 @@ void ConvectionSystemSplit::setSplitConstT(const dvector& constT)
     utwSystem.splitConstT = constT;
 }
 
-void ConvectionSystemSplit::setSplitConstY(const Array2D& constY)
+void ConvectionSystemSplit::setSplitConstY(const Array2D& constY, bool offset)
 {
     for (size_t k=0; k<nSpec; k++) {
         size_t i = 0;
@@ -932,14 +944,24 @@ void ConvectionSystemSplit::setSplitConstY(const Array2D& constY)
             i++;
         }
     }
+
+    if (!offset) {
+        for (size_t j=0; j<nPointsUTW; j++) {
+            double value = 0;
+            for (size_t k=0; k<nSpec; k++) {
+                 value += constY(k,j)/W[k];
+            }
+            utwSystem.splitConstW[j] = - value * Wmx[j] * Wmx[j];
+        }
+    }
 }
 
 void ConvectionSystemSplit::setSplitConst
-(const dvector& constU, const dvector& constT, const Array2D& constY)
+(const dvector& constU, const dvector& constT, const Array2D& constY, bool offset)
 {
     setSplitConstU(constU);
     setSplitConstT(constT);
-    setSplitConstY(constY);
+    setSplitConstY(constY, offset);
 }
 
 void ConvectionSystemSplit::setSplitLinearU(const dvector& LinearU)
@@ -1003,6 +1025,7 @@ void ConvectionSystemSplit::unroll_y()
     for (size_t j=0; j<nPoints; j++) {
         T[j] = utwSolver->y[j*nVars+kEnergy];
         U[j] = utwSolver->y[j*nVars+kMomentum];
+        Wmx[j] = utwSolver->y[j*nVars+kWmx];
     }
 
     for (size_t k=0; k<nSpec; k++) {
