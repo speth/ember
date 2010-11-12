@@ -140,6 +140,18 @@ void FlameSolver::run(void)
             wDot.data().assign(wDot.data().size(), 0);
         }
 
+        // Reset boundary conditions to prevent numerical drift
+        if (grid.leftBC == BoundaryCondition::FixedValue) {
+            T[0] = Tleft;
+            for (size_t k=0; k<nSpec; k++) {
+                Y(k,0) = Yleft[k];
+            }
+        }
+        T[jj] = Tright;
+        for (size_t k=0; k<nSpec; k++) {
+            Y(k,jj) = Yright[k];
+        }
+
         // Calculate auxiliary data
         for (size_t j=0; j<nPoints; j++) {
             thermoTimer.start();
