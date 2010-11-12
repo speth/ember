@@ -8,7 +8,12 @@
 #include <boost/filesystem.hpp>
 
 using boost::format;
-static const bool VERY_VERBOSE = false;
+
+#ifdef NDEBUG
+    static const bool VERY_VERBOSE = false;
+#else
+    static const bool VERY_VERBOSE = true;
+#endif
 
 FlameSolver::FlameSolver()
     : jCorrSolver(jCorrSystem)
