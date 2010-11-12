@@ -218,6 +218,10 @@ void FlameSolver::run(void)
             }
         }
 
+        // constYprod is needed to determine the region where the diffusion term
+        // needs to be integrated for each species
+        updateTransportDomain();
+
         // Convection solver: Initialization
         convectionSystem.setState(U, T, Y);
         convectionSystem.initialize(t);
@@ -245,10 +249,6 @@ void FlameSolver::run(void)
         constTdiff = diffusionSolvers[kEnergy].get_ydot();
         linearUdiff = diffusionSolvers[kMomentum].get_diagonal();
         linearTdiff = diffusionSolvers[kEnergy].get_diagonal();
-
-        // constYconv and constYprod are needed to determine the region
-        // where the diffusion term needs to be integrated for each species
-        updateTransportDomain();
 
         // Diffusion solvers: Species
         for (size_t k=0; k<nSpec; k++) {
@@ -1577,8 +1577,8 @@ void FlameSolver::updateTransportDomain()
         // Find the left boundary for species k
         int jStart = jj;
         for (size_t j=0; j<nPoints; j++) {
-            if (abs(constYdiff(k,j)) > options.adapchem_atol ||
-                abs(constYprod(k,j)+constYconv(k,j)) > options.adapchem_atol) {
+            if (abs(constYdiff(k,j)+constYconv(k,j)) > options.adapchem_atol ||
+                abs(constYprod(k,j)) > options.adapchem_atol) {
                 jStart = j;
                 break;
             }
@@ -1589,8 +1589,8 @@ void FlameSolver::updateTransportDomain()
         // Find the right boundary for species k
         size_t jStop = jStart;
         for (int j=jj; j>jStart; j--) {
-            if (abs(constYdiff(k,j)) > options.adapchem_atol ||
-                abs(constYprod(k,j)+constYconv(k,j)) > options.adapchem_atol) {
+            if (abs(constYdiff(k,j)+constYconv(k,j)) > options.adapchem_atol ||
+                abs(constYprod(k,j)) > options.adapchem_atol) {
                 jStop = j;
                 break;
             }
