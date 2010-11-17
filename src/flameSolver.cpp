@@ -377,7 +377,7 @@ void FlameSolver::run(void)
             term.splitConst[kMomentum] = constUconv[j] + constUdiff[j];
             term.splitLinear[kMomentum] = linearUconv[j] + linearUdiff[j];
             term.splitConst[kEnergy] = constTconv[j] + constTdiff[j] + constTcross[j];
-            term.splitLinear[kEnergy] = linearTconv[j] + linearTdiff[j];
+            term.splitLinear[kEnergy] = linearTconv[j] + linearTdiff[j] + linearTcross[j];
             for (size_t k=0; k<nSpec; k++) {
                 term.splitConst[kSpecies+k] = constYconv(k,j) + constYdiff(k,j) + constYcross(k,j);
                 term.splitLinear[kSpecies+k] = linearYconv(k,j) + linearYdiff(k,j) + linearYcross(k,j);
@@ -444,13 +444,13 @@ void FlameSolver::run(void)
         convectionSystem.setSplitConst(constUprod + constUdiff,
             constTprod + constTdiff + constTcross, Ytmp, true);
         convectionSystem.setSplitLinear(linearUprod + linearUdiff,
-            linearTprod + linearTdiff, YtmpLinear);
+            linearTprod + linearTdiff + linearTcross, YtmpLinear);
 
         // Diffusion terms: Calculate constant & linear terms
         diffusionTerms[kMomentum].splitConst = constUconv + constUprod;
         diffusionTerms[kMomentum].splitLinear = linearUconv + linearUprod;
         diffusionTerms[kEnergy].splitConst = constTconv + constTprod + constTcross;
-        diffusionTerms[kEnergy].splitLinear = linearTconv + linearTprod;
+        diffusionTerms[kEnergy].splitLinear = linearTconv + linearTprod + linearTcross;
         for (size_t k=0; k<nSpec; k++) {
             dvector& splitConst = diffusionTerms[kSpecies+k].splitConst;
             dvector& splitLinear = diffusionTerms[kSpecies+k].splitLinear;
