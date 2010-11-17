@@ -178,9 +178,12 @@ private:
     Array2D linearYdiff, linearYconv, linearYprod;
 
     // instantaneous Time derivatives (for output purposes)
-    dvector dTdtdiff, dTdtconv, dTdtprod;
+    dvector dTdtdiff, dTdtconv, dTdtprod, dTdtcross;
     dvector dUdtdiff, dUdtconv, dUdtprod;
-    Array2D dYdtdiff, dYdtconv, dYdtprod;
+    Array2D dYdtdiff, dYdtconv, dYdtprod, dYdtcross;
+
+    Array2D vInterp;
+    dvector tvInterp;
 
     int alpha;
 

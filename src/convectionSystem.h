@@ -128,16 +128,16 @@ public:
 
     perfTimer* thermoTimer;
 
+    // variables used internally
+    dvector dUdx;
+    dvector dTdx;
+    dvector dWdx;
+
 private:
     void V2rV();
     void rV2V();
 
     size_t nVars; // == 3
-
-    // variables used internally
-    dvector dUdx;
-    dvector dTdx;
-    dvector dWdx;
 };
 
 typedef std::map<double, dvector> vecInterpolator;
@@ -222,6 +222,8 @@ public:
     dvector dTdt;
     dvector dWdt;
     Array2D dYdt;
+
+    boost::shared_ptr<vecInterpolator> vInterp;
 
 private:
     // set parameters of a new species solver

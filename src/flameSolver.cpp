@@ -6,6 +6,9 @@
 
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/foreach.hpp>
+
+#define foreach BOOST_FOREACH
 
 using boost::format;
 
@@ -351,6 +354,8 @@ void FlameSolver::run(void)
         dTdtdiff = constTdiff;
         dYdtconv = constYconv;
         dYdtdiff = constYdiff;
+        dTdtcross = constTcross;
+        dYdtcross = constYcross;
 
         // *** Use the time derivatives to calculate the values for the
         //     state variables based on the diagonalized approximation
@@ -518,6 +523,20 @@ void FlameSolver::run(void)
                     t % dt << endl;
             writeStateFile("errorOutput",true);
             break;
+        }
+
+        // store Interpolation data for V used in the species-split convection
+        // solver for the output file
+        vInterp.resize(convectionSystem.vInterp->size(), nPoints);
+        tvInterp.resize(convectionSystem.vInterp->size());
+        size_t i = 0;
+        typedef std::pair<double,dvector> dobuledvectorpair;
+        foreach (const dobuledvectorpair& item, *convectionSystem.vInterp) {
+            for (size_t j=0; j<nPoints; j++) {
+                vInterp(i,j) = item.second[j];
+                tvInterp[i] = item.first;
+            }
+            i += 1;
         }
 
         // This is the exact solution to the linearized problem
@@ -905,6 +924,8 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
             outFile.writeVector("transportStopIndices", jStop);
         }
 
+        outFile.writeVector("tvInterp", tvInterp);
+        outFile.writeArray2D("vInterp", vInterp);
     }
 
     if (options.outputResidualComponents || errorFile) {
@@ -923,12 +944,14 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeVector("dTdtdiff", dTdtdiff);
         outFile.writeVector("dTdtconv", dTdtconv);
         outFile.writeVector("dTdtprod", dTdtprod);
+        outFile.writeVector("dTdtcross", dTdtcross);
         outFile.writeVector("dUdtdiff", dUdtdiff);
         outFile.writeVector("dUdtconv", dUdtconv);
         outFile.writeVector("dUdtprod", dUdtprod);
         outFile.writeArray2D("dYdtdiff", dYdtdiff);
         outFile.writeArray2D("dYdtconv", dYdtconv);
         outFile.writeArray2D("dYdtprod", dYdtprod);
+        outFile.writeArray2D("dYdtcross", dYdtcross);
         outFile.writeVector("dWdtconv", convectionSystem.dWdt);
 
         outFile.writeVector("linearTdiff", linearTdiff);
@@ -1137,6 +1160,15 @@ void FlameSolver::updateCrossTerms()
         double dTdx = cfm[j]*T[j-1] + cf[j]*T[j] + cfp[j]*T[j+1];
         constTcross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * dTdx / (cp[j]*rho[j]);
         linearTcross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * cf[j] / (cp[j]*rho[j]);
+    }
+
+    if (false) {
+        cout << "cfm = [" << cfm << "]" << endl;
+        cout << "cf = [" << cf << "]" << endl;
+        cout << "cfp = [" << cfp << "]" << endl;
+        cout << "sumcpj = [" << sumcpj << "]" << endl;
+        cout << "cp = [" << cp << "]" << endl;
+        cout << "rhox = [" << rho << "]" << endl;
     }
 }
 
