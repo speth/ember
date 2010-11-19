@@ -373,7 +373,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     for (size_t j=1; j<jj; j++) {
         dUdt[j] = -V[j] * dUdx[j] / rho[j] + Uconst[j];
         dTdt[j] = -V[j] * dTdx[j] / rho[j] + Tconst[j];
-        dWdt[j] = -V[j] * dWdx[j] / rho[j] + splitConstW[0];
+        dWdt[j] = -V[j] * dWdx[j] / rho[j] + splitConstW[j];
     }
 
     // Right boundary values
