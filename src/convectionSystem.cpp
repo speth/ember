@@ -905,7 +905,7 @@ void ConvectionSystemSplit::evaluate()
     utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
 
     vInterp->clear();
-    vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V));
+    vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
 
     V = utwSystem.V;
     dUdt = utwSystem.dUdt;
