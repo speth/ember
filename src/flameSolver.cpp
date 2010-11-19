@@ -410,10 +410,13 @@ void FlameSolver::run(void)
                 cout << "U = " << sourceTerms[j].U << endl;
                 cout << "Y = " << sourceTerms[j].Y << endl;
             }
-            linearUprod[j] = sourceTerms[j].diagonalJac[kMomentum];
-            linearTprod[j] = sourceTerms[j].diagonalJac[kEnergy];
+            linearUprod[j] = sourceTerms[j].diagonalJac[kMomentum] -
+                    sourceTerms[j].splitLinear[kMomentum];
+            linearTprod[j] = sourceTerms[j].diagonalJac[kEnergy] -
+                    sourceTerms[j].splitLinear[kEnergy];
             for (size_t k=0; k<nSpec; k++) {
-                linearYprod(k,j) = sourceTerms[j].diagonalJac[kSpecies+k];
+                linearYprod(k,j) = sourceTerms[j].diagonalJac[kSpecies+k] -
+                        sourceTerms[j].splitLinear[kSpecies+k];
             }
         }
         reactionTimer.stop();
