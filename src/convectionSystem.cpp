@@ -730,7 +730,6 @@ ConvectionSystemSplit::ConvectionSystemSplit()
     , startIndices(NULL)
     , stopIndices(NULL)
     , gas(NULL)
-    , thermoTimer(NULL)
 {
 }
 
@@ -773,11 +772,6 @@ void ConvectionSystemSplit::setGas(CanteraGas& gas_)
 {
     gas = &gas_;
     utwSystem.gas = &gas_;
-}
-
-void ConvectionSystemSplit::setThermoTimer(perfTimer& timer)
-{
-    thermoTimer = &timer;
 }
 
 void ConvectionSystemSplit::resize

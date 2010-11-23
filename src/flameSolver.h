@@ -194,7 +194,7 @@ private:
     perfTimer totalTimer;
 
     // These add up to the total run time:
-    perfTimer resizeTimer, splitTimer, combineTimer,
+    perfTimer setupTimer, splitTimer, combineTimer,
               reactionTimer, diffusionTimer, convectionTimer,
               regridTimer;
 

@@ -74,7 +74,6 @@ void FlameSolver::initialize(void)
     grid.setSize(x.size());
     convectionSystem.setLeftBC(Tleft, Yleft);
     convectionSystem.setGas(gas);
-    convectionSystem.setThermoTimer(thermoTimer);
     convectionSystem.setTolerances(options);
 
     for (size_t k=0; k<nVars; k++) {
@@ -121,6 +120,7 @@ void FlameSolver::run(void)
 
     while (true) {
 
+        setupTimer.start();
         // Debug sanity check
         bool error = false;
         for (size_t j=0; j<nPoints; j++) {
@@ -195,6 +195,7 @@ void FlameSolver::run(void)
         convectionSystem.set_rVzero(rVzero);
         dt = options.globalTimestep;
 
+        setupTimer.stop();
         splitTimer.start();
 
         // *** Set the initial conditions and auxiliary variables for each
@@ -593,6 +594,7 @@ void FlameSolver::run(void)
 
         combineTimer.stop();
 
+        setupTimer.resume();
         if (t > tOutput || nOutput >= options.outputStepInterval) {
             timeVector.push_back(t);
             timestepVector.push_back(dt);
@@ -643,6 +645,7 @@ void FlameSolver::run(void)
             tProfile = t + options.profileTimeInterval;
             nProfile = 0;
         }
+        setupTimer.stop();
 
         if (t > tRegrid || nRegrid >= options.regridStepInterval) {
             regridTimer.start();
@@ -719,17 +722,20 @@ void FlameSolver::run(void)
             regridTimer.stop();
         }
 
+        setupTimer.resume();
         for (size_t j=0; j<nPoints; j++) {
             // Correct the drift of the total mass fractions and reset
             // any negative mass fractions
             gas.setStateMass(&Y(0,j), T[j]);
             gas.getMassFractions(&Y(0,j));
         }
+        setupTimer.stop();
 
         if (debugParameters::debugPerformanceStats && (nTotal % 10 == 0)) {
             printPerformanceStats();
         }
         nTotal++;
+
     }
 
     // *** Integration has reached the termination condition
@@ -990,7 +996,6 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
 
 void FlameSolver::resizeAuxiliary()
 {
-    resizeTimer.start();
     size_t nPointsOld = rho.size();
     grid.setSize(T.size());
 
@@ -1123,9 +1128,6 @@ void FlameSolver::resizeAuxiliary()
     // Resize the jCorr stabilizer
     jCorrSolver.resize(nPoints, 1, 1);
     jCorrSystem.setGrid(grid);
-
-    // All done
-    resizeTimer.stop();
 }
 
 void FlameSolver::updateCrossTerms()
@@ -1563,7 +1565,7 @@ dvector FlameSolver::calculateReactantMixture(void)
 void FlameSolver::printPerformanceStats(void)
 {
     cout << endl << "   *** Performance Stats ***       time   ( call count )" << endl;
-    printPerfString("                General Setup: ", resizeTimer);
+    printPerfString("                General Setup: ", setupTimer);
     printPerfString("             Split Term Setup: ", splitTimer);
     printPerfString("    Reaction Term Integration: ", reactionTimer);
     printPerfString("   Diffusion Term Integration: ", diffusionTimer);

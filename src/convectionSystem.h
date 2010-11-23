@@ -126,8 +126,6 @@ public:
     dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
     dvector rho; // mixture density [kg/m^3]
 
-    perfTimer* thermoTimer;
-
     // variables used internally
     dvector dUdx;
     dvector dTdx;
@@ -187,7 +185,6 @@ public:
     void setGrid(const oneDimGrid& grid);
     void setTolerances(const configOptions& options);
     void setGas(CanteraGas& gas);
-    void setThermoTimer(perfTimer& timer);
     void resize(const size_t nPointsUTW, const vector<size_t>& nPointsSpec, const size_t nSpec);
     void setSpeciesDomains(vector<size_t>& startIndices, vector<size_t>& stopIndices);
     void setState(const dvector& U, const dvector& T, Array2D& Y);
@@ -253,5 +250,4 @@ private:
     vector<size_t>* stopIndices; // index of rightmost grid point for each component (U,T,Yk)
 
     CanteraGas* gas;
-    perfTimer* thermoTimer;
 };
