@@ -700,9 +700,6 @@ void FlameSolver::run(void)
                     for (size_t k=0; k<nSpec; k++) {
                         Y(k,j) = currentSolution[kSpecies+k][j];
                     }
-                    // Correct the drift of the total mass fractions
-                    gas.setStateMass(&Y(0,j), T[j]);
-                    gas.getMassFractions(&Y(0,j));
                 }
 
                 // Assign the new grid to the terms that need it
@@ -720,6 +717,13 @@ void FlameSolver::run(void)
                 writeStateFile("postAdapt");
             }
             regridTimer.stop();
+        }
+
+        for (size_t j=0; j<nPoints; j++) {
+            // Correct the drift of the total mass fractions and reset
+            // any negative mass fractions
+            gas.setStateMass(&Y(0,j), T[j]);
+            gas.getMassFractions(&Y(0,j));
         }
 
         if (debugParameters::debugPerformanceStats && (nTotal % 10 == 0)) {
