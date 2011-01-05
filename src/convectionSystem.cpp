@@ -1000,44 +1000,10 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
     sdVector ydotUTW(nVars*nPoints);
     utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
 
-    if (false) {
-        cout << "t[" << i << "] = " << utwSolver->tInt << endl;
-        cout << "V[" << i << "] = [" << utwSystem.V << "]" << endl;
-        cout << "U[" << i << "] = [" << utwSystem.U << "]" << endl;
-        cout << "T[" << i << "] = [" << utwSystem.T << "]" << endl;
-        cout << "Wmx[" << i << "] = [" << utwSystem.Wmx << "]" << endl;
-        cout << "rho[" << i << "] = [" << utwSystem.rho << "]" << endl;
-        cout << "dTdx[" << i << "] = [" << utwSystem.dTdx << "]" << endl;
-        cout << "dWdx[" << i << "] = [" << utwSystem.dWdx << "]" << endl;
-        cout << "Uconst[" << i << "] = [" << utwSystem.Uconst << "]" << endl;
-        cout << "Tconst[" << i << "] = [" << utwSystem.Tconst << "]" << endl;
-        cout << "Wconst[" << i << "] = [" << utwSystem.splitConstW << "]" << endl;
-        cout << "splitConstU[" << i << "] = [" << utwSystem.splitConstU << "]" << endl;
-        cout << "splitConstT[" << i << "] = [" << utwSystem.splitConstT << "]" << endl;
-        cout << "splitLinearU[" << i << "] = [" << utwSystem.splitLinearU << "]" << endl;
-        cout << "splitLinearT[" << i << "] = [" << utwSystem.splitLinearT << "]" << endl;
-    }
-
+    // CVODE returns CV_TSTOP_RETURN when the solver has reached tf
     while (cvode_flag != CV_TSTOP_RETURN) {
         cvode_flag = utwSolver->integrateOneStep(tf);
         i++;
-        if (false) {
-            cout << "t[" << i << "] = " << utwSolver->tInt << endl;
-            cout << "V[" << i << "] = [" << utwSystem.V << "]" << endl;
-            cout << "U[" << i << "] = [" << utwSystem.U << "]" << endl;
-            cout << "T[" << i << "] = [" << utwSystem.T << "]" << endl;
-            cout << "Wmx[" << i << "] = [" << utwSystem.Wmx << "]" << endl;
-            cout << "rho[" << i << "] = [" << utwSystem.rho << "]" << endl;
-            cout << "dTdx[" << i << "] = [" << utwSystem.dTdx << "]" << endl;
-            cout << "dWdx[" << i << "] = [" << utwSystem.dWdx << "]" << endl;
-            cout << "Uconst[" << i << "] = [" << utwSystem.Uconst << "]" << endl;
-            cout << "Tconst[" << i << "] = [" << utwSystem.Tconst << "]" << endl;
-            cout << "Wconst[" << i << "] = [" << utwSystem.splitConstW << "]" << endl;
-            cout << "splitConstU[" << i << "] = [" << utwSystem.splitConstU << "]" << endl;
-            cout << "splitConstT[" << i << "] = [" << utwSystem.splitConstT << "]" << endl;
-            cout << "splitLinearU[" << i << "] = [" << utwSystem.splitLinearU << "]" << endl;
-            cout << "splitLinearT[" << i << "] = [" << utwSystem.splitLinearT << "]" << endl;
-        }
         vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
     }
 

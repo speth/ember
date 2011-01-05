@@ -1170,15 +1170,6 @@ void FlameSolver::updateCrossTerms()
         constTcross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * dTdx / (cp[j]*rho[j]);
         linearTcross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * cf[j] / (cp[j]*rho[j]);
     }
-
-    if (false) {
-        cout << "cfm = [" << cfm << "]" << endl;
-        cout << "cf = [" << cf << "]" << endl;
-        cout << "cfp = [" << cfp << "]" << endl;
-        cout << "sumcpj = [" << sumcpj << "]" << endl;
-        cout << "cp = [" << cp << "]" << endl;
-        cout << "rhox = [" << rho << "]" << endl;
-    }
 }
 
 void FlameSolver::updateLeftBC()
