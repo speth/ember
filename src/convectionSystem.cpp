@@ -308,8 +308,6 @@ void ConvectionSystem::rV2V(void)
     }
 }
 
-
-
 ConvectionSystemUTW::ConvectionSystemUTW()
     : gas(NULL)
     , nVars(3)

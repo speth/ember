@@ -220,6 +220,8 @@ public:
     dvector dWdt;
     Array2D dYdt;
 
+    ConvectionSystemUTW utwSystem;
+
     boost::shared_ptr<vecInterpolator> vInterp;
 
 private:
@@ -233,7 +235,6 @@ private:
     double abstolW; // molecular weight absolute tolerance
     double abstolY; // mass fraction absolute tolerance
 
-    ConvectionSystemUTW utwSystem;
     boost::shared_ptr<sundialsCVODE> utwSolver;
     boost::ptr_vector<ConvectionSystemY> speciesSystems;
     boost::ptr_vector<sundialsCVODE> speciesSolvers;

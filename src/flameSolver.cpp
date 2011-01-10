@@ -966,6 +966,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("dYdtprod", dYdtprod);
         outFile.writeArray2D("dYdtcross", dYdtcross);
         outFile.writeVector("dWdtconv", convectionSystem.dWdt);
+        outFile.writeVector("constW", convectionSystem.utwSystem.splitConstW);
 
         outFile.writeVector("linearTdiff", linearTdiff);
         outFile.writeVector("linearTconv", linearTconv);
