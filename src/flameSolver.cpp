@@ -242,14 +242,14 @@ void FlameSolver::run(void)
         convectionSystem.setState(U, T, Y);
         convectionSystem.initialize(t);
 
+        // Diffusion solvers: Energy and Momentum
+        diffusionSolvers[kMomentum].resize(nPoints, 1, 1);
+        diffusionSolvers[kEnergy].resize(nPoints, 1, 1);
+
         for (size_t k=0; k<nVars; k++) {
             // TODO: Use timestep that is based on each component's diffusivity
             diffusionSolvers[k].initialize(t, options.diffusionTimestep);
         }
-
-        // Diffusion solvers: Energy and Momentum
-        diffusionSolvers[kMomentum].resize(nPoints, 1, 1);
-        diffusionSolvers[kEnergy].resize(nPoints, 1, 1);
 
         diffusionSolvers[kMomentum].y = U;
         diffusionSolvers[kEnergy].y = T;
@@ -1062,7 +1062,7 @@ void FlameSolver::resizeAuxiliary()
     grid.updateBoundaryIndices();
     transportStartIndices.assign(nSpec, 0);
     transportStopIndices.assign(nSpec, jj);
-    nPointsTransport.assign(nVars, nPoints);
+    nPointsTransport.assign(nSpec, nPoints);
     if (options.usingAdapChem) {
         ckGas->setGridSize(nPoints);
     }
@@ -1631,7 +1631,7 @@ void FlameSolver::updateTransportDomain()
             }
         }
         jStart = max(0, jStart-2);
-        transportStartIndices[kSpecies+k] = jStart;
+        transportStartIndices[k] = jStart;
 
         // Find the right boundary for species k
         size_t jStop = jStart;
@@ -1644,12 +1644,12 @@ void FlameSolver::updateTransportDomain()
         }
         jStop = min(jj, jStop+2);
 
-        transportStopIndices[kSpecies+k] = jStop;
-        nPointsTransport[kSpecies+k] = jStop - jStart + 1;
+        transportStopIndices[k] = jStop;
+        nPointsTransport[k] = jStop - jStart + 1;
     }
 
-    for (size_t k=0; k<nVars; k++) {
+    for (size_t k=0; k<nSpec; k++) {
         // size the Diffusion systems appropriately
-        diffusionSolvers[k].resize(nPointsTransport[k], 1, 1);
+        diffusionSolvers[kSpecies+k].resize(nPointsTransport[k], 1, 1);
     }
 }

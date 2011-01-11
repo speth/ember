@@ -1,4 +1,5 @@
 #include "diffusionSystem.h"
+#include <assert.h>
 
 DiffusionSystem::DiffusionSystem()
 {
@@ -10,8 +11,10 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
     SetToZero(A.forSundials());
     size_t N = D.size();
 
+    assert(N == jRight - jLeft + 1);
     dvector c1(N);
     dvector c2(N);
+
     for (size_t j=0; j<=jRight-jLeft; j++) {
         c1[j] = 0.5*B[j]/(dlj[j+jLeft]*r[j+jLeft]);
         c2[j] = rphalf[j+jLeft]*(D[j]+D[j+1])/hh[j+jLeft];
