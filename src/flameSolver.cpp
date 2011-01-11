@@ -271,11 +271,11 @@ void FlameSolver::run(void)
             dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
             DiffusionSystem& sys = diffusionTerms[kSpecies+k];
             size_t i = 0;
-            sys.jLeft = transportStartIndices[kSpecies+k];
-            sys.jRight = transportStopIndices[kSpecies+k];
+            sys.jLeft = transportStartIndices[k];
+            sys.jRight = transportStopIndices[k];
 
-            for (size_t j = transportStartIndices[kSpecies+k];
-                 j <= transportStopIndices[kSpecies+k];
+            for (size_t j = transportStartIndices[k];
+                 j <= transportStopIndices[k];
                  j++)
             {
                 yDiff_Y[i] = Y(k,j);
@@ -291,15 +291,15 @@ void FlameSolver::run(void)
 
             if (options.transportElimination) {
                 // left excluded region
-                for (size_t j=0; j<transportStartIndices[kSpecies+k]; j++) {
+                for (size_t j=0; j<transportStartIndices[k]; j++) {
                     constYdiff(k,j) = 0;
                     linearYdiff(k,j) = 0;
                 }
 
                 // transport solution region
                 size_t i = 0;
-                for (size_t j = transportStartIndices[kSpecies+k];
-                     j <= transportStopIndices[kSpecies+k];
+                for (size_t j = transportStartIndices[k];
+                     j <= transportStopIndices[k];
                      j++)
                 {
                     constYdiff(k,j) = constantTerm[i];
@@ -308,7 +308,7 @@ void FlameSolver::run(void)
                 }
 
                 // right excluded region
-                for (size_t j=transportStopIndices[kSpecies+k]+1; j<nPoints; j++) {
+                for (size_t j=transportStopIndices[k]+1; j<nPoints; j++) {
                     constYdiff(k,j) = 0;
                     linearYdiff(k,j) = 0;
                 }
@@ -464,8 +464,8 @@ void FlameSolver::run(void)
             dvector& splitConst = diffusionTerms[kSpecies+k].splitConst;
             dvector& splitLinear = diffusionTerms[kSpecies+k].splitLinear;
             size_t i = 0;
-            for (size_t j = transportStartIndices[kSpecies+k];
-                 j <= transportStopIndices[kSpecies+k];
+            for (size_t j = transportStartIndices[k];
+                 j <= transportStopIndices[k];
                  j++)
             {
                 splitConst[i] = constYconv(k,j) + constYprod(k,j) + constYcross(k,j);
@@ -583,8 +583,8 @@ void FlameSolver::run(void)
         for (size_t k=0; k<nSpec; k++) {
             size_t i = 0;
             const BDFIntegrator& solver = diffusionSolvers[kSpecies+k];
-            for (size_t j = transportStartIndices[kSpecies+k];
-                 j <= transportStopIndices[kSpecies+k];
+            for (size_t j = transportStartIndices[k];
+                 j <= transportStopIndices[k];
                  j++)
             {
                 Y(k,j) += solver.y[i] - Yextrap(k,j);
@@ -886,8 +886,8 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
             if (diffusionSolvers[kSpecies+k].y.empty()) {
                 continue;
             }
-            for (size_t j = transportStartIndices[kSpecies+k];
-                 j <= transportStopIndices[kSpecies+k];
+            for (size_t j = transportStartIndices[k];
+                 j <= transportStopIndices[k];
                  j++)
             {
                 Ydiff(k,j) = diffusionSolvers[kSpecies+k].y[i];
@@ -930,8 +930,8 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         if (options.transportElimination) {
             dvector jStart, jStop;
             for (size_t k=0; k<nSpec; k++) {
-                jStart.push_back(transportStartIndices[kSpecies+k]);
-                jStop.push_back(transportStopIndices[kSpecies+k]);
+                jStart.push_back(transportStartIndices[k]);
+                jStop.push_back(transportStopIndices[k]);
             }
             outFile.writeVector("transportStartIndices", jStart);
             outFile.writeVector("transportStopIndices", jStop);
@@ -1060,8 +1060,8 @@ void FlameSolver::resizeAuxiliary()
 
     grid.jj = nPoints-1;
     grid.updateBoundaryIndices();
-    transportStartIndices.assign(nVars, 0);
-    transportStopIndices.assign(nVars, jj);
+    transportStartIndices.assign(nSpec, 0);
+    transportStopIndices.assign(nSpec, jj);
     nPointsTransport.assign(nVars, nPoints);
     if (options.usingAdapChem) {
         ckGas->setGridSize(nPoints);

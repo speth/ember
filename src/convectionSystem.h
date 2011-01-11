@@ -156,6 +156,7 @@ public:
     void initialize();
 
     double Yleft;
+    int k; // species index (only needed for debugging)
 
     // Diagonalized, linear approximations for terms neglected by splitting
     dvector splitConstY;

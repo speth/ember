@@ -717,6 +717,7 @@ void ConvectionSystemY::update_v(const double t)
     size_t i = 0;
     for (size_t j=startIndex; j<=stopIndex; j++) {
         v[i] = vLeft[j]*(1-s) + vRight[j]*s;
+        i++;
     }
 }
 
@@ -1053,4 +1054,5 @@ void ConvectionSystemSplit::configureSolver(sundialsCVODE& solver, const size_t 
     speciesSystems[k].startIndex = (*startIndices)[k];
     speciesSystems[k].stopIndex = (*stopIndices)[k];
     speciesSystems[k].Yleft = Yleft[k];
+    speciesSystems[k].k = k;
 }
