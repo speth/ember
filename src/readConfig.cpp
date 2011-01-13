@@ -56,7 +56,8 @@ void configOptions::readOptionsFile(const std::string& filename)
     }
     // Transport elimination
     readOption("adapchem.atol", adapchem_atol, 1e-8);
-    readOption("adapchem.transportElimination", transportElimination, false);
+    readOption("adapchem.transportEliminationDiffusion", transportEliminationDiffusion, false);
+    readOption("adapchem.transportEliminationConvection", transportEliminationConvection, false);
 
     // Grid
     readOption("initialCondition.nPoints", nPoints, 50);

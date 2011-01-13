@@ -138,9 +138,14 @@ private:
     // transport term for each species
     DiffusionSystem diffusionTestTerm;
     BDFIntegrator diffusionTestSolver;
-    vector<size_t> transportStartIndices; // index of leftmost grid point for each component
-    vector<size_t> transportStopIndices; // index of rightmost grid point for each component
-    vector<size_t> nPointsTransport; // number of grid points for transport of each component
+    vector<size_t> diffusionStartIndices; // index of leftmost grid point for each component
+    vector<size_t> diffusionStopIndices; // index of rightmost grid point for each component
+    vector<size_t> nPointsDiffusion; // number of grid points for transport of each component
+
+    vector<size_t> convectionStartIndices; // index of leftmost grid point for each component
+    vector<size_t> convectionStopIndices; // index of rightmost grid point for each component
+    vector<size_t> nPointsConvection; // number of grid points for transport of each component
+
 
     // Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;

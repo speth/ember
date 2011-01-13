@@ -22,7 +22,7 @@ FlameSolver::FlameSolver()
     : jCorrSolver(jCorrSystem)
     , diffusionTestSolver(diffusionTestTerm)
 {
-    convectionSystem.setSpeciesDomains(transportStartIndices, transportStopIndices);
+    convectionSystem.setSpeciesDomains(convectionStartIndices, convectionStopIndices);
 }
 
 FlameSolver::~FlameSolver()
@@ -271,11 +271,11 @@ void FlameSolver::run(void)
             dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
             DiffusionSystem& sys = diffusionTerms[kSpecies+k];
             size_t i = 0;
-            sys.jLeft = transportStartIndices[k];
-            sys.jRight = transportStopIndices[k];
+            sys.jLeft = diffusionStartIndices[k];
+            sys.jRight = diffusionStopIndices[k];
 
-            for (size_t j = transportStartIndices[k];
-                 j <= transportStopIndices[k];
+            for (size_t j = diffusionStartIndices[k];
+                 j <= diffusionStopIndices[k];
                  j++)
             {
                 yDiff_Y[i] = Y(k,j);
@@ -289,17 +289,17 @@ void FlameSolver::run(void)
             const dvector& constantTerm = diffusionSolvers[kSpecies+k].get_ydot();
             const dvector& linearTerm = diffusionSolvers[kSpecies+k].get_diagonal();
 
-            if (options.transportElimination) {
+            if (options.transportEliminationDiffusion) {
                 // left excluded region
-                for (size_t j=0; j<transportStartIndices[k]; j++) {
+                for (size_t j=0; j<diffusionStartIndices[k]; j++) {
                     constYdiff(k,j) = 0;
                     linearYdiff(k,j) = 0;
                 }
 
                 // transport solution region
                 size_t i = 0;
-                for (size_t j = transportStartIndices[k];
-                     j <= transportStopIndices[k];
+                for (size_t j = diffusionStartIndices[k];
+                     j <= diffusionStopIndices[k];
                      j++)
                 {
                     constYdiff(k,j) = constantTerm[i];
@@ -308,7 +308,7 @@ void FlameSolver::run(void)
                 }
 
                 // right excluded region
-                for (size_t j=transportStopIndices[k]+1; j<nPoints; j++) {
+                for (size_t j=diffusionStopIndices[k]+1; j<nPoints; j++) {
                     constYdiff(k,j) = 0;
                     linearYdiff(k,j) = 0;
                 }
@@ -464,8 +464,8 @@ void FlameSolver::run(void)
             dvector& splitConst = diffusionTerms[kSpecies+k].splitConst;
             dvector& splitLinear = diffusionTerms[kSpecies+k].splitLinear;
             size_t i = 0;
-            for (size_t j = transportStartIndices[k];
-                 j <= transportStopIndices[k];
+            for (size_t j = diffusionStartIndices[k];
+                 j <= diffusionStopIndices[k];
                  j++)
             {
                 splitConst[i] = constYconv(k,j) + constYprod(k,j) + constYcross(k,j);
@@ -583,8 +583,8 @@ void FlameSolver::run(void)
         for (size_t k=0; k<nSpec; k++) {
             size_t i = 0;
             const BDFIntegrator& solver = diffusionSolvers[kSpecies+k];
-            for (size_t j = transportStartIndices[k];
-                 j <= transportStopIndices[k];
+            for (size_t j = diffusionStartIndices[k];
+                 j <= diffusionStopIndices[k];
                  j++)
             {
                 Y(k,j) += solver.y[i] - Yextrap(k,j);
@@ -886,8 +886,8 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
             if (diffusionSolvers[kSpecies+k].y.empty()) {
                 continue;
             }
-            for (size_t j = transportStartIndices[k];
-                 j <= transportStopIndices[k];
+            for (size_t j = diffusionStartIndices[k];
+                 j <= diffusionStopIndices[k];
                  j++)
             {
                 Ydiff(k,j) = diffusionSolvers[kSpecies+k].y[i];
@@ -927,14 +927,24 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         }
         outFile.writeVector("chemSteps", chemSteps);
 
-        if (options.transportElimination) {
+        if (options.transportEliminationDiffusion) {
             dvector jStart, jStop;
             for (size_t k=0; k<nSpec; k++) {
-                jStart.push_back(transportStartIndices[k]);
-                jStop.push_back(transportStopIndices[k]);
+                jStart.push_back(diffusionStartIndices[k]);
+                jStop.push_back(diffusionStopIndices[k]);
             }
-            outFile.writeVector("transportStartIndices", jStart);
-            outFile.writeVector("transportStopIndices", jStop);
+            outFile.writeVector("diffusionStartIndices", jStart);
+            outFile.writeVector("diffusionStopIndices", jStop);
+        }
+
+        if (options.transportEliminationConvection) {
+            dvector jStart, jStop;
+            for (size_t k=0; k<nSpec; k++) {
+                jStart.push_back(convectionStartIndices[k]);
+                jStop.push_back(convectionStopIndices[k]);
+            }
+            outFile.writeVector("convectionStartIndices", jStart);
+            outFile.writeVector("convectionStopIndices", jStop);
         }
 
         outFile.writeVector("tvInterp", tvInterp);
@@ -1060,9 +1070,14 @@ void FlameSolver::resizeAuxiliary()
 
     grid.jj = nPoints-1;
     grid.updateBoundaryIndices();
-    transportStartIndices.assign(nSpec, 0);
-    transportStopIndices.assign(nSpec, jj);
-    nPointsTransport.assign(nSpec, nPoints);
+    diffusionStartIndices.assign(nSpec, 0);
+    diffusionStopIndices.assign(nSpec, jj);
+    nPointsDiffusion.assign(nSpec, nPoints);
+
+    convectionStartIndices.assign(nSpec, 0);
+    convectionStopIndices.assign(nSpec, jj);
+    nPointsConvection.assign(nSpec, nPoints);
+
     if (options.usingAdapChem) {
         ckGas->setGridSize(nPoints);
     }
@@ -1111,7 +1126,7 @@ void FlameSolver::resizeAuxiliary()
     // Resize solution vector for diffusion systems / solvers
     // With transport species elimination enabled, this is done later
     // to handle the varying number of grid points for each species
-    if (options.transportElimination) {
+    if (options.transportEliminationDiffusion || options.transportEliminationConvection) {
         diffusionTestSolver.resize(nPoints, 1, 1);
         diffusionTestTerm.setGrid(grid);
     } else {
@@ -1123,7 +1138,7 @@ void FlameSolver::resizeAuxiliary()
         diffusionTerms[k].setGrid(grid);
     }
 
-    convectionSystem.resize(nPoints, nPointsTransport, nSpec);
+    convectionSystem.resize(nPoints, nPointsConvection, nSpec);
     convectionSystem.setGrid(grid);
 
     // Resize the jCorr stabilizer
@@ -1578,7 +1593,7 @@ void FlameSolver::printPerfString(const std::string& label, const perfTimer& T) 
 
 void FlameSolver::updateTransportDomain()
 {
-    if (!options.transportElimination) {
+    if (!options.transportEliminationDiffusion && !options.transportEliminationConvection) {
         return;
     }
 
@@ -1630,8 +1645,14 @@ void FlameSolver::updateTransportDomain()
                 break;
             }
         }
+
         jStart = max(0, jStart-2);
-        transportStartIndices[k] = jStart;
+        if (options.transportEliminationDiffusion) {
+            diffusionStartIndices[k] = jStart;
+        }
+        if (options.transportEliminationConvection) {
+            convectionStartIndices[k] = jStart;
+        }
 
         // Find the right boundary for species k
         size_t jStop = jStart;
@@ -1642,14 +1663,20 @@ void FlameSolver::updateTransportDomain()
                 break;
             }
         }
-        jStop = min(jj, jStop+2);
 
-        transportStopIndices[k] = jStop;
-        nPointsTransport[k] = jStop - jStart + 1;
+        jStop = min(jj, jStop+2);
+        if (options.transportEliminationDiffusion) {
+            diffusionStopIndices[k] = jStop;
+            nPointsDiffusion[k] = jStop - jStart + 1;
+        }
+        if (options.transportEliminationConvection) {
+            convectionStopIndices[k] = jStop;
+            nPointsConvection[k] = jStop - jStart + 1;
+        }
     }
 
     for (size_t k=0; k<nSpec; k++) {
         // size the Diffusion systems appropriately
-        diffusionSolvers[kSpecies+k].resize(nPointsTransport[k], 1, 1);
+        diffusionSolvers[kSpecies+k].resize(nPointsDiffusion[k], 1, 1);
     }
 }
