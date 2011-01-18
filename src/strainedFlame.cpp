@@ -29,10 +29,10 @@ int main(int argc, char** argv)
         inputFile = "input.txt"; // default input filename
     }
 
-    strainedFlame(inputFile);
+    //strainedFlame(inputFile);
 
     try {
-//        strainedFlame(inputFile);
+        strainedFlame(inputFile);
         //chemistryTest();
         //miscTest();
     }

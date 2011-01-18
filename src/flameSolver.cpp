@@ -576,11 +576,13 @@ void FlameSolver::run(void)
             U[j] = convectionSystem.U[j] + sourceTerms[j].U + diffusionSolvers[kMomentum].y[j] - 2*Uextrap[j];
             T[j] = convectionSystem.T[j] + sourceTerms[j].T + diffusionSolvers[kEnergy].y[j] - 2*Textrap[j];
             for (size_t k=0; k<nSpec; k++) {
-                Y(k,j) = convectionSystem.Y(k,j) + sourceTerms[j].Y[k] - Yextrap(k,j);
+                Y(k,j) = sourceTerms[j].Y[k];
             }
         }
 
         for (size_t k=0; k<nSpec; k++) {
+
+            // species diffusion terms
             size_t i = 0;
             const BDFIntegrator& solver = diffusionSolvers[kSpecies+k];
             for (size_t j = diffusionStartIndices[k];
@@ -589,6 +591,14 @@ void FlameSolver::run(void)
             {
                 Y(k,j) += solver.y[i] - Yextrap(k,j);
                 i++;
+            }
+
+            // species convection terms
+            for (size_t j = convectionStartIndices[k];
+                 j <= convectionStopIndices[k];
+                 j++)
+            {
+                Y(k,j) += convectionSystem.Y(k,j) - Yextrap(k,j);
             }
         }
 
