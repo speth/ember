@@ -188,6 +188,7 @@ public:
     void setGas(CanteraGas& gas);
     void resize(const size_t nPointsUTW, const vector<size_t>& nPointsSpec, const size_t nSpec);
     void setSpeciesDomains(vector<size_t>& startIndices, vector<size_t>& stopIndices);
+    void updateSpeciesDomains(); // propagate changes to the individual species solvers
     void setState(const dvector& U, const dvector& T, Array2D& Y);
     void setLeftBC(const double Tleft, const dvector& Yleft);
     void set_rVzero(const double rVzero);

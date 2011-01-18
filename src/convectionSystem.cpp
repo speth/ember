@@ -836,6 +836,15 @@ void ConvectionSystemSplit::setSpeciesDomains
     stopIndices = &stopIndices_;
 }
 
+void ConvectionSystemSplit::updateSpeciesDomains()
+{
+    // Set integration domain for each species
+    for (size_t k=0; k<nSpec; k++) {
+        speciesSystems[k].startIndex = (*startIndices)[k];
+        speciesSystems[k].stopIndex = (*stopIndices)[k];
+    }
+}
+
 void ConvectionSystemSplit::setState(const dvector& U_, const dvector& T_, Array2D& Y_)
 {
     U = U_;
@@ -877,6 +886,8 @@ void ConvectionSystemSplit::initialize(const double t0)
     foreach (ConvectionSystemY& system, speciesSystems) {
         system.initialize();
     }
+
+    updateSpeciesDomains();
 
     // Initialize solvers
     utwSolver->t0 = t0;
@@ -1051,8 +1062,6 @@ void ConvectionSystemSplit::configureSolver(sundialsCVODE& solver, const size_t 
     solver.nonlinearSolverMethod = CV_NEWTON;
 
     speciesSystems[k].resize(nPointsSpec[k]);
-    speciesSystems[k].startIndex = (*startIndices)[k];
-    speciesSystems[k].stopIndex = (*stopIndices)[k];
     speciesSystems[k].Yleft = Yleft[k];
     speciesSystems[k].k = k;
 }

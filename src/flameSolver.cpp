@@ -1087,6 +1087,7 @@ void FlameSolver::resizeAuxiliary()
     convectionStartIndices.assign(nSpec, 0);
     convectionStopIndices.assign(nSpec, jj);
     nPointsConvection.assign(nSpec, nPoints);
+    convectionSystem.updateSpeciesDomains();
 
     if (options.usingAdapChem) {
         ckGas->setGridSize(nPoints);
@@ -1625,6 +1626,11 @@ void FlameSolver::updateTransportDomain()
     // Because the convection solver includes the continuity equation containing
     // drho/dt, we need to include the time derivatives from the other terms when
     // evaluating the derivatives of this term, then subtract them from the output
+    convectionStartIndices.assign(nSpec, 0);
+    convectionStopIndices.assign(nSpec, jj);
+    nPointsConvection.assign(nSpec, nPoints);
+    convectionSystem.updateSpeciesDomains();
+
     convectionSystem.setState(U, T, Y);
     dvector Utmp = constUprod + constUdiff;
     dvector Ttmp = constTprod + constTdiff + constTcross;
