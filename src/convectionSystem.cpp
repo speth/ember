@@ -562,6 +562,8 @@ ConvectionSystemY::ConvectionSystemY()
 
 int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
 {
+    assert (stopIndex-startIndex+1 == y.length());
+
     // *** Calculate v (= V/rho) ***
     update_v(t);
 
@@ -825,8 +827,6 @@ void ConvectionSystemSplit::resize
     }
 
     nPoints = nPointsUTWNew;
-
-
 }
 
 void ConvectionSystemSplit::setSpeciesDomains
@@ -1062,6 +1062,8 @@ void ConvectionSystemSplit::configureSolver(sundialsCVODE& solver, const size_t 
     solver.nonlinearSolverMethod = CV_NEWTON;
 
     speciesSystems[k].resize(nPointsSpec[k]);
+    speciesSystems[k].startIndex = (*startIndices)[k];
+    speciesSystems[k].stopIndex = (*stopIndices)[k];
     speciesSystems[k].Yleft = Yleft[k];
     speciesSystems[k].k = k;
 }

@@ -335,8 +335,8 @@ void FlameSolver::run(void)
         }
 
         convectionSystem.setSplitConst(Utmp, Ttmp, Ytmp, false);
-
         convectionSystem.evaluate();
+
         constUconv = convectionSystem.dUdt - Utmp;
         constTconv = convectionSystem.dTdt - Ttmp;
 
@@ -1087,7 +1087,6 @@ void FlameSolver::resizeAuxiliary()
     convectionStartIndices.assign(nSpec, 0);
     convectionStopIndices.assign(nSpec, jj);
     nPointsConvection.assign(nSpec, nPoints);
-    convectionSystem.updateSpeciesDomains();
 
     if (options.usingAdapChem) {
         ckGas->setGridSize(nPoints);
@@ -1629,7 +1628,9 @@ void FlameSolver::updateTransportDomain()
     convectionStartIndices.assign(nSpec, 0);
     convectionStopIndices.assign(nSpec, jj);
     nPointsConvection.assign(nSpec, nPoints);
-    convectionSystem.updateSpeciesDomains();
+    if (options.transportEliminationConvection) {
+        convectionSystem.resize(nPoints, nPointsConvection, nSpec);
+    }
 
     convectionSystem.setState(U, T, Y);
     dvector Utmp = constUprod + constUdiff;
@@ -1694,5 +1695,9 @@ void FlameSolver::updateTransportDomain()
     for (size_t k=0; k<nSpec; k++) {
         // size the Diffusion systems appropriately
         diffusionSolvers[kSpecies+k].resize(nPointsDiffusion[k], 1, 1);
+    }
+
+    if (options.transportEliminationConvection) {
+        convectionSystem.resize(nPoints, nPointsConvection, nSpec);
     }
 }
