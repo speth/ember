@@ -1593,6 +1593,8 @@ void FlameSolver::printPerformanceStats(void)
     printPerfString("         Transport Properties: ", transportTimer);
     printPerfString("     Thermodynamic Properties: ", thermoTimer);
     printPerfString("   Source Jacobian Evaluation: ", jacobianTimer);
+    printPerfString("   UTW Convection Integration: ", convectionSystem.utwTimer);
+    printPerfString("    Yk Convection Integration: ", convectionSystem.speciesTimer);
     cout << endl;
 }
 

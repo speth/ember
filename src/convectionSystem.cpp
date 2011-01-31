@@ -997,6 +997,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
 {
     // Integrate the UTW system while storing the value of v after each timestep
     //boost::shared_ptr<vecInterpolator> vInterp(new vecInterpolator());
+    utwTimer.start();
     vInterp->clear();
     vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
     int cvode_flag = CV_SUCCESS;
@@ -1011,12 +1012,15 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
         i++;
         vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
     }
+    utwTimer.stop();
 
+    speciesTimer.start();
     // Integrate the species systems
     for (size_t k=0; k<nSpec; k++) {
         speciesSystems[k].vInterp = vInterp;
         speciesSolvers[k].integrateToTime(tf);
     }
+    speciesTimer.stop();
 }
 
 int ConvectionSystemSplit::getNumSteps()

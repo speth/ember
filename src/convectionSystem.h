@@ -225,6 +225,8 @@ public:
 
     boost::shared_ptr<vecInterpolator> vInterp;
 
+    perfTimer utwTimer, speciesTimer;
+
 private:
     // set parameters of a new species solver
     void configureSolver(sundialsCVODE& solver, const size_t k);
