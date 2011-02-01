@@ -85,9 +85,9 @@ namespace mathUtils
     void uniqueSort(vector<Tx>& keys, vector< vector<Ty> >& values);
 }
 
-std::ostream& operator<<(std::ostream& os, dvector& v);
-std::ostream& operator<<(std::ostream& os, vector<bool>& v);
-std::ostream& operator<<(std::ostream& os, vector<int>& v);
+std::ostream& operator<<(std::ostream& os, const dvector& v);
+std::ostream& operator<<(std::ostream& os, const vector<bool>& v);
+std::ostream& operator<<(std::ostream& os, const vector<int>& v);
 
 dvector& operator+=(dvector& v1, const dvector& v2);
 dvector operator+(const dvector& v1, const dvector& v2);

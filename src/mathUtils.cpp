@@ -446,7 +446,7 @@ int mathUtils::sign(const int x)
                    : 0;
 }
 
-std::ostream& operator<<(std::ostream& os, dvector& v)
+std::ostream& operator<<(std::ostream& os, const dvector& v)
 {
     for (dvector::size_type i=0; i<v.size()-1; i++) {
         os << v[i] << ", ";
@@ -455,7 +455,7 @@ std::ostream& operator<<(std::ostream& os, dvector& v)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, vector<bool>& v)
+std::ostream& operator<<(std::ostream& os, const vector<bool>& v)
 {
     for (vector<bool>::size_type i=0; i<v.size()-1; i++) {
         os << v[i] << ", ";
@@ -464,7 +464,7 @@ std::ostream& operator<<(std::ostream& os, vector<bool>& v)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, vector<int>& v)
+std::ostream& operator<<(std::ostream& os, const vector<int>& v)
 {
     for (vector<int>::size_type i=0; i<v.size()-1; i++) {
         os << v[i] << ", ";
