@@ -232,9 +232,66 @@ void FlameSolver::run(void)
 
         // *** Strang-split Integration ***
 
-        // Assign initial conditions to the convection solver
+        // ** Assign initial conditions to the convection solver
         convectionSystem.setState(U, T, Y);
         convectionSystem.initialize(t);
+        dvector dUdtSplit(nPoints, 0);
+        dvector dTdtSplit(nPoints);
+        Array2D dYdtSplit(nSpec, nPoints);
+
+        // Evaluate the derivatives from the diffusion terms
+        for (size_t k=0; k<nVars; k++) {
+            diffusionSolvers[k].initialize(t, options.diffusionTimestep);
+        }
+
+        diffusionSolvers[kMomentum].y = U;
+        diffusionSolvers[kEnergy].y = T;
+        for (size_t k=0; k<nSpec; k++) {
+            dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
+            size_t i = 0;
+            for (size_t j = diffusionStartIndices[k];
+                 j <= diffusionStopIndices[k];
+                 j++)
+            {
+                yDiff_Y[i] = Y(k,j);
+                i++;
+            }
+        }
+        dUdtSplit += diffusionSolvers[kMomentum].get_ydot();
+        dTdtSplit += diffusionSolvers[kEnergy].get_ydot();
+        for (size_t k=0; k<nSpec; k++) {
+            const dvector& ydotk = diffusionSolvers[kSpecies+k].get_ydot();
+            size_t i = 0;
+            for (size_t j = diffusionStartIndices[k];
+                             j <= diffusionStopIndices[k];
+                             j++)
+            {
+                dYdtSplit(k,j) = ydotk[i];
+                i++;
+            }
+        }
+
+        // Evaluate the derivatives from the source terms
+        for (size_t j=0; j<nPoints; j++) {
+            sdVector& ySource = sourceSolvers[j].y;
+            ySource[kMomentum] = U[j];
+            ySource[kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                ySource[kSpecies+k] = Y(k,j);
+            }
+            sourceTerms[j].wDot.assign(nSpec, 0);
+            sourceTerms[j].strainFunction.pin(t);
+
+            sdVector ydotSource(nVars);
+            sourceTerms[j].f(t, ySource, ydotSource);
+            dUdtSplit[j] += ydotSource[kMomentum];
+            dTdtSplit[j] += ydotSource[kEnergy];
+            for (size_t k=0; k<nSpec; k++) {
+                dYdtSplit(k,j) += ydotSource[kSpecies+k];
+            }
+        }
+
+        convectionSystem.setSplitConst(dUdtSplit, dTdtSplit, dYdtSplit, false);
 
         // Convection Integration: first half-step
         if (VERY_VERBOSE) {
@@ -412,9 +469,67 @@ void FlameSolver::run(void)
             }
         }
 
-        // Assign initial conditions to the convection solver
+        // ** Assign initial conditions to the convection solver
         convectionSystem.setState(U, T, Y);
         convectionSystem.initialize(t + 0.5*dt);
+
+        dUdtSplit.assign(nPoints, 0);
+        dTdtSplit.assign(nPoints, 0);
+        dYdtSplit.data().assign(nPoints*nSpec, 0);
+        // Evaluate the derivatives from the diffusion terms
+        for (size_t k=0; k<nVars; k++) {
+            diffusionSolvers[k].initialize(t + 0.5*dt, options.diffusionTimestep);
+        }
+
+        diffusionSolvers[kMomentum].y = U;
+        diffusionSolvers[kEnergy].y = T;
+        for (size_t k=0; k<nSpec; k++) {
+            dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
+            size_t i = 0;
+            for (size_t j = diffusionStartIndices[k];
+                 j <= diffusionStopIndices[k];
+                 j++)
+            {
+                yDiff_Y[i] = Y(k,j);
+                i++;
+            }
+        }
+        dUdtSplit += diffusionSolvers[kMomentum].get_ydot();
+        dTdtSplit += diffusionSolvers[kEnergy].get_ydot();
+        for (size_t k=0; k<nSpec; k++) {
+            const dvector& ydotk = diffusionSolvers[kSpecies+k].get_ydot();
+            size_t i = 0;
+            for (size_t j = diffusionStartIndices[k];
+                             j <= diffusionStopIndices[k];
+                             j++)
+            {
+                dYdtSplit(k,j) = ydotk[i];
+                i++;
+            }
+        }
+
+        // Evaluate the derivatives from the source terms
+        for (size_t j=0; j<nPoints; j++) {
+            sdVector& ySource = sourceSolvers[j].y;
+            ySource[kMomentum] = U[j];
+            ySource[kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                ySource[kSpecies+k] = Y(k,j);
+            }
+            sourceTerms[j].wDot.assign(nSpec, 0);
+            sourceTerms[j].strainFunction.pin(t + 0.5*dt);
+
+            sdVector ydotSource(nVars);
+            sourceTerms[j].f(t + 0.5*dt, ySource, ydotSource);
+            dUdtSplit[j] += ydotSource[kMomentum];
+            dTdtSplit[j] += ydotSource[kEnergy];
+            for (size_t k=0; k<nSpec; k++) {
+                dYdtSplit(k,j) += ydotSource[kSpecies+k];
+            }
+        }
+
+        convectionSystem.setSplitConst(dUdtSplit, dTdtSplit, dYdtSplit, false);
+
         splitTimer.stop();
 
         // Convection Integration: second half-step
