@@ -686,7 +686,6 @@ void ConvectionSystemY::initialize()
 void ConvectionSystemY::update_v(const double t)
 {
     assert(vInterp->size() > 0);
-
     if (vInterp->size() == 1) {
         // vInterp only has one data point
         const dvector& vLeft = vInterp->begin()->second;
@@ -999,12 +998,13 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
     //boost::shared_ptr<vecInterpolator> vInterp(new vecInterpolator());
     utwTimer.start();
     vInterp->clear();
-    vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
-    int cvode_flag = CV_SUCCESS;
-    int i = 0;
 
     sdVector ydotUTW(nVars*nPoints);
     utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
+    vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
+
+    int cvode_flag = CV_SUCCESS;
+    int i = 0;
 
     // CVODE returns CV_TSTOP_RETURN when the solver has reached tf
     while (cvode_flag != CV_TSTOP_RETURN) {
@@ -1012,6 +1012,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
         i++;
         vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
     }
+
     utwTimer.stop();
 
     speciesTimer.start();
