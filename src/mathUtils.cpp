@@ -448,28 +448,34 @@ int mathUtils::sign(const int x)
 
 std::ostream& operator<<(std::ostream& os, const dvector& v)
 {
+    os << "[";
     for (dvector::size_type i=0; i<v.size()-1; i++) {
         os << v[i] << ", ";
     }
     os << v[v.size()-1];
+    os << "]";
     return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const vector<bool>& v)
 {
+    os << "[";
     for (vector<bool>::size_type i=0; i<v.size()-1; i++) {
         os << v[i] << ", ";
     }
     os << v[v.size()-1];
+    os << "]";
     return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const vector<int>& v)
 {
+    os << "[";
     for (vector<int>::size_type i=0; i<v.size()-1; i++) {
         os << v[i] << ", ";
     }
     os << v[v.size()-1];
+    os << "]";
     return os;
 }
 
