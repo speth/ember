@@ -129,8 +129,8 @@ private:
     Array2D jFick;
     Array2D jSoret;
 
-    Array2D constYcross, linearYcross;
-    dvector constTcross, linearTcross;
+    Array2D dYdtcross;
+    dvector dTdtcross;
     DiffusionSystem jCorrSystem;
     BDFIntegrator jCorrSolver;
 
@@ -171,21 +171,6 @@ private:
     void printPerfString(const std::string& label, const perfTimer& T) const;
 
     void updateTransportDomain();
-
-    // Subdivided governing equation constant terms
-    dvector constTdiff, constTconv, constTprod;
-    dvector constUdiff, constUconv, constUprod;
-    Array2D constYdiff, constYconv, constYprod;
-
-    // Subdivided governing equation linear terms
-    dvector linearTdiff, linearTconv, linearTprod;
-    dvector linearUdiff, linearUconv, linearUprod;
-    Array2D linearYdiff, linearYconv, linearYprod;
-
-    // instantaneous Time derivatives (for output purposes)
-    dvector dTdtdiff, dTdtconv, dTdtprod, dTdtcross;
-    dvector dUdtdiff, dUdtconv, dUdtprod;
-    Array2D dYdtdiff, dYdtconv, dYdtprod, dYdtcross;
 
     Array2D vInterp;
     dvector tvInterp;

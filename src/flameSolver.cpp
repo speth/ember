@@ -223,17 +223,6 @@ void FlameSolver::run(void)
             }
         }
 
-        // Store the time derivatives for output files (BROKEN)
-        // TODO: Only do this if we're actually about to write an output file
-        dUdtdiff = constUdiff;
-        dUdtconv = constUconv;
-        dTdtconv = constTconv;
-        dTdtdiff = constTdiff;
-        dYdtconv = constYconv;
-        dYdtdiff = constYdiff;
-        dTdtcross = constTcross;
-        dYdtcross = constYcross;
-
         // *** Use the time derivatives to calculate the values for the
         //     state variables based on the diagonalized approximation
 
@@ -727,6 +716,8 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
     }
     DataFile outFile(fileName.str());
 
+    convectionSystem.evaluate();
+
     // Write the state data to the output file:
     outFile.writeScalar("t", tNow);
     outFile.writeVector("x", x);
@@ -856,44 +847,49 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
     }
 
     if (options.outputResidualComponents || errorFile) {
-        outFile.writeVector("constTdiff", constTdiff);
-        outFile.writeVector("constTconv", constTconv);
-        outFile.writeVector("constTprod", constTprod);
-        outFile.writeVector("constUdiff", constUdiff);
-        outFile.writeVector("constUconv", constUconv);
-        outFile.writeVector("constUprod", constUprod);
-        outFile.writeArray2D("constYdiff", constYdiff);
-        outFile.writeArray2D("constYconv", constYconv);
-        outFile.writeArray2D("constYprod", constYprod);
-        outFile.writeArray2D("constYcross", constYcross);
-        outFile.writeVector("constTcross", constTcross);
 
-        outFile.writeVector("dTdtdiff", dTdtdiff);
-        outFile.writeVector("dTdtconv", dTdtconv);
-        outFile.writeVector("dTdtprod", dTdtprod);
+        outFile.writeVector("dUdtdiff", diffusionSolvers[kMomentum].get_ydot());
+        outFile.writeVector("dUdtconv", convectionSystem.dUdt);
+
+
+        outFile.writeVector("dTdtdiff", diffusionSolvers[kEnergy].get_ydot());
+        outFile.writeVector("dTdtconv", convectionSystem.dTdt);
         outFile.writeVector("dTdtcross", dTdtcross);
-        outFile.writeVector("dUdtdiff", dUdtdiff);
-        outFile.writeVector("dUdtconv", dUdtconv);
-        outFile.writeVector("dUdtprod", dUdtprod);
+
+        Array2D dYdtdiff(nSpec, nPoints, 0);
+        for (size_t k=0; k<nSpec; k++) {
+            const dvector& ytmp = diffusionSolvers[kSpecies+k].get_ydot();
+            size_t i = 0;
+            for (size_t j = diffusionStartIndices[k];
+                 j <= diffusionStopIndices[k];
+                 j++)
+            {
+                dYdtdiff(k,j) = ytmp[i];
+                i++;
+            }
+        }
+
+        outFile.writeArray2D("dYdtconv", convectionSystem.dYdt);
         outFile.writeArray2D("dYdtdiff", dYdtdiff);
-        outFile.writeArray2D("dYdtconv", dYdtconv);
-        outFile.writeArray2D("dYdtprod", dYdtprod);
         outFile.writeArray2D("dYdtcross", dYdtcross);
+
+        dvector dUdtprod(nPoints);
+        dvector dTdtprod(nPoints);
+        Array2D dYdtprod(nSpec, nPoints, 0);
+        for (size_t j=0; j<nPoints; j++) {
+            dUdtprod[j] = sourceTerms[j].dUdt;
+            dTdtprod[j] = sourceTerms[j].dTdt;
+            for (size_t k=0; k<nSpec; k++) {
+                dYdtprod(k,j) = sourceTerms[j].dYdt[k];
+            }
+        }
+
+        outFile.writeVector("dUdtprod", dUdtprod);
+        outFile.writeVector("dTdtprod", dTdtprod);
+        outFile.writeArray2D("dYdtprod", dYdtprod);
+
         outFile.writeVector("dWdtconv", convectionSystem.dWdt);
         outFile.writeVector("constW", convectionSystem.utwSystem.splitConstW);
-
-        outFile.writeVector("linearTdiff", linearTdiff);
-        outFile.writeVector("linearTconv", linearTconv);
-        outFile.writeVector("linearTprod", linearTprod);
-        outFile.writeVector("linearUdiff", linearUdiff);
-        outFile.writeVector("linearUconv", linearUconv);
-        outFile.writeVector("linearUprod", linearUprod);
-        outFile.writeArray2D("linearYdiff", linearYdiff);
-        outFile.writeArray2D("linearYconv", linearYconv);
-        outFile.writeArray2D("linearYprod", linearYprod);
-        outFile.writeArray2D("linearTcross", linearYcross);
-        outFile.writeVector("linearTcross", linearTcross);
-
     }
 
     outFile.close();
@@ -930,31 +926,8 @@ void FlameSolver::resizeAuxiliary()
     dTdt.resize(nPoints,0);
     dYdt.resize(nSpec,nPoints);
 
-    constTdiff.resize(nPoints,0);
-    constTconv.resize(nPoints,0);
-    constTprod.resize(nPoints,0);
-    linearTdiff.resize(nPoints,0);
-    linearTconv.resize(nPoints,0);
-    linearTprod.resize(nPoints,0);
-
-    constUdiff.resize(nPoints,0);
-    constUconv.resize(nPoints,0);
-    constUprod.resize(nPoints,0);
-    linearUdiff.resize(nPoints,0);
-    linearUconv.resize(nPoints,0);
-    linearUprod.resize(nPoints,0);
-
-    constYdiff.resize(nSpec,nPoints,0);
-    constYconv.resize(nSpec,nPoints,0);
-    constYprod.resize(nSpec,nPoints,0);
-    linearYdiff.resize(nSpec,nPoints,0);
-    linearYconv.resize(nSpec,nPoints,0);
-    linearYprod.resize(nSpec,nPoints,0);
-
-    constTcross.resize(nPoints,0);
-    linearTcross.resize(nPoints,0);
-    constYcross.resize(nSpec, nPoints, 0);
-    linearYcross.resize(nSpec, nPoints, 0);
+    dTdtcross.resize(nPoints,0);
+    dYdtcross.resize(nSpec, nPoints, 0);
 
     rho.resize(nPoints);
     Wmx.resize(nPoints);
@@ -1076,19 +1049,15 @@ void FlameSolver::updateCrossTerms()
     for (size_t j=1; j<jj; j++) {
         sumcpj[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
-            constYcross(k,j) = -0.5/(r[j]*rho[j]*dlj[j]) *
+            dYdt(k,j) = -0.5/(r[j]*rho[j]*dlj[j]) *
                 (rphalf[j]*(Y(k,j)+Y(k,j+1))*jCorr[j] - rphalf[j-1]*(Y(k,j-1)+Y(k,j))*jCorr[j-1]);
-            constYcross(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
+            dYdt(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
                 (rphalf[j]*jSoret(k,j) - rphalf[j-1]*jSoret(k,j-1));
             sumcpj[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j)
                     + jSoret(k,j) + 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]);
-
-            linearYcross(k,j) = -0.5/(r[j]*rho[j]*dlj[j]) *
-                    (rphalf[j]*jCorr[j] - rphalf[j-1]*jCorr[j-1]);
         }
         double dTdx = cfm[j]*T[j-1] + cf[j]*T[j] + cfp[j]*T[j+1];
-        constTcross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * dTdx / (cp[j]*rho[j]);
-        linearTcross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * cf[j] / (cp[j]*rho[j]);
+        dTdtcross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * dTdx / (cp[j]*rho[j]);
     }
 }
 
@@ -1504,6 +1473,7 @@ void FlameSolver::updateTransportDomain()
         return;
     }
 
+    /*
     // TODO: Use timestep that is based on each component's diffusivity
     diffusionTestSolver.initialize(0, options.diffusionTimestep);
 
@@ -1597,4 +1567,5 @@ void FlameSolver::updateTransportDomain()
     if (options.transportEliminationConvection) {
         convectionSystem.resize(nPoints, nPointsConvection, nSpec);
     }
+    */
 }
