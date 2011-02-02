@@ -336,8 +336,8 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
             dWdx[j] = (Wmx[j] - Wmx[j-1]) / hh[j-1];
         }
 
-        rV[j+1] = rV[j] - hh[j] * (rV[j] * dTdx[j] - rphalf[j] * rho[j] * splitConstT[j]) / T[j];
-        rV[j+1] += hh[j] * (rV[j] * dWdx[j] - rphalf[j] * rho[j] * splitConstW[j]) / Wmx[j];
+        rV[j+1] = rV[j] - hh[j] * (rV[j] * dTdx[j] - rphalf[j] * rho[j] * dTdtSplit[j]) / T[j];
+        rV[j+1] += hh[j] * (rV[j] * dWdx[j] - rphalf[j] * rho[j] * dWdtSplit[j]) / Wmx[j];
         rV[j+1] -= hh[j] * rho[j] * U[j] * rphalf[j];
     }
 
@@ -496,29 +496,23 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     dUdt.resize(nPoints);
     dUdx.resize(nPoints);
     Uconst.resize(nPoints);
-    splitConstU.resize(nPoints);
-    splitLinearU.resize(nPoints);
 
     T.resize(nPoints);
     dTdt.resize(nPoints);
     dTdx.resize(nPoints);
     Tconst.resize(nPoints);
-    splitConstT.resize(nPoints);
-    splitLinearT.resize(nPoints);
+    dTdtSplit.resize(nPoints);
 
     Wmx.resize(nPoints);
     dWdt.resize(nPoints);
     dWdx.resize(nPoints);
-    splitConstW.resize(nPoints);
+    dWdtSplit.resize(nPoints);
 }
 
 void ConvectionSystemUTW::initialize()
 {
-    splitConstU.assign(nPoints, 0);
-    splitLinearU.assign(nPoints, 0);
-    splitConstT.assign(nPoints, 0);
-    splitLinearT.assign(nPoints, 0);
-    splitConstW.assign(nPoints, 0);
+    dTdtSplit.assign(nPoints, 0);
+    dWdtSplit.assign(nPoints, 0);
 }
 
 void ConvectionSystemUTW::V2rV(void)
@@ -641,7 +635,7 @@ int ConvectionSystemY::bandedJacobian(const realtype t, const sdVector& y,
         J(0,0) = -rvzero_mod / centerVol;
 
     } else { // FixedValue, ZeroGradient or truncated domain
-        J(0,0) = splitLinearY[0];
+        J(0,0) = 0;
     }
 
     // Intermediate points
@@ -665,14 +659,10 @@ void ConvectionSystemY::resize(const size_t new_nPoints)
     grid.setSize(new_nPoints);
 
     v.resize(nPoints);
-    splitConstY.resize(nPoints);
-    splitLinearY.resize(nPoints);
 }
 
 void ConvectionSystemY::initialize()
 {
-    splitConstY.assign(nPoints, 0);
-    splitLinearY.assign(nPoints, 0);
 }
 
 
@@ -917,71 +907,18 @@ void ConvectionSystemSplit::evaluate()
     }
 }
 
-void ConvectionSystemSplit::setSplitConstU(const dvector& constU)
+void ConvectionSystemSplit::setSplitDerivatives
+(const dvector& dTdtSplit, const Array2D& dYdtSplit)
 {
-    utwSystem.splitConstU = constU;
-}
-
-void ConvectionSystemSplit::setSplitConstT(const dvector& constT)
-{
-    utwSystem.splitConstT = constT;
-}
-
-void ConvectionSystemSplit::setSplitConstY(const Array2D& constY, bool offset)
-{
-    for (size_t k=0; k<nSpec; k++) {
-        size_t i = 0;
-        for (size_t j=(*startIndices)[k]; j<=(*stopIndices)[k]; j++) {
-            speciesSystems[k].splitConstY[i] = constY(k,j);
-            i++;
-        }
-    }
+    utwSystem.dTdtSplit = dTdtSplit;
 
     for (size_t j=0; j<nPointsUTW; j++) {
         double value = 0;
         for (size_t k=0; k<nSpec; k++) {
-             value += constY(k,j)/W[k];
+             value += dYdtSplit(k,j)/W[k];
         }
-        utwSystem.splitConstW[j] = - value * Wmx[j] * Wmx[j];
+        utwSystem.dWdtSplit[j] = - value * Wmx[j] * Wmx[j];
     }
-
-}
-
-void ConvectionSystemSplit::setSplitConst
-(const dvector& constU, const dvector& constT, const Array2D& constY, bool offset)
-{
-    setSplitConstU(constU);
-    setSplitConstT(constT);
-    setSplitConstY(constY, offset);
-}
-
-void ConvectionSystemSplit::setSplitLinearU(const dvector& LinearU)
-{
-    utwSystem.splitLinearU = LinearU;
-}
-
-void ConvectionSystemSplit::setSplitLinearT(const dvector& LinearT)
-{
-    utwSystem.splitLinearT = LinearT;
-}
-
-void ConvectionSystemSplit::setSplitLinearY(const Array2D& LinearY)
-{
-    for (size_t k=0; k<nSpec; k++) {
-        size_t i = 0;
-        for (size_t j=(*startIndices)[k]; j<=(*stopIndices)[k]; j++) {
-            speciesSystems[k].splitLinearY[i] = LinearY(k,j);
-            i++;
-        }
-    }
-}
-
-void ConvectionSystemSplit::setSplitLinear
-(const dvector& linearU, const dvector& linearT, const Array2D& linearY)
-{
-    setSplitLinearU(linearU);
-    setSplitLinearT(linearT);
-    setSplitLinearY(linearY);
 }
 
 void ConvectionSystemSplit::integrateToTime(const double tf)

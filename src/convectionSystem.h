@@ -108,11 +108,8 @@ public:
     double rVzero; // mass flux boundary value at j=0
 
     // Diagonalized, linear approximations for terms neglected by splitting
-    dvector splitConstU;
-    dvector splitConstT;
-    dvector splitConstW;
-    dvector splitLinearU;
-    dvector splitLinearT;
+    dvector dTdtSplit;
+    dvector dWdtSplit;
 
     // Temporaries for the neglected terms
     dvector Tconst;
@@ -158,10 +155,6 @@ public:
     double Yleft;
     int k; // species index (only needed for debugging)
 
-    // Diagonalized, linear approximations for terms neglected by splitting
-    dvector splitConstY;
-    dvector splitLinearY;
-
     size_t startIndex;
     size_t stopIndex;
 
@@ -194,16 +187,9 @@ public:
     void initialize(const double t0);
     void evaluate(); // evaluate time derivatives and mass flux at the current state
 
-    // Diagonalized, linear approximations for terms neglected by splitting
-    // 'offset' indicates whether constant the values have been offset by the linear term times the current value
-    void setSplitConst(const dvector& constU, const dvector& constT, const Array2D& constY, bool offset);
-    void setSplitLinear(const dvector& linearU, const dvector& linearT, const Array2D& linearY);
-    void setSplitConstU(const dvector& constU);
-    void setSplitConstT(const dvector& constT);
-    void setSplitConstY(const Array2D& constY, bool offset);
-    void setSplitLinearU(const dvector& linearU);
-    void setSplitLinearT(const dvector& linearT);
-    void setSplitLinearY(const Array2D& linearY);
+    // Time derivatives of species and temperature from the split terms are needed
+    // to correctly compute the density derivative appearing in the continuity equation
+    void setSplitDerivatives(const dvector& dTdtSplit, const Array2D& dYdtSplit);
 
     void integrateToTime(const double tf);
     void unroll_y(); // convert the solver's solution vectors to the full U, Y, and T

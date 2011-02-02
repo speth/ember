@@ -235,7 +235,6 @@ void FlameSolver::run(void)
         // ** Assign initial conditions to the convection solver
         convectionSystem.setState(U, T, Y);
         convectionSystem.initialize(t);
-        dvector dUdtSplit(nPoints, 0);
         dvector dTdtSplit(nPoints);
         Array2D dYdtSplit(nSpec, nPoints);
 
@@ -257,7 +256,6 @@ void FlameSolver::run(void)
                 i++;
             }
         }
-        dUdtSplit += diffusionSolvers[kMomentum].get_ydot();
         dTdtSplit += diffusionSolvers[kEnergy].get_ydot();
         for (size_t k=0; k<nSpec; k++) {
             const dvector& ydotk = diffusionSolvers[kSpecies+k].get_ydot();
@@ -284,14 +282,13 @@ void FlameSolver::run(void)
 
             sdVector ydotSource(nVars);
             sourceTerms[j].f(t, ySource, ydotSource);
-            dUdtSplit[j] += ydotSource[kMomentum];
             dTdtSplit[j] += ydotSource[kEnergy];
             for (size_t k=0; k<nSpec; k++) {
                 dYdtSplit(k,j) += ydotSource[kSpecies+k];
             }
         }
 
-        convectionSystem.setSplitConst(dUdtSplit, dTdtSplit, dYdtSplit, false);
+        convectionSystem.setSplitDerivatives(dTdtSplit, dYdtSplit);
 
         // Convection Integration: first half-step
         if (VERY_VERBOSE) {
@@ -473,7 +470,6 @@ void FlameSolver::run(void)
         convectionSystem.setState(U, T, Y);
         convectionSystem.initialize(t + 0.5*dt);
 
-        dUdtSplit.assign(nPoints, 0);
         dTdtSplit.assign(nPoints, 0);
         dYdtSplit.data().assign(nPoints*nSpec, 0);
         // Evaluate the derivatives from the diffusion terms
@@ -494,7 +490,6 @@ void FlameSolver::run(void)
                 i++;
             }
         }
-        dUdtSplit += diffusionSolvers[kMomentum].get_ydot();
         dTdtSplit += diffusionSolvers[kEnergy].get_ydot();
         for (size_t k=0; k<nSpec; k++) {
             const dvector& ydotk = diffusionSolvers[kSpecies+k].get_ydot();
@@ -521,14 +516,13 @@ void FlameSolver::run(void)
 
             sdVector ydotSource(nVars);
             sourceTerms[j].f(t + 0.5*dt, ySource, ydotSource);
-            dUdtSplit[j] += ydotSource[kMomentum];
             dTdtSplit[j] += ydotSource[kEnergy];
             for (size_t k=0; k<nSpec; k++) {
                 dYdtSplit(k,j) += ydotSource[kSpecies+k];
             }
         }
 
-        convectionSystem.setSplitConst(dUdtSplit, dTdtSplit, dYdtSplit, false);
+        convectionSystem.setSplitDerivatives(dTdtSplit, dYdtSplit);
 
         splitTimer.stop();
 
@@ -1004,7 +998,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("dYdtprod", dYdtprod);
 
         outFile.writeVector("dWdtconv", convectionSystem.dWdt);
-        outFile.writeVector("constW", convectionSystem.utwSystem.splitConstW);
+        outFile.writeVector("constW", convectionSystem.utwSystem.dWdtSplit);
     }
 
     outFile.close();
