@@ -314,6 +314,11 @@ void FlameSolver::run(void)
             }
         }
 
+        if (options.outputSplitHeatReleaseRate) {
+            calculateQdot();
+            qDotConv1 = getHeatReleaseRate();
+        }
+
         // Assign initial conditions to the diffusion solvers
         for (size_t k=0; k<nVars; k++) {
             // TODO: Use timestep that is based on each component's diffusivity
@@ -364,6 +369,11 @@ void FlameSolver::run(void)
             }
         }
 
+        if (options.outputSplitHeatReleaseRate) {
+            calculateQdot();
+            qDotDiff1 = getHeatReleaseRate();
+        }
+
         // Assign initial conditions to the source-term solvers
         for (size_t j=0; j<nPoints; j++) {
             sdVector& ySource = sourceSolvers[j].y;
@@ -390,31 +400,90 @@ void FlameSolver::run(void)
         splitTimer.stop();
 
         // Reaction Integration: full step
-        reactionTimer.start();
         if (VERY_VERBOSE) {
             cout << "Source term...";
             cout.flush();
         }
-        for (size_t j=0; j<nPoints; j++) {
-            int err = sourceSolvers[j].integrateToTime(tNext);
-            if (err) {
-                cout << "Error at j = " << j << endl;
-                cout << "T = " << sourceTerms[j].T << endl;
-                cout << "U = " << sourceTerms[j].U << endl;
-                cout << "Y = " << sourceTerms[j].Y << endl;
-            }
-        }
-        reactionTimer.stop();
 
-        // Extract solutions from the source-term solvers
-        splitTimer.resume();
-        for (size_t j=0; j<nPoints; j++) {
-            sourceTerms[j].unroll_y(sourceSolvers[j].y);
-            U[j] = sourceTerms[j].U;
-            T[j] = sourceTerms[j].T;
-            for (size_t k=0; k<nSpec; k++) {
-                Y(k,j) = sourceTerms[j].Y[k];
+        if (options.outputSplitHeatReleaseRate) {
+            reactionTimer.start();
+            for (size_t j=0; j<nPoints; j++) {
+                int err = sourceSolvers[j].integrateToTime(t + 0.5*dt);
+                if (err) {
+                    cout << "Error at j = " << j << endl;
+                    cout << "T = " << sourceTerms[j].T << endl;
+                    cout << "U = " << sourceTerms[j].U << endl;
+                    cout << "Y = " << sourceTerms[j].Y << endl;
+                }
             }
+            reactionTimer.stop();
+
+            // Extract solutions from the source-term solvers
+            splitTimer.resume();
+            for (size_t j=0; j<nPoints; j++) {
+                sourceTerms[j].unroll_y(sourceSolvers[j].y);
+                U[j] = sourceTerms[j].U;
+                T[j] = sourceTerms[j].T;
+                for (size_t k=0; k<nSpec; k++) {
+                    Y(k,j) = sourceTerms[j].Y[k];
+                }
+            }
+            splitTimer.stop();
+
+            calculateQdot();
+            qDotProd1 = getHeatReleaseRate();
+
+            reactionTimer.start();
+            for (size_t j=0; j<nPoints; j++) {
+                int err = sourceSolvers[j].integrateToTime(tNext);
+                if (err) {
+                    cout << "Error at j = " << j << endl;
+                    cout << "T = " << sourceTerms[j].T << endl;
+                    cout << "U = " << sourceTerms[j].U << endl;
+                    cout << "Y = " << sourceTerms[j].Y << endl;
+                }
+            }
+            reactionTimer.stop();
+
+            // Extract solutions from the source-term solvers
+            splitTimer.resume();
+            for (size_t j=0; j<nPoints; j++) {
+                sourceTerms[j].unroll_y(sourceSolvers[j].y);
+                U[j] = sourceTerms[j].U;
+                T[j] = sourceTerms[j].T;
+                for (size_t k=0; k<nSpec; k++) {
+                    Y(k,j) = sourceTerms[j].Y[k];
+                }
+            }
+            splitTimer.stop();
+
+            calculateQdot();
+            qDotProd2 = getHeatReleaseRate();
+
+        } else {
+            reactionTimer.start();
+            for (size_t j=0; j<nPoints; j++) {
+                int err = sourceSolvers[j].integrateToTime(tNext);
+                if (err) {
+                    cout << "Error at j = " << j << endl;
+                    cout << "T = " << sourceTerms[j].T << endl;
+                    cout << "U = " << sourceTerms[j].U << endl;
+                    cout << "Y = " << sourceTerms[j].Y << endl;
+                }
+            }
+            reactionTimer.stop();
+
+            // Extract solutions from the source-term solvers
+            splitTimer.resume();
+            for (size_t j=0; j<nPoints; j++) {
+                sourceTerms[j].unroll_y(sourceSolvers[j].y);
+                U[j] = sourceTerms[j].U;
+                T[j] = sourceTerms[j].T;
+                for (size_t k=0; k<nSpec; k++) {
+                    Y(k,j) = sourceTerms[j].Y[k];
+                }
+            }
+            splitTimer.stop();
         }
 
         // Assign initial conditions to the diffusion solvers
@@ -464,6 +533,11 @@ void FlameSolver::run(void)
                 Y(k,j) = solver.y[i];
                 i++;
             }
+        }
+
+        if (options.outputSplitHeatReleaseRate) {
+            calculateQdot();
+            qDotDiff2 = getHeatReleaseRate();
         }
 
         // ** Assign initial conditions to the convection solver
@@ -551,6 +625,11 @@ void FlameSolver::run(void)
         }
         splitTimer.stop();
 
+        if (options.outputSplitHeatReleaseRate) {
+            calculateQdot();
+            qDotConv2 = getHeatReleaseRate();
+        }
+
         if (VERY_VERBOSE) {
             cout << "done!" << endl;
         }
@@ -604,6 +683,15 @@ void FlameSolver::run(void)
             consumptionSpeed.push_back(getConsumptionSpeed());
             flamePosition.push_back(getFlamePosition());
 
+            if (options.outputSplitHeatReleaseRate) {
+                qDotProd1Vec.push_back(qDotProd1);
+                qDotProd2Vec.push_back(qDotProd2);
+                qDotDiff1Vec.push_back(qDotDiff1);
+                qDotDiff2Vec.push_back(qDotDiff2);
+                qDotConv1Vec.push_back(qDotConv1);
+                qDotConv2Vec.push_back(qDotConv2);
+            }
+
             tOutput = t + options.outputTimeInterval;
             nOutput = 0;
         }
@@ -629,13 +717,7 @@ void FlameSolver::run(void)
         //     and save the time-series data (out.h5)
         if (nCurrentState >= options.currentStateStepInterval) {
             nCurrentState = 0;
-            DataFile outFile(options.outputDir+"/outNow.h5");
-            outFile.writeVector("t",timeVector);
-            outFile.writeVector("dt",timestepVector);
-            outFile.writeVector("Q",heatReleaseRate);
-            outFile.writeVector("Sc",consumptionSpeed);
-            outFile.writeVector("xFlame",flamePosition);
-            outFile.close();
+            writeTimeseriesFile("outNow");
             writeStateFile("profNow");
         }
 
@@ -960,7 +1042,6 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeVector("dUdtdiff", diffusionSolvers[kMomentum].get_ydot());
         outFile.writeVector("dUdtconv", convectionSystem.dUdt);
 
-
         outFile.writeVector("dTdtdiff", diffusionSolvers[kEnergy].get_ydot());
         outFile.writeVector("dTdtconv", convectionSystem.dTdt);
         outFile.writeVector("dTdtcross", dTdtcross);
@@ -1012,6 +1093,27 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         throw debugException("Too many integration failures.");
       }
     }
+}
+
+void FlameSolver::writeTimeseriesFile(const std::string filename)
+{
+    DataFile outFile(options.outputDir+"/"+filename+".h5");
+    outFile.writeVector("t", timeVector);
+    outFile.writeVector("dt", timestepVector);
+    outFile.writeVector("Q", heatReleaseRate);
+    outFile.writeVector("Sc", consumptionSpeed);
+    outFile.writeVector("xFlame", flamePosition);
+
+    if (options.outputSplitHeatReleaseRate) {
+        outFile.writeVector("qDotProd1", qDotProd1Vec);
+        outFile.writeVector("qDotProd2", qDotProd2Vec);
+        outFile.writeVector("qDotDiff1", qDotDiff1Vec);
+        outFile.writeVector("qDotDiff2", qDotDiff2Vec);
+        outFile.writeVector("qDotConv1", qDotConv1Vec);
+        outFile.writeVector("qDotConv2", qDotConv2Vec);
+    }
+
+    outFile.close();
 }
 
 void FlameSolver::resizeAuxiliary()
@@ -1223,6 +1325,25 @@ double FlameSolver::targetFlamePosition(double t)
         : options.xFlameInitial + (options.xFlameFinal-options.xFlameInitial)*(t-options.xFlameT0)/options.xFlameDt;
 }
 
+void FlameSolver::calculateQdot()
+{
+    // Calculate auxiliary data
+    for (size_t j=0; j<nPoints; j++) {
+        gas.setStateMass(&Y(0,j), T[j]);
+        gas.getEnthalpies(&hk(0,j));
+
+        if (options.usingAdapChem) {
+            ckGas->initializeStep(&Y(0,j), T[j], j);
+            ckGas->getReactionRates(&wDot(0,j));
+        } else {
+            gas.getReactionRates(&wDot(0,j));
+        }
+        qDot[j] = 0;
+        for (size_t k=0; k<nSpec; k++) {
+            qDot[j] -= wDot(k,j)*hk(k,j);
+        }
+    }
+}
 
 double FlameSolver::getHeatReleaseRate(void)
 {

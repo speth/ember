@@ -93,6 +93,7 @@ public:
     bool outputAuxiliaryVariables;
     bool outputTimeDerivatives;
     bool outputHeatReleaseRate;
+    bool outputSplitHeatReleaseRate;
     bool outputResidualComponents;
     bool outputProfiles;
 

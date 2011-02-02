@@ -146,13 +146,7 @@ void strainedFlame(const std::string& inputFile)
                 mainOptions.haveRestartFile = true;
 
                 // Write the time-series data file for this run
-                DataFile outFile(mainOptions.outputDir+"/out_eps"+stringify(a,4)+".h5");
-                outFile.writeVector("t",theFlameSolver.timeVector);
-                outFile.writeVector("dt",theFlameSolver.timestepVector);
-                outFile.writeVector("Q",theFlameSolver.heatReleaseRate);
-                outFile.writeVector("Sc",theFlameSolver.consumptionSpeed);
-                outFile.writeVector("xFlame",theFlameSolver.flamePosition);
-                outFile.close();
+                theFlameSolver.writeTimeseriesFile("out_eps"+stringify(a,4));
 
                 // Append and save the integral data for this run
                 int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.tNow - mainOptions.terminationPeriodHigh));
@@ -190,13 +184,7 @@ void strainedFlame(const std::string& inputFile)
 
         theFlameSolver.writeStateFile("prof");
         std::string strainString;
-        DataFile outFile(mainOptions.outputDir+"/out.h5");
-        outFile.writeVector("t",theFlameSolver.timeVector);
-        outFile.writeVector("dt",theFlameSolver.timestepVector);
-        outFile.writeVector("Q",theFlameSolver.heatReleaseRate);
-        outFile.writeVector("Sc",theFlameSolver.consumptionSpeed);
-        outFile.writeVector("xFlame",theFlameSolver.flamePosition);
-        outFile.close();
+        theFlameSolver.writeTimeseriesFile("out");
     }
 
     // Cleanup

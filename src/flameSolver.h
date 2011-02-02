@@ -43,6 +43,7 @@ public:
     bool checkTerminationCondition(void);
 
     void writeStateFile(const std::string fileName="", bool errorFile=false);
+    void writeTimeseriesFile(const std::string filename); // create out.h5 file
 
     // Functions for calculating flame information
     double getHeatReleaseRate(void); // [W/m^2]
@@ -55,6 +56,7 @@ public:
     dvector heatReleaseRate; // [W/m^2]
     dvector consumptionSpeed; // [m/s]
     dvector flamePosition; // [m]
+    dvector qDotProd1Vec, qDotProd2Vec, qDotDiff1Vec, qDotDiff2Vec, qDotConv1Vec, qDotConv2Vec;
 
     // Options read from the input file
     configOptions options;
@@ -83,6 +85,7 @@ private:
     void resizeAuxiliary(); // Handle resizing of data structures as grid size changes
     void updateCrossTerms(); // calculates values of cross-component terms: jSoret, sumcpj, and jCorr
     void updateLeftBC();
+    void calculateQdot();
 
     // Utility functions for adaptation & regridding
     void rollVectorVector(const sdVector& y, const dvector& qdot, vector<dvector>& v);
@@ -128,6 +131,9 @@ private:
     Array2D hk;
     Array2D jFick;
     Array2D jSoret;
+
+    // Heat release rate evaluated after each phase of the split solver
+    double qDotProd1, qDotProd2, qDotDiff1, qDotDiff2, qDotConv1, qDotConv2;
 
     Array2D dYdtcross;
     dvector dTdtcross;

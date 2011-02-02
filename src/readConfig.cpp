@@ -184,6 +184,7 @@ void configOptions::readOptionsFile(const std::string& filename)
         readOption("outputFiles.residualComponents", outputResidualComponents, false);
         fileNumberOverride = readOption("outputFiles.firstFileNumber", outputFileNumber, 0);
     }
+    readOption("outputFiles.splitHeatReleaseRate", outputSplitHeatReleaseRate, false);
     stopIfError = readOption("general.errorStopCount",errorStopCount, 1);
 
     if (cfg.exists("strainParameters.list")) {
