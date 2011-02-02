@@ -135,8 +135,8 @@ private:
     // Heat release rate evaluated after each phase of the split solver
     double qDotProd1, qDotProd2, qDotDiff1, qDotDiff2, qDotConv1, qDotConv2;
 
-    Array2D dYdtcross;
-    dvector dTdtcross;
+    Array2D dYdtCross;
+    dvector dTdtCross;
     DiffusionSystem jCorrSystem;
     BDFIntegrator jCorrSolver;
 

@@ -180,7 +180,6 @@ void FlameSolver::run(void)
         }
 
         updateLeftBC();
-        updateCrossTerms();
         if (options.xFlameControl) {
             update_xStag(t, true); // calculate the value of rVzero
         }
@@ -190,8 +189,6 @@ void FlameSolver::run(void)
         setupTimer.stop();
         splitTimer.start();
 
-        // constYprod is needed to determine the region where the diffusion term
-        // needs to be integrated for each species
         updateTransportDomain();
 
         // Diffusion solvers: Energy and Momentum
@@ -243,19 +240,24 @@ void FlameSolver::run(void)
             diffusionSolvers[k].initialize(t, options.diffusionTimestep);
         }
 
+        updateCrossTerms();
         diffusionSolvers[kMomentum].y = U;
         diffusionSolvers[kEnergy].y = T;
+        diffusionTerms[kEnergy].splitConst = dTdtCross;
         for (size_t k=0; k<nSpec; k++) {
             dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
+            dvector& splitConstY = diffusionTerms[kSpecies+k].splitConst;
             size_t i = 0;
             for (size_t j = diffusionStartIndices[k];
                  j <= diffusionStopIndices[k];
                  j++)
             {
                 yDiff_Y[i] = Y(k,j);
+                splitConstY[i] = dYdtCross(k,j);
                 i++;
             }
         }
+
         dTdtSplit += diffusionSolvers[kEnergy].get_ydot();
         for (size_t k=0; k<nSpec; k++) {
             const dvector& ydotk = diffusionSolvers[kSpecies+k].get_ydot();
@@ -325,16 +327,20 @@ void FlameSolver::run(void)
             diffusionSolvers[k].initialize(t, options.diffusionTimestep);
         }
 
+        updateCrossTerms();
         diffusionSolvers[kMomentum].y = U;
         diffusionSolvers[kEnergy].y = T;
+        diffusionTerms[kEnergy].splitConst = dTdtCross;
         for (size_t k=0; k<nSpec; k++) {
             dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
+            dvector& splitConstY = diffusionTerms[kSpecies+k].splitConst;
             size_t i = 0;
             for (size_t j = diffusionStartIndices[k];
                  j <= diffusionStopIndices[k];
                  j++)
             {
                 yDiff_Y[i] = Y(k,j);
+                splitConstY[i] = dYdtCross(k,j);
                 i++;
             }
         }
@@ -492,16 +498,20 @@ void FlameSolver::run(void)
             diffusionSolvers[k].initialize(t + 0.5*dt, options.diffusionTimestep);
         }
 
+        updateCrossTerms();
         diffusionSolvers[kMomentum].y = U;
         diffusionSolvers[kEnergy].y = T;
+        diffusionTerms[kEnergy].splitConst = dTdtCross;
         for (size_t k=0; k<nSpec; k++) {
             dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
+            dvector& splitConstY = diffusionTerms[kSpecies+k].splitConst;
             size_t i = 0;
             for (size_t j = diffusionStartIndices[k];
                  j <= diffusionStopIndices[k];
                  j++)
             {
                 yDiff_Y[i] = Y(k,j);
+                splitConstY[i] = dYdtCross(k,j);
                 i++;
             }
         }
@@ -551,16 +561,20 @@ void FlameSolver::run(void)
             diffusionSolvers[k].initialize(t + 0.5*dt, options.diffusionTimestep);
         }
 
+        updateCrossTerms();
         diffusionSolvers[kMomentum].y = U;
         diffusionSolvers[kEnergy].y = T;
+        diffusionTerms[kEnergy].splitConst = dTdtCross;
         for (size_t k=0; k<nSpec; k++) {
             dvector& yDiff_Y = diffusionSolvers[kSpecies+k].y;
+            dvector& splitConstY = diffusionTerms[kSpecies+k].splitConst;
             size_t i = 0;
             for (size_t j = diffusionStartIndices[k];
                  j <= diffusionStopIndices[k];
                  j++)
             {
                 yDiff_Y[i] = Y(k,j);
+                splitConstY[i] = dYdtCross(k,j);
                 i++;
             }
         }
@@ -1044,7 +1058,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
 
         outFile.writeVector("dTdtdiff", diffusionSolvers[kEnergy].get_ydot());
         outFile.writeVector("dTdtconv", convectionSystem.dTdt);
-        outFile.writeVector("dTdtcross", dTdtcross);
+        outFile.writeVector("dTdtCross", dTdtCross);
 
         Array2D dYdtdiff(nSpec, nPoints, 0);
         for (size_t k=0; k<nSpec; k++) {
@@ -1061,7 +1075,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
 
         outFile.writeArray2D("dYdtconv", convectionSystem.dYdt);
         outFile.writeArray2D("dYdtdiff", dYdtdiff);
-        outFile.writeArray2D("dYdtcross", dYdtcross);
+        outFile.writeArray2D("dYdtCross", dYdtCross);
 
         dvector dUdtprod(nPoints);
         dvector dTdtprod(nPoints);
@@ -1137,8 +1151,8 @@ void FlameSolver::resizeAuxiliary()
     dTdt.resize(nPoints,0);
     dYdt.resize(nSpec,nPoints);
 
-    dTdtcross.resize(nPoints,0);
-    dYdtcross.resize(nSpec, nPoints, 0);
+    dTdtCross.resize(nPoints,0);
+    dYdtCross.resize(nSpec, nPoints, 0);
 
     rho.resize(nPoints);
     Wmx.resize(nPoints);
@@ -1260,15 +1274,15 @@ void FlameSolver::updateCrossTerms()
     for (size_t j=1; j<jj; j++) {
         sumcpj[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,j) = -0.5/(r[j]*rho[j]*dlj[j]) *
+            dYdtCross(k,j) = -0.5/(r[j]*rho[j]*dlj[j]) *
                 (rphalf[j]*(Y(k,j)+Y(k,j+1))*jCorr[j] - rphalf[j-1]*(Y(k,j-1)+Y(k,j))*jCorr[j-1]);
-            dYdt(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
+            dYdtCross(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
                 (rphalf[j]*jSoret(k,j) - rphalf[j-1]*jSoret(k,j-1));
             sumcpj[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j)
                     + jSoret(k,j) + 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]);
         }
         double dTdx = cfm[j]*T[j-1] + cf[j]*T[j] + cfp[j]*T[j+1];
-        dTdtcross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * dTdx / (cp[j]*rho[j]);
+        dTdtCross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * dTdx / (cp[j]*rho[j]);
     }
 }
 
