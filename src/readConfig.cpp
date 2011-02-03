@@ -171,7 +171,6 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("debug.flameRadiusControl",debugParameters::debugFlameRadiusControl, false);
 
     readOption("integrator.relativeTolerance", idaRelTol, 1e-5);
-    readOption("integrator.relativeToleranceLow", idaRelTolLow, 1e-3);
     readOption("integrator.continuityAbsTol", idaContinuityAbsTol, 1e-8);
     readOption("integrator.momentumAbsTol", idaMomentumAbsTol, 1e-8);
     readOption("integrator.energyAbsTol", idaEnergyAbsTol, 1e-6);
@@ -206,22 +205,17 @@ void configOptions::readOptionsFile(const std::string& filename)
 
     if (multiRun) {
         terminateForSteadyQdot = true;
-        readOption("terminationCondition.timeMax",terminationMaxTime, 2.0);
-        readOption("terminationCondition.timeLow",terminationPeriodLow, 0.04);
-        readOption("terminationCondition.timeHigh",terminationPeriodHigh, 0.10);
-        readOption("terminationCondition.tolerance", terminationTolerance, 1e-4);
-        readOption("terminationCondition.toleranceLow", terminationToleranceLow, 1e-4);
-        readOption("terminationCondition.abstol",terminationAbsTol, 0.5);
     } else {
         std::string terminationMeasurement;
         readOptionQuietDefault("terminationCondition.measurement",terminationMeasurement, "");
         terminateForSteadyQdot = (terminationMeasurement == "Q");
-        if (terminateForSteadyQdot) {
-            readOption("terminationCondition.timeMax",terminationMaxTime, 2.0);
-            readOption("terminationCondition.time",terminationPeriod, 0.10);
-            readOption("terminationCondition.tolerance", terminationTolerance, 1e-4);
-            readOption("terminationCondition.abstol",terminationAbsTol, 0.5);
-        }
+    }
+
+    if (terminateForSteadyQdot) {
+        readOption("terminationCondition.time",terminationPeriod, 0.01);
+        readOption("terminationCondition.timeMax",terminationMaxTime, 2.0);
+        readOption("terminationCondition.tolerance", terminationTolerance, 1e-4);
+        readOption("terminationCondition.abstol",terminationAbsTol, 0.5);
     }
 
     if (!boost::filesystem::exists(outputDir)) {

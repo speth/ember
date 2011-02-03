@@ -43,7 +43,6 @@ public:
     double diffusionTimestep; // timestep for diffusion solver
 
     double idaRelTol;
-    double idaRelTolLow;
     double idaContinuityAbsTol;
     double idaMomentumAbsTol;
     double idaEnergyAbsTol;
@@ -98,12 +97,9 @@ public:
     bool outputProfiles;
 
     bool terminateForSteadyQdot; // if true, code finishes when integral heat release rate is constant
-    double terminationTolerance; // relative tolerance for normal or high-res run
-    double terminationToleranceLow; // relative tolerance for low-res run
+    double terminationTolerance; // relative tolerance for termination
     double terminationAbsTol; // absolute tolerance
     double terminationPeriod; // period over which to require constant heat release rate
-    double terminationPeriodLow; // period for low-res run
-    double terminationPeriodHigh; // period for high-res run
     double terminationMaxTime; // stop integration at this time regardless of the heat release rate
 
     int errorStopCount;

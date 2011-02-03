@@ -99,7 +99,7 @@ void strainedFlame(const std::string& inputFile)
                 double tEnd = *(oldTime.rbegin());
 
                 // Append the integral data from the old run
-                int iStart = findFirst(oldTime > tEnd - mainOptions.terminationPeriodHigh);
+                int iStart = findFirst(oldTime > tEnd - mainOptions.terminationPeriod);
                 int iEnd = oldTime.size()-1;
                 if (iStart == -1) {
                     cout << "Warning: old data file did not contain data spanning the requested period." << endl;
@@ -120,23 +120,14 @@ void strainedFlame(const std::string& inputFile)
                 theFlameSolver.setOptions(mainOptions);
 
                 // Low Res Run:
-                cout << "Beginning low-res run at strain rate a = " << a << endl;
+                cout << "Beginning run at strain rate a = " << a << endl;
                  theFlameSolver.initialize();
-                theFlameSolver.options.idaRelTol = mainOptions.idaRelTolLow;
-                 theFlameSolver.options.terminationTolerance = mainOptions.terminationToleranceLow;
-                 theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodLow;
                  theFlameSolver.tStart = 0;
-                 theFlameSolver.run();
-                 cout << "Completed low-res run at strain rate a = " << a << endl;
-                 double dtLow = theFlameSolver.tNow - theFlameSolver.tStart;
-
-                // High Res Run:
-                theFlameSolver.tStart = theFlameSolver.tNow;
                 theFlameSolver.options.idaRelTol = mainOptions.idaRelTol;
                 theFlameSolver.options.terminationTolerance = mainOptions.terminationTolerance;
-                theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriodHigh + dtLow;
+                theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriod;
                 theFlameSolver.run();
-                cout << "Completed high-res run at strain rate a = " << a << endl;
+                cout << "Completed run at strain rate a = " << a << endl;
 
                 // Write data needed for the next run
                 mainOptions.fileNumberOverride = false;
@@ -149,7 +140,7 @@ void strainedFlame(const std::string& inputFile)
                 theFlameSolver.writeTimeseriesFile("out_eps"+stringify(a,4));
 
                 // Append and save the integral data for this run
-                int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.tNow - mainOptions.terminationPeriodHigh));
+                int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.tNow - mainOptions.terminationPeriod));
                 int iEnd = theFlameSolver.timestepVector.size()-1;
                 eps.push_back(a);
                 Q.push_back(mean(theFlameSolver.heatReleaseRate, iStart, iEnd));
