@@ -87,6 +87,9 @@ private:
     void updateLeftBC();
     void calculateQdot();
 
+    void setDiffusionSolverState(double tInitial);
+    void calculateSplitDerivatives(double t);
+
     // Utility functions for adaptation & regridding
     void rollVectorVector(const sdVector& y, const dvector& qdot, vector<dvector>& v);
     void unrollVectorVector(const vector<dvector>& v);
