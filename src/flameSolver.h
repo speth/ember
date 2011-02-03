@@ -84,11 +84,17 @@ private:
     void updateLeftBC();
     void calculateQdot();
 
+    // Steps in the Strang split integration process
     void setDiffusionSolverState(double tInitial);
+    void setConvectionSolverState(double tInitial);
+    void setProductionSolverState(double tInitial);
     void calculateSplitDerivatives(double t);
     void extractConvectionState(int stage);
     void extractDiffusionState(int stage);
     void extractProductionState(int stage);
+    void integrateConvectionTerms(double t, int stage);
+    void integrateProductionTerms(double t, int stage);
+    void integrateDiffusionTerms(double t, int stage);
 
     // Utility functions for adaptation & regridding
     void rollVectorVector(const sdVector& y, const dvector& qdot, vector<dvector>& v);

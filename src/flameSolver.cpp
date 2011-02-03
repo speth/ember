@@ -106,31 +106,32 @@ void FlameSolver::run(void)
     double tProfile = t + options.profileTimeInterval; // time of next profile output
 
     grid.updateValues();
+    resizeAuxiliary();
 
     tFlamePrev = t;
     tNow = t;
-
-    resizeAuxiliary();
+    dt = options.globalTimestep;
 
     if (options.outputProfiles) {
         writeStateFile();
     }
 
     while (true) {
-
         setupTimer.start();
 
         // Debug sanity check
-        bool error = false;
-        for (size_t j=0; j<nPoints; j++) {
-            if (T[j] < 295 || T[j] > 3000) {
-                cout << format("WARNING: Unexpected Temperature: T = %f at j = %i")
-                        % T[j] % j << endl;
-                error = true;
+        if (!NDEBUG) {
+            bool error = false;
+            for (size_t j=0; j<nPoints; j++) {
+                if (T[j] < 295 || T[j] > 3000) {
+                    cout << format("WARNING: Unexpected Temperature: T = %f at j = %i")
+                            % T[j] % j << endl;
+                    error = true;
+                }
             }
-        }
-        if (error) {
-            writeStateFile();
+            if (error) {
+                writeStateFile();
+            }
         }
 
         // Reset boundary conditions to prevent numerical drift
@@ -182,11 +183,10 @@ void FlameSolver::run(void)
             update_xStag(t, true); // calculate the value of rVzero
         }
         convectionSystem.set_rVzero(rVzero);
-        dt = options.globalTimestep;
 
         setupTimer.stop();
-        splitTimer.start();
 
+        splitTimer.start();
         updateTransportDomain();
 
         // Diffusion solvers: Energy and Momentum
@@ -218,181 +218,56 @@ void FlameSolver::run(void)
             }
         }
 
-        // *** Use the time derivatives to calculate the values for the
-        //     state variables based on the diagonalized approximation
-
         splitTimer.stop();
 
         double tNext = tNow + dt;
 
         // *** Strang-split Integration ***
 
-        // ** Assign initial conditions to the convection solver
-        convectionSystem.setState(U, T, Y);
-        convectionSystem.initialize(t);
-
-        setDiffusionSolverState(t);
-        calculateSplitDerivatives(t);
-
         // Convection Integration: first half-step
-        if (VERY_VERBOSE) {
-            cout << "convection term 1/2...";
-            cout.flush();
-        }
-
-        convectionTimer.start();
-        convectionSystem.integrateToTime(tNow + 0.5*dt);
-        convectionTimer.stop();
-
+        setConvectionSolverState(t);
+        integrateConvectionTerms(t + 0.5*dt, 1);
         extractConvectionState(1);
 
-        // Assign initial conditions to the diffusion solvers
-        setDiffusionSolverState(t);
-
-        splitTimer.stop();
-
         // Diffusion Integration: first half-step
-        if (VERY_VERBOSE) {
-            cout << "diffusion terms 1/2...";
-            cout.flush();
-        }
-
-        diffusionTimer.start();
-        for (size_t k=0; k<nVars; k++) {
-            diffusionSolvers[k].integrateToTime(tNow + 0.5*dt);
-        }
-        diffusionTimer.stop();
-
-        splitTimer.resume();
+        setDiffusionSolverState(t);
+        integrateDiffusionTerms(t + 0.5*dt, 1);
         extractDiffusionState(1);
 
-        // Assign initial conditions to the source-term solvers
-        for (size_t j=0; j<nPoints; j++) {
-            sdVector& ySource = sourceSolvers[j].y;
-            ySource[kMomentum] = U[j];
-            ySource[kEnergy] = T[j];
-            for (size_t k=0; k<nSpec; k++) {
-                ySource[kSpecies+k] = Y(k,j);
-            }
-            sourceSolvers[j].t0 = t;
-            sourceSolvers[j].initialize();
-            sourceTerms[j].wDot.assign(nSpec, 0);
-            sourceTerms[j].strainFunction.pin(t);
-        }
-
-        if (options.usingAdapChem) {
-            ckGas->incrementStep();
-
-            // Because AdapChem only assigns values for species in the
-            // reduced mechanisms, we need to zero the reaction rates
-            // whenever the mechansim at each point could change.
-            wDot.data().assign(wDot.data().size(), 0);
-        }
-
-        splitTimer.stop();
-
-        // Reaction Integration: full step
-        if (VERY_VERBOSE) {
-            cout << "Source term...";
-            cout.flush();
-        }
+        // Reaction Integration
+        setProductionSolverState(t);
 
         if (options.outputSplitHeatReleaseRate) {
             // First half-step
-            reactionTimer.start();
-            for (size_t j=0; j<nPoints; j++) {
-                int err = sourceSolvers[j].integrateToTime(t + 0.5*dt);
-                if (err) {
-                    cout << "Error at j = " << j << endl;
-                    cout << "T = " << sourceTerms[j].T << endl;
-                    cout << "U = " << sourceTerms[j].U << endl;
-                    cout << "Y = " << sourceTerms[j].Y << endl;
-                }
-            }
-            reactionTimer.stop();
+            integrateProductionTerms(t + 0.5*dt, 1);
             extractProductionState(1);
 
             // Second half-step
-            reactionTimer.start();
-            for (size_t j=0; j<nPoints; j++) {
-                int err = sourceSolvers[j].integrateToTime(tNext);
-                if (err) {
-                    cout << "Error at j = " << j << endl;
-                    cout << "T = " << sourceTerms[j].T << endl;
-                    cout << "U = " << sourceTerms[j].U << endl;
-                    cout << "Y = " << sourceTerms[j].Y << endl;
-                }
-            }
-            reactionTimer.stop();
+            integrateProductionTerms(tNext, 2);
             extractProductionState(2);
 
         } else {
-            reactionTimer.start();
-            for (size_t j=0; j<nPoints; j++) {
-                int err = sourceSolvers[j].integrateToTime(tNext);
-                if (err) {
-                    cout << "Error at j = " << j << endl;
-                    cout << "T = " << sourceTerms[j].T << endl;
-                    cout << "U = " << sourceTerms[j].U << endl;
-                    cout << "Y = " << sourceTerms[j].Y << endl;
-                }
-            }
-            reactionTimer.stop();
-            extractProductionState(1);
+            // Full step
+            integrateProductionTerms(tNext, 0);
+            extractProductionState(2);
         }
-
-        // Assign initial conditions to the diffusion solvers
-        setDiffusionSolverState(t + 0.5*dt);
-        splitTimer.stop();
 
         // Diffusion: second half-step
-        if (VERY_VERBOSE) {
-            cout << "diffusion terms 2/2...";
-            cout.flush();
-        }
-        diffusionTimer.start();
-        for (size_t k=0; k<nVars; k++) {
-            diffusionSolvers[k].integrateToTime(tNext);
-        }
-        diffusionTimer.stop();
-
-
-        splitTimer.resume();
-        extractDiffusionState(2);
-
-        // ** Assign initial conditions to the convection solver
-        convectionSystem.setState(U, T, Y);
-        convectionSystem.initialize(t + 0.5*dt);
-        setDiffusionSolverState(t + 0.5*dt);
-        calculateSplitDerivatives(t + 0.5*dt);
-        splitTimer.stop();
+        setDiffusionSolverState(t + 0.5*dt); // assign initial conditions
+        integrateDiffusionTerms(tNext, 2); // integrate
+        extractDiffusionState(2); // extract solution components
 
         // Convection Integration: second half-step
-        if (VERY_VERBOSE) {
-            cout << "convection term 2/2...";
-            cout.flush();
-        }
-
-        convectionTimer.start();
-        convectionSystem.integrateToTime(tNext);
-        convectionTimer.stop();
-
-        extractConvectionState(2);
-
-        if (options.outputSplitHeatReleaseRate) {
-            calculateQdot();
-            qDotConv2 = getHeatReleaseRate();
-        }
+        setConvectionSolverState(t + 0.5*dt); // assign initial conditions
+        integrateConvectionTerms(tNext, 2); // integrate
+        extractConvectionState(2); // extract solution components
 
         if (VERY_VERBOSE) {
             cout << "done!" << endl;
         }
 
-        // End of Strang-split integration step
+        // *** End of Strang-split integration step ***
 
-        // *** Take one global timestep: diffusion / convection solvers
-
-        combineTimer.start();
         t = tNext;
         tNow = tNext;
 
@@ -422,11 +297,6 @@ void FlameSolver::run(void)
             }
             i += 1;
         }
-
-        // *** Combine the solutions from the split integrators and form
-        //     the new state vector
-
-        combineTimer.stop();
 
         setupTimer.resume();
         if (t > tOutput || nOutput >= options.outputStepInterval) {
@@ -552,7 +422,9 @@ void FlameSolver::run(void)
                 // Allocate the solvers and arrays for auxiliary variables
                 resizeAuxiliary();
 
-                writeStateFile("postAdapt");
+                if (debugParameters::debugAdapt || debugParameters::debugRegrid) {
+                    writeStateFile("postAdapt");
+                }
             }
             regridTimer.stop();
         }
@@ -566,7 +438,7 @@ void FlameSolver::run(void)
         }
         setupTimer.stop();
 
-        if (debugParameters::debugPerformanceStats && (nTotal % 10 == 0)) {
+        if (debugParameters::debugPerformanceStats && (nTotal % 50 == 0)) {
             printPerformanceStats();
         }
         nTotal++;
@@ -1042,6 +914,7 @@ void FlameSolver::updateLeftBC()
 
 void FlameSolver::setDiffusionSolverState(double tInitial)
 {
+    splitTimer.resume();
     for (size_t k=0; k<nVars; k++) {
         // TODO: Use timestep that is based on each component's diffusivity
         diffusionSolvers[k].initialize(tInitial, options.diffusionTimestep);
@@ -1064,6 +937,44 @@ void FlameSolver::setDiffusionSolverState(double tInitial)
             i++;
         }
     }
+    splitTimer.stop();
+}
+
+void FlameSolver::setConvectionSolverState(double tInitial)
+{
+    splitTimer.resume();
+    convectionSystem.setState(U, T, Y);
+    convectionSystem.initialize(tInitial);
+    splitTimer.stop();
+    setDiffusionSolverState(tInitial);
+    calculateSplitDerivatives(tInitial);
+}
+
+void FlameSolver::setProductionSolverState(double tInitial)
+{
+    splitTimer.resume();
+    for (size_t j=0; j<nPoints; j++) {
+        sdVector& ySource = sourceSolvers[j].y;
+        ySource[kMomentum] = U[j];
+        ySource[kEnergy] = T[j];
+        for (size_t k=0; k<nSpec; k++) {
+            ySource[kSpecies+k] = Y(k,j);
+        }
+        sourceSolvers[j].t0 = tInitial;
+        sourceSolvers[j].initialize();
+        sourceTerms[j].wDot.assign(nSpec, 0);
+        sourceTerms[j].strainFunction.pin(tInitial);
+    }
+
+    if (options.usingAdapChem) {
+        ckGas->incrementStep();
+
+        // Because AdapChem only assigns values for species in the
+        // reduced mechanisms, we need to zero the reaction rates
+        // whenever the mechansim at each point could change.
+        wDot.data().assign(wDot.data().size(), 0);
+    }
+    splitTimer.stop();
 }
 
 void FlameSolver::calculateSplitDerivatives(double t)
@@ -1134,6 +1045,7 @@ void FlameSolver::extractDiffusionState(int stage)
 {
     assert(stage == 1 || stage == 2);
 
+    splitTimer.resume();
     U = diffusionSolvers[kMomentum].y;
     T = diffusionSolvers[kEnergy].y;
     for (size_t k=0; k<nSpec; k++) {
@@ -1147,6 +1059,7 @@ void FlameSolver::extractDiffusionState(int stage)
             i++;
         }
     }
+    splitTimer.stop();
 
     if (options.outputSplitHeatReleaseRate) {
         calculateQdot();
@@ -1173,6 +1086,56 @@ void FlameSolver::extractProductionState(int stage)
         calculateQdot();
         (stage == 1) ? qDotProd1 : qDotProd2 = getHeatReleaseRate();
     }
+}
+
+void FlameSolver::integrateConvectionTerms(double t, int stage)
+{
+    if (VERY_VERBOSE) {
+        cout << format("convection term %i/2...") % stage;
+        cout.flush();
+    }
+
+    convectionTimer.start();
+    convectionSystem.integrateToTime(t);
+    convectionTimer.stop();
+}
+
+void FlameSolver::integrateProductionTerms(double t, int stage)
+{
+    if (VERY_VERBOSE) {
+        if (stage) {
+            cout << format("Source term %i/2...") % stage;
+        } else {
+            cout << format("Source term...");
+        }
+        cout.flush();
+    }
+
+    reactionTimer.start();
+    for (size_t j=0; j<nPoints; j++) {
+        int err = sourceSolvers[j].integrateToTime(t);
+        if (err) {
+            cout << "Error at j = " << j << endl;
+            cout << "T = " << sourceTerms[j].T << endl;
+            cout << "U = " << sourceTerms[j].U << endl;
+            cout << "Y = " << sourceTerms[j].Y << endl;
+        }
+    }
+    reactionTimer.stop();
+}
+
+void FlameSolver::integrateDiffusionTerms(double t, int stage)
+{
+    if (VERY_VERBOSE) {
+        cout << format("diffusion terms %i/2...") % stage;
+        cout.flush();
+    }
+
+    diffusionTimer.start();
+    for (size_t k=0; k<nVars; k++) {
+        diffusionSolvers[k].integrateToTime(t);
+    }
+    diffusionTimer.stop();
 }
 
 void FlameSolver::update_xStag(const double t, const bool updateIntError)
