@@ -284,20 +284,6 @@ void FlameSolver::run(void)
                     t % dt % nSteps << endl;
         }
 
-        // store Interpolation data for V used in the species-split convection
-        // solver for the output file
-        vInterp.resize(convectionSystem.vInterp->size(), nPoints);
-        tvInterp.resize(convectionSystem.vInterp->size());
-        size_t i = 0;
-        typedef std::pair<double,dvector> dobuledvectorpair;
-        foreach (const dobuledvectorpair& item, *convectionSystem.vInterp) {
-            for (size_t j=0; j<nPoints; j++) {
-                vInterp(i,j) = item.second[j];
-                tvInterp[i] = item.first;
-            }
-            i += 1;
-        }
-
         setupTimer.resume();
         if (t > tOutput || nOutput >= options.outputStepInterval) {
             timeVector.push_back(t);
@@ -554,9 +540,6 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
 
     if (options.outputAuxiliaryVariables || errorFile) {
         outFile.writeVector("V", convectionSystem.V);
-        outFile.writeArray2D("Yextrap", Yextrap);
-        outFile.writeVector("Textrap", Textrap);
-        outFile.writeVector("Uextrap", Uextrap);
         outFile.writeArray2D("wdot", wDot);
         outFile.writeArray2D("rhoD", rhoD);
         outFile.writeVector("lambda", lambda);
@@ -614,10 +597,6 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("Yprod", Yprod);
         outFile.writeVector("Wconv", convectionSystem.Wmx);
 
-        outFile.writeVector("Uextrap", Uextrap);
-        outFile.writeVector("Textrap", Textrap);
-        outFile.writeArray2D("Yextrap", Yextrap);
-
         if (options.usingAdapChem) {
             dvector nSpecReduced(nPoints);
             for (size_t j=0; j<nPoints; j++) {
@@ -654,9 +633,6 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
             outFile.writeVector("convectionStartIndices", jStart);
             outFile.writeVector("convectionStopIndices", jStop);
         }
-
-        outFile.writeVector("tvInterp", tvInterp);
-        outFile.writeArray2D("vInterp", vInterp);
     }
 
     if (options.outputResidualComponents || errorFile) {
@@ -750,10 +726,6 @@ void FlameSolver::resizeAuxiliary()
     nSpec = gas.nSpec;
     nVars = 2+nSpec;
     N = nVars*nPoints;
-
-    Uextrap.resize(nPoints, 0);
-    Textrap.resize(nPoints, 0);
-    Yextrap.resize(nSpec,nPoints, 0);
 
     dUdt.resize(nPoints,0);
     dTdt.resize(nPoints,0);
@@ -1528,7 +1500,6 @@ void FlameSolver::printPerformanceStats(void)
     printPerfString("    Reaction Term Integration: ", reactionTimer);
     printPerfString("   Diffusion Term Integration: ", diffusionTimer);
     printPerfString("  Convection Term Integration: ", convectionTimer);
-    printPerfString("     Split Term Recombination: ", combineTimer);
     cout << endl << " Subcomponents:" << endl;
     printPerfString("               Reaction Rates: ", reactionRatesTimer);
     printPerfString("         Transport Properties: ", transportTimer);

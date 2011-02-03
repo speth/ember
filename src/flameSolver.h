@@ -96,14 +96,6 @@ private:
     void integrateProductionTerms(double t, int stage);
     void integrateDiffusionTerms(double t, int stage);
 
-    // Utility functions for adaptation & regridding
-    void rollVectorVector(const sdVector& y, const dvector& qdot, vector<dvector>& v);
-    void unrollVectorVector(const vector<dvector>& v);
-    void unrollVectorVectorDot(const vector<dvector>& v);
-
-    // For debugging purposes
-    void debugFailedTimestep(const sdVector& y);
-
     size_t N; // total problem size;
     size_t nSpec; // Number of chemical species
     size_t nVars; // Number of state variables at each grid point (nSpec + 2)
@@ -117,11 +109,6 @@ private:
     dvector dUdt;
     dvector dTdt;
     Array2D dYdt;
-
-    // Extrapolated state from previous timestep:
-    dvector Uextrap;
-    dvector Textrap;
-    Array2D Yextrap;
 
     // Auxiliary variables:
     dvector rho; // density [kg/m^3]
@@ -179,16 +166,10 @@ private:
     void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); // [m]
 
-    void V2rV(void);
-    void rV2V(void);
-
     void printPerformanceStats(void);
     void printPerfString(const std::string& label, const perfTimer& T) const;
 
     void updateTransportDomain();
-
-    Array2D vInterp;
-    dvector tvInterp;
 
     int alpha;
 
@@ -199,9 +180,8 @@ private:
     perfTimer totalTimer;
 
     // These add up to the total run time:
-    perfTimer setupTimer, splitTimer, combineTimer,
-              reactionTimer, diffusionTimer, convectionTimer,
-              regridTimer;
+    perfTimer setupTimer, splitTimer, reactionTimer, diffusionTimer,
+              convectionTimer, regridTimer;
 
     // These account for special parts of the code
     perfTimer reactionRatesTimer, transportTimer, thermoTimer;
