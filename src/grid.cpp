@@ -1,6 +1,7 @@
 #include "grid.h"
 #include "debugUtils.h"
 
+#include <assert.h>
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
 
@@ -363,9 +364,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
 
 void oneDimGrid::addPoint(int jInsert, vector<dvector>& y)
 {
+    assert(x.size() == dampVal.size());
+
     double xInsert = 0.5*(x[jInsert+1]+x[jInsert]);
 
-    cout << "oneDimGrid::addPoint: " << x.size() << ", " << dampVal.size() << endl;
     dampVal.insert(dampVal.begin()+jInsert+1, mathUtils::splines(x,dampVal, xInsert));
 
     foreach(dvector& row, y) {
@@ -495,7 +497,9 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
                     xLeft = xLeftMin;
                 }
             }
-            cout << "adding point at " << xLeft << endl;
+            if (debugParameters::debugRegrid) {
+                cout << "adding point at " << xLeft << endl;
+            }
             x.insert(x.begin(),xLeft);
 
             for (size_t k=0; k<nVars; k++) {
