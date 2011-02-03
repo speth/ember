@@ -42,10 +42,10 @@ public:
     double globalTimestep; // timestep size for the outer solver
     double diffusionTimestep; // timestep for diffusion solver
 
-    double idaRelTol;
-    double idaMomentumAbsTol;
-    double idaEnergyAbsTol;
-    double idaSpeciesAbsTol;
+    double integratorRelTol;
+    double integratorMomentumAbsTol;
+    double integratorEnergyAbsTol;
+    double integratorSpeciesAbsTol;
 
     std::string gasMechanismFile;
     std::string gasPhaseID;

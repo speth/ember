@@ -123,7 +123,7 @@ void strainedFlame(const std::string& inputFile)
                 cout << "Beginning run at strain rate a = " << a << endl;
                  theFlameSolver.initialize();
                  theFlameSolver.tStart = 0;
-                theFlameSolver.options.idaRelTol = mainOptions.idaRelTol;
+                theFlameSolver.options.integratorRelTol = mainOptions.integratorRelTol;
                 theFlameSolver.options.terminationTolerance = mainOptions.terminationTolerance;
                 theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriod;
                 theFlameSolver.run();

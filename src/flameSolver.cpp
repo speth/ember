@@ -1203,12 +1203,12 @@ void FlameSolver::resizeAuxiliary()
             // Create and initialize the new Sundials solver
             sundialsCVODE* solver = new sundialsCVODE(nVars);
             solver->setODE(system);
-            solver->abstol[kMomentum] = options.idaMomentumAbsTol;
-            solver->abstol[kEnergy] = options.idaEnergyAbsTol;
+            solver->abstol[kMomentum] = options.integratorMomentumAbsTol;
+            solver->abstol[kEnergy] = options.integratorEnergyAbsTol;
             for (size_t k=0; k<nSpec; k++) {
-                solver->abstol[kSpecies+k] = options.idaSpeciesAbsTol;
+                solver->abstol[kSpecies+k] = options.integratorSpeciesAbsTol;
             }
-            solver->reltol = options.idaRelTol;
+            solver->reltol = options.integratorRelTol;
             solver->linearMultistepMethod = CV_BDF;
             solver->nonlinearSolverMethod = CV_NEWTON;
             solver->maxNumSteps = 1000000;

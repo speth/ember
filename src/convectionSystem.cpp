@@ -439,11 +439,11 @@ void ConvectionSystemSplit::setGrid(const oneDimGrid& grid)
 
 void ConvectionSystemSplit::setTolerances(const configOptions& options)
 {
-    reltol = options.idaRelTol;
-    abstolU = options.idaMomentumAbsTol;
-    abstolT = options.idaEnergyAbsTol;
-    abstolW = options.idaSpeciesAbsTol * 20;
-    abstolY = options.idaSpeciesAbsTol;
+    reltol = options.integratorRelTol;
+    abstolU = options.integratorMomentumAbsTol;
+    abstolT = options.integratorEnergyAbsTol;
+    abstolW = options.integratorSpeciesAbsTol * 20;
+    abstolY = options.integratorSpeciesAbsTol;
 }
 
 void ConvectionSystemSplit::setGas(CanteraGas& gas_)

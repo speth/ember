@@ -168,10 +168,10 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("debug.performanceStats",debugParameters::debugPerformanceStats, true);
     readOption("debug.flameRadiusControl",debugParameters::debugFlameRadiusControl, false);
 
-    readOption("integrator.relativeTolerance", idaRelTol, 1e-5);
-    readOption("integrator.momentumAbsTol", idaMomentumAbsTol, 1e-8);
-    readOption("integrator.energyAbsTol", idaEnergyAbsTol, 1e-6);
-    readOption("integrator.speciesAbsTol", idaSpeciesAbsTol, 1e-10);
+    readOption("integrator.relativeTolerance", integratorRelTol, 1e-5);
+    readOption("integrator.momentumAbsTol", integratorMomentumAbsTol, 1e-8);
+    readOption("integrator.energyAbsTol", integratorEnergyAbsTol, 1e-6);
+    readOption("integrator.speciesAbsTol", integratorSpeciesAbsTol, 1e-10);
 
     if (readOption("outputFiles.saveProfiles", outputProfiles, true)) {
         readOption("outputFiles.heatReleaseRate", outputHeatReleaseRate, true);
