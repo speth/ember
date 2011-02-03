@@ -104,8 +104,6 @@ void configOptions::readOptionsFile(const std::string& filename)
 
     readOption("grid.adaptation.vtol", vtol, 0.06);
     readOption("grid.adaptation.dvtol", dvtol, 0.2);
-    readOption("grid.adaptation.vtolCont", vtolCont, vtol);
-    readOption("grid.adaptation.dvtolCont", dvtolCont, dvtol);
 
     readOption("grid.adaptation.rmTol", rmTol, 0.67);
     readOption("grid.adaptation.dampConst", dampConst, 0.5);
@@ -171,7 +169,6 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("debug.flameRadiusControl",debugParameters::debugFlameRadiusControl, false);
 
     readOption("integrator.relativeTolerance", idaRelTol, 1e-5);
-    readOption("integrator.continuityAbsTol", idaContinuityAbsTol, 1e-8);
     readOption("integrator.momentumAbsTol", idaMomentumAbsTol, 1e-8);
     readOption("integrator.energyAbsTol", idaEnergyAbsTol, 1e-6);
     readOption("integrator.speciesAbsTol", idaSpeciesAbsTol, 1e-10);

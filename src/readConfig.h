@@ -43,7 +43,6 @@ public:
     double diffusionTimestep; // timestep for diffusion solver
 
     double idaRelTol;
-    double idaContinuityAbsTol;
     double idaMomentumAbsTol;
     double idaEnergyAbsTol;
     double idaSpeciesAbsTol;
@@ -78,7 +77,7 @@ public:
     double xLeft, xRight;
 
     // Tolerances for adaptation and regridding
-    double vtol, dvtol, vtolCont, dvtolCont, rmTol, dampConst, gridMin, gridMax;
+    double vtol, dvtol, rmTol, dampConst, gridMin, gridMax;
     double uniformityTol, absvtol;
     double boundaryTol, boundaryTolRm;
     int addPointCount;
