@@ -74,9 +74,6 @@ private:
 
     ConvectionSystemSplit convectionSystem; // term + solver
 
-    double tPrev;
-    double aPrev;
-
     // Boundary values
     double rhou, rhob, rhoLeft, rhoRight;
     double Tu, Tb, Tleft, Tright;

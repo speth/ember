@@ -109,8 +109,6 @@ void FlameSolver::run(void)
 
     tFlamePrev = t;
     tNow = t;
-    tPrev = t;
-    aPrev = strainfunc.a(t);
 
     resizeAuxiliary();
 
@@ -365,10 +363,8 @@ void FlameSolver::run(void)
         // ** Assign initial conditions to the convection solver
         convectionSystem.setState(U, T, Y);
         convectionSystem.initialize(t + 0.5*dt);
-
         setDiffusionSolverState(t + 0.5*dt);
         calculateSplitDerivatives(t + 0.5*dt);
-
         splitTimer.stop();
 
         // Convection Integration: second half-step
@@ -399,7 +395,6 @@ void FlameSolver::run(void)
         combineTimer.start();
         t = tNext;
         tNow = tNext;
-        aPrev = strainfunc.a(t);
 
         nOutput++;
         nRegrid++;
