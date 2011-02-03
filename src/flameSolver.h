@@ -89,6 +89,9 @@ private:
 
     void setDiffusionSolverState(double tInitial);
     void calculateSplitDerivatives(double t);
+    void extractConvectionState(int stage);
+    void extractDiffusionState(int stage);
+    void extractProductionState(int stage);
 
     // Utility functions for adaptation & regridding
     void rollVectorVector(const sdVector& y, const dvector& qdot, vector<dvector>& v);

@@ -246,24 +246,7 @@ void FlameSolver::run(void)
         convectionSystem.integrateToTime(tNow + 0.5*dt);
         convectionTimer.stop();
 
-        // Extract solution from the convection solver
-        splitTimer.resume();
-        convectionSystem.unroll_y();
-        U = convectionSystem.U;
-        T = convectionSystem.T;
-        for (size_t k=0; k<nSpec; k++) {
-            for (size_t j = convectionStartIndices[k];
-                 j <= convectionStopIndices[k];
-                 j++)
-            {
-                Y(k,j) = convectionSystem.Y(k,j);
-            }
-        }
-
-        if (options.outputSplitHeatReleaseRate) {
-            calculateQdot();
-            qDotConv1 = getHeatReleaseRate();
-        }
+        extractConvectionState(1);
 
         // Assign initial conditions to the diffusion solvers
         setDiffusionSolverState(t);
@@ -282,26 +265,8 @@ void FlameSolver::run(void)
         }
         diffusionTimer.stop();
 
-        // Extract solution from the diffusion solver
         splitTimer.resume();
-        U = diffusionSolvers[kMomentum].y;
-        T = diffusionSolvers[kEnergy].y;
-        for (size_t k=0; k<nSpec; k++) {
-            size_t i = 0;
-            const BDFIntegrator& solver = diffusionSolvers[kSpecies+k];
-            for (size_t j = diffusionStartIndices[k];
-                 j <= diffusionStopIndices[k];
-                 j++)
-            {
-                Y(k,j) = solver.y[i];
-                i++;
-            }
-        }
-
-        if (options.outputSplitHeatReleaseRate) {
-            calculateQdot();
-            qDotDiff1 = getHeatReleaseRate();
-        }
+        extractDiffusionState(1);
 
         // Assign initial conditions to the source-term solvers
         for (size_t j=0; j<nPoints; j++) {
@@ -335,6 +300,7 @@ void FlameSolver::run(void)
         }
 
         if (options.outputSplitHeatReleaseRate) {
+            // First half-step
             reactionTimer.start();
             for (size_t j=0; j<nPoints; j++) {
                 int err = sourceSolvers[j].integrateToTime(t + 0.5*dt);
@@ -346,22 +312,9 @@ void FlameSolver::run(void)
                 }
             }
             reactionTimer.stop();
+            extractProductionState(1);
 
-            // Extract solutions from the source-term solvers
-            splitTimer.resume();
-            for (size_t j=0; j<nPoints; j++) {
-                sourceTerms[j].unroll_y(sourceSolvers[j].y);
-                U[j] = sourceTerms[j].U;
-                T[j] = sourceTerms[j].T;
-                for (size_t k=0; k<nSpec; k++) {
-                    Y(k,j) = sourceTerms[j].Y[k];
-                }
-            }
-            splitTimer.stop();
-
-            calculateQdot();
-            qDotProd1 = getHeatReleaseRate();
-
+            // Second half-step
             reactionTimer.start();
             for (size_t j=0; j<nPoints; j++) {
                 int err = sourceSolvers[j].integrateToTime(tNext);
@@ -373,21 +326,7 @@ void FlameSolver::run(void)
                 }
             }
             reactionTimer.stop();
-
-            // Extract solutions from the source-term solvers
-            splitTimer.resume();
-            for (size_t j=0; j<nPoints; j++) {
-                sourceTerms[j].unroll_y(sourceSolvers[j].y);
-                U[j] = sourceTerms[j].U;
-                T[j] = sourceTerms[j].T;
-                for (size_t k=0; k<nSpec; k++) {
-                    Y(k,j) = sourceTerms[j].Y[k];
-                }
-            }
-            splitTimer.stop();
-
-            calculateQdot();
-            qDotProd2 = getHeatReleaseRate();
+            extractProductionState(2);
 
         } else {
             reactionTimer.start();
@@ -401,18 +340,7 @@ void FlameSolver::run(void)
                 }
             }
             reactionTimer.stop();
-
-            // Extract solutions from the source-term solvers
-            splitTimer.resume();
-            for (size_t j=0; j<nPoints; j++) {
-                sourceTerms[j].unroll_y(sourceSolvers[j].y);
-                U[j] = sourceTerms[j].U;
-                T[j] = sourceTerms[j].T;
-                for (size_t k=0; k<nSpec; k++) {
-                    Y(k,j) = sourceTerms[j].Y[k];
-                }
-            }
-            splitTimer.stop();
+            extractProductionState(1);
         }
 
         // Assign initial conditions to the diffusion solvers
@@ -430,26 +358,9 @@ void FlameSolver::run(void)
         }
         diffusionTimer.stop();
 
-        // Extract solutions from the diffusion solvers
-        splitTimer.resume();
-        U = diffusionSolvers[kMomentum].y;
-        T = diffusionSolvers[kEnergy].y;
-        for (size_t k=0; k<nSpec; k++) {
-            size_t i = 0;
-            const BDFIntegrator& solver = diffusionSolvers[kSpecies+k];
-            for (size_t j = diffusionStartIndices[k];
-                 j <= diffusionStopIndices[k];
-                 j++)
-            {
-                Y(k,j) = solver.y[i];
-                i++;
-            }
-        }
 
-        if (options.outputSplitHeatReleaseRate) {
-            calculateQdot();
-            qDotDiff2 = getHeatReleaseRate();
-        }
+        splitTimer.resume();
+        extractDiffusionState(2);
 
         // ** Assign initial conditions to the convection solver
         convectionSystem.setState(U, T, Y);
@@ -470,20 +381,7 @@ void FlameSolver::run(void)
         convectionSystem.integrateToTime(tNext);
         convectionTimer.stop();
 
-        // Extract solutions from the convection solver
-        splitTimer.resume();
-        convectionSystem.unroll_y();
-        U = convectionSystem.U;
-        T = convectionSystem.T;
-        for (size_t k=0; k<nSpec; k++) {
-            for (size_t j = convectionStartIndices[k];
-                 j <= convectionStopIndices[k];
-                 j++)
-            {
-                Y(k,j) = convectionSystem.Y(k,j);
-            }
-        }
-        splitTimer.stop();
+        extractConvectionState(2);
 
         if (options.outputSplitHeatReleaseRate) {
             calculateQdot();
@@ -1211,6 +1109,75 @@ void FlameSolver::calculateSplitDerivatives(double t)
     }
 
     convectionSystem.setSplitDerivatives(dTdtSplit, dYdtSplit);
+}
+
+void FlameSolver::extractConvectionState(int stage)
+{
+    assert(stage == 1 || stage == 2);
+
+    splitTimer.resume();
+    convectionSystem.unroll_y();
+    U = convectionSystem.U;
+    T = convectionSystem.T;
+    for (size_t k=0; k<nSpec; k++) {
+        for (size_t j = convectionStartIndices[k];
+             j <= convectionStopIndices[k];
+             j++)
+        {
+            Y(k,j) = convectionSystem.Y(k,j);
+        }
+    }
+    splitTimer.stop();
+
+    if (options.outputSplitHeatReleaseRate) {
+        calculateQdot();
+        (stage == 1) ? qDotConv1 : qDotConv2 = getHeatReleaseRate();
+    }
+}
+
+void FlameSolver::extractDiffusionState(int stage)
+{
+    assert(stage == 1 || stage == 2);
+
+    U = diffusionSolvers[kMomentum].y;
+    T = diffusionSolvers[kEnergy].y;
+    for (size_t k=0; k<nSpec; k++) {
+        size_t i = 0;
+        const BDFIntegrator& solver = diffusionSolvers[kSpecies+k];
+        for (size_t j = diffusionStartIndices[k];
+             j <= diffusionStopIndices[k];
+             j++)
+        {
+            Y(k,j) = solver.y[i];
+            i++;
+        }
+    }
+
+    if (options.outputSplitHeatReleaseRate) {
+        calculateQdot();
+        (stage == 1) ? qDotDiff1 : qDotDiff2 = getHeatReleaseRate();
+    }
+}
+
+void FlameSolver::extractProductionState(int stage)
+{
+    assert(stage == 1 || stage == 2);
+
+    splitTimer.resume();
+    for (size_t j=0; j<nPoints; j++) {
+        sourceTerms[j].unroll_y(sourceSolvers[j].y);
+        U[j] = sourceTerms[j].U;
+        T[j] = sourceTerms[j].T;
+        for (size_t k=0; k<nSpec; k++) {
+            Y(k,j) = sourceTerms[j].Y[k];
+        }
+    }
+    splitTimer.stop();
+
+    if (options.outputSplitHeatReleaseRate) {
+        calculateQdot();
+        (stage == 1) ? qDotProd1 : qDotProd2 = getHeatReleaseRate();
+    }
 }
 
 void FlameSolver::update_xStag(const double t, const bool updateIntError)
