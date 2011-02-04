@@ -83,6 +83,7 @@ private:
     void updateCrossTerms(); // calculates values of cross-component terms: jSoret, sumcpj, and jCorr
     void updateLeftBC();
     void calculateQdot();
+    void calculateTimeDerivatives(); // Combine dUdt, dTdt and dYdt from the split solvers
 
     // Steps in the Strang split integration process
     void setDiffusionSolverState(double tInitial);
@@ -109,6 +110,10 @@ private:
     dvector dUdt;
     dvector dTdt;
     Array2D dYdt;
+
+    // components of the time derivatives
+    Array2D dYdtDiff, dYdtProd;
+    dvector dTdtProd, dUdtProd;
 
     // Auxiliary variables:
     dvector rho; // density [kg/m^3]

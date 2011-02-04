@@ -179,6 +179,16 @@ void FlameSolver::run(void)
             reactionRatesTimer.stop();
         }
 
+        if (options.usingAdapChem) {
+            // TODO: Determine whether this should be called before or after initializeStep
+            ckGas->incrementStep();
+
+            // Because AdapChem only assigns values for species in the
+            // reduced mechanisms, we need to zero the reaction rates
+            // whenever the mechansim at each point could change.
+            wDot.data().assign(wDot.data().size(), 0);
+        }
+
         updateLeftBC();
         if (options.xFlameControl) {
             update_xStag(t, true); // calculate the value of rVzero
@@ -356,10 +366,8 @@ void FlameSolver::run(void)
             currentSolution.push_back(T);
             for (size_t k=0; k<nSpec; k++) {
                 dvector tmp(nPoints);
-                dvector dtmp(nPoints);
                 for (size_t j=0; j<nPoints; j++) {
                     tmp[j] = Y(k,j);
-                    dtmp[j] = dYdt(k,j);
                 }
                 currentSolution.push_back(tmp);
             }
@@ -528,6 +536,10 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
     outFile.writeScalar("dadt", strainfunc.dadt(tNow));
     outFile.writeScalar("fileNumber", options.outputFileNumber);
 
+    if (options.outputTimeDerivatives || options.outputAuxiliaryVariables) {
+        calculateTimeDerivatives();
+    }
+
     if (options.outputHeatReleaseRate || errorFile) {
         outFile.writeVector("q", qDot);
         outFile.writeVector("rho", rho);
@@ -560,43 +572,6 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeVector("rphalf", grid.rphalf);
         outFile.writeScalar("Tleft", Tleft);
         outFile.writeVector("Yleft", Yleft);
-
-        dvector Uprod(nPoints);
-        dvector Tprod(nPoints);
-        Array2D Ydiff(nSpec, nPoints, 0), Yprod(nSpec, nPoints, 0);
-
-        for (size_t j=0; j<nPoints; j++) {
-            Uprod[j] = sourceTerms[j].U;
-            Tprod[j] = sourceTerms[j].T;
-            for (size_t k=0; k<nSpec; k++) {
-                Yprod(k,j) = sourceTerms[j].Y[k];
-            }
-        }
-
-        for (size_t k=0; k<nSpec; k++) {
-            size_t i = 0;
-            if (diffusionSolvers[kSpecies+k].y.empty()) {
-                continue;
-            }
-            for (size_t j = diffusionStartIndices[k];
-                 j <= diffusionStopIndices[k];
-                 j++)
-            {
-                Ydiff(k,j) = diffusionSolvers[kSpecies+k].y[i];
-                i++;
-            }
-        }
-
-        outFile.writeVector("Uconv", convectionSystem.U);
-        outFile.writeVector("Udiff", diffusionSolvers[kMomentum].y);
-        outFile.writeVector("Uprod", Uprod);
-        outFile.writeVector("Tconv", convectionSystem.T);
-        outFile.writeVector("Tdiff", diffusionSolvers[kEnergy].y);
-        outFile.writeVector("Tprod", Tprod);
-        outFile.writeArray2D("Yconv", convectionSystem.Y);
-        outFile.writeArray2D("Ydiff", Ydiff);
-        outFile.writeArray2D("Yprod", Yprod);
-        outFile.writeVector("Wconv", convectionSystem.Wmx);
 
         if (options.usingAdapChem) {
             dvector nSpecReduced(nPoints);
@@ -638,47 +613,22 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
 
     if (options.outputResidualComponents || errorFile) {
 
-        outFile.writeVector("dUdtdiff", diffusionSolvers[kMomentum].get_ydot());
-        outFile.writeVector("dUdtconv", convectionSystem.dUdt);
+        outFile.writeVector("dUdtDiff", diffusionSolvers[kMomentum].get_ydot());
+        outFile.writeVector("dUdtConv", convectionSystem.dUdt);
+        outFile.writeVector("dUdtProd", dUdtProd);
 
-        outFile.writeVector("dTdtdiff", diffusionSolvers[kEnergy].get_ydot());
-        outFile.writeVector("dTdtconv", convectionSystem.dTdt);
+        outFile.writeVector("dTdtDiff", diffusionSolvers[kEnergy].get_ydot());
+        outFile.writeVector("dTdtConv", convectionSystem.dTdt);
+        outFile.writeVector("dTdtProd", dTdtProd);
         outFile.writeVector("dTdtCross", dTdtCross);
 
-        Array2D dYdtdiff(nSpec, nPoints, 0);
-        for (size_t k=0; k<nSpec; k++) {
-            const dvector& ytmp = diffusionSolvers[kSpecies+k].get_ydot();
-            size_t i = 0;
-            for (size_t j = diffusionStartIndices[k];
-                 j <= diffusionStopIndices[k];
-                 j++)
-            {
-                dYdtdiff(k,j) = ytmp[i];
-                i++;
-            }
-        }
-
-        outFile.writeArray2D("dYdtconv", convectionSystem.dYdt);
-        outFile.writeArray2D("dYdtdiff", dYdtdiff);
+        outFile.writeArray2D("dYdtConv", convectionSystem.dYdt);
+        outFile.writeArray2D("dYdtDiff", dYdtDiff);
+        outFile.writeArray2D("dYdtProd", dYdtProd);
         outFile.writeArray2D("dYdtCross", dYdtCross);
 
-        dvector dUdtprod(nPoints);
-        dvector dTdtprod(nPoints);
-        Array2D dYdtprod(nSpec, nPoints, 0);
-        for (size_t j=0; j<nPoints; j++) {
-            dUdtprod[j] = sourceTerms[j].dUdt;
-            dTdtprod[j] = sourceTerms[j].dTdt;
-            for (size_t k=0; k<nSpec; k++) {
-                dYdtprod(k,j) = sourceTerms[j].dYdt[k];
-            }
-        }
-
-        outFile.writeVector("dUdtprod", dUdtprod);
-        outFile.writeVector("dTdtprod", dTdtprod);
-        outFile.writeArray2D("dYdtprod", dYdtprod);
-
-        outFile.writeVector("dWdtconv", convectionSystem.dWdt);
-        outFile.writeVector("constW", convectionSystem.utwSystem.dWdtSplit);
+        outFile.writeVector("dWdt", convectionSystem.dWdt);
+        outFile.writeVector("dWdtSplit", convectionSystem.utwSystem.dWdtSplit);
     }
 
     outFile.close();
@@ -938,15 +888,6 @@ void FlameSolver::setProductionSolverState(double tInitial)
         sourceTerms[j].wDot.assign(nSpec, 0);
         sourceTerms[j].strainFunction.pin(tInitial);
     }
-
-    if (options.usingAdapChem) {
-        ckGas->incrementStep();
-
-        // Because AdapChem only assigns values for species in the
-        // reduced mechanisms, we need to zero the reaction rates
-        // whenever the mechansim at each point could change.
-        wDot.data().assign(wDot.data().size(), 0);
-    }
     splitTimer.stop();
 }
 
@@ -1164,6 +1105,53 @@ void FlameSolver::calculateQdot()
             qDot[j] -= wDot(k,j)*hk(k,j);
         }
     }
+}
+
+void FlameSolver::calculateTimeDerivatives()
+{
+    dYdtDiff.resize(nSpec, nPoints);
+    dYdtProd.resize(nSpec, nPoints);
+    dTdtProd.resize(nPoints);
+    dUdtProd.resize(nPoints);
+
+    // Diffusion term contribution
+    setDiffusionSolverState(tNow);
+    dUdt = diffusionSolvers[kMomentum].get_ydot();
+    dTdt = diffusionSolvers[kEnergy].get_ydot();
+    dYdt.data().assign(dYdt.data().size(), 0);
+    for (size_t k=0; k<nSpec; k++) {
+        const dvector& ydot = diffusionSolvers[kSpecies+k].get_ydot();
+
+        size_t i = 0;
+        for (size_t j = diffusionStartIndices[k];
+             j <= diffusionStopIndices[k];
+             j++)
+        {
+            dYdt(k,j) = dYdtDiff(k,j) = ydot[i];
+            i++;
+        }
+    }
+
+    // Production term contribution
+    setProductionSolverState(tNow);
+    for (size_t j=0; j<nPoints; j++) {
+        sdVector& ySource = sourceSolvers[j].y;
+        sdVector ydotSource(nVars);
+        sourceTerms[j].f(tNow, ySource, ydotSource);
+
+        dUdt[j] += dUdtProd[j] = ydotSource[kMomentum];
+        dTdt[j] += dTdtProd[j] = ydotSource[kEnergy];
+        for (size_t k=0; k<nSpec; k++) {
+            dYdt(k,j) += dYdtProd(k,j) = ydotSource[kSpecies+k];
+        }
+    }
+
+    // Convection term contribution
+    setConvectionSolverState(tNow);
+    convectionSystem.evaluate();
+    dUdt += convectionSystem.dUdt;
+    dTdt += convectionSystem.dTdt;
+    dYdt += convectionSystem.dYdt;
 }
 
 double FlameSolver::getHeatReleaseRate(void)
