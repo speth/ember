@@ -81,6 +81,7 @@ private:
 
     void resizeAuxiliary(); // Handle resizing of data structures as grid size changes
     void updateCrossTerms(); // calculates values of cross-component terms: jSoret, sumcpj, and jCorr
+    void updateChemicalProperties();
     void updateLeftBC();
     void calculateQdot();
     void calculateTimeDerivatives(); // Combine dUdt, dTdt and dYdt from the split solvers

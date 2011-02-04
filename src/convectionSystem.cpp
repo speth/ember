@@ -3,6 +3,12 @@
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
 
+#ifdef NDEBUG
+    static const bool VERY_VERBOSE = false;
+#else
+    static const bool VERY_VERBOSE = true;
+#endif
+
 ConvectionSystemUTW::ConvectionSystemUTW()
     : gas(NULL)
     , nVars(3)
@@ -619,6 +625,11 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
     int cvode_flag = CV_SUCCESS;
     int i = 0;
 
+    if (VERY_VERBOSE) {
+        cout << "UTW...";
+        cout.flush();
+    }
+
     // CVODE returns CV_TSTOP_RETURN when the solver has reached tf
     while (cvode_flag != CV_TSTOP_RETURN) {
         cvode_flag = utwSolver->integrateOneStep(tf);
@@ -629,6 +640,10 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
     utwTimer.stop();
 
     speciesTimer.start();
+    if (VERY_VERBOSE) {
+        cout << "Yk...";
+        cout.flush();
+    }
     // Integrate the species systems
     for (size_t k=0; k<nSpec; k++) {
         speciesSystems[k].vInterp = vInterp;

@@ -37,6 +37,9 @@ namespace mathUtils
     int minloc(const dvector& v);
     int maxloc(const dvector& v);
 
+    bool notnan(const dvector& v); // returns true if v does not contain any NaNs
+    int nanloc(const dvector& v); // returns index of first NaN component. Returns -1 if none
+
     dvector abs(const dvector& v);
 
     // Returns the index of the first/last element of v which is true

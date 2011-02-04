@@ -108,10 +108,6 @@ void FlameSolver::run(void)
     tFlamePrev = t;
     tNow = t;
 
-    if (options.outputProfiles) {
-        writeStateFile();
-    }
-
     while (true) {
         setupTimer.start();
 
@@ -142,37 +138,7 @@ void FlameSolver::run(void)
             Y(k,jj) = Yright[k];
         }
 
-        // Calculate auxiliary data
-        for (size_t j=0; j<nPoints; j++) {
-            thermoTimer.start();
-            gas.setStateMass(&Y(0,j), T[j]);
-            rho[j] = gas.getDensity();
-            Wmx[j] = gas.getMixtureMolecularWeight();
-            cp[j] = gas.getSpecificHeatCapacity();
-            gas.getSpecificHeatCapacities(&cpSpec(0,j));
-            gas.getEnthalpies(&hk(0,j));
-            thermoTimer.stop();
-
-            transportTimer.start();
-            lambda[j] = gas.getThermalConductivity();
-            mu[j] = gas.getViscosity();
-            gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j));
-            gas.getThermalDiffusionCoefficients(&Dkt(0,j));
-            transportTimer.stop();
-
-            reactionRatesTimer.start();
-            if (options.usingAdapChem) {
-                ckGas->initializeStep(&Y(0,j), T[j], j);
-                ckGas->getReactionRates(&wDot(0,j));
-            } else {
-                gas.getReactionRates(&wDot(0,j));
-            }
-            qDot[j] = 0;
-            for (size_t k=0; k<nSpec; k++) {
-                qDot[j] -= wDot(k,j)*hk(k,j);
-            }
-            reactionRatesTimer.stop();
-        }
+        updateChemicalProperties();
 
         if (options.usingAdapChem) {
             // TODO: Determine whether this should be called before or after initializeStep
@@ -225,6 +191,10 @@ void FlameSolver::run(void)
         }
 
         splitTimer.stop();
+
+        if (t == tStart && options.outputProfiles) {
+            writeStateFile();
+        }
 
         double tNext = tNow + dt;
 
@@ -519,6 +489,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
     }
     DataFile outFile(fileName.str());
 
+    updateChemicalProperties();
     convectionSystem.evaluate();
 
     // Write the state data to the output file:
@@ -776,6 +747,10 @@ void FlameSolver::resizeAuxiliary()
 
 void FlameSolver::updateCrossTerms()
 {
+    assert(mathUtils::notnan(Y.data()));
+    assert(mathUtils::notnan(T));
+    assert(mathUtils::notnan(rhoD.data()));
+
     for (size_t j=0; j<jj; j++) {
         jCorr[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
@@ -785,6 +760,11 @@ void FlameSolver::updateCrossTerms()
             jCorr[j] -= jFick(k,j) + jSoret(k,j);
         }
     }
+    assert(mathUtils::notnan(jFick.data()));
+    assert(mathUtils::notnan(jSoret.data()));
+    assert(mathUtils::notnan(lambda));
+    assert(mathUtils::notnan(rho));
+    assert(mathUtils::notnan(cp));
 
     // Add a bit of artificial diffusion to jCorr to improve stability
     jCorrSolver.y = jCorr;
@@ -796,6 +776,8 @@ void FlameSolver::updateCrossTerms()
     jCorrSolver.initialize(0, options.diffusionTimestep);
     jCorrSolver.integrateToTime(options.globalTimestep);
     jCorr = jCorrSolver.y;
+
+    assert(mathUtils::notnan(jCorr));
 
     for (size_t j=1; j<jj; j++) {
         sumcpj[j] = 0;
@@ -810,6 +792,10 @@ void FlameSolver::updateCrossTerms()
         double dTdx = cfm[j]*T[j-1] + cf[j]*T[j] + cfp[j]*T[j+1];
         dTdtCross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * dTdx / (cp[j]*rho[j]);
     }
+
+    assert(mathUtils::notnan(dYdtCross.data()));
+    assert(mathUtils::notnan(sumcpj));
+    assert(mathUtils::notnan(dTdtCross));
 }
 
 void FlameSolver::updateLeftBC()
@@ -827,6 +813,41 @@ void FlameSolver::updateLeftBC()
 
     if (prev != grid.leftBC) {
         cout << "updateLeftBC: BC changed from " << prev << " to " << grid.leftBC << "." << endl;
+    }
+}
+
+void FlameSolver::updateChemicalProperties()
+{
+    // Calculate auxiliary data
+    for (size_t j=0; j<nPoints; j++) {
+        thermoTimer.start();
+        gas.setStateMass(&Y(0,j), T[j]);
+        rho[j] = gas.getDensity();
+        Wmx[j] = gas.getMixtureMolecularWeight();
+        cp[j] = gas.getSpecificHeatCapacity();
+        gas.getSpecificHeatCapacities(&cpSpec(0,j));
+        gas.getEnthalpies(&hk(0,j));
+        thermoTimer.stop();
+
+        transportTimer.start();
+        lambda[j] = gas.getThermalConductivity();
+        mu[j] = gas.getViscosity();
+        gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j));
+        gas.getThermalDiffusionCoefficients(&Dkt(0,j));
+        transportTimer.stop();
+
+        reactionRatesTimer.start();
+        if (options.usingAdapChem) {
+            ckGas->initializeStep(&Y(0,j), T[j], j);
+            ckGas->getReactionRates(&wDot(0,j));
+        } else {
+            gas.getReactionRates(&wDot(0,j));
+        }
+        qDot[j] = 0;
+        for (size_t k=0; k<nSpec; k++) {
+            qDot[j] -= wDot(k,j)*hk(k,j);
+        }
+        reactionRatesTimer.stop();
     }
 }
 
