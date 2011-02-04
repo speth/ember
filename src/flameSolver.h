@@ -27,7 +27,7 @@ class FlameSolver : public GridBased
     // for the large-scale time integration.
 public:
     FlameSolver();
-    ~FlameSolver();
+    ~FlameSolver() {}
 
     void setOptions(const configOptions& options);
     // Call one of these

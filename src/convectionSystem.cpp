@@ -238,11 +238,6 @@ void ConvectionSystemUTW::rV2V(void)
     }
 }
 
-
-ConvectionSystemY::ConvectionSystemY()
-{
-}
-
 int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
 {
     assert (stopIndex-startIndex+1 == y.length());
@@ -352,14 +347,8 @@ int ConvectionSystemY::bandedJacobian(const realtype t, const sdVector& y,
 void ConvectionSystemY::resize(const size_t new_nPoints)
 {
     grid.setSize(new_nPoints);
-
     v.resize(nPoints);
 }
-
-void ConvectionSystemY::initialize()
-{
-}
-
 
 void ConvectionSystemY::update_v(const double t)
 {

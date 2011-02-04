@@ -14,8 +14,8 @@ public:
 class LinearODE
 {
 public:
-    LinearODE() { };
-    ~LinearODE() { };
+    LinearODE() {}
+    ~LinearODE() {}
 
     // ODE defined as ydot = f(t,y) = J*y + c
     virtual void get_A(sdBandMatrix& J) = 0;
@@ -29,7 +29,7 @@ class Integrator
 {
 public:
     Integrator();
-    ~Integrator() { };
+    ~Integrator() {}
 
     // Initialization - Each of these must be called before starting integration
     virtual void set_y0(const dvector& y0);

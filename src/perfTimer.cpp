@@ -6,10 +6,6 @@ perfTimer::perfTimer(void)
     cummulativeTime = 0;
 }
 
-perfTimer::~perfTimer(void)
-{
-}
-
 void perfTimer::start(void)
 {
     callCount++;

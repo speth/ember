@@ -74,7 +74,7 @@ class ConvectionSystemY : public sdODE, public GridBased
     // System representing the convection equation for a single species
     // with a prescribed velocity field V
 public:
-    ConvectionSystemY();
+    ConvectionSystemY() {}
 
     // The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
@@ -82,7 +82,6 @@ public:
     int bandedJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdBandMatrix& J);
 
     void resize(const size_t nPoints);
-    void initialize();
 
     double Yleft;
     int k; // species index (only needed for debugging)

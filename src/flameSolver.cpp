@@ -25,10 +25,6 @@ FlameSolver::FlameSolver()
     convectionSystem.setSpeciesDomains(convectionStartIndices, convectionStopIndices);
 }
 
-FlameSolver::~FlameSolver()
-{
-}
-
 void FlameSolver::setOptions(const configOptions& _options)
 {
     options = _options;
@@ -92,7 +88,7 @@ void FlameSolver::run(void)
     totalTimer.start();
 
     double t = tStart;
-    double dt;
+    double dt = options.globalTimestep;
 
     long int nTotal = 0; // total number of timesteps taken
     int nRegrid = 0; // number of time steps since regridding/adaptation
@@ -111,7 +107,6 @@ void FlameSolver::run(void)
 
     tFlamePrev = t;
     tNow = t;
-    dt = options.globalTimestep;
 
     if (options.outputProfiles) {
         writeStateFile();

@@ -11,7 +11,7 @@ private:
 
 public:
     perfTimer(void);
-    ~perfTimer(void);
+    ~perfTimer(void) {}
 
     void start(void);
     void stop(void);

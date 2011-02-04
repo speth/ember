@@ -18,7 +18,7 @@ class DiffusionSystem : public LinearODE, public GridBased
     // the diffusion coefficients D, and the finite difference formula used.
 
 public:
-    DiffusionSystem();
+    DiffusionSystem() {}
 
     // Provide the matrix associated with the ODE to the integrator
     void get_A(sdBandMatrix& J);

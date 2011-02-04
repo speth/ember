@@ -1,10 +1,6 @@
 #include "diffusionSystem.h"
 #include <assert.h>
 
-DiffusionSystem::DiffusionSystem()
-{
-}
-
 void DiffusionSystem::get_A(sdBandMatrix& A)
 {
     // Build the matrix A describing the linear ODE
