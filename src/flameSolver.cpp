@@ -79,6 +79,7 @@ void FlameSolver::initialize(void)
     for (size_t k=0; k<nVars; k++) {
         DiffusionSystem* term = new DiffusionSystem();
         BDFIntegrator* integrator = new BDFIntegrator(*term);
+        integrator->resize(nPoints, 1, 1);
         diffusionTerms.push_back(term);
         diffusionSolvers.push_back(integrator);
     }
@@ -120,7 +121,7 @@ void FlameSolver::run(void)
         setupTimer.start();
 
         // Debug sanity check
-        if (!NDEBUG) {
+        #ifndef NDEBUG
             bool error = false;
             for (size_t j=0; j<nPoints; j++) {
                 if (T[j] < 295 || T[j] > 3000) {
@@ -132,7 +133,7 @@ void FlameSolver::run(void)
             if (error) {
                 writeStateFile();
             }
-        }
+        #endif
 
         // Reset boundary conditions to prevent numerical drift
         if (grid.leftBC == BoundaryCondition::FixedValue) {
@@ -1517,24 +1518,44 @@ void FlameSolver::printPerfString(const std::string& label, const perfTimer& T) 
 
 void FlameSolver::updateTransportDomain()
 {
-    // TODO: Broken until we get calculations of constYprod back somehow
     if (!options.transportEliminationDiffusion && !options.transportEliminationConvection) {
         return;
     }
 
-    /*
-    // TODO: Use timestep that is based on each component's diffusivity
-    diffusionTestSolver.initialize(0, options.diffusionTimestep);
+    Array2D dYdtTransport(nSpec, nPoints);
+    Array2D dYdtProduction(nSpec, nPoints);
 
+    // Evaluate the full diffusion term for each species
+    diffusionTestSolver.initialize(0, options.diffusionTimestep);
     for (size_t k=0; k<nSpec; k++) {
-        // evaluate the full diffusion term for each species
         for (size_t j=0; j<nPoints; j++) {
             diffusionTestSolver.y[j] = Y(k,j);
             diffusionTestTerm.B[j] = 1/rho[j];
             diffusionTestTerm.D[j] = rhoD(k,j);
         }
         const dvector& dYkdt_diff = diffusionTestSolver.get_ydot();
-        constYdiff.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
+        dYdt.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
+        dYdtTransport.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
+    }
+
+    // Evaluate the reaction term (using the current reduced mechanism, if any)
+    // for reach component
+    for (size_t j=0; j<nPoints; j++) {
+        sdVector& ySource = sourceSolvers[j].y;
+        ySource[kMomentum] = U[j];
+        ySource[kEnergy] = T[j];
+        for (size_t k=0; k<nSpec; k++) {
+            ySource[kSpecies+k] = Y(k,j);
+        }
+        sourceTerms[j].wDot.assign(nSpec, 0);
+        sourceTerms[j].strainFunction.pin(tNow);
+
+        sdVector ydotSource(nVars);
+        sourceTerms[j].f(tNow, ySource, ydotSource);
+        for (size_t k=0; k<nSpec; k++) {
+            dYdt(k,j) += ydotSource[kSpecies+k];
+            dYdtProduction(k,j) = ydotSource[kSpecies+k];
+        }
     }
 
     // Evaluate the full convection term
@@ -1549,22 +1570,13 @@ void FlameSolver::updateTransportDomain()
     }
 
     convectionSystem.setState(U, T, Y);
-    dvector Utmp = constUprod + constUdiff;
-    dvector Ttmp = constTprod + constTdiff + constTcross;
-    Array2D Ytmp(nSpec, nPoints);
-    for (size_t j=0; j<nPoints; j++) {
-        for (size_t k=0; k<nSpec; k++) {
-            Ytmp(k,j) = constYprod(k,j) + constYdiff(k,j) + constYcross(k,j);
-        }
-    }
-    convectionSystem.setSplitConst(Utmp, Ttmp, Ytmp, false);
-
+    convectionSystem.setSplitDerivatives(dTdt, dYdt);
     convectionSystem.evaluate();
-    constUconv = convectionSystem.dUdt - Utmp;
-    constTconv = convectionSystem.dTdt - Ttmp;
+
     for (size_t j=0; j<nPoints; j++) {
         for (size_t k=0; k<nSpec; k++) {
-            constYconv(k,j) = convectionSystem.dYdt(k,j) - Ytmp(k,j);
+            dYdt(k,j) += convectionSystem.dYdt(k,j);
+            dYdtTransport(k,j) += convectionSystem.dYdt(k,j);
         }
     }
 
@@ -1572,8 +1584,8 @@ void FlameSolver::updateTransportDomain()
         // Find the left boundary for species k
         int jStart = jj;
         for (size_t j=0; j<nPoints; j++) {
-            if (abs(constYdiff(k,j)+constYconv(k,j)) > options.adapchem_atol ||
-                abs(constYprod(k,j)) > options.adapchem_atol) {
+            if (abs(dYdtTransport(k,j)) > options.adapchem_atol ||
+                abs(dYdtProduction(k,j)) > options.adapchem_atol) {
                 jStart = j;
                 break;
             }
@@ -1590,8 +1602,8 @@ void FlameSolver::updateTransportDomain()
         // Find the right boundary for species k
         size_t jStop = jStart;
         for (int j=jj; j>jStart; j--) {
-            if (abs(constYdiff(k,j)+constYconv(k,j)) > options.adapchem_atol ||
-                abs(constYprod(k,j)) > options.adapchem_atol) {
+            if (abs(dYdtTransport(k,j)) > options.adapchem_atol ||
+                abs(dYdtProduction(k,j)) > options.adapchem_atol) {
                 jStop = j;
                 break;
             }
@@ -1616,5 +1628,4 @@ void FlameSolver::updateTransportDomain()
     if (options.transportEliminationConvection) {
         convectionSystem.resize(nPoints, nPointsConvection, nSpec);
     }
-    */
 }
