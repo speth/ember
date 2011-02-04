@@ -800,7 +800,6 @@ void FlameSolver::updateCrossTerms()
 
 void FlameSolver::updateLeftBC()
 {
-    // Boundary condition for left edge of domain
     BoundaryCondition::BC prev = grid.leftBC;
 
     if ((options.twinFlame || options.curvedFlame) && x[0] >= 0.0 && x[0] <= options.centerGridMin) {
@@ -1105,7 +1104,6 @@ double FlameSolver::targetFlamePosition(double t)
 
 void FlameSolver::calculateQdot()
 {
-    // Calculate auxiliary data
     for (size_t j=0; j<nPoints; j++) {
         gas.setStateMass(&Y(0,j), T[j]);
         gas.getEnthalpies(&hk(0,j));

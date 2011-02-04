@@ -29,13 +29,13 @@ public:
     FlameSolver();
     ~FlameSolver() {}
 
-    void setOptions(const configOptions& options);
-    // Call one of these
-    virtual void generateProfile();
-    virtual void loadProfile();
+    void setOptions(const configOptions& options); // Set options read from the configuration file
+    void initialize(void); // call to generate profiles and perform one-time setup
+    void run(void); // Start the time integration
 
-    void initialize(void);
-    void run(void);
+    // Called internally by initialize()
+    virtual void generateProfile(); // Generate initial conditions based on boundary conditions
+    virtual void loadProfile(); // Load initial conditions from a file
 
     // Calculate the mole fraction vector of the reactants based on the
     // equivalence ratio and the fuel and oxidizer compositions
@@ -81,9 +81,9 @@ private:
 
     void resizeAuxiliary(); // Handle resizing of data structures as grid size changes
     void updateCrossTerms(); // calculates values of cross-component terms: jSoret, sumcpj, and jCorr
-    void updateChemicalProperties();
-    void updateLeftBC();
-    void calculateQdot();
+    void updateChemicalProperties(); // Update thermodynamic, transport, and kinetic properties
+    void updateLeftBC(); // Set boundary condition for left edge of domain
+    void calculateQdot(); // Compute heat release rate using the current temperature and mass fractions
     void calculateTimeDerivatives(); // Combine dUdt, dTdt and dYdt from the split solvers
 
     // Steps in the Strang split integration process
@@ -98,9 +98,9 @@ private:
     void integrateProductionTerms(double t, int stage);
     void integrateDiffusionTerms(double t, int stage);
 
-    size_t N; // total problem size;
     size_t nSpec; // Number of chemical species
     size_t nVars; // Number of state variables at each grid point (nSpec + 2)
+    size_t N; // total problem size (nSpec * nVars)
 
     // State variables:
     dvector U; // normalized tangential velocity (u*a/u_inf) [1/s]
@@ -121,24 +121,28 @@ private:
     dvector jCorr; // Correction to ensure sum of mass fractions = 1
     dvector sumcpj; // part of the enthalpy flux term
     dvector qDot; // Heat release rate [W/m^3]
-    Array2D wDot; // species production rates [mol/m^3*s]
-    dvector Wmx; // mixture molecular weight
-    dvector W;
-    dvector mu;
-    dvector lambda;
-    dvector cp;
-    Array2D cpSpec;
-    Array2D rhoD;
-    Array2D Dkt;
-    Array2D hk;
-    Array2D jFick;
-    Array2D jSoret;
+    Array2D wDot; // species production rates [kmol/m^3*s]
+    dvector Wmx; // mixture molecular weight [kg/kmol]
+    dvector W; // species molecular weights [kg/kmol]
+    dvector mu; // dynamic viscosity [Pa*s]
+    dvector lambda; // thermal conductivity [W/m*K]
+    dvector cp; // mixture heat capacity [J/kg*K]
+    Array2D cpSpec; // species molar heat capacities [J/kmol*K]
+    Array2D rhoD; // density * diffusivity [kg/m*s]
+    Array2D Dkt; // thermal diffusivity
+    Array2D hk; // species molar enthalpies [J/kmol]
+    Array2D jFick; // Fickian mass flux [kg/m^2*s]
+    Array2D jSoret; // Soret mass flux [kg/m^2*s]
 
     // Heat release rate evaluated after each phase of the split solver
     double qDotProd1, qDotProd2, qDotDiff1, qDotDiff2, qDotConv1, qDotConv2;
 
-    Array2D dYdtCross;
-    dvector dTdtCross;
+    Array2D dYdtCross; // dYdt due to gradients in other species and temperature
+    dvector dTdtCross; // dTdt due to gradients in gas composition
+
+    // jCorr is a correction to force the net diffusion mass flux to be zero
+    // jCorrSystem / jCorrSolver are used to introduce numerical diffusion into
+    // jCorr to eliminate spatial instabilities
     DiffusionSystem jCorrSystem;
     BDFIntegrator jCorrSolver;
 
@@ -154,7 +158,6 @@ private:
     vector<size_t> convectionStopIndices; // index of rightmost grid point for each component
     vector<size_t> nPointsConvection; // number of grid points for transport of each component
 
-
     // Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;
 
@@ -167,6 +170,7 @@ private:
     // Cantera data
     CanteraGas gas;
 
+    // Chemkin/AdapChem state mechanism data
     boost::shared_ptr<AdapChem> ckGas;
 
     void update_xStag(const double t, const bool updateIntError);
@@ -177,9 +181,7 @@ private:
 
     void updateTransportDomain();
 
-    int alpha;
-
-    double centerVol, centerArea;
+    int alpha; // curved grid exponent. alpha = 1 for curved flames, 0 for planar flames.
 
     // Performance Timers
     // Just the total time:
@@ -190,6 +192,5 @@ private:
               convectionTimer, regridTimer;
 
     // These account for special parts of the code
-    perfTimer reactionRatesTimer, transportTimer, thermoTimer;
-    perfTimer jacobianTimer;
+    perfTimer reactionRatesTimer, transportTimer, thermoTimer, jacobianTimer;
 };
