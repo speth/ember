@@ -98,6 +98,9 @@ void FlameSolver::run(void)
     int nTerminate = 1; // number of steps since last checking termination condition
     int nCurrentState = 0; // number of time steps since profNow.h5 and outNow.h5 were written
 
+    // number of time steps since performing transport species elimination
+    int nEliminate = options.transportEliminationStepInterval;
+
     double tOutput = t; // time of next integral flame parameters output (this step)
     double tRegrid = t + options.regridTimeInterval; // time of next regridding
     double tProfile = t + options.profileTimeInterval; // time of next profile output
@@ -159,7 +162,12 @@ void FlameSolver::run(void)
         setupTimer.stop();
 
         splitTimer.start();
-        updateTransportDomain();
+        if (nEliminate >= options.transportEliminationStepInterval) {
+            updateTransportDomain();
+            nEliminate = 0;
+        } else {
+            nEliminate++;
+        }
 
         // Diffusion solvers: Energy and Momentum
         diffusionSolvers[kMomentum].resize(nPoints, 1, 1);
@@ -355,6 +363,10 @@ void FlameSolver::run(void)
             if (grid.updated) {
                 grid.updated = false;
                 nIntegrate = 0;
+
+                // Update species elimination at the start of the next time step
+                nEliminate = options.transportEliminationStepInterval;
+
                 cout << format("Grid size: %i points.") % nPoints << endl;
 
                 // "unrollVectorVector"

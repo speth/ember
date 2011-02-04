@@ -61,6 +61,7 @@ public:
     std::string adapchemRestartFile;
     bool transportEliminationDiffusion;
     bool transportEliminationConvection;
+    int transportEliminationStepInterval;
     double adapchem_atol;
 
     std::string fuel; // molar composition of the fuel
