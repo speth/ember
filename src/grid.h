@@ -16,7 +16,6 @@ public:
 
     int alpha; // domain curvature parameter. 0: planar, 1: cylindrical
     size_t ju, jb; // indices of burned / unburned boundaries
-    size_t kQdot; // index into solutionState of the heat release rate
 
     // Parameters for controlling internal grid points:
     double vtol_in;
