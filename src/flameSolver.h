@@ -88,7 +88,7 @@ private:
 
     // Steps in the Strang split integration process
     void setDiffusionSolverState(double tInitial);
-    void setConvectionSolverState(double tInitial);
+    void setConvectionSolverState(double tInitial, int stage);
     void setProductionSolverState(double tInitial);
     void calculateSplitDerivatives(double t);
     void extractConvectionState(int stage);

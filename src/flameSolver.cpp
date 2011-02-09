@@ -209,7 +209,7 @@ void FlameSolver::run(void)
         // *** Strang-split Integration ***
 
         // Convection Integration: first half-step
-        setConvectionSolverState(t);
+        setConvectionSolverState(t, 1);
         integrateConvectionTerms(t + 0.5*dt, 1);
         extractConvectionState(1);
 
@@ -242,7 +242,7 @@ void FlameSolver::run(void)
         extractDiffusionState(2); // extract solution components
 
         // Convection Integration: second half-step
-        setConvectionSolverState(t + 0.5*dt); // assign initial conditions
+        setConvectionSolverState(t + 0.5*dt, 2); // assign initial conditions
         integrateConvectionTerms(tNext, 2); // integrate
         extractConvectionState(2); // extract solution components
 
@@ -606,7 +606,10 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
         outFile.writeArray2D("dYdtCross", dYdtCross);
 
         outFile.writeVector("dWdt", convectionSystem.dWdt);
+        outFile.writeVector("dWdx", convectionSystem.utwSystem.dWdx);
+        outFile.writeVector("dTdx", convectionSystem.utwSystem.dTdx);
         outFile.writeVector("dWdtSplit", convectionSystem.utwSystem.dWdtSplit);
+        outFile.writeVector("dTdtSplit", convectionSystem.utwSystem.dTdtSplit);
     }
 
     outFile.close();
@@ -890,14 +893,19 @@ void FlameSolver::setDiffusionSolverState(double tInitial)
     splitTimer.stop();
 }
 
-void FlameSolver::setConvectionSolverState(double tInitial)
+void FlameSolver::setConvectionSolverState(double tInitial, int stage)
 {
+    assert(stage == 1 || stage == 2);
+
     splitTimer.resume();
     convectionSystem.setState(U, T, Y);
     convectionSystem.initialize(tInitial);
     splitTimer.stop();
     setDiffusionSolverState(tInitial);
-    calculateSplitDerivatives(tInitial);
+
+    if (stage == 1) {
+        calculateSplitDerivatives(tInitial);
+    }
 }
 
 void FlameSolver::setProductionSolverState(double tInitial)
@@ -1173,7 +1181,7 @@ void FlameSolver::calculateTimeDerivatives()
     }
 
     // Convection term contribution
-    setConvectionSolverState(tNow);
+    setConvectionSolverState(tNow, 1);
     convectionSystem.evaluate();
     dUdt += convectionSystem.dUdt;
     dTdt += convectionSystem.dTdt;

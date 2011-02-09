@@ -202,18 +202,18 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     dTdt.resize(nPoints);
     dTdx.resize(nPoints);
     Tconst.resize(nPoints);
-    dTdtSplit.resize(nPoints);
+    dTdtSplit.resize(nPoints, 0);
 
     Wmx.resize(nPoints);
     dWdt.resize(nPoints);
     dWdx.resize(nPoints);
-    dWdtSplit.resize(nPoints);
+    dWdtSplit.resize(nPoints, 0);
 }
 
 void ConvectionSystemUTW::initialize()
 {
-    dTdtSplit.assign(nPoints, 0);
-    dWdtSplit.assign(nPoints, 0);
+    //dTdtSplit.assign(nPoints, 0);
+    //dWdtSplit.assign(nPoints, 0);
 }
 
 void ConvectionSystemUTW::V2rV(void)
