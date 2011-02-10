@@ -169,10 +169,6 @@ void FlameSolver::run(void)
             nEliminate++;
         }
 
-        // Diffusion solvers: Energy and Momentum
-        diffusionSolvers[kMomentum].resize(nPoints, 1, 1);
-        diffusionSolvers[kEnergy].resize(nPoints, 1, 1);
-
         for (size_t j=0; j<nPoints; j++) {
             diffusionTerms[kMomentum].B[j] = 1/rho[j];
             diffusionTerms[kEnergy].B[j] = 1/(rho[j]*cp[j]);
@@ -382,12 +378,6 @@ void FlameSolver::run(void)
                     }
                 }
 
-                // Assign the new grid to the terms that need it
-                for (size_t k=0; k<nVars; k++) {
-                    diffusionTerms[k].setGrid(grid);
-                }
-                convectionSystem.setGrid(grid);
-
                 // Update the mass flux at the left boundary
                 rVzero = mathUtils::interp1(x_prev, V_prev, grid.x[0]);
 
@@ -395,7 +385,7 @@ void FlameSolver::run(void)
                 resizeAuxiliary();
 
                 if (debugParameters::debugAdapt || debugParameters::debugRegrid) {
-                    writeStateFile("postAdapt");
+                    writeStateFile("postAdapt", false, false);
                 }
             }
             regridTimer.stop();
@@ -469,7 +459,7 @@ bool FlameSolver::checkTerminationCondition(void)
     return false;
 }
 
-void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
+void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile, bool updateDerivatives)
 {
     std::ostringstream fileName(ostringstream::out);
     bool incrementFileNumber = false;
@@ -514,7 +504,7 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile)
     outFile.writeScalar("dadt", strainfunc.dadt(tNow));
     outFile.writeScalar("fileNumber", options.outputFileNumber);
 
-    if (options.outputTimeDerivatives || options.outputAuxiliaryVariables) {
+    if (updateDerivatives && (options.outputTimeDerivatives || options.outputAuxiliaryVariables)) {
         calculateTimeDerivatives();
     }
 
@@ -748,9 +738,14 @@ void FlameSolver::resizeAuxiliary()
             diffusionSolvers[k].resize(nPoints, 1, 1);
         }
     }
+
     for (size_t k=0; k<nVars; k++) {
         diffusionTerms[k].setGrid(grid);
     }
+
+    // Diffusion solvers: Energy and Momentum
+    diffusionSolvers[kMomentum].resize(nPoints, 1, 1);
+    diffusionSolvers[kEnergy].resize(nPoints, 1, 1);
 
     convectionSystem.resize(nPoints, nPointsConvection, nSpec);
     convectionSystem.setGrid(grid);

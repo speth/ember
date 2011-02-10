@@ -42,7 +42,7 @@ public:
     dvector calculateReactantMixture(void);
     bool checkTerminationCondition(void);
 
-    void writeStateFile(const std::string fileName="", bool errorFile=false);
+    void writeStateFile(const std::string fileName="", bool errorFile=false, bool updateDerivatives=true);
     void writeTimeseriesFile(const std::string filename); // create out.h5 file
 
     // Functions for calculating flame information
