@@ -357,7 +357,6 @@ void FlameSolver::run(void)
 
             // Perform updates that are necessary if the grid has changed
             if (grid.updated) {
-                grid.updated = false;
                 nIntegrate = 0;
 
                 // Update species elimination at the start of the next time step
@@ -387,6 +386,7 @@ void FlameSolver::run(void)
                 if (debugParameters::debugAdapt || debugParameters::debugRegrid) {
                     writeStateFile("postAdapt", false, false);
                 }
+                grid.updated = false;
             }
             regridTimer.stop();
         }
@@ -641,7 +641,7 @@ void FlameSolver::resizeAuxiliary()
     size_t nPointsOld = rho.size();
     grid.setSize(T.size());
 
-    if (nPoints == nPointsOld) {
+    if (nPoints == nPointsOld && !grid.updated) {
         return; // nothing to do
     }
 
