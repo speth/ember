@@ -1645,4 +1645,12 @@ void FlameSolver::updateTransportDomain()
     if (options.transportEliminationConvection) {
         convectionSystem.resize(nPoints, nPointsConvection, nSpec);
     }
+
+    // Eliminated species don't count for regridding
+    grid.leftComponents.resize(nVars, true);
+    grid.rightComponents.resize(nVars, true);
+    for (size_t k=0; k<nSpec; k++) {
+        grid.leftComponents[kSpecies+k] = (diffusionStartIndices[k] == 0 && convectionStartIndices[k] == 0);
+        grid.rightComponents[kSpecies+k] = (diffusionStopIndices[k] == jj && convectionStopIndices[k] == jj);
+    }
 }

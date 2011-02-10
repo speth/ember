@@ -40,6 +40,11 @@ public:
     double boundaryTolRm;
     size_t addPointCount; // number of points to add when regridding
 
+    // true for each component that counts for evaluating boundary grid point tolerances
+    // Transport-eliminated species don't get to vote.
+    vector<bool> leftComponents;
+    vector<bool> rightComponents;
+
     // Derived mesh parameters (calculated by updateValues)
     dvector cfm, cf, cfp; // first centered difference
     dvector dlj;
@@ -51,6 +56,7 @@ public:
     size_t jj; // index of last grid point ( = nPoints-1)
 
     bool updated; // true if the grid changed on the last call to adapt or regrid
+
 
     // Update the grid based on the solutionState, and adjust it to fit
     // on the new grid. Each element of the solutionState is a vector

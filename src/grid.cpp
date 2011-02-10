@@ -404,6 +404,9 @@ bool oneDimGrid::addRight(vector<dvector>& y)
 
     // check flatness of temperature, velocity and species profiles at the boundary
     for (size_t k=0; k<nVars; k++) {
+        if (!rightComponents[k]) {
+            continue;
+        }
         int dj = (k == kMomentum) ? djMom : djOther;
         double ymax = maxval(y[k]);
         if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTol && ymax > absvtol ) {
@@ -448,6 +451,9 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
     bool pointAdded = false;
     if (!fixedLeftLoc) {
         for (size_t k=0; k<nVars; k++) {
+            if (!leftComponents[k]) {
+                continue;
+            }
             double ymax = maxval(y[k]);
             int dj = (k==kMomentum) ? djMom : djOther;
             if (abs(y[k][dj]-y[k][0])/ymax > boundaryTol && ymax > absvtol) {
@@ -517,6 +523,9 @@ bool oneDimGrid::removeRight(vector<dvector>& y)
 
     bool pointRemoved = true; // assume removal
     for (size_t k=0; k<nVars; k++) {
+        if (!rightComponents[k]) {
+            continue;
+        }
         int dj = (k==kMomentum) ? djMom : djOther;
         double ymax = maxval(y[k]);
         if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTolRm && ymax > absvtol) {
@@ -558,6 +567,9 @@ bool oneDimGrid::removeLeft(vector<dvector>& y)
     }
 
     for (size_t k=0; k<nVars; k++) {
+        if (!leftComponents[k]) {
+            continue;
+        }
         size_t dj = (k==kMomentum) ? djMom : djOther;
         double ymax = maxval(y[k]);
         if (abs(y[k][dj]-y[k][0])/ymax > boundaryTolRm && ymax > absvtol) {
@@ -588,6 +600,11 @@ void oneDimGrid::regrid(vector<dvector>& y)
     nVars = y.size();
 
     setSize(y[0].size());
+
+    // By default, all components count for regridding
+    leftComponents.resize(nVars, true);
+    rightComponents.resize(nVars, true);
+
 
     bool rightAddition = addRight(y);
     bool leftAddition = addLeft(y);
