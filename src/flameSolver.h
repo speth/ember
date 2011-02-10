@@ -21,49 +21,71 @@
 using Cantera::Array2D;
 using std::string;
 
+//! Class which manages the main integration loop.
+//! Contains the split solvers and is responsible for the large-scale time integration.
 class FlameSolver : public GridBased
 {
-    // This is the system which contains the split solvers and is responsible
-    // for the large-scale time integration.
 public:
     FlameSolver();
     ~FlameSolver() {}
 
-    void setOptions(const configOptions& options); // Set options read from the configuration file
-    void initialize(void); // call to generate profiles and perform one-time setup
-    void run(void); // Start the time integration
+    void setOptions(const configOptions& options); //!< Set options read from the configuration file
+    void initialize(void); //!< call to generate profiles and perform one-time setup
+    void run(void); //!< Start the time integration
 
     // Called internally by initialize()
-    virtual void generateProfile(); // Generate initial conditions based on boundary conditions
-    virtual void loadProfile(); // Load initial conditions from a file
+    virtual void generateProfile(); //!< Generate initial conditions based on boundary conditions
+    virtual void loadProfile(); //!< Load initial conditions from a file
 
-    // Calculate the mole fraction vector of the reactants based on the
-    // equivalence ratio and the fuel and oxidizer compositions
+    //! Calculate the mole fraction vector of the reactants based on the
+    //! equivalence ratio and the fuel and oxidizer compositions.
     dvector calculateReactantMixture(void);
+
+    //! Determine whether to terminate integration based on reaching steady-state solution.
     bool checkTerminationCondition(void);
 
+    //! Create prof.h5 file.
+    //! @param fileName The name of the output file.
+    //! @param errorFile Setting this to 'true' will generate a more verbose output file
+    //! @param updateDerivatives Setting this to 'true' will compute time derivatives based
+    //!        on the current state. This flag should only set if all of the solvers and auxillary
+    //!        arrays are sized corresponding to the current state, e.g. after integration but
+    //!        but before regridding.
     void writeStateFile(const std::string fileName="", bool errorFile=false, bool updateDerivatives=true);
-    void writeTimeseriesFile(const std::string filename); // create out.h5 file
 
-    // Functions for calculating flame information
-    double getHeatReleaseRate(void); // [W/m^2]
-    double getConsumptionSpeed(void); // [m/s]
-    double getFlamePosition(void); // [m]
+    void writeTimeseriesFile(const std::string filename); //!< create out.h5 file
+
+    //! Compute integral heat release rate [W/m^2].
+    //! Assumes that #qDot has already been updated.
+    double getHeatReleaseRate(void);
+
+    //! Compute flame consumption speed [m/s]. Computed by integrating the energy equation:
+    //! \f[ S_c = \frac{\int_{-\infty}^\infty \dot{q}/c_p}{\rho_u(T_b-T_u)} \f]
+    //! Assumes that #qDot has already been updated.
+    double getConsumptionSpeed(void);
+
+    //! Compute position of flame (heat release centroid) [m]
+    double getFlamePosition(void);
 
     // Time-series data
-    dvector timeVector; // [s]
-    dvector timestepVector; // [s]
-    dvector heatReleaseRate; // [W/m^2]
-    dvector consumptionSpeed; // [m/s]
-    dvector flamePosition; // [m]
-    dvector qDotProd1Vec, qDotProd2Vec, qDotDiff1Vec, qDotDiff2Vec, qDotConv1Vec, qDotConv2Vec;
+    dvector timeVector; //!< Time [s] at the end of every configOptions::outputStepInterval timesteps.
+    dvector timestepVector; //!< Global integrator timesteps [s] used to get to the times in #timeVector.
+    dvector heatReleaseRate; //!< Integral heat release rate [W/m^2] at the times in #timeVector.
+    dvector consumptionSpeed; //!< Consumption speed [m/s] at the times in #timeVector.
+    dvector flamePosition; //!< Heat release centroid [m] at the times in #timeVector.
 
-    // Options read from the input file
-    configOptions options;
+    dvector qDotProd1Vec; //!< Integral heat release rate after the first production half-step.
+    dvector qDotProd2Vec; //!< Integral heat release rate after the second production half-step.
+    dvector qDotDiff1Vec; //!< Integral heat release rate after the first diffusion half-step.
+    dvector qDotDiff2Vec; //!< Integral heat release rate after the second diffusion half-step.
+    dvector qDotConv1Vec; //!< Integral heat release rate after the first convection half-step.
+    dvector qDotConv2Vec; //!< Integral heat release rate after the second convection half-step.
 
-    double tStart;
-    double tEnd;
-    double tNow;
+    configOptions options; //!< Options read from the input file
+
+    double tStart; //!< Integrator start time
+    double tEnd; //!< Integrator termination time (upper bound)
+    double tNow; //!< Current time reached by the integrator
 
 private:
     boost::ptr_vector<SourceSystem> sourceTerms; // One for each grid point
@@ -72,19 +94,20 @@ private:
     boost::ptr_vector<sundialsCVODE> sourceSolvers; // One for each grid point
     boost::ptr_vector<BDFIntegrator> diffusionSolvers; // One for each state variable
 
-    ConvectionSystemSplit convectionSystem; // term + solver
+    //! System representing the convection terms and containing their integrators
+    ConvectionSystemSplit convectionSystem;
 
     // Boundary values
     double rhou, rhob, rhoLeft, rhoRight;
     double Tu, Tb, Tleft, Tright;
     dvector Yu, Yb, Yleft, Yright;
 
-    void resizeAuxiliary(); // Handle resizing of data structures as grid size changes
-    void updateCrossTerms(); // calculates values of cross-component terms: jSoret, sumcpj, and jCorr
-    void updateChemicalProperties(); // Update thermodynamic, transport, and kinetic properties
-    void updateLeftBC(); // Set boundary condition for left edge of domain
-    void calculateQdot(); // Compute heat release rate using the current temperature and mass fractions
-    void calculateTimeDerivatives(); // Combine dUdt, dTdt and dYdt from the split solvers
+    void resizeAuxiliary(); //!< Handle resizing of data structures as grid size changes
+    void updateCrossTerms(); //!< calculates values of cross-component terms: jSoret, sumcpj, and jCorr
+    void updateChemicalProperties(); //!< Update thermodynamic, transport, and kinetic properties
+    void updateLeftBC(); //!< Set boundary condition for left edge of domain
+    void calculateQdot(); //!< Compute heat release rate using the current temperature and mass fractions
+    void calculateTimeDerivatives(); //!< Combine dUdt, dTdt and dYdt from the split solvers
 
     // Steps in the Strang split integration process
     void setDiffusionSolverState(double tInitial);
@@ -98,14 +121,14 @@ private:
     void integrateProductionTerms(double t, int stage);
     void integrateDiffusionTerms(double t, int stage);
 
-    size_t nSpec; // Number of chemical species
-    size_t nVars; // Number of state variables at each grid point (nSpec + 2)
-    size_t N; // total problem size (nSpec * nVars)
+    size_t nSpec; //!< Number of chemical species
+    size_t nVars; //!< Number of state variables at each grid point (nSpec + 2)
+    size_t N; //!< total problem size (nSpec * nVars)
 
     // State variables:
-    dvector U; // normalized tangential velocity (u*a/u_inf) [1/s]
-    dvector T; // temperature [K]
-    Array2D Y; // species mass fractions, Y(k,j) [-]
+    dvector U; //!< normalized tangential velocity (u*a/u_inf) [1/s]
+    dvector T; //!< temperature [K]
+    Array2D Y; //!< species mass fractions, Y(k,j) [-]
 
     // Time derivatives of state variables:
     dvector dUdt;
@@ -117,28 +140,28 @@ private:
     dvector dTdtProd, dUdtProd;
 
     // Auxiliary variables:
-    dvector rho; // density [kg/m^3]
-    dvector jCorr; // Correction to ensure sum of mass fractions = 1
-    dvector sumcpj; // part of the enthalpy flux term
-    dvector qDot; // Heat release rate [W/m^3]
-    Array2D wDot; // species production rates [kmol/m^3*s]
-    dvector Wmx; // mixture molecular weight [kg/kmol]
-    dvector W; // species molecular weights [kg/kmol]
-    dvector mu; // dynamic viscosity [Pa*s]
-    dvector lambda; // thermal conductivity [W/m*K]
-    dvector cp; // mixture heat capacity [J/kg*K]
-    Array2D cpSpec; // species molar heat capacities [J/kmol*K]
-    Array2D rhoD; // density * diffusivity [kg/m*s]
-    Array2D Dkt; // thermal diffusivity
-    Array2D hk; // species molar enthalpies [J/kmol]
-    Array2D jFick; // Fickian mass flux [kg/m^2*s]
-    Array2D jSoret; // Soret mass flux [kg/m^2*s]
+    dvector rho; //!< density [kg/m^3]
+    dvector jCorr; //!< Correction to ensure sum of mass fractions = 1
+    dvector sumcpj; //!< part of the enthalpy flux term
+    dvector qDot; //!< Heat release rate [W/m^3]
+    Array2D wDot; //!< species production rates [kmol/m^3*s]
+    dvector Wmx; //!< mixture molecular weight [kg/kmol]
+    dvector W; //!< species molecular weights [kg/kmol]
+    dvector mu; //!< dynamic viscosity [Pa*s]
+    dvector lambda; //!< thermal conductivity [W/m*K]
+    dvector cp; //!< mixture heat capacity [J/kg*K]
+    Array2D cpSpec; //!< species molar heat capacities [J/kmol*K]
+    Array2D rhoD; //!< density * diffusivity [kg/m*s]
+    Array2D Dkt; //!< thermal diffusivity
+    Array2D hk; //!< species molar enthalpies [J/kmol]
+    Array2D jFick; //!< Fickian mass flux [kg/m^2*s]
+    Array2D jSoret; //!< Soret mass flux [kg/m^2*s]
 
     // Heat release rate evaluated after each phase of the split solver
     double qDotProd1, qDotProd2, qDotDiff1, qDotDiff2, qDotConv1, qDotConv2;
 
-    Array2D dYdtCross; // dYdt due to gradients in other species and temperature
-    dvector dTdtCross; // dTdt due to gradients in gas composition
+    Array2D dYdtCross; //!< dYdt due to gradients in other species and temperature
+    dvector dTdtCross; //!< dTdt due to gradients in gas composition
 
     // jCorr is a correction to force the net diffusion mass flux to be zero
     // jCorrSystem / jCorrSolver are used to introduce numerical diffusion into
@@ -150,38 +173,38 @@ private:
     // transport term for each species
     DiffusionSystem diffusionTestTerm;
     BDFIntegrator diffusionTestSolver;
-    vector<size_t> diffusionStartIndices; // index of leftmost grid point for each component
-    vector<size_t> diffusionStopIndices; // index of rightmost grid point for each component
-    vector<size_t> nPointsDiffusion; // number of grid points for transport of each component
+    vector<size_t> diffusionStartIndices; //!< index of leftmost grid point for each component
+    vector<size_t> diffusionStopIndices; //!< index of rightmost grid point for each component
+    vector<size_t> nPointsDiffusion; //!< number of grid points for transport of each component
 
-    vector<size_t> convectionStartIndices; // index of leftmost grid point for each component
-    vector<size_t> convectionStopIndices; // index of rightmost grid point for each component
-    vector<size_t> nPointsConvection; // number of grid points for transport of each component
+    vector<size_t> convectionStartIndices; //!< index of leftmost grid point for each component
+    vector<size_t> convectionStopIndices; //!< index of rightmost grid point for each component
+    vector<size_t> nPointsConvection; //!< number of grid points for transport of each component
 
-    // Function which describes strain rate a(t) and its derivative
+    //! Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;
 
-    double rVcenter; // mass flux at centerline [kg/m^2 or kg/m*rad*s]
-    double rVzero; // mass flux at j=0
+    double rVcenter; //!< mass flux at centerline [kg/m^2 or kg/m*rad*s]
+    double rVzero; //!< mass flux at j=0
     double tFlamePrev, tFlameNext;
     double xFlameTarget, xFlameActual;
     double flamePosIntegralError;
 
-    // Cantera data
+    //! Cantera data
     CanteraGas gas;
 
-    // Chemkin/AdapChem state mechanism data
+    //! Chemkin/AdapChem state mechanism data
     boost::shared_ptr<AdapChem> ckGas;
 
     void update_xStag(const double t, const bool updateIntError);
-    double targetFlamePosition(double t); // [m]
+    double targetFlamePosition(double t); //!< [m]
 
     void printPerformanceStats(void);
     void printPerfString(const std::string& label, const perfTimer& T) const;
 
     void updateTransportDomain();
 
-    int alpha; // curved grid exponent. alpha = 1 for curved flames, 0 for planar flames.
+    int alpha; //!< curved grid exponent. alpha = 1 for curved flames, 0 for planar flames.
 
     // Performance Timers
     // Just the total time:
