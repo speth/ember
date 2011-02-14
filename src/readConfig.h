@@ -95,6 +95,7 @@ public:
     bool outputSplitHeatReleaseRate;
     bool outputResidualComponents;
     bool outputProfiles;
+    bool outputDebugIntegratorStages;
 
     bool terminateForSteadyQdot; // if true, code finishes when integral heat release rate is constant
     double terminationTolerance; // relative tolerance for termination

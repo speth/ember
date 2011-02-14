@@ -200,6 +200,10 @@ void FlameSolver::run(void)
             writeStateFile();
         }
 
+        if (options.outputDebugIntegratorStages) {
+            writeStateFile((format("start_t%.6f") % t).str(), true, false);
+        }
+
         double tNext = tNow + dt;
 
         // *** Strang-split Integration ***
@@ -267,6 +271,7 @@ void FlameSolver::run(void)
 
         setupTimer.resume();
         if (t > tOutput || nOutput >= options.outputStepInterval) {
+            calculateQdot();
             timeVector.push_back(t);
             timestepVector.push_back(dt);
             heatReleaseRate.push_back(getHeatReleaseRate());
@@ -977,6 +982,10 @@ void FlameSolver::extractConvectionState(int stage)
         calculateQdot();
         (stage == 1) ? qDotConv1 : qDotConv2 = getHeatReleaseRate();
     }
+
+    if (options.outputDebugIntegratorStages) {
+        writeStateFile((format("conv%i_t%.6f") % stage % tNow).str(), true, false);
+    }
 }
 
 void FlameSolver::extractDiffusionState(int stage)
@@ -1003,6 +1012,10 @@ void FlameSolver::extractDiffusionState(int stage)
         calculateQdot();
         (stage == 1) ? qDotDiff1 : qDotDiff2 = getHeatReleaseRate();
     }
+
+    if (options.outputDebugIntegratorStages) {
+        writeStateFile((format("diff%i_t%.6f") % stage % tNow).str(), true, false);
+    }
 }
 
 void FlameSolver::extractProductionState(int stage)
@@ -1023,6 +1036,10 @@ void FlameSolver::extractProductionState(int stage)
     if (options.outputSplitHeatReleaseRate) {
         calculateQdot();
         (stage == 1) ? qDotProd1 : qDotProd2 = getHeatReleaseRate();
+    }
+
+    if (options.outputDebugIntegratorStages) {
+        writeStateFile((format("prod%i_t%.6f") % stage % tNow).str(), true, false);
     }
 }
 
@@ -1057,6 +1074,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
             cout << "T = " << sourceTerms[j].T << endl;
             cout << "U = " << sourceTerms[j].U << endl;
             cout << "Y = " << sourceTerms[j].Y << endl;
+            writeStateFile((format("prod%i_error_t%.6f_j%03i") % stage % t % j).str(), true, false);
         }
     }
     reactionTimer.stop();
