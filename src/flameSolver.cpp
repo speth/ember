@@ -247,6 +247,7 @@ void FlameSolver::run(void)
         }
 
         // *** End of Strang-split integration step ***
+        correctMassFractions();
 
         t = tNext;
         tNow = tNext;
@@ -377,6 +378,8 @@ void FlameSolver::run(void)
                     }
                 }
 
+                correctMassFractions();
+
                 // Update the mass flux at the left boundary
                 rVzero = mathUtils::interp1(x_prev, V_prev, grid.x[0]);
 
@@ -390,15 +393,6 @@ void FlameSolver::run(void)
             }
             regridTimer.stop();
         }
-
-        setupTimer.resume();
-        for (size_t j=0; j<nPoints; j++) {
-            // Correct the drift of the total mass fractions and reset
-            // any negative mass fractions
-            gas.setStateMass(&Y(0,j), T[j]);
-            gas.getMassFractions(&Y(0,j));
-        }
-        setupTimer.stop();
 
         if (debugParameters::debugPerformanceStats && (nTotal % 50 == 0)) {
             printPerformanceStats();
@@ -1181,6 +1175,16 @@ void FlameSolver::calculateTimeDerivatives()
     dUdt += convectionSystem.dUdt;
     dTdt += convectionSystem.dTdt;
     dYdt += convectionSystem.dYdt;
+}
+
+void FlameSolver::correctMassFractions() {
+    setupTimer.resume();
+    for (size_t j=0; j<nPoints; j++) {
+        //
+        gas.setStateMass(&Y(0,j), T[j]);
+        gas.getMassFractions(&Y(0,j));
+    }
+    setupTimer.stop();
 }
 
 double FlameSolver::getHeatReleaseRate(void)

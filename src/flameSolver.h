@@ -109,6 +109,9 @@ private:
     void calculateQdot(); //!< Compute heat release rate using the current temperature and mass fractions
     void calculateTimeDerivatives(); //!< Combine dUdt, dTdt and dYdt from the split solvers
 
+    //! Correct the drift of the total mass fractions and reset any negative mass fractions.
+    void correctMassFractions();
+
     // Steps in the Strang split integration process
     void setDiffusionSolverState(double tInitial);
     void setConvectionSolverState(double tInitial, int stage);
