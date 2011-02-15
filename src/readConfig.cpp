@@ -125,7 +125,6 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("general.unburnedLeft",unburnedLeft, true);
     readOption("general.curvedFlame",curvedFlame, false);
     readOption("general.twinFlame",twinFlame, false);
-    readOption("general.centeredDifferences",centeredDifferences, false);
     readOption("general.steadyOnly",steadyOnly, false);
 
     if (cfg.exists("times.regridTimeInterval") || cfg.exists("times.regridStepInterval")) {

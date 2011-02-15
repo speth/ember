@@ -9,23 +9,45 @@ extern const size_t kMomentum, kEnergy, kSpecies, kWmx;
 class configOptions
 {
 public:
-    // Populate the members of this class with the contents of the configuration file
+    //! Populate the members of this class with the contents of the configuration file
     void readOptionsFile(const std::string& filename);
 
-    std::string inputDir;
+    std::string inputDir; //!< [paths.inputDir] Directory where input files are located.
+
+    //! [paths.outputDir] Directory to store output files.
+    //! Automatically created if it does not already exist.
     std::string outputDir;
+
+    //! [initialCondition.file] A prof.h5 file to load initial conditions from.
     std::string restartFile;
+
+    //! True if #restartFile is in #inputDir.
     bool useRelativeRestartPath;
 
+    //! Set a new temperature boundary value. Automatically set to 'true' if initialCondition.Tu
+    //! is specified in the config file.
     bool overrideTu;
-    bool overrideReactants;
-    bool haveRestartFile;
 
+    //! Set new species boundary values. Automatically set to 'true' if initialCondition.fuel
+    //! is specified in the config file.
+    bool overrideReactants;
+
+    bool haveRestartFile; //!< True if a restart file has been specified.
+
+    //! [general.fixedBurnedVal] True if burned gas state is fixed at equilibrium conditions.
     bool fixedBurnedVal;
+
+    //! [general.fixedLeftLocation] True if the position of the leftmost grid point is fixed.
     bool fixedLeftLoc;
+
+    //! [general.twinFlame] Set to true for the twin flame configuration.
+    //! If specified, the leftmost grid point will not extend beyond x = 0.
     bool twinFlame;
+
+    //! [general.curvedFlame] Set to true for the twin flame configuration.
+    //! If specified, the leftmost grid point will not extend beyond x = 0.
+    //! Also sets #gridAlpha = 1. Otherwise, #gridAlpha = 0.
     bool curvedFlame;
-    bool centeredDifferences;
     bool steadyOnly;
     bool unburnedLeft;
 
