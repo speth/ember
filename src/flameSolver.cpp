@@ -822,6 +822,7 @@ void FlameSolver::updateChemicalProperties()
 {
     // Calculate auxiliary data
     for (size_t j=0; j<nPoints; j++) {
+        // Thermodynamic properties
         thermoTimer.start();
         gas.setStateMass(&Y(0,j), T[j]);
         rho[j] = gas.getDensity();
@@ -831,13 +832,24 @@ void FlameSolver::updateChemicalProperties()
         gas.getEnthalpies(&hk(0,j));
         thermoTimer.stop();
 
+        // Transport Properties
         transportTimer.start();
+
+        conductivityTimer.start();
         lambda[j] = gas.getThermalConductivity();
+        conductivityTimer.stop();
+
+        viscosityTimer.start();
         mu[j] = gas.getViscosity();
+        viscosityTimer.stop();
+
+        diffusivityTimer.start();
         gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j));
         gas.getThermalDiffusionCoefficients(&Dkt(0,j));
+        diffusivityTimer.stop();
         transportTimer.stop();
 
+        // Reaction rates
         reactionRatesTimer.start();
         if (options.usingAdapChem) {
             ckGas->initializeStep(&Y(0,j), T[j], j);
@@ -1568,6 +1580,9 @@ void FlameSolver::printPerformanceStats(void)
     cout << endl << " Subcomponents:" << endl;
     printPerfString("               Reaction Rates: ", reactionRatesTimer);
     printPerfString("         Transport Properties: ", transportTimer);
+    printPerfString("          - thermal cond.    : ", conductivityTimer);
+    printPerfString("          - viscosity        : ", viscosityTimer);
+    printPerfString("          - diffusion coeff. : ", diffusivityTimer);
     printPerfString("     Thermodynamic Properties: ", thermoTimer);
     printPerfString("   Source Jacobian Evaluation: ", jacobianTimer);
     printPerfString("   UTW Convection Integration: ", convectionSystem.utwTimer);

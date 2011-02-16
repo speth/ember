@@ -219,4 +219,5 @@ private:
 
     // These account for special parts of the code
     perfTimer reactionRatesTimer, transportTimer, thermoTimer, jacobianTimer;
+    perfTimer conductivityTimer, viscosityTimer, diffusivityTimer;
 };
