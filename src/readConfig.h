@@ -68,6 +68,7 @@ public:
     double integratorMomentumAbsTol;
     double integratorEnergyAbsTol;
     double integratorSpeciesAbsTol;
+    double integratorMinTimestep; //!< minimum timestep for the chemistry integrator [s]
 
     std::string gasMechanismFile;
     std::string gasPhaseID;

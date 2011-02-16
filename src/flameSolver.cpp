@@ -713,7 +713,7 @@ void FlameSolver::resizeAuxiliary()
             solver->linearMultistepMethod = CV_BDF;
             solver->nonlinearSolverMethod = CV_NEWTON;
             solver->maxNumSteps = 1000000;
-            solver->minStep = 1e-16;
+            solver->minStep = options.integratorMinTimestep;
 
             // Store the solver and system
             sourceTerms.push_back(system);

@@ -172,6 +172,7 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("integrator.momentumAbsTol", integratorMomentumAbsTol, 1e-8);
     readOption("integrator.energyAbsTol", integratorEnergyAbsTol, 1e-6);
     readOption("integrator.speciesAbsTol", integratorSpeciesAbsTol, 1e-10);
+    readOption("integrator.minimumTimestep", integratorMinTimestep, 1e-18);
 
     if (readOption("outputFiles.saveProfiles", outputProfiles, true)) {
         readOption("outputFiles.heatReleaseRate", outputHeatReleaseRate, true);
