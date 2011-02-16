@@ -1,6 +1,8 @@
 #include "sourceSystem.h"
 #include "readConfig.h"
 
+#include <boost/format.hpp>
+
 SourceSystem::SourceSystem()
     : U(NaN)
     , T(NaN)
@@ -231,4 +233,38 @@ void SourceSystem::roll_ydot(sdVector& ydot) const
     for (size_t k=0; k<nSpec; k++) {
         ydot[kSpecies+k] = dYdt[k];
     }
+}
+
+void SourceSystem::writeJacobian(sundialsCVODE& solver, ostream& out)
+{
+    size_t N = solver.y.length();
+    double t = solver.tInt;
+    sdMatrix J(N,N);
+    sdVector ydot(N);
+    f(t, solver.y, ydot);
+    denseJacobian(t, solver.y, ydot, J);
+
+    out << "J = []" << endl;
+    for (size_t i=0; i<N; i++) {
+        out << "J.append([";
+        for (size_t k=0; k<N; k++) {
+            out << boost::format("%.5e, ") % J(i,k);
+        }
+        out << "])" << endl;
+    }
+}
+
+void SourceSystem::writeState(sundialsCVODE& solver, ostream& out, bool init)
+{
+    if (init) {
+        out << "T = []" << endl;
+        out << "Y = []" << endl;
+        out << "t = []" << endl;
+        out << "wDot = []" << endl;
+    }
+
+    out << "T.append(" << T << ")" << endl;
+    out << "Y.append(" << Y << ")" << endl;
+    out << "t.append(" << solver.tInt << ")" << endl;
+    out << "wDot.append(" << wDot << ")" << endl;
 }

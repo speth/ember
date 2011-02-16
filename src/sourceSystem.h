@@ -32,6 +32,9 @@ public:
     void resize(size_t nSpec);
     void initialize();
 
+    void writeJacobian(sundialsCVODE& solver, ostream& out);
+    void writeState(sundialsCVODE& solver, ostream& out, bool init);
+
     // A class that provides the strain rate and its time derivative
     StrainFunction strainFunction;
 

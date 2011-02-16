@@ -190,6 +190,9 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("outputFiles.debugIntegratorStages", outputDebugIntegratorStages, false);
     stopIfError = readOption("general.errorStopCount",errorStopCount, 1);
 
+    readOptionQuietDefault("debug.sourcePoint", debugSourcePoint, -1);
+    readOptionQuietDefault("debug.debugSourceTime", debugSourceTime, 0);
+
     if (cfg.exists("strainParameters.list")) {
         libconfig::Setting& strainSetting = cfg.lookup("strainParameters.list");
         int strainCount = strainSetting.getLength();

@@ -120,6 +120,9 @@ public:
     bool outputProfiles;
     bool outputDebugIntegratorStages;
 
+    size_t debugSourcePoint; //!< Grid point index marked for verbose output (cvodeSteps.py)
+    double debugSourceTime; //!< Integrator time at which to generate verbose output (then terminate)
+
     bool terminateForSteadyQdot; // if true, code finishes when integral heat release rate is constant
     double terminationTolerance; // relative tolerance for termination
     double terminationAbsTol; // absolute tolerance

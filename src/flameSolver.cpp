@@ -1061,14 +1061,45 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
     }
 
     reactionTimer.start();
+    int err = 0;
     for (size_t j=0; j<nPoints; j++) {
-        int err = sourceSolvers[j].integrateToTime(t);
-        if (err) {
+        if (debugParameters::veryVerbose) {
+            cout << j;
+            cout.flush();
+        }
+        if (j == options.debugSourcePoint && t >= options.debugSourceTime) {
+            ofstream steps;
+            steps.open("cvodeSteps.py");
+            sourceTerms[j].writeState(sourceSolvers[j], steps, true);
+
+            while (sourceSolvers[j].tInt < t) {
+                err = sourceSolvers[j].integrateOneStep(t);
+                sourceTerms[j].writeState(sourceSolvers[j], steps, false);
+                if (err != CV_SUCCESS) {
+                    break;
+                }
+            }
+
+            sourceTerms[j].writeJacobian(sourceSolvers[j], steps);
+
+            steps.close();
+            terminate();
+
+        } else {
+            err = sourceSolvers[j].integrateToTime(t);
+        }
+
+        if (err && err != CV_TSTOP_RETURN) {
             cout << "Error at j = " << j << endl;
             cout << "T = " << sourceTerms[j].T << endl;
             cout << "U = " << sourceTerms[j].U << endl;
             cout << "Y = " << sourceTerms[j].Y << endl;
             writeStateFile((format("prod%i_error_t%.6f_j%03i") % stage % t % j).str(), true, false);
+        }
+
+        if (debugParameters::veryVerbose) {
+            cout << " [" << sourceSolvers[j].getNumSteps() << "]...";
+            cout.flush();
         }
     }
     reactionTimer.stop();
