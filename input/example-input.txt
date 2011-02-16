@@ -150,6 +150,7 @@ debug:
     timesteps: false;
     solverStats: false;
     flameRadiusControl: false;
+    veryVerbose: false;
 };
 
 outputFiles:

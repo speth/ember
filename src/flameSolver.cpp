@@ -12,12 +12,6 @@
 
 using boost::format;
 
-#ifdef NDEBUG
-    static const bool VERY_VERBOSE = false;
-#else
-    static const bool VERY_VERBOSE = true;
-#endif
-
 FlameSolver::FlameSolver()
     : jCorrSolver(jCorrSystem)
     , diffusionTestSolver(diffusionTestTerm)
@@ -246,7 +240,7 @@ void FlameSolver::run(void)
         integrateConvectionTerms(tNext, 2); // integrate
         extractConvectionState(2); // extract solution components
 
-        if (VERY_VERBOSE) {
+        if (debugParameters::veryVerbose) {
             cout << "done!" << endl;
         }
 
@@ -1045,7 +1039,7 @@ void FlameSolver::extractProductionState(int stage)
 
 void FlameSolver::integrateConvectionTerms(double t, int stage)
 {
-    if (VERY_VERBOSE) {
+    if (debugParameters::veryVerbose) {
         cout << format("convection term %i/2...") % stage;
         cout.flush();
     }
@@ -1057,7 +1051,7 @@ void FlameSolver::integrateConvectionTerms(double t, int stage)
 
 void FlameSolver::integrateProductionTerms(double t, int stage)
 {
-    if (VERY_VERBOSE) {
+    if (debugParameters::veryVerbose) {
         if (stage) {
             cout << format("Source term %i/2...") % stage;
         } else {
@@ -1082,7 +1076,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
 
 void FlameSolver::integrateDiffusionTerms(double t, int stage)
 {
-    if (VERY_VERBOSE) {
+    if (debugParameters::veryVerbose) {
         cout << format("diffusion terms %i/2...") % stage;
         cout.flush();
     }

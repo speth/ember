@@ -15,6 +15,7 @@ public:
     static bool debugSolverStats;
     static bool debugPerformanceStats;
     static bool debugFlameRadiusControl;
+    static bool veryVerbose;
 };
 
 class debugException : public std::exception

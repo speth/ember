@@ -167,6 +167,11 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("debug.solverStats",debugParameters::debugSolverStats, true);
     readOption("debug.performanceStats",debugParameters::debugPerformanceStats, true);
     readOption("debug.flameRadiusControl",debugParameters::debugFlameRadiusControl, false);
+    #ifdef NDEBUG
+        readOption("debug.veryVerbose", debugParameters::veryVerbose, false);
+    #else
+        debugParameters::veryVerbose = true;
+    #endif
 
     readOption("integrator.relativeTolerance", integratorRelTol, 1e-5);
     readOption("integrator.momentumAbsTol", integratorMomentumAbsTol, 1e-8);

@@ -9,6 +9,7 @@ bool debugParameters::debugTimesteps;
 bool debugParameters::debugSolverStats;
 bool debugParameters::debugPerformanceStats;
 bool debugParameters::debugFlameRadiusControl;
+bool debugParameters::veryVerbose;
 
 debugException::debugException(void)
 {

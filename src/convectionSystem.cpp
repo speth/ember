@@ -1,13 +1,8 @@
 #include "convectionSystem.h"
+#include "debugUtils.h"
 
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
-
-#ifdef NDEBUG
-    static const bool VERY_VERBOSE = false;
-#else
-    static const bool VERY_VERBOSE = true;
-#endif
 
 ConvectionSystemUTW::ConvectionSystemUTW()
     : gas(NULL)
@@ -625,7 +620,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
     int cvode_flag = CV_SUCCESS;
     int i = 0;
 
-    if (VERY_VERBOSE) {
+    if (debugParameters::veryVerbose) {
         cout << "UTW...";
         cout.flush();
     }
@@ -640,7 +635,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
     utwTimer.stop();
 
     speciesTimer.start();
-    if (VERY_VERBOSE) {
+    if (debugParameters::veryVerbose) {
         cout << "Yk...";
         cout.flush();
     }
