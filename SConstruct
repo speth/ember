@@ -1,4 +1,5 @@
-VariantDir('build','src', duplicate=0)
+VariantDir('src/build','src', duplicate=0)
+VariantDir('test/build','test', duplicate=0)
 
 debugCppFlags = ['-O0','-ftemplate-depth-128','-fno-inline','-Wall','-g','-fPIC']
 releaseCppFlags = ['-ftemplate-depth-128', '-O3', '-finline-functions', '-Wno-inline',
@@ -30,4 +31,13 @@ Library('lib/libadapchem.a',
          'adapchem/ckcompat.cpp', 
          'adapchem/wrappers.f90'])
 
-env.Program('bin/1dflameV2', Glob('build/*.cpp'))
+common = [f for f in Glob('src/build/*.cpp')
+          if 'strainedFlame.cpp' not in f.name]
+
+# The main 1dflame program
+pyro = env.Program('bin/1dflameV2', common + ['src/build/strainedFlame.cpp'])
+Default(pyro)
+env.Alias('pyro', pyro)
+
+env.Alias('qsstest', env.Program('bin/qsstest', common+['test/build/test_qssintegrator.cpp']))
+env.Alias('all', ['pyro','qsstest'])
