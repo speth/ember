@@ -1,4 +1,6 @@
 bin
+lib
 *~
 *.o
 *.d
+.sconsign.dblite
