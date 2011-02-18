@@ -36,7 +36,7 @@ public:
     int gcount; //!< Total number of timestep repeats (after failed timesteps)
 
 private:
-    void getInitialStepSize(double tf);
+    void getInitialStepSize(double tf); //!< Estimate the initial step size.
 
     size_t N; //!< Number of state variables.
 

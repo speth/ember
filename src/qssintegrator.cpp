@@ -1,11 +1,14 @@
 #include "qssintegrator.h"
 
+#include <boost/format.hpp>
+
 #include <iostream>
 
 using std::cout;
 using std::endl;
 using std::abs;
 using mathUtils::sign;
+using boost::format;
 
 QSSIntegrator::QSSIntegrator()
 {
@@ -58,12 +61,6 @@ void QSSIntegrator::initialize(dvector yIn, double tstart_)
 
 void QSSIntegrator::getInitialStepSize(double tf)
 {
-    firstStep = false;
-
-    // Evaluate the derivatives of the initial values.
-    odefun(tn + tstart, y, q, d);
-    gcount += 1;
-
     // Estimate the initial stepsize.
 
     // strongly increasing functions(q >>> d assumed here) use a step-
@@ -74,6 +71,7 @@ void QSSIntegrator::getInitialStepSize(double tf)
     // scheme is likely since the smallest estimate is chosen for the
     // initial stepsize.
 
+    firstStep = false;
     double scrtch = 1.0e-25;
 
     for (size_t i=0; i<N; i++) {
@@ -89,25 +87,23 @@ void QSSIntegrator::getInitialStepSize(double tf)
 
 int QSSIntegrator::integrateToTime(double tf)
 {
-    while (true) {
+    while (tfd*tn < tf) {
         int ret = integrateOneStep(tf);
         if (ret) {
             // Integration failed
             return ret;
         }
-        if (tf <= tfd*tn) {
-            // Successfully reached tf
-            return 0;
-        }
     }
+    return 0;
 }
 
 int QSSIntegrator::integrateOneStep(double tf) {
+    // Evaluate the derivatives at the initial state.
+    odefun(t, y, q, d);
+    gcount += 1;
+
     if (firstStep) {
         getInitialStepSize(tf);
-    } else {
-        odefun(t, y, q, d);
-        gcount += 1;
     }
 
     // Store starting values
@@ -127,52 +123,28 @@ int QSSIntegrator::integrateOneStep(double tf) {
         for (size_t i=0; i<N; i++) {
             // prediction
             double rtaui = rtau[i];
-
-            // note that one of two approximations for alpha is chosen:
-            // 1) Pade b for all rtaui (see supporting memo report)
-            //      or
-            // 2) Pade a for rtaui<=rswitch,
-            //    linear approximation for rtaui > rswitch
-            //    (again, see supporting NRL memo report (Mott et al., 2000) )
-
-            // Option 1): Pade b
-
-           double alpha = (180+rtaui*(60+rtaui*(11+rtaui))) / (360 + rtaui*(60 + rtaui*(12 + rtaui)));
-
-           // Option 2): Pade a or linear
-
-           //c         if(rtaui.le.rswitch) then
-           //c            alpha = (840.+rtaui*(140.+rtaui*(20.+rtaui)))
-           //c     &           / (1680. + 40. * rtaui*rtaui)
-           //c         else
-           //c            alpha = 1.-1./rtaui
-           //c         end if
-
+            double alpha = (180+rtaui*(60+rtaui*(11+rtaui))) /
+                           (360 + rtaui*(60 + rtaui*(12 + rtaui)));
            scratch[i] = (q[i]-d[i])/(1.0 + alpha*rtaui);
         }
 
         double eps = 1e-10;
-        int iter = 1;
-        while (iter < itermax) {
+        for (int iter=0; iter<itermax; iter++) {
             // limit decreasing functions to their minimum values.
             if (stabilityCheck) {
-                for (size_t i=0; i<N; i++) {
-                    ym2[i] = ym1[i];
-                    ym1[i] = y[i];
-                }
+                ym2 = ym1;
+                ym1 = y;
             }
 
             for (size_t i=0; i<N; i++) {
                 y[i] = std::max(ys[i] + dt*scratch[i], ymin[i]);
             }
 
-            if (iter == 1) {
+            if (iter == 0) {
                 // The first corrector step advances the time (tentatively) and
                 // saves the initial predictor value as y1 for the timestep check later
                 tn = ts + dt;
-                for (size_t i=0; i<N; i++) {
-                    y1[i] = y[i];
-                }
+                y1 = y;
             }
 
             // Evaluate the derivatives for the corrector.
@@ -182,26 +154,11 @@ int QSSIntegrator::integrateOneStep(double tf) {
 
             for (size_t i=0; i<N; i++) {
                double rtaub = 0.5*(rtaus[i]+dt*d[i]/y[i]);
-
-               // Same options for calculating alpha as in predictor:
-
-               // Option 1): Pade b
-               double alpha = (180.+rtaub*(60.+rtaub*(11.+rtaub))) / (360. + rtaub*(60. + rtaub*(12. + rtaub)));
-
-               //c  Option 2):  Pade a or linear
-               //c
-               //c             if(rtaub.le.rswitch) then
-               //c                alpha = (840.+rtaub*(140.+rtaub*(20.+rtaub)))
-               //c     &               / (1680. + 40.*rtaub*rtaub)
-               //c             else
-               //c                alpha = 1.-1./rtaub
-               //c             end if
-
+               double alpha = (180.+rtaub*(60.+rtaub*(11.+rtaub))) /
+                              (360. + rtaub*(60. + rtaub*(12. + rtaub)));
                double qt = qs[i]*(1.0 - alpha) + q[i]*alpha;
-               double pb = rtaub/dt;
-               scratch[i] = (qt - ys[i]*pb) / (1.0 + alpha*rtaub);
+               scratch[i] = (qt - ys[i]*rtaub/dt) / (1.0 + alpha*rtaub);
             }
-            iter += 1;
         }
 
         // Calculate new f, check for convergence, and limit decreasing
@@ -218,39 +175,31 @@ int QSSIntegrator::integrateOneStep(double tf) {
         }
 
         if (stabilityCheck) {
-            for (size_t i=0; i<N; i++) {
-                ym2[i] = ym1[i];
-                ym1[i] = y[i];
-            }
+            ym2 = ym1;
+            ym1 = y;
         }
 
         eps /= epsmin;
 
-        // Print out dianostics if stepsize becomes too small.
-        // write(*,*) tn, dt, dtmin, tn, dtmin+1.0e-4*tn
         if (dt <= dtmin + 1e-16*tn) {
-            //write(lo, 1003) dt, tn, dtmin
-//            for (size_t i=0; i<N; i++) {
-//                double dtc = epsmin*y[i]/(abs(q[i]-d[i]) + 1.0e-30);
-//               //write(lo, 1004) q(i), d(i), y(i), rtau(i), dtc, q(i)-d(i),ys(i), y0(i), ymin(i)
-//            }
+            // Integration failed with a timestep that is too small.
+            cout << "QSSIntegrator failed: timestep too small." << endl;
+            cout << format("dt = %e, tn = %e, dtmin = %e") % dt % tn % dtmin << endl;
+            cout << "     i    q[i]     d[i]     y[i]    rtau[i]    dtc    q[i]-d[i]    ys[i]    ymin[i]" << endl;
 
-            //1003     format('1    chemeq error;   stepsize too small ! ! !', /,
-            //   1    '     dt = ', 1pe10.3, ' tn = ', d25.15,
-            //   2    ' dtmin = ',e10.3, //, 11x, 'q', 10x, 'd', 10x, 'y',
-            //   3         8x, 'rtau', 8x, 'dtc', 7x, 'q - d',7x, 'ys',
-            //   4         9x, 'y0', 8x, 'ymin')
-            //1004     format(5x, 1p12e11.3)
-            dt = tf - ts;
-            dt = std::min(dtmin, abs(dt));
+            for (size_t i=0; i<N; i++) {
+                double dtc = epsmin*y[i]/(abs(q[i]-d[i]) + 1.0e-30);
+                cout << format("%3i %9e %9e %9e %9e %9e %9e %9e %9e") % i % q[i] %
+                        d[i] % y[i] % rtau[i] % dtc % (q[i]-d[i]) % ys[i] % ymin[i] << endl;
+            }
 
-            // return, indicating an error
+            // Return, indicating an error.
             return 1;
         }
 
         // Check for convergence.
 
-        // The following section is used for the stability check
+        // The following section is used for the stability check.
         double stab = 0;
         if (stabilityCheck) {
             stab = 0.01;
@@ -262,18 +211,18 @@ int QSSIntegrator::integrateOneStep(double tf) {
         }
 
         if (eps <= epsmax && stab <= 1.0) {
-            // Valid step.  Return if tf has been reached.
+            // Successful step. Return if tf has been reached.
             if (tf <= tn*tfd) {
                 return 0;
             }
         } else {
-            // Invalid step; reset tn to ts
+            // Unsuccessful step; reset tn to ts
             tn = ts;
         }
 
-        // perform stepsize modifications.
-        // estimate sqrt(eps) by newton iteration.
+        // Perform stepsize modifications.
 
+        // estimate sqrt(eps) by newton iteration.
         double rteps = 0.5*(eps + 1.0);
         rteps = 0.5*(rteps + eps/rteps);
         rteps = 0.5*(rteps + eps/rteps);
@@ -284,23 +233,18 @@ int QSSIntegrator::integrateOneStep(double tf) {
             dt = std::min(dt, dto/(stab+.001));
         }
 
-        // begin new step if previous step converged.
         if (eps > epsmax || stab > 1) {
-            rcount += 1;
-
-            // After an unsuccessful step the initial timescales don't
+            // After an unsuccessful step, the initial timescales don't
             // change, but dt does, requiring rtaus to be scaled by the
             // ratio of the new and old timesteps.
+            rcount += 1;
             dto = dt/dto;
 
             for (size_t i=0; i<N; i++) {
-                rtaus[i] = rtaus[i] * dto;
+                rtaus[i] *= dto;
             }
-
-            // After an unsuccessful step, do not recalculate the initial source terms
-
         } else {
-            // Successful step;
+            // Successful step
             return 0;
         }
     }

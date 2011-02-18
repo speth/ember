@@ -189,7 +189,6 @@ int main(int argc, char** argv) {
     for (int ICASE=0; ICASE<MXCASE; ICASE++) {
         cout << ICASE << ", " << EPS[ICASE] << ", " << INLP << endl;
         qssSolver.epsmin = EPS[ICASE];
-        qssSolver.tstart = TI;
         qssSolver.itermax = 5;
         qssSolver.ymin = YMIN;
 
@@ -203,7 +202,7 @@ int main(int argc, char** argv) {
         for (int istep=0; istep<INLP; istep++) {
             // CALL INTEGRATOR.
             // CALL CHEMEQ2(DELTAT, CSDFE, NA, Y)
-            qssSolver.initialize(Y, 0);
+            qssSolver.initialize(Y, TI);
             qssSolver.integrateToTime(DELTAT);
         }
 
