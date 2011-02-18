@@ -20,6 +20,7 @@ QSSIntegrator::QSSIntegrator(size_t Neq)
     itermax = 1;
 
     ymin.resize(N, 1e-20);
+    stabilityCheck = false;
 }
 
 void QSSIntegrator::chemsp(double epsmn, double epsmx, double dtmn, double tnot,
@@ -94,10 +95,7 @@ int QSSIntegrator::integrateToTime(double dtg)
     double rtaui, rtaub, qt, pb, dtc, rteps;
 
     // ym1, ym2, and stab are used only for the stability check on dt
-    #ifndef NDEBUG
-        dvector ym1(N), ym2(N);
-    #endif
-
+    dvector ym1(N), ym2(N);
     double stab;
 
     // Initialize the control parameters.
@@ -182,11 +180,14 @@ int QSSIntegrator::integrateToTime(double dtg)
     while (iter < itermax) {
 
         // limit decreasing functions to their minimum values.
-        for (i=0; i<N; i++) {
-            #ifndef NDEBUG
+        if (stabilityCheck) {
+            for (i=0; i<N; i++) {
                 ym2[i] = ym1[i];
                 ym1[i] = y[i];
-            #endif
+            }
+        }
+
+        for (i=0; i<N; i++) {
             y[i] = std::max(ys[i] + dt*scrarray[i], ymin[i]);
         }
 
@@ -203,7 +204,6 @@ int QSSIntegrator::integrateToTime(double dtg)
         odefun(tn + tstart, y, q, d);
         gcount += 1;
         eps = 1.0e-10;
-
 
         for (i=0; i<N; i++) {
            rtaub = 0.5*(rtaus[i]+dt*d[i]/y[i]);
@@ -235,16 +235,20 @@ int QSSIntegrator::integrateToTime(double dtg)
         scr2 = std::max(ys[i] + dt*scrarray[i], 0.0);
         scr1 = abs(scr2 - y1[i]);
         y[i] = std::max(scr2, ymin[i]);
-        #ifndef NDEBUG
-            ym2[i] = ym1[i];
-            ym1[i] = y[i];
-        #endif
 
         if (0.25*(ys[i] + y[i]) > ymin[i]) {
            scr1 = scr1/y[i];
            eps = std::max(.5*(scr1+ std::min(abs(q[i]-d[i])/(q[i]+d[i]+1e-30), scr1)),eps);
         }
     }
+
+    if (stabilityCheck) {
+        for (i=0; i<N; i++) {
+            ym2[i] = ym1[i];
+            ym1[i] = y[i];
+        }
+    }
+
     eps *= epscl;
 
     // Print out dianostics if stepsize becomes too small.
@@ -272,16 +276,17 @@ int QSSIntegrator::integrateToTime(double dtg)
     // Check for convergence.
 
     // The following section is used for the stability check
-    #ifndef NDEBUG
+    if (stabilityCheck) {
         stab = 0.01;
         if (itermax >= 3) {
             for (i=0; i<N; i++) {
                 stab = std::max(stab, abs(y[i]-ym1[i])/(abs(ym1[i]-ym2[i])+1e-20*y[i]));
             }
         }
-    #else
-        stab = 0.01;
-    #endif
+    } else {
+        stab = 0.0;
+    }
+
     if (eps <= epsmax && stab <= 1.0) {
         // Valid step.  Return if dtg has been reached.
         if (dtg <= tn*tfd) {
@@ -301,9 +306,9 @@ int QSSIntegrator::integrateToTime(double dtg)
 
     dto = dt;
     dt = std::min(dt*(1.0/rteps + 0.005), tfd*(dtg - tn));
-    #ifndef NDEBUG
+    if (stabilityCheck) {
         dt = std::min(dt, dto/(stab+.001));
-    #endif
+    }
 
     // begin new step if previous step converged.
     if (eps > epsmax || stab > 1) {

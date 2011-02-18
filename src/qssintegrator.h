@@ -17,6 +17,8 @@ public:
     double t; //!< current integrator time
     dvector y; // !< current state vector
 
+    bool stabilityCheck; //!< Flag to enable convergence-based stability check on timestep
+
 private:
     size_t N;
     double epsmin;
