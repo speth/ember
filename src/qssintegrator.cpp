@@ -7,55 +7,58 @@ using std::endl;
 using std::abs;
 using mathUtils::sign;
 
-QSSIntegrator::QSSIntegrator(size_t Neq)
-    : y(Neq)
-    , N(Neq)
+QSSIntegrator::QSSIntegrator()
 {
+    N = 0;
     t = 0;
     epsmax = 10;
     epsmin = 1e-2;
     dtmin = 1e-15;
     tstart = 0;
     itermax = 1;
+    tfd = 1.000008;
 
-    gcount = 0;
-    rcount = 0;
-
-    ymin.resize(N, 1e-20);
-    ym1.resize(N);
-    ym2.resize(N);
-    scrarray.resize(N);
     stabilityCheck = false;
+}
 
-    q.resize(N, 0);
-    d.resize(N, 0);
+void QSSIntegrator::initialize(dvector yIn, double tstart_)
+{
+    N = yIn.size();
+    y.resize(N);
+
+    // Store and limit to 'ymin' the initial values.
+    for (size_t i=0; i<N; i++) {
+        y[i] = std::max(yIn[i], ymin[i]);
+    }
+
+    tstart = tstart_;
+
+    q.assign(N, 0);
+    d.assign(N, 0);
     rtaus.resize(N);
     y1.resize(N);
 
     ys.resize(N);
     rtau.resize(N);
     qs.resize(N);
+
+    y.resize(N);
+    ymin.resize(N, 1e-20);
+    ym1.resize(N);
+    ym2.resize(N);
+    scratch.resize(N);
+
+    tn = 0.0;
+
+    gcount = 0;
+    rcount = 0;
+
+    firstStep = true;
 }
 
-int QSSIntegrator::integrateToTime(double dtg)
+void QSSIntegrator::getInitialStepSize(double tf)
 {
-    int iter;
-
-    static const double tfd = 1.000008;
-    double ts;
-
-    double eps = 1e-10;
-    // double rswitch = 5.965900; // rswitch for 4-4 pade: 5.9659
-
-    // Initialize the control parameters.
-    double tn = 0.0;
-
-    // Store and limit to 'ymin' the initial values.
-    q.assign(N, 0);
-    d.assign(N, 0);
-    for (size_t i=0; i<N; i++) {
-        y[i] = std::max(y[i], ymin[i]);
-    }
+    firstStep = false;
 
     // Evaluate the derivatives of the initial values.
     odefun(tn + tstart, y, q, d);
@@ -81,23 +84,45 @@ int QSSIntegrator::integrateToTime(double dtg)
     }
 
     double sqreps = 0.5;
-    double dt = std::min(sqreps/scrtch, dtg);
+    dt = std::min(sqreps/scrtch, tf);
+}
 
-    bool newStep = true;
-
+int QSSIntegrator::integrateToTime(double tf)
+{
     while (true) {
-        if (newStep) {
-        // The starting values are stored.
-            ts = tn;
-
-            for (size_t i=0; i<N; i++) {
-                rtau[i] = dt*d[i]/y[i];
-                ys[i] = y[i];
-                qs[i] = q[i];
-                rtaus[i] = rtau[i];
-            }
+        int ret = integrateOneStep(tf);
+        if (ret) {
+            // Integration failed
+            return ret;
         }
+        if (tf <= tfd*tn) {
+            // Successfully reached tf
+            return 0;
+        }
+    }
+}
 
+int QSSIntegrator::integrateOneStep(double tf) {
+    if (firstStep) {
+        getInitialStepSize(tf);
+    } else {
+        odefun(t, y, q, d);
+        gcount += 1;
+    }
+
+    // Store starting values
+    ts = tn;
+    for (size_t i=0; i<N; i++) {
+        rtau[i] = dt*d[i]/y[i];
+        ys[i] = y[i];
+        qs[i] = q[i];
+        rtaus[i] = rtau[i];
+    }
+
+    // double rswitch = 5.965900; // rswitch for 4-4 pade: 5.9659
+
+    // Repeat integration until a successful timestep has been taken
+    while (true) {
         // Find the predictor terms.
         for (size_t i=0; i<N; i++) {
             // prediction
@@ -123,10 +148,11 @@ int QSSIntegrator::integrateToTime(double dtg)
            //c            alpha = 1.-1./rtaui
            //c         end if
 
-           scrarray[i] = (q[i]-d[i])/(1.0 + alpha*rtaui);
+           scratch[i] = (q[i]-d[i])/(1.0 + alpha*rtaui);
         }
 
-        iter = 1;
+        double eps = 1e-10;
+        int iter = 1;
         while (iter < itermax) {
             // limit decreasing functions to their minimum values.
             if (stabilityCheck) {
@@ -137,7 +163,7 @@ int QSSIntegrator::integrateToTime(double dtg)
             }
 
             for (size_t i=0; i<N; i++) {
-                y[i] = std::max(ys[i] + dt*scrarray[i], ymin[i]);
+                y[i] = std::max(ys[i] + dt*scratch[i], ymin[i]);
             }
 
             if (iter == 1) {
@@ -173,7 +199,7 @@ int QSSIntegrator::integrateToTime(double dtg)
 
                double qt = qs[i]*(1.0 - alpha) + q[i]*alpha;
                double pb = rtaub/dt;
-               scrarray[i] = (qt - ys[i]*pb) / (1.0 + alpha*rtaub);
+               scratch[i] = (qt - ys[i]*pb) / (1.0 + alpha*rtaub);
             }
             iter += 1;
         }
@@ -181,7 +207,7 @@ int QSSIntegrator::integrateToTime(double dtg)
         // Calculate new f, check for convergence, and limit decreasing
         // functions. the order of the operations in this loop is important.
         for (size_t i=0; i<N; i++) {
-            double scr2 = std::max(ys[i] + dt*scrarray[i], 0.0);
+            double scr2 = std::max(ys[i] + dt*scratch[i], 0.0);
             double scr1 = abs(scr2 - y1[i]);
             y[i] = std::max(scr2, ymin[i]);
 
@@ -204,10 +230,10 @@ int QSSIntegrator::integrateToTime(double dtg)
         // write(*,*) tn, dt, dtmin, tn, dtmin+1.0e-4*tn
         if (dt <= dtmin + 1e-16*tn) {
             //write(lo, 1003) dt, tn, dtmin
-            for (size_t i=0; i<N; i++) {
-                double dtc = epsmin*y[i]/(abs(q[i]-d[i]) + 1.0e-30);
-               //write(lo, 1004) q(i), d(i), y(i), rtau(i), dtc, q(i)-d(i),ys(i), y0(i), ymin(i)
-            }
+//            for (size_t i=0; i<N; i++) {
+//                double dtc = epsmin*y[i]/(abs(q[i]-d[i]) + 1.0e-30);
+//               //write(lo, 1004) q(i), d(i), y(i), rtau(i), dtc, q(i)-d(i),ys(i), y0(i), ymin(i)
+//            }
 
             //1003     format('1    chemeq error;   stepsize too small ! ! !', /,
             //   1    '     dt = ', 1pe10.3, ' tn = ', d25.15,
@@ -215,7 +241,7 @@ int QSSIntegrator::integrateToTime(double dtg)
             //   3         8x, 'rtau', 8x, 'dtc', 7x, 'q - d',7x, 'ys',
             //   4         9x, 'y0', 8x, 'ymin')
             //1004     format(5x, 1p12e11.3)
-            dt = dtg - ts;
+            dt = tf - ts;
             dt = std::min(dtmin, abs(dt));
 
             // return, indicating an error
@@ -236,8 +262,8 @@ int QSSIntegrator::integrateToTime(double dtg)
         }
 
         if (eps <= epsmax && stab <= 1.0) {
-            // Valid step.  Return if dtg has been reached.
-            if (dtg <= tn*tfd) {
+            // Valid step.  Return if tf has been reached.
+            if (tf <= tn*tfd) {
                 return 0;
             }
         } else {
@@ -253,7 +279,7 @@ int QSSIntegrator::integrateToTime(double dtg)
         rteps = 0.5*(rteps + eps/rteps);
 
         double dto = dt;
-        dt = std::min(dt*(1.0/rteps + 0.005), tfd*(dtg - tn));
+        dt = std::min(dt*(1.0/rteps + 0.005), tfd*(tf - tn));
         if (stabilityCheck) {
             dt = std::min(dt, dto/(stab+.001));
         }
@@ -272,12 +298,10 @@ int QSSIntegrator::integrateToTime(double dtg)
             }
 
             // After an unsuccessful step, do not recalculate the initial source terms
-            newStep = false;
+
         } else {
-            // Successful step; get the source terms for the next step
-            odefun(t, y, q, d);
-            gcount = gcount + 1;
-            newStep = true;
+            // Successful step;
+            return 0;
         }
     }
 }

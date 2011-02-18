@@ -8,11 +8,6 @@ using std::cout;
 using std::endl;
 using boost::format;
 
-QSSTestProblem::QSSTestProblem(size_t Neq)
-    : QSSIntegrator(Neq)
-{
-}
-
 void QSSTestProblem::odefun(double t, const dvector& y, dvector& q, dvector& d)
 {
     // csdfe(y, q, d, t)
@@ -94,7 +89,7 @@ int main(int argc, char** argv) {
     // epsmin (set by passing an entry from array EPS through
     // CHEMSP before each integration).
 
-    QSSTestProblem qssSolver(7);
+    QSSTestProblem qssSolver;
 
     // PROGRAM SPECIFICATIONS.
     dvector Y(10);
@@ -208,7 +203,7 @@ int main(int argc, char** argv) {
         for (int istep=0; istep<INLP; istep++) {
             // CALL INTEGRATOR.
             // CALL CHEMEQ2(DELTAT, CSDFE, NA, Y)
-            qssSolver.y = Y;
+            qssSolver.initialize(Y, 0);
             qssSolver.integrateToTime(DELTAT);
         }
 

@@ -5,6 +5,6 @@
 class QSSTestProblem : public QSSIntegrator
 {
 public:
-    QSSTestProblem(size_t Neq);
+    QSSTestProblem() {}
     void odefun(double t, const dvector& y, dvector& q, dvector& d);
 };
