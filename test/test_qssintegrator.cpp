@@ -193,7 +193,10 @@ int main(int argc, char** argv) {
     // LOOP OVER THE TEST CASES.
     for (int ICASE=0; ICASE<MXCASE; ICASE++) {
         cout << ICASE << ", " << EPS[ICASE] << ", " << INLP << endl;
-        qssSolver.chemsp(EPS[ICASE], 0, 0, TI, 5, NS, YMIN, 0);
+        qssSolver.epsmin = EPS[ICASE];
+        qssSolver.tstart = TI;
+        qssSolver.itermax = 5;
+        qssSolver.ymin = YMIN;
 
         // RESET "Y" TO INITIAL VALUES "YI".
         for (int i=0; i<NS; i++) {

@@ -14,45 +14,24 @@ QSSIntegrator::QSSIntegrator(size_t Neq)
     t = 0;
     epsmax = 10;
     epsmin = 1e-2;
-    epscl = 1/epsmin;
     dtmin = 1e-15;
     tstart = 0;
     itermax = 1;
 
     ymin.resize(N, 1e-20);
+    ym1.resize(N);
+    ym2.resize(N);
+    scrarray.resize(N);
     stabilityCheck = false;
-}
 
-void QSSIntegrator::chemsp(double epsmn, double epsmx, double dtmn, double tnot,
-                      int itermx, int ns, dvector& ymn, double prt)
-{
-    if (epsmn > 0) {
-        epsmin = epsmn;
-    }
+    q.resize(N, 0);
+    d.resize(N, 0);
+    rtaus.resize(N);
+    y1.resize(N);
 
-    if (epsmx > 0) {
-        epsmax = epsmx;
-    }
-
-    if (dtmn > 0) {
-        dtmin = dtmn;
-    }
-
-    if (tnot > 0) {
-        tstart = tnot;
-    }
-
-    if (itermx > 0) {
-        itermax = itermx;
-    }
-
-    for (size_t i=0; i<N; i++) {
-        if (ymn[i] > 0) {
-            ymin[i] = ymn[i];
-        }
-    }
-
-    epscl = 1.0/epsmin;
+    ys.resize(N);
+    rtau.resize(N);
+    qs.resize(N);
 }
 
 int QSSIntegrator::integrateToTime(double dtg)
@@ -65,25 +44,12 @@ int QSSIntegrator::integrateToTime(double dtg)
     int gcount = 0;
     int rcount = 0;
 
-    double tfd = 1.000008;
+    static const double tfd = 1.000008;
     double tn = 0;
     double ts;
-    dvector ymn(N);
-
-    dvector q(N, 0);
-    dvector d(N, 0);
-    dvector rtaus(N);
-    dvector y1(N);
-
-    dvector ys(N);
-    dvector y0(N);
-    dvector rtau(N);
 
     double alpha;
-    dvector qs(N);
-
     double scr1, scr2;
-    dvector scrarray(N);
 
     double sqreps = 0.5;
     double dt = 0;
@@ -95,7 +61,7 @@ int QSSIntegrator::integrateToTime(double dtg)
     double rtaui, rtaub, qt, pb, dtc, rteps;
 
     // ym1, ym2, and stab are used only for the stability check on dt
-    dvector ym1(N), ym2(N);
+
     double stab;
 
     // Initialize the control parameters.
@@ -105,7 +71,6 @@ int QSSIntegrator::integrateToTime(double dtg)
     for (i=0; i<N; i++) {
         q[i] = 0;
         d[i] = 0;
-        y0[i] = 0;
         y[i] = std::max(y[i], ymin[i]);
     }
 
@@ -249,7 +214,7 @@ int QSSIntegrator::integrateToTime(double dtg)
         }
     }
 
-    eps *= epscl;
+    eps /= epsmin;
 
     // Print out dianostics if stepsize becomes too small.
     // write(*,*) tn, dt, dtmin, tn, dtmin+1.0e-4*tn
