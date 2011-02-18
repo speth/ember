@@ -31,6 +31,9 @@ public:
 
     dvector ymin; //!< minimum value allowed for each component
 
+    int rcount; //!< Total number of ODE function calls
+    int gcount; //!< Total number of timestep repeats (after failed timesteps)
+
 private:
     size_t N; //!< Number of state variables.
 
