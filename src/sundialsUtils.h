@@ -137,6 +137,9 @@ public:
     std::vector<int> rootsFound;
     unsigned int nRoots;
 
+    int errorCount;
+    int errorStopCount;
+
 private:
 
     static int f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data);
@@ -153,7 +156,6 @@ private:
     int flag;
     int flagr;
     int nEq;
-
 
     int bandwidth_upper;
     int bandwidth_lower;

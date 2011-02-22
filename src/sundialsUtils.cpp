@@ -19,6 +19,8 @@ sundialsCVODE::sundialsCVODE(unsigned int n)
     nRoots = 0;
     maxNumSteps = 500;
     minStep = 0;
+    errorCount = 0;
+    errorStopCount = 100;
 }
 
 sundialsCVODE::~sundialsCVODE(void)
@@ -111,6 +113,12 @@ void sundialsCVODE::setBandwidth(int upper, int lower)
 int sundialsCVODE::integrateToTime(realtype t)
 {
     flag = CVode(sundialsMem, t, y.forSundials(), &tInt, CV_NORMAL);
+    if (flag != CV_SUCCESS) {
+        errorCount += 1;
+        if (errorCount > errorStopCount) {
+            throw debugException("CVODE Integrator had too many errors");
+        }
+    }
     return flag;
 }
 
@@ -118,6 +126,12 @@ int sundialsCVODE::integrateOneStep(realtype tf)
 {
     CVodeSetStopTime(sundialsMem, tf);
     flag = CVode(sundialsMem, tf, y.forSundials(), &tInt, CV_ONE_STEP);
+    if (flag != CV_SUCCESS && flag != CV_TSTOP_RETURN) {
+        errorCount += 1;
+        if (errorCount > errorStopCount) {
+            throw debugException("CVODE Integrator had too many errors");
+        }
+    }
     return flag;
 }
 
