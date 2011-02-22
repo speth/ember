@@ -240,3 +240,23 @@ void CanteraGas::getReactionRates(double* wDot) const
 {
     kinetics->getNetProductionRates(wDot);
 }
+
+void CanteraGas::getCreationRates(dvector& wDot) const
+{
+    kinetics->getCreationRates(&wDot[0]);
+}
+
+void CanteraGas::getCreationRates(double* wDot) const
+{
+    kinetics->getCreationRates(wDot);
+}
+
+void CanteraGas::getDestructionRates(dvector& wDot) const
+{
+    kinetics->getDestructionRates(&wDot[0]);
+}
+
+void CanteraGas::getDestructionRates(double* wDot) const
+{
+    kinetics->getDestructionRates(wDot);
+}

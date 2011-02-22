@@ -11,12 +11,14 @@ public:
     //! Initialize integrator at the start of each global timestep.
     void initialize(dvector yIn, double tStart);
 
-    int integrateToTime(double tf); //!< Take as many steps as needed to reach tf.
+    //! Take as many steps as needed to reach tf.
+    //! Note that tf is relative to tstart, not absolute.
+    int integrateToTime(double tf);
     int integrateOneStep(double tf); //!< Take one step toward tf without stepping past it.
 
     virtual void odefun(double t, const dvector& y, dvector& q, dvector& d) = 0;
 
-    double t; //!< current integrator time
+    double tn; //!< Internal integrator time (relative to #tstart)
     dvector y; //!< current state vector
 
     bool stabilityCheck; //!< Flag to enable convergence-based stability check on timestep
@@ -32,15 +34,15 @@ public:
     double dtmin; //!< Minimum timestep allowed.
     dvector ymin; //!< minimum value allowed for each component
 
-    int rcount; //!< Total number of ODE function calls
-    int gcount; //!< Total number of timestep repeats (after failed timesteps)
+    int rcount; //!< Total number of timestep repeats (after failed timesteps)
+    int gcount; //!< Total number of ODE function calls
 
 private:
     void getInitialStepSize(double tf); //!< Estimate the initial step size.
 
     size_t N; //!< Number of state variables.
 
-    double tn; //!< Internal integrator time
+
     double ts; //!< Time at the start of the current internal timestep
     double tfd; //!< Round-off parameter used to determine when integration is complete
     double dt; //!< Integrator internal timestep

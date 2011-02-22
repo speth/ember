@@ -268,3 +268,117 @@ void SourceSystem::writeState(sundialsCVODE& solver, ostream& out, bool init)
     out << "t.append(" << solver.tInt << ")" << endl;
     out << "wDot.append(" << wDot << ")" << endl;
 }
+
+// ********************
+
+
+SourceSystemQSS::SourceSystemQSS()
+    : U(NaN)
+    , T(NaN)
+    , gas(NULL)
+{
+    dUdtQ = 0;
+    dUdtD = 0;
+    dTdtQ = 0;
+    dTdtD = 0;
+}
+
+void SourceSystemQSS::resize(size_t new_nSpec)
+{
+    nSpec = new_nSpec;
+    Y.resize(nSpec, NaN);
+    dYdtQ.resize(nSpec, 0);
+    dYdtD.resize(nSpec, 0);
+    cpSpec.resize(nSpec);
+    wDotD.resize(nSpec);
+    wDotQ.resize(nSpec);
+    hk.resize(nSpec);
+}
+
+void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d)
+{
+    unroll_y(y);
+
+    // *** Update auxiliary data ***
+    reactionRatesTimer->start();
+    gas->setStateMass(Y, T);
+    if (usingAdapChem) {
+//        ckGas->setStateMass(&Y[0], T, j);
+//        ckGas->getReactionRates(&wDot[0]);
+    } else {
+        gas->getCreationRates(wDotQ);
+        gas->getDestructionRates(wDotD);
+    }
+
+    reactionRatesTimer->stop();
+
+    thermoTimer->start();
+    gas->getEnthalpies(hk);
+    rho = gas->getDensity();
+    cp = gas->getSpecificHeatCapacity();
+    thermoTimer->stop();
+
+    qDot = 0.0;
+    for (size_t k=0; k<nSpec; k++) {
+        qDot -= (wDotQ[k]-wDotD[k])*hk[k];
+    }
+
+    double a = strainFunction.a(t);
+    double dadt = strainFunction.dadt(t);
+
+    // *** Calculate the time derivatives
+    dUdtQ = rhou/rho*(dadt + a*a);
+    dUdtD = U*U;
+    dTdtQ = qDot/(rho*cp);
+    for (size_t k=0; k<nSpec; k++) {
+        dYdtQ[k] = wDotQ[k] * W[k] / rho;
+        dYdtD[k] = wDotD[k] * W[k] / rho;
+    }
+
+    roll_ydot(q, d);
+}
+
+void SourceSystemQSS::unroll_y(const dvector& y)
+{
+    T = y[kEnergy];
+    U = y[kMomentum];
+    for (size_t k=0; k<nSpec; k++) {
+        Y[k] = y[kSpecies+k];
+    }
+}
+
+void SourceSystemQSS::roll_y(dvector& y) const
+{
+    y[kEnergy] = T;
+    y[kMomentum] = U;
+    for (size_t k=0; k<nSpec; k++) {
+        y[kSpecies+k] = Y[k];
+    }
+}
+
+void SourceSystemQSS::roll_ydot(dvector& q, dvector& d) const
+{
+    q[kEnergy] = dTdtQ;
+    d[kEnergy] = dTdtD;
+    q[kMomentum] = dUdtQ;
+    d[kMomentum] = dUdtD;
+    for (size_t k=0; k<nSpec; k++) {
+        q[kSpecies+k] = dYdtQ[k];
+        d[kSpecies+k] = dYdtD[k];
+    }
+}
+
+void SourceSystemQSS::writeState(ostream& out, bool init)
+{
+    if (init) {
+        out << "T = []" << endl;
+        out << "Y = []" << endl;
+        out << "t = []" << endl;
+    }
+
+    out << "T.append(" << T << ")" << endl;
+    out << "Y.append(" << Y << ")" << endl;
+    out << "t.append(" << tn << ")" << endl;
+}
+
+

@@ -13,26 +13,20 @@ using boost::format;
 QSSIntegrator::QSSIntegrator()
 {
     N = 0;
-    t = 0;
-    epsmax = 10;
+    epsmax = 20;
     epsmin = 1e-2;
     dtmin = 1e-15;
     tstart = 0;
-    itermax = 1;
+    itermax = 2;
     tfd = 1.000008;
 
-    stabilityCheck = false;
+    stabilityCheck = true;
 }
 
 void QSSIntegrator::initialize(dvector yIn, double tstart_)
 {
     N = yIn.size();
     y.resize(N);
-
-    // Store and limit to 'ymin' the initial values.
-    for (size_t i=0; i<N; i++) {
-        y[i] = std::max(yIn[i], ymin[i]);
-    }
 
     tstart = tstart_;
 
@@ -55,6 +49,11 @@ void QSSIntegrator::initialize(dvector yIn, double tstart_)
 
     gcount = 0;
     rcount = 0;
+
+    // Store and limit to 'ymin' the initial values.
+    for (size_t i=0; i<N; i++) {
+        y[i] = std::max(yIn[i], ymin[i]);
+    }
 
     firstStep = true;
 }
@@ -99,7 +98,7 @@ int QSSIntegrator::integrateToTime(double tf)
 
 int QSSIntegrator::integrateOneStep(double tf) {
     // Evaluate the derivatives at the initial state.
-    odefun(t, y, q, d);
+    odefun(tn, y, q, d);
     gcount += 1;
 
     if (firstStep) {

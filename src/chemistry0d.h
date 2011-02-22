@@ -74,6 +74,11 @@ public:
     void getReactionRates(dvector& wDot) const;
     void getReactionRates(double* wDot) const;
 
+    void getCreationRates(dvector& wDot) const;
+    void getCreationRates(double* wDot) const;
+    void getDestructionRates(dvector& wDot) const;
+    void getDestructionRates(double* wDot) const;
+
     Cantera::IdealGasPhase thermo;
 
 private:

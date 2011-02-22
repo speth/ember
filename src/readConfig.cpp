@@ -173,6 +173,10 @@ void configOptions::readOptionsFile(const std::string& filename)
         debugParameters::veryVerbose = true;
     #endif
 
+    readOption("integrator.chemistryIntegrator", chemistryIntegrator, "cvode");
+    if (chemistryIntegrator != "cvode" && chemistryIntegrator != "qss") {
+        throw debugException("Unknown chemistryIntegrator: '" + chemistryIntegrator + "'.");
+    }
     readOption("integrator.relativeTolerance", integratorRelTol, 1e-5);
     readOption("integrator.momentumAbsTol", integratorMomentumAbsTol, 1e-8);
     readOption("integrator.energyAbsTol", integratorEnergyAbsTol, 1e-6);

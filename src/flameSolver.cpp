@@ -393,7 +393,7 @@ void FlameSolver::run(void)
             regridTimer.stop();
         }
 
-        if (debugParameters::debugPerformanceStats && (nTotal % 50 == 0)) {
+        if (debugParameters::debugPerformanceStats && (nTotal % 10 == 0)) {
             printPerformanceStats();
         }
         nTotal++;
@@ -712,12 +712,35 @@ void FlameSolver::resizeAuxiliary()
             // Store the solver and system
             sourceTerms.push_back(system);
             sourceSolvers.push_back(solver);
+
+            // Create the new SourceSystemQSS
+            SourceSystemQSS* qssSolver = new SourceSystemQSS();
+            qssSolver->resize(nSpec);
+            qssSolver->gas = &gas;
+            qssSolver->ckGas = ckGas;
+            qssSolver->usingAdapChem = options.usingAdapChem;
+            qssSolver->thermoTimer = &thermoTimer;
+            qssSolver->reactionRatesTimer = &reactionRatesTimer;
+            qssSolver->strainFunction = strainfunc;
+            qssSolver->rhou = rhou;
+            qssSolver->W = W;
+            qssSolver->j = j;
+
+            qssSolver->ymin.assign(nVars, 1e-24);
+            qssSolver->ymin[kMomentum] = -1e4;
+            qssSolver->epsmin = options.integratorRelTol;
+            qssSolver->dtmin = options.integratorMinTimestep;
+
+            sourceTermsQSS.push_back(qssSolver);
+            useCVODE.push_back(options.chemistryIntegrator == "cvode");
         }
 
     } else {
         // Delete the unwanted solvers and systems
         sourceTerms.erase(sourceTerms.begin()+nPoints, sourceTerms.end());
         sourceSolvers.erase(sourceSolvers.begin()+nPoints, sourceSolvers.end());
+        sourceTermsQSS.erase(sourceTermsQSS.begin()+nPoints, sourceTermsQSS.end());
+        useCVODE.erase(useCVODE.begin()+nPoints, useCVODE.end());
     }
 
     // Resize solution vector for diffusion systems / solvers
@@ -912,16 +935,29 @@ void FlameSolver::setProductionSolverState(double tInitial)
 {
     splitTimer.resume();
     for (size_t j=0; j<nPoints; j++) {
-        sdVector& ySource = sourceSolvers[j].y;
-        ySource[kMomentum] = U[j];
-        ySource[kEnergy] = T[j];
-        for (size_t k=0; k<nSpec; k++) {
-            ySource[kSpecies+k] = Y(k,j);
+        if (useCVODE[j]) {
+            sdVector& ySource = sourceSolvers[j].y;
+            ySource[kMomentum] = U[j];
+            ySource[kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                ySource[kSpecies+k] = Y(k,j);
+            }
+            sourceSolvers[j].t0 = tInitial;
+            sourceSolvers[j].initialize();
+            sourceTerms[j].wDot.assign(nSpec, 0);
+            sourceTerms[j].strainFunction.pin(tInitial);
+        } else {
+            dvector ySource(nVars);
+            ySource[kMomentum] = U[j];
+            ySource[kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                ySource[kSpecies+k] = Y(k,j);
+            }
+            sourceTermsQSS[j].initialize(ySource, tInitial);
+            sourceTermsQSS[j].wDotQ.assign(nSpec, 0);
+            sourceTermsQSS[j].wDotD.assign(nSpec, 0);
+            sourceTermsQSS[j].strainFunction.pin(tInitial);
         }
-        sourceSolvers[j].t0 = tInitial;
-        sourceSolvers[j].initialize();
-        sourceTerms[j].wDot.assign(nSpec, 0);
-        sourceTerms[j].strainFunction.pin(tInitial);
     }
     splitTimer.stop();
 }
@@ -946,20 +982,39 @@ void FlameSolver::calculateSplitDerivatives(double t)
 
     // Evaluate the derivatives from the source terms
     for (size_t j=0; j<nPoints; j++) {
-        sdVector& ySource = sourceSolvers[j].y;
-        ySource[kMomentum] = U[j];
-        ySource[kEnergy] = T[j];
-        for (size_t k=0; k<nSpec; k++) {
-            ySource[kSpecies+k] = Y(k,j);
-        }
-        sourceTerms[j].wDot.assign(nSpec, 0);
-        sourceTerms[j].strainFunction.pin(t);
+        if (useCVODE[j]) {
+            sdVector& ySource = sourceSolvers[j].y;
+            ySource[kMomentum] = U[j];
+            ySource[kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                ySource[kSpecies+k] = Y(k,j);
+            }
+            sourceTerms[j].wDot.assign(nSpec, 0);
+            sourceTerms[j].strainFunction.pin(t);
 
-        sdVector ydotSource(nVars);
-        sourceTerms[j].f(t, ySource, ydotSource);
-        dTdtSplit[j] += ydotSource[kEnergy];
-        for (size_t k=0; k<nSpec; k++) {
-            dYdtSplit(k,j) += ydotSource[kSpecies+k];
+            sdVector ydotSource(nVars);
+            sourceTerms[j].f(t, ySource, ydotSource);
+            dTdtSplit[j] += ydotSource[kEnergy];
+            for (size_t k=0; k<nSpec; k++) {
+                dYdtSplit(k,j) += ydotSource[kSpecies+k];
+            }
+        } else {
+            dvector ySource(nVars);
+            ySource[kMomentum] = U[j];
+            ySource[kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                ySource[kSpecies+k] = Y(k,j);
+            }
+            sourceTermsQSS[j].wDotQ.assign(nSpec, 0);
+            sourceTermsQSS[j].wDotD.assign(nSpec, 0);
+            sourceTermsQSS[j].strainFunction.pin(t);
+
+            dvector q(nVars), d(nVars);
+            sourceTermsQSS[j].odefun(t, ySource, q, d);
+            dTdtSplit[j] += (q[kEnergy] - d[kEnergy]);
+            for (size_t k=0; k<nSpec; k++) {
+                dYdtSplit(k,j) += (q[kSpecies+k] - d[kSpecies+k]);
+            }
         }
     }
 
@@ -1030,11 +1085,20 @@ void FlameSolver::extractProductionState(int stage)
 
     splitTimer.resume();
     for (size_t j=0; j<nPoints; j++) {
-        sourceTerms[j].unroll_y(sourceSolvers[j].y);
-        U[j] = sourceTerms[j].U;
-        T[j] = sourceTerms[j].T;
-        for (size_t k=0; k<nSpec; k++) {
-            Y(k,j) = sourceTerms[j].Y[k];
+        if (useCVODE[j]) {
+            sourceTerms[j].unroll_y(sourceSolvers[j].y);
+            U[j] = sourceTerms[j].U;
+            T[j] = sourceTerms[j].T;
+            for (size_t k=0; k<nSpec; k++) {
+                Y(k,j) = sourceTerms[j].Y[k];
+            }
+        } else {
+            sourceTermsQSS[j].unroll_y(sourceTermsQSS[j].y);
+            U[j] = sourceTermsQSS[j].U;
+            T[j] = sourceTermsQSS[j].T;
+            for (size_t k=0; k<nSpec; k++) {
+                Y(k,j) = sourceTermsQSS[j].Y[k];
+            }
         }
     }
     splitTimer.stop();
@@ -1079,39 +1143,74 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
             cout << j;
             cout.flush();
         }
-        if (j == options.debugSourcePoint && t >= options.debugSourceTime) {
-            ofstream steps;
-            steps.open("cvodeSteps.py");
-            sourceTerms[j].writeState(sourceSolvers[j], steps, true);
+        if (useCVODE[j]) {
+            if (j == options.debugSourcePoint && t >= options.debugSourceTime) {
+                ofstream steps;
+                steps.open("cvodeSteps.py");
+                sourceTerms[j].writeState(sourceSolvers[j], steps, true);
 
-            while (sourceSolvers[j].tInt < t) {
-                err = sourceSolvers[j].integrateOneStep(t);
-                sourceTerms[j].writeState(sourceSolvers[j], steps, false);
-                if (err != CV_SUCCESS) {
-                    break;
+                while (sourceSolvers[j].tInt < t) {
+                    err = sourceSolvers[j].integrateOneStep(t);
+                    sourceTerms[j].writeState(sourceSolvers[j], steps, false);
+                    if (err != CV_SUCCESS) {
+                        break;
+                    }
                 }
+
+                sourceTerms[j].writeJacobian(sourceSolvers[j], steps);
+
+                steps.close();
+                terminate();
+
+            } else {
+                err = sourceSolvers[j].integrateToTime(t);
+            }
+            if (err && err != CV_TSTOP_RETURN) {
+                cout << "Error at j = " << j << endl;
+                cout << "T = " << sourceTerms[j].T << endl;
+                cout << "U = " << sourceTerms[j].U << endl;
+                cout << "Y = " << sourceTerms[j].Y << endl;
+                writeStateFile((format("prod%i_error_t%.6f_j%03i") % stage % t % j).str(), true, false);
             }
 
-            sourceTerms[j].writeJacobian(sourceSolvers[j], steps);
-
-            steps.close();
-            terminate();
+            if (debugParameters::veryVerbose) {
+                cout << " [" << sourceSolvers[j].getNumSteps() << "]...";
+                cout.flush();
+            }
 
         } else {
-            err = sourceSolvers[j].integrateToTime(t);
-        }
+            if (j == options.debugSourcePoint && t >= options.debugSourceTime) {
+                ofstream steps;
+                steps.open("cvodeSteps.py");
+                sourceTermsQSS[j].writeState(steps, true);
 
-        if (err && err != CV_TSTOP_RETURN) {
-            cout << "Error at j = " << j << endl;
-            cout << "T = " << sourceTerms[j].T << endl;
-            cout << "U = " << sourceTerms[j].U << endl;
-            cout << "Y = " << sourceTerms[j].Y << endl;
-            writeStateFile((format("prod%i_error_t%.6f_j%03i") % stage % t % j).str(), true, false);
-        }
+                while (sourceTermsQSS[j].tn < (t-tNow)) {
+                    err = sourceTermsQSS[j].integrateOneStep(t-tNow);
+                    sourceTermsQSS[j].writeState(steps, false);
+                    if (err) {
+                        break;
+                    }
+                }
 
-        if (debugParameters::veryVerbose) {
-            cout << " [" << sourceSolvers[j].getNumSteps() << "]...";
-            cout.flush();
+                steps.close();
+                terminate();
+
+            } else {
+                err = sourceTermsQSS[j].integrateToTime(t-tNow);
+            }
+            if (err) {
+                cout << "Error at j = " << j << endl;
+                cout << "T = " << sourceTermsQSS[j].T << endl;
+                cout << "U = " << sourceTermsQSS[j].U << endl;
+                cout << "Y = " << sourceTermsQSS[j].Y << endl;
+                writeStateFile((format("prod%i_error_t%.6f_j%03i") % stage % t % j).str(), true, false);
+            }
+
+            if (debugParameters::veryVerbose) {
+                cout << " [" << sourceTermsQSS[j].gcount << "]...";
+                cout.flush();
+            }
+
         }
     }
     reactionTimer.stop();
@@ -1213,14 +1312,26 @@ void FlameSolver::calculateTimeDerivatives()
     // Production term contribution
     setProductionSolverState(tNow);
     for (size_t j=0; j<nPoints; j++) {
-        sdVector& ySource = sourceSolvers[j].y;
-        sdVector ydotSource(nVars);
-        sourceTerms[j].f(tNow, ySource, ydotSource);
+        if (useCVODE[j]) {
+            sdVector& ySource = sourceSolvers[j].y;
+            sdVector ydotSource(nVars);
+            sourceTerms[j].f(tNow, ySource, ydotSource);
 
-        dUdt[j] += dUdtProd[j] = ydotSource[kMomentum];
-        dTdt[j] += dTdtProd[j] = ydotSource[kEnergy];
-        for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,j) += dYdtProd(k,j) = ydotSource[kSpecies+k];
+            dUdt[j] += dUdtProd[j] = ydotSource[kMomentum];
+            dTdt[j] += dTdtProd[j] = ydotSource[kEnergy];
+            for (size_t k=0; k<nSpec; k++) {
+                dYdt(k,j) += dYdtProd(k,j) = ydotSource[kSpecies+k];
+            }
+        } else {
+            dvector& ySource = sourceTermsQSS[j].y;
+            dvector q(nVars), d(nVars);
+            sourceTermsQSS[j].odefun(tNow, ySource, q, d);
+
+            dUdt[j] += dUdtProd[j] = (q[kMomentum] - d[kMomentum]);
+            dTdt[j] += dTdtProd[j] = (q[kEnergy] - d[kEnergy]);
+            for (size_t k=0; k<nSpec; k++) {
+                dYdt(k,j) += dYdtProd(k,j) = (q[kSpecies+k] - d[kSpecies+k]);
+            }
         }
     }
 
@@ -1620,20 +1731,40 @@ void FlameSolver::updateTransportDomain()
     // Evaluate the reaction term (using the current reduced mechanism, if any)
     // for reach component
     for (size_t j=0; j<nPoints; j++) {
-        sdVector& ySource = sourceSolvers[j].y;
-        ySource[kMomentum] = U[j];
-        ySource[kEnergy] = T[j];
-        for (size_t k=0; k<nSpec; k++) {
-            ySource[kSpecies+k] = Y(k,j);
-        }
-        sourceTerms[j].wDot.assign(nSpec, 0);
-        sourceTerms[j].strainFunction.pin(tNow);
+        if (useCVODE[j]) {
+            sdVector& ySource = sourceSolvers[j].y;
+            ySource[kMomentum] = U[j];
+            ySource[kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                ySource[kSpecies+k] = Y(k,j);
+            }
+            sourceTerms[j].wDot.assign(nSpec, 0);
+            sourceTerms[j].strainFunction.pin(tNow);
 
-        sdVector ydotSource(nVars);
-        sourceTerms[j].f(tNow, ySource, ydotSource);
-        for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,j) += ydotSource[kSpecies+k];
-            dYdtProduction(k,j) = ydotSource[kSpecies+k];
+            sdVector ydotSource(nVars);
+            sourceTerms[j].f(tNow, ySource, ydotSource);
+            for (size_t k=0; k<nSpec; k++) {
+                dYdt(k,j) += ydotSource[kSpecies+k];
+                dYdtProduction(k,j) = ydotSource[kSpecies+k];
+            }
+        } else {
+            dvector& ySource = sourceTermsQSS[j].y;
+            ySource[kMomentum] = U[j];
+            ySource[kEnergy] = T[j];
+            for (size_t k=0; k<nSpec; k++) {
+                ySource[kSpecies+k] = Y(k,j);
+            }
+            sourceTermsQSS[j].wDotD.assign(nSpec, 0);
+            sourceTermsQSS[j].wDotQ.assign(nSpec, 0);
+            sourceTermsQSS[j].strainFunction.pin(tNow);
+
+            dvector q(nVars), d(nVars);
+            sourceTermsQSS[j].odefun(tNow, ySource, q, d);
+            for (size_t k=0; k<nSpec; k++) {
+                dYdt(k,j) += (q[kSpecies+k] = d[kSpecies+k]);
+                dYdtProduction(k,j) = (q[kSpecies+k] - d[kSpecies+k]);
+            }
+
         }
     }
 

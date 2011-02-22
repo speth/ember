@@ -94,6 +94,9 @@ private:
     boost::ptr_vector<sundialsCVODE> sourceSolvers; // One for each grid point
     boost::ptr_vector<BDFIntegrator> diffusionSolvers; // One for each state variable
 
+    boost::ptr_vector<SourceSystemQSS> sourceTermsQSS; // One for each grid point
+    vector<bool> useCVODE; // At each grid point, a flag for which integrator to use
+
     //! System representing the convection terms and containing their integrators
     ConvectionSystemSplit convectionSystem;
 

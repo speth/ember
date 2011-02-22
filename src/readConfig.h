@@ -64,6 +64,7 @@ public:
     double globalTimestep; // timestep size for the outer solver
     double diffusionTimestep; // timestep for diffusion solver
 
+    std::string chemistryIntegrator;
     double integratorRelTol;
     double integratorMomentumAbsTol;
     double integratorEnergyAbsTol;
