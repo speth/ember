@@ -19,6 +19,7 @@ QSSIntegrator::QSSIntegrator()
     tstart = 0;
     itermax = 2;
     tfd = 1.000008;
+    abstol = 1e-8;
 
     stabilityCheck = true;
 }
@@ -74,10 +75,12 @@ void QSSIntegrator::getInitialStepSize(double tf)
     double scrtch = 1.0e-25;
 
     for (size_t i=0; i<N; i++) {
-        double absq = abs(q[i]);
-        double scr2 = abs(1/y[i]) * sign(0.1*epsmin*absq - d[i]);
-        double scr1 = scr2 * d[i];
-        scrtch = std::max(std::max(scr1, -abs(absq-d[i])*scr2), scrtch);
+        if (abs(y[i]) > abstol) {
+            double absq = abs(q[i]);
+            double scr2 = abs(1/y[i]) * sign(0.1*epsmin*absq - d[i]);
+            double scr1 = scr2 * d[i];
+            scrtch = std::max(std::max(scr1, -abs(absq-d[i])*scr2), scrtch);
+        }
     }
 
     double sqreps = 0.5;
@@ -167,7 +170,7 @@ int QSSIntegrator::integrateOneStep(double tf) {
             double scr1 = abs(scr2 - y1[i]);
             y[i] = std::max(scr2, ymin[i]);
 
-            if (0.25*(ys[i] + y[i]) > ymin[i]) {
+            if (abs(y[i]) > abstol && 0.25*(ys[i] + y[i]) > ymin[i]) {
                scr1 = scr1/y[i];
                eps = std::max(.5*(scr1+ std::min(abs(q[i]-d[i])/(q[i]+d[i]+1e-30), scr1)),eps);
             }
@@ -200,10 +203,10 @@ int QSSIntegrator::integrateOneStep(double tf) {
 
         // The following section is used for the stability check.
         double stab = 0;
-        if (stabilityCheck) {
+        if (stabilityCheck && itermax >= 3) {
             stab = 0.01;
-            if (itermax >= 3) {
-                for (size_t i=0; i<N; i++) {
+            for (size_t i=0; i<N; i++) {
+                if (abs(y[i]) > abstol) {
                     stab = std::max(stab, abs(y[i]-ym1[i])/(abs(ym1[i]-ym2[i])+1e-20*y[i]));
                 }
             }

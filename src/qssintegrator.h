@@ -32,7 +32,8 @@ public:
     double epsmax;
 
     double dtmin; //!< Minimum timestep allowed.
-    dvector ymin; //!< minimum value allowed for each component
+    dvector ymin; //!< Minimum value allowed for each component
+    double abstol; //!< Minimum component value to consider when determining stability / step size
 
     int rcount; //!< Total number of timestep repeats (after failed timesteps)
     int gcount; //!< Total number of ODE function calls
