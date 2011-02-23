@@ -1,5 +1,12 @@
+
 VariantDir('src/build','src', duplicate=0)
 VariantDir('test/build','test', duplicate=0)
+
+try:
+    import multiprocessing
+    SetOption('num_jobs', multiprocessing.cpu_count())
+except:
+    pass
 
 debugCppFlags = ['-O0','-ftemplate-depth-128','-fno-inline','-Wall','-g','-fPIC']
 releaseCppFlags = ['-ftemplate-depth-128', '-O3', '-finline-functions', '-Wno-inline',
