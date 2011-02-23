@@ -71,6 +71,15 @@ public:
     double integratorSpeciesAbsTol;
     double integratorMinTimestep; //!< minimum timestep for the chemistry integrator [s]
 
+    // QSS integrator parameters
+    double qss_epsmax;
+    double qss_epsmin;
+    double qss_dtmin;
+    double qss_iterationCount;
+    double qss_abstol;
+    double qss_minval;
+    bool qss_stabilityCheck;
+
     std::string gasMechanismFile;
     std::string gasPhaseID;
     bool usingMultiTransport;

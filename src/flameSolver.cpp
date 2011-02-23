@@ -726,10 +726,14 @@ void FlameSolver::resizeAuxiliary()
             qssSolver->W = W;
             qssSolver->j = j;
 
-            qssSolver->ymin.assign(nVars, 1e-24);
+            qssSolver->ymin.assign(nVars, options.qss_minval);
             qssSolver->ymin[kMomentum] = -1e4;
-            qssSolver->epsmin = options.integratorRelTol;
-            qssSolver->dtmin = options.integratorMinTimestep;
+            qssSolver->epsmin = options.qss_epsmin;
+            qssSolver->epsmax = options.qss_epsmax;
+            qssSolver->dtmin = options.qss_dtmin;
+            qssSolver->itermax = options.qss_iterationCount;
+            qssSolver->abstol = options.qss_abstol;
+            qssSolver->stabilityCheck = options.qss_stabilityCheck;
 
             sourceTermsQSS.push_back(qssSolver);
             useCVODE.push_back(options.chemistryIntegrator == "cvode");

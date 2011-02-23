@@ -183,6 +183,14 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("integrator.speciesAbsTol", integratorSpeciesAbsTol, 1e-10);
     readOption("integrator.minimumTimestep", integratorMinTimestep, 1e-18);
 
+    readOption("integrator.qss.epsmax", qss_epsmax, 10);
+    readOption("integrator.qss.epsmin", qss_epsmin, 0.02);
+    readOption("integrator.qss.dtmin", qss_dtmin, 1e-16);
+    readOption("integrator.qss.iterationCount", qss_iterationCount, 1);
+    readOption("integrator.qss.abstol", qss_abstol, 1e-11);
+    readOption("integrator.qss.minval", qss_minval, 1e-30);
+    readOption("integrator.qss.stabilityCheck", qss_stabilityCheck, false);
+
     if (readOption("outputFiles.saveProfiles", outputProfiles, true)) {
         readOption("outputFiles.heatReleaseRate", outputHeatReleaseRate, true);
         readOption("outputFiles.auxiliaryVariables", outputAuxiliaryVariables, false);

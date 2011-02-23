@@ -132,12 +132,24 @@ times:
 
 integrator:
 {
+    chemistryIntegrator = "qss";
     relativeTolerance = 2e-5;
     relativeToleranceLow = 1e-2;
     continuityAbsTol = 1e-10;
     momentumAbsTol = 1e-10;
     energyAbsTol = 1e-8;
     speciesAbsTol = 1e-14;
+
+    qss:
+    {
+        epsmax = 1e1;
+        epsmin = 2e-2;
+        dtmin = 1e-16;
+        iterationCount = 1;
+        abstol = 1e-11;
+        minval = 1e-30;
+        stabilityCheck = false;
+    };
 };
 
 debug:
