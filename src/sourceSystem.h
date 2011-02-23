@@ -89,7 +89,7 @@ public:
     SourceSystemQSS();
 
     // The ODE function: ydot = f(t,y)
-    void odefun(double t, const dvector& y, dvector& q, dvector& d);
+    void odefun(double t, const dvector& y, dvector& q, dvector& d, bool corrector=false);
 
     void unroll_y(const dvector& y); // fill in current state variables from sdvector
     void roll_y(dvector& y) const; // fill in y with current state variables
@@ -133,4 +133,5 @@ private:
     double Wmx; // mixture molecular weight [kg/mol]
     dvector hk; // species enthalpies [J/kmol]
 
+    bool corrector;
 };

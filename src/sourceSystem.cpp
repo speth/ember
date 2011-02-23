@@ -295,8 +295,9 @@ void SourceSystemQSS::resize(size_t new_nSpec)
     hk.resize(nSpec);
 }
 
-void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d)
+void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d, bool _corrector)
 {
+    corrector = _corrector;
     unroll_y(y);
 
     // *** Update auxiliary data ***
@@ -309,14 +310,15 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d)
         gas->getCreationRates(wDotQ);
         gas->getDestructionRates(wDotD);
     }
-
     reactionRatesTimer->stop();
 
-    thermoTimer->start();
-    gas->getEnthalpies(hk);
-    rho = gas->getDensity();
-    cp = gas->getSpecificHeatCapacity();
-    thermoTimer->stop();
+    if (!corrector) {
+        thermoTimer->start();
+        gas->getEnthalpies(hk);
+        rho = gas->getDensity();
+        cp = gas->getSpecificHeatCapacity();
+        thermoTimer->stop();
+    }
 
     qDot = 0.0;
     for (size_t k=0; k<nSpec; k++) {
@@ -340,7 +342,9 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d)
 
 void SourceSystemQSS::unroll_y(const dvector& y)
 {
-    T = y[kEnergy];
+    if (!corrector) {
+        T = y[kEnergy];
+    }
     U = y[kMomentum];
     for (size_t k=0; k<nSpec; k++) {
         Y[k] = y[kSpecies+k];

@@ -147,7 +147,7 @@ int QSSIntegrator::integrateOneStep(double tf) {
             }
 
             // Evaluate the derivatives for the corrector.
-            odefun(tn + tstart, y, q, d);
+            odefun(tn + tstart, y, q, d, true);
             gcount += 1;
             eps = 1.0e-10;
 

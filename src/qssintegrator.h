@@ -16,7 +16,7 @@ public:
     int integrateToTime(double tf);
     int integrateOneStep(double tf); //!< Take one step toward tf without stepping past it.
 
-    virtual void odefun(double t, const dvector& y, dvector& q, dvector& d) = 0;
+    virtual void odefun(double t, const dvector& y, dvector& q, dvector& d, bool corrector=false) = 0;
 
     double tn; //!< Internal integrator time (relative to #tstart)
     dvector y; //!< current state vector
