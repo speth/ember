@@ -3,12 +3,19 @@
 #include <string>
 #include "mathUtils.h"
 
+namespace boost { namespace python { namespace api { class object; } } }
+
 // indices of the respective equations / solution components
 extern const size_t kMomentum, kEnergy, kSpecies, kWmx;
 
 class configOptions
 {
 public:
+    configOptions() {}
+
+    //! Create a configOptions object from a parallel python data structure
+    configOptions(const boost::python::api::object& conf);
+
     //! Populate the members of this class with the contents of the configuration file
     void readOptionsFile(const std::string& filename);
 
@@ -130,7 +137,7 @@ public:
     bool outputProfiles;
     bool outputDebugIntegratorStages;
 
-    size_t debugSourcePoint; //!< Grid point index marked for verbose output (cvodeSteps.py)
+    int debugSourcePoint; //!< Grid point index marked for verbose output (cvodeSteps.py)
     double debugSourceTime; //!< Integrator time at which to generate verbose output (then terminate)
 
     bool terminateForSteadyQdot; // if true, code finishes when integral heat release rate is constant
@@ -168,6 +175,11 @@ private:
     // Same as readOption, but does not print if the default was used
     template <class T1, class T2>
     bool readOptionQuietDefault(const std::string name, T1& value, const T2 defaultVal);
+
+    // Python version of readOption: load the config option "name" from "conf" into "value",
+    // Return true if value was not None
+    template <class T1>
+    bool readOption(const boost::python::api::object& conf, const char* name, T1& value);
 
     libconfig::Config* theConfig;
 

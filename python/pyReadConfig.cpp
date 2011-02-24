@@ -6,7 +6,8 @@ using namespace boost::python;
 
 void exportReadConfig()
 {
-    class_<configOptions>("ConfigOptions")
+    class_<configOptions>("_ConfigOptions")
+        .def(init<object>())
         .def_readwrite("inputDir", &configOptions::inputDir)
         .def_readwrite("outputDir", &configOptions::outputDir)
         .def_readwrite("restartFile", &configOptions::restartFile)

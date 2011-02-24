@@ -1,6 +1,7 @@
 VariantDir('src/build','src', duplicate=0)
 VariantDir('test/build','test', duplicate=0)
 VariantDir('python/build','python', duplicate=0)
+VariantDir('adapchem/build','adapchem', duplicate=0)
 
 try:
     import multiprocessing
@@ -35,15 +36,15 @@ env = Environment(CPPPATH=['/opt/cantera-gcc/include',
                   CPPFLAGS=cppFlags,
                   FORTRANFLAGS=fortFlags,
                   F90FLAGS=fortFlags,
-                  LIBS=startlibs + sundials + cantera + lastlibs)
+                  LIBS=startlibs + sundials + cantera + pythonlibs + lastlibs)
 
-env.Library('lib/libcklib.a', 'adapchem/cklib.f')
+env.Library('lib/libcklib.a', 'adapchem/build/cklib.f')
 
 env.Library('lib/libadapchem.a',
-            ['adapchem/adapchem.f',
-             'adapchem/box.f',
-             'adapchem/ckcompat.cpp',
-             'adapchem/wrappers.f90'])
+            ['adapchem/build/adapchem.f',
+             'adapchem/build/box.f',
+             'adapchem/build/ckcompat.cpp',
+             'adapchem/build/wrappers.f90'])
 
 common = [f for f in Glob('src/build/*.cpp')
           if 'strainedFlame.cpp' not in f.name]

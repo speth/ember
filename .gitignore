@@ -1,7 +1,10 @@
 bin
-lib
+*.a
+*.so
 *~
+\#*\#
 *.o
 *.d
+*.pyc
 .sconsign.dblite
 build

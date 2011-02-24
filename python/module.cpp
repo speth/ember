@@ -5,7 +5,9 @@ using namespace boost::python;
 
 BOOST_PYTHON_MODULE(_pyro)
 {
-    exportReadConfig();
     exportConverters();
     exportContainers();
+
+    exportFlameSolver();
+    exportReadConfig();
 }

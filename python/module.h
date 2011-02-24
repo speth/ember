@@ -5,3 +5,4 @@
 void exportReadConfig();
 void exportConverters();
 void exportContainers();
+void exportFlameSolver();

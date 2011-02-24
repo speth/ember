@@ -7,6 +7,7 @@
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
+#include <boost/python.hpp>
 
 #define foreach BOOST_FOREACH
 
@@ -17,6 +18,14 @@ FlameSolver::FlameSolver()
     , diffusionTestSolver(diffusionTestTerm)
 {
     convectionSystem.setSpeciesDomains(convectionStartIndices, convectionStopIndices);
+}
+
+FlameSolver::FlameSolver(const boost::python::api::object& config)
+    : jCorrSolver(jCorrSystem)
+    , diffusionTestSolver(diffusionTestTerm)
+{
+    convectionSystem.setSpeciesDomains(convectionStartIndices, convectionStopIndices);
+    setOptions(configOptions(config));
 }
 
 void FlameSolver::setOptions(const configOptions& _options)
@@ -1148,7 +1157,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
             cout.flush();
         }
         if (useCVODE[j]) {
-            if (j == options.debugSourcePoint && t >= options.debugSourceTime) {
+            if (int(j) == options.debugSourcePoint && t >= options.debugSourceTime) {
                 ofstream steps;
                 steps.open("cvodeSteps.py");
                 sourceTerms[j].writeState(sourceSolvers[j], steps, true);
@@ -1183,7 +1192,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
             }
 
         } else {
-            if (j == options.debugSourcePoint && t >= options.debugSourceTime) {
+            if (int(j) == options.debugSourcePoint && t >= options.debugSourceTime) {
                 ofstream steps;
                 steps.open("cvodeSteps.py");
                 sourceTermsQSS[j].writeState(steps, true);
