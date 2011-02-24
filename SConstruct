@@ -12,8 +12,12 @@ debugCppFlags = ['-O0','-ftemplate-depth-128','-fno-inline','-Wall','-g','-fPIC'
 releaseCppFlags = ['-ftemplate-depth-128', '-O3', '-finline-functions', '-Wno-inline',
                    '-fPIC', '-Wall', '-g', '-DNDEBUG']
 
+debugFortFlags = ['-O0', '-g','-fPIC']
+releaseFortFlags = ['-O3','-fPIC','-g']
+
 mode = ARGUMENTS.get('mode','release')
 cppFlags = releaseCppFlags if mode == 'release' else debugCppFlags
+fortFlags = releaseFortFlags if mode == 'release' else debugFortFlags
 
 startlibs = 'adapchem cklib'.split()
 cantera = '''thermo transport kinetics equil tpx ctnumerics 
@@ -27,16 +31,17 @@ env = Environment(CPPPATH=['/opt/cantera-gcc/include',
                            '/opt/sundials-2.4.0-gcc/lib',
                            'lib'],
                   CPPFLAGS=cppFlags,
+                  FORTRANFLAGS=fortFlags,
+                  F90FLAGS=fortFlags,
                   LIBS=startlibs + sundials + cantera + lastlibs)
 
+env.Library('lib/libcklib.a', 'adapchem/cklib.f')
 
-Library('lib/libcklib.a', 'adapchem/cklib.f')
-
-Library('lib/libadapchem.a', 
-        ['adapchem/adapchem.f', 
-         'adapchem/box.f', 
-         'adapchem/ckcompat.cpp', 
-         'adapchem/wrappers.f90'])
+env.Library('lib/libadapchem.a',
+            ['adapchem/adapchem.f',
+             'adapchem/box.f',
+             'adapchem/ckcompat.cpp',
+             'adapchem/wrappers.f90'])
 
 common = [f for f in Glob('src/build/*.cpp')
           if 'strainedFlame.cpp' not in f.name]
