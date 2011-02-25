@@ -10,6 +10,41 @@ bool debugParameters::debugSolverStats;
 bool debugParameters::debugPerformanceStats;
 bool debugParameters::debugFlameRadiusControl;
 bool debugParameters::veryVerbose;
+LogFile logFile;
+
+LogFile::LogFile()
+{
+    std::cout << std::boolalpha; // prints "true" and "false" rather than 1 and 0
+    haveFile = false;
+}
+
+LogFile::LogFile(const std::string& filename)
+{
+    open(filename);
+}
+
+LogFile::~LogFile()
+{
+    close();
+}
+
+void LogFile::open(const std::string& filename)
+{
+    if (haveFile) {
+        close();
+    }
+    haveFile = true;
+    file.open(filename.c_str());
+    file << std::boolalpha; // prints "true" and "false" rather than 1 and 0
+}
+
+void LogFile::close()
+{
+    if (haveFile) {
+        haveFile = false;
+        file.close();
+    }
+}
 
 debugException::debugException(void)
 {

@@ -5,8 +5,6 @@
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
 
-using std::cout;
-using std::endl;
 using namespace mathUtils;
 using std::max; using std::min;
 
@@ -149,9 +147,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
             if (abs(v[j+1]-v[j]) > vtol[k]*vRange) {
                 insert = true;
                 if (debugParameters::debugAdapt) {
-                    cout << "Adapt: v resolution wants grid point j = " << j << ", k = " << k;
-                    cout << " |v(j+1)-v(j)|/vrange = "
-                        << abs(v[j+1]-v[j])/vRange << " > " << vtol[k] << endl;
+                    logFile.write(format("Adapt: v resolution wants grid point"
+                            " j = %i, k = %i; |v(j+1)-v(j)|/vrange = %g > %g") %
+                            j % k % (abs(v[j+1]-v[j])/vRange) % vtol[k]);
                 }
             }
 
@@ -159,20 +157,20 @@ void oneDimGrid::adapt(vector<dvector>& y)
             if (j!=0 && j!=jj-1 && abs(dv[j+1]-dv[j]) > dvtol[k]*dvRange) {
                 insert = true;
                 if (debugParameters::debugAdapt) {
-                    cout << "Adapt: dv resolution (global) wants grid point j = " << j << ", k = " << k;
-                    cout << " |dv(j+1)-dv(j)|/vrange = "
-                        << abs(dv[j+1]-dv[j])/dvRange << " > " << dvtol[k] << endl;
+                    logFile.write(format("Adapt: dv resolution (global) wants grid point"
+                            " j = %i, k = %i; |dv(j+1)-dv(j)|/vrange = %g > % g") %
+                            j % k % (abs(dv[j+1]-dv[j])/dvRange) % dvtol[k]);
                 }
             }
-
         }
 
         // Damping of high-frequency numerical error
         if (hh[j] > dampConst*dampVal[j]) {
             insert = true;
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: damping criterion wants a grid point j = " << j;
-                cout << " hh(j) = " << hh[j] << " > " << dampConst*dampVal[j] << endl;
+                logFile.write(format("Adapt: damping criterion wants a grid point"
+                        " j = %i; hh[j] = %g > %g") %
+                        j % hh[j] % (dampConst*dampVal[j]));
             }
         }
 
@@ -180,8 +178,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
         if (hh[j] > gridMax) {
             insert = true;
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: Maximum grid size criterion wants a grid point j = " << j;
-                cout << " hh(j) = " << hh[j] << " > " << gridMax << endl;
+                logFile.write(format("Adapt: Maximum grid size criterion wants a grid point"
+                        " j = %i; hh[j] = %g < %g") %
+                        j % hh[j] % gridMax);
             }
         }
 
@@ -189,8 +188,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
         if (j!=0 && hh[j]/hh[j-1] > uniformityTol) {
             insert = true;
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: left uniformity wants grid point j = " << j;
-                cout << " hh(j)/hh(j-1) = " << hh[j]/hh[j-1] << " > " << uniformityTol << endl;
+                logFile.write(format("Adapt: left uniformity wants grid point"
+                        " j = %i; hh(j)/hh(j-1) = %g > %g") %
+                        j % (hh[j]/hh[j-1]) % uniformityTol);
             }
         }
 
@@ -198,8 +198,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
         if (j!=jj-1 && hh[j]/hh[j+1] > uniformityTol) {
             insert = true;
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: right uniformity wants grid point j = " << j;
-                cout << " hh(j)/hh(j+1) = " << hh[j]/hh[j+1] << " > " << uniformityTol << endl;
+                logFile.write(format("Adapt: right uniformity wants grid point"
+                        " j = %i; hh(j)/hh(j+1) = %g > %g") %
+                        j % (hh[j]/hh[j+1]) % uniformityTol);
             }
         }
 
@@ -209,8 +210,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
             if (hh[j] < xLeftMin) {
                 insert = false;
                 if (debugParameters::debugAdapt) {
-                    cout << "Adapt: grid point addition canceled by minimum center grid size j = " << j;
-                    cout << " hh(j) = " << hh[j] << " < " << 2*xLeftMin << endl;
+                    logFile.write(format("Adapt: grid point addition canceled"
+                            " by minimum center grid size j = %i; hh[j] = %g < %g") %
+                            j % hh[j] % (2*xLeftMin));
                 }
             }
         }
@@ -219,8 +221,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
         if (insert && hh[j] < 2*gridMin) {
             insert = false;
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: grid point addition canceled by minimum grid size j = " << j;
-                cout << " hh(j) = " << hh[j] << " < " << 2*gridMin << endl;
+                logFile.write(format("Adapt: grid point addition canceled"
+                        " by minimum grid size j = %i; hh[j] = %g < %g") %
+                        j % hh[j] % (2*gridMin));
             }
         }
 
@@ -238,11 +241,11 @@ void oneDimGrid::adapt(vector<dvector>& y)
     }
 
     if (insertionIndicies.size() != 0) {
-        cout << "Grid points inserted at j = ";
+        logFile.write("Grid points inserted at j = ", false);
         for (unsigned int i=0; i<insertionIndicies.size()-1; i++) {
-            cout << insertionIndicies[i] << ", ";
+            logFile.write(format("%i, ") % insertionIndicies[i], false);
         }
-        cout << insertionIndicies[insertionIndicies.size()-1] << endl;
+        logFile.write(insertionIndicies[insertionIndicies.size()-1]);
     }
 
     // *** Grid point removal algorithm
@@ -274,9 +277,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
             // resolution of v
             if (abs(v[j+1]-v[j-1]) > rmTol*vtol[k]*vRange) {
                 if (debugParameters::debugAdapt) {
-                    cout << "Adapt: no removal - v res. j = " << j << ", k = " << k;
-                    cout << " |v(j+1)-v(j-1)|/vtrange = "
-                        << abs(v[j+1]-v[j-1])/vRange << " > " << vtol[k]*rmTol << endl;
+                    logFile.write(format("Adapt: no removal - v res. j = %i, k = %i;"
+                            " |v[j+1]-v[j-1]|/vtrange = %g > %g") %
+                            j % k % (abs(v[j+1]-v[j-1])/vRange) % (vtol[k]*rmTol));
                 }
                 remove = false;
             }
@@ -284,9 +287,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
             // resolution of dv
             if (j!=2 && j!=jj-1 && abs(dv[j+1]-dv[j-1]) > rmTol*dvtol[k]*dvRange) {
                 if (debugParameters::debugAdapt) {
-                    cout << "Adapt: no removal - dv res. j = " << j << ", k = " << k;
-                    cout << " |dv(j+1)-dv(j-1)|/dvrange = "
-                        << abs(dv[j+1]-dv[j-1])/dvRange << " > " << dvtol[k]*rmTol << endl;
+                    logFile.write(format("Adapt: no removal - dv res. j = %i, k = %i;"
+                            " |dv(j+1)-dv(j-1)|/dvrange = %g > %g") %
+                            j % k % (abs(dv[j+1]-dv[j-1])/dvRange) % (dvtol[k]*rmTol));
                 }
                 remove = false;
             }
@@ -295,8 +298,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
         // Damping of high-frequency numerical error
         if (hh[j]+hh[j-1] >= rmTol*dampConst*dampVal[j]) {
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: no removal - damping criterion. j = " << j;
-                cout << " hh(j)+hh(j-1) = " << hh[j]+hh[j-1] << " > " << dampConst*dampVal[j] << endl;
+                logFile.write(format("Adapt: no removal - damping criterion. j = %i;"
+                        " hh(j)+hh(j-1) = %g > %g") %
+                        j % (hh[j]+hh[j-1]) % (dampConst*dampVal[j]));
             }
             remove = false;
         }
@@ -304,8 +308,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
         // Enforce maximum grid size
         if (hh[j]+hh[j-1] > gridMax) {
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: no removal - maximum grid size. j = " << j;
-                cout << " hh(j)+hh(j-1) = " << hh[j]+hh[j-1] << " > " << gridMax << endl;
+                logFile.write(format("Adapt: no removal - maximum grid size. j = %i;"
+                        " hh(j)+hh(j-1) = %g > %g") %
+                        j % (hh[j]+hh[j-1]) % gridMax);
             }
             remove = false;
         }
@@ -313,9 +318,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
         // Enforce left uniformity
         if (j>=2 && hh[j]+hh[j-1] > uniformityTol*hh[j-2]) {
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: no removal - left uniformity. j = " << j;
-                cout << " (hh(j)+hh(j-1))/hh(j-2) = "
-                    << (hh[j]+hh[j-1])/hh[j-2] << " > " << uniformityTol << endl;
+                logFile.write(format("Adapt: no removal - left uniformity. j = %i;"
+                        " (hh(j)+hh(j-1))/hh(j-2) = %g > %g") %
+                        j % ((hh[j]+hh[j-1])/hh[j-2]) % uniformityTol);
             }
             remove = false;
         }
@@ -323,9 +328,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
         // Enforce right uniformity
         if (j<=jj-2 && hh[j]+hh[j-1] > uniformityTol*hh[j+1]) {
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: no removal - right uniformity. j = " << j;
-                cout << " (hh(j)+hh(j-1))/hh(j+1) = "
-                    << (hh[j]+hh[j-1])/hh[j+1] << " > " << uniformityTol << endl;
+                logFile.write(format("Adapt: no removal - right uniformity. j = %i;"
+                        " (hh(j)+hh(j-1))/hh(j+1) = %g > %g") %
+                        j % ((hh[j]+hh[j-1])/hh[j+1]) % uniformityTol);
             }
             remove = false;
         }
@@ -333,7 +338,7 @@ void oneDimGrid::adapt(vector<dvector>& y)
         // Special fixed grid for flames pinned at x=0
         if (j == 1 && leftBC == BoundaryCondition::ControlVolume) {
             if (debugParameters::debugAdapt) {
-                cout << "Adapt: no removal - fixed grid near r = 0." << endl;
+                logFile.write("Adapt: no removal - fixed grid near r = 0.");
             }
             remove = false;
         }
@@ -349,11 +354,11 @@ void oneDimGrid::adapt(vector<dvector>& y)
     }
 
     if (removalIndices.size() != 0) {
-        cout << "Grid points removed at j = ";
+        logFile.write("Grid points removed at j = ", false);
         for (unsigned int i=0; i<removalIndices.size()-1; i++) {
-            cout << removalIndices[i] << ", ";
+            logFile.write(format("%i, ") % removalIndices[i], false);
         }
-        cout << removalIndices[removalIndices.size()-1] << endl;
+        logFile.write(removalIndices[removalIndices.size()-1]);
     }
 
     if (updated) {
@@ -411,8 +416,9 @@ bool oneDimGrid::addRight(vector<dvector>& y)
         double ymax = maxval(y[k]);
         if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTol && ymax > absvtol ) {
             if (!pointAdded && debugParameters::debugRegrid) {
-                cout << "Regrid: Flatness of component " << k << " requires right addition: ";
-                cout << abs(y[k][jj]-y[k][jj-dj])/ymax << " > " << boundaryTol << endl;
+                logFile.write(format("Regrid: Flatness of component %i requires"
+                        " right addition: %g > %g") %
+                        k % (abs(y[k][jj]-y[k][jj-dj])/ymax) % boundaryTol);
             }
             pointAdded = true;
             break;
@@ -420,11 +426,11 @@ bool oneDimGrid::addRight(vector<dvector>& y)
     }
 
     if (!pointAdded && debugParameters::debugRegrid) {
-        cout << "Regrid: no addition on right" << endl;
+        logFile.write("Regrid: no addition on right");
     }
 
     if (pointAdded) {
-        cout << "Regrid: Adding points to right side." << endl;
+        logFile.write("Regrid: Adding points to right side.");
 
         for (size_t i=0; i<addPointCount; i++) {
             x.push_back(x[jj] + (x[jj]-x[jj-1]));
@@ -458,8 +464,9 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
             int dj = (k==kMomentum) ? djMom : djOther;
             if (abs(y[k][dj]-y[k][0])/ymax > boundaryTol && ymax > absvtol) {
                 if (!pointAdded && debugParameters::debugRegrid) {
-                    cout << "Regrid: Flatness of component " << k << " requires left addition: ";
-                    cout << abs(y[k][dj]-y[k][0])/ymax << " > " << boundaryTol << endl;
+                    logFile.write(format("Regrid: Flatness of component %i"
+                            " requires left addition: %g > %g") %
+                            k % (abs(y[k][dj]-y[k][0])/ymax) % boundaryTol);
                 }
                 pointAdded = true;
                 break;
@@ -469,17 +476,17 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
 
     if (fixedLeftLoc && leftBC != BoundaryCondition::ControlVolume) {
         if (!pointAdded && debugParameters::debugRegrid) {
-            cout << "Regrid: Adding point to force left boundary toward x = 0" << endl;
+            logFile.write("Regrid: Adding point to force left boundary toward x = 0");
         }
         pointAdded = true;
     }
 
     if (!pointAdded && debugParameters::debugRegrid) {
-        cout << "Regrid: No addition to left." << endl;
+        logFile.write("Regrid: No addition to left.");
     }
 
     if (pointAdded) {
-        cout << "Regrid: Adding points to left side." << endl;
+        logFile.write("Regrid: Adding points to left side.");
         // Add point to the left.
         for (size_t i=0; i<addPointCount; i++) {
             double xLeft = x[0]-hh[0];
@@ -496,7 +503,7 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
                 }
             }
             if (debugParameters::debugRegrid) {
-                cout << "adding point at " << xLeft << endl;
+                logFile.write(format("adding point at %i") % xLeft);
             }
             x.insert(x.begin(),xLeft);
 
@@ -530,8 +537,9 @@ bool oneDimGrid::removeRight(vector<dvector>& y)
         double ymax = maxval(y[k]);
         if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTolRm && ymax > absvtol) {
             if (pointRemoved && debugParameters::debugRegrid) {
-                cout << "Regrid: Right removal prevented by component " << k << " flatness: ";
-                cout << abs(y[k][jj]-y[k][jj-dj])/ymax << " > " << boundaryTolRm << endl;
+                logFile.write(format("Regrid: Right removal prevented by component %i"
+                        " flatness: %g > %g") %
+                        k % (abs(y[k][jj]-y[k][jj-dj])/ymax) % boundaryTolRm);
             }
             pointRemoved = false;
             break;
@@ -561,7 +569,7 @@ bool oneDimGrid::removeLeft(vector<dvector>& y)
     bool pointRemoved = true; // assume removal
     if (fixedLeftLoc) {
         if (pointRemoved && debugParameters::debugRegrid) {
-            cout << "Regrid: left removal prevented by fixed left boundary" << endl;
+            logFile.write("Regrid: left removal prevented by fixed left boundary");
         }
         pointRemoved = false;
     }
@@ -574,8 +582,9 @@ bool oneDimGrid::removeLeft(vector<dvector>& y)
         double ymax = maxval(y[k]);
         if (abs(y[k][dj]-y[k][0])/ymax > boundaryTolRm && ymax > absvtol) {
             if (pointRemoved && debugParameters::debugRegrid) {
-                cout << "Regrid: Left removal prevented component " << k << " flatness requirement: ";
-                cout << abs(y[k][dj]-y[k][0])/ymax << " > " << boundaryTolRm << endl;
+                logFile.write(format("Regrid: Left removal prevented component %i"
+                        " flatness requirement: %g > %g") %
+                        k % (abs(y[k][dj]-y[k][0])/ymax) % boundaryTolRm);
             }
             pointRemoved = false;
         }
@@ -626,7 +635,8 @@ void oneDimGrid::regrid(vector<dvector>& y)
     }
     if (rightRemovalCount > 0) {
         std::string suffix = (rightRemovalCount == 1) ? "" : "s";
-        cout << "Removed " << rightRemovalCount << " point" << suffix << " from the right side. " << endl;
+        logFile.write(format("Removed %i point%s from the right side.") %
+                rightRemovalCount % suffix);
     }
 
     int leftRemovalCount = 0;
@@ -643,7 +653,8 @@ void oneDimGrid::regrid(vector<dvector>& y)
 
     if (leftRemovalCount > 0) {
         std::string suffix = (leftRemovalCount == 1) ? "" : "s";
-        cout << "Removed " << leftRemovalCount << " point" << suffix << " from the left side." << endl;
+        logFile.write(format("Removed %i point%s from the left side.") %
+                leftRemovalCount % suffix);
     }
 
     updated = (updated || leftAddition || rightAddition || leftRemoval || rightRemoval);

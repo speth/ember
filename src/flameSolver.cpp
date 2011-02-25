@@ -4,14 +4,11 @@
 #include "dataFile.h"
 #include "mathUtils.h"
 
-#include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/python.hpp>
 
 #define foreach BOOST_FOREACH
-
-using boost::format;
 
 FlameSolver::FlameSolver()
     : jCorrSolver(jCorrSystem)
@@ -122,8 +119,8 @@ void FlameSolver::run(void)
             bool error = false;
             for (size_t j=0; j<nPoints; j++) {
                 if (T[j] < 295 || T[j] > 3000) {
-                    cout << format("WARNING: Unexpected Temperature: T = %f at j = %i")
-                            % T[j] % j << endl;
+                    logFile.write(format("WARNING: Unexpected Temperature: T = %f at j = %i")
+                            % T[j] % j)
                     error = true;
                 }
             }
@@ -250,7 +247,7 @@ void FlameSolver::run(void)
         extractConvectionState(2); // extract solution components
 
         if (debugParameters::veryVerbose) {
-            cout << "done!" << endl;
+            logFile.write("done!");
         }
 
         // *** End of Strang-split integration step ***
@@ -268,8 +265,7 @@ void FlameSolver::run(void)
 
         if (debugParameters::debugTimesteps) {
             int nSteps = convectionSystem.getNumSteps();
-            cout << format("t = %8.6f (dt = %9.3e) [C: %i]") %
-                    t % dt % nSteps << endl;
+            logFile.write(format("t = %8.6f (dt = %9.3e) [C: %i]") % t % dt % nSteps);
         }
 
         setupTimer.resume();
@@ -371,7 +367,7 @@ void FlameSolver::run(void)
                 // Update species elimination at the start of the next time step
                 nEliminate = options.transportEliminationStepInterval;
 
-                cout << format("Grid size: %i points.") % nPoints << endl;
+                logFile.write(format("Grid size: %i points.") % nPoints);
 
                 // "unrollVectorVector"
                 U.resize(nPoints);
@@ -415,7 +411,7 @@ void FlameSolver::run(void)
 
     totalTimer.stop();
     printPerformanceStats();
-    cout << format("Runtime: %f seconds.") % totalTimer.getTime() << endl;
+    logFile.write(format("Runtime: %f seconds.") % totalTimer.getTime());
 }
 
 bool FlameSolver::checkTerminationCondition(void)
@@ -426,8 +422,8 @@ bool FlameSolver::checkTerminationCondition(void)
 
         if (j1 == -1)
         {
-            cout << format("Continuing integration: t (%8.6f) < terminationPeriod (%8.6f)")
-                    % (tNow-timeVector[0]) % options.terminationPeriod << endl;
+            logFile.write(format("Continuing integration: t (%8.6f) < terminationPeriod (%8.6f)") %
+                    (tNow-timeVector[0]) % options.terminationPeriod);
             return false;
         }
 
@@ -439,22 +435,22 @@ bool FlameSolver::checkTerminationCondition(void)
         }
         hrrError /= (j2-j1+1);
 
-        cout << format("Heat release rate deviation = %6.3f%%. hrrError = %9.4e")
-                % (hrrError/qMean*100) % hrrError << endl;
+        logFile.write(format("Heat release rate deviation = %6.3f%%. hrrError = %9.4e") %
+                (hrrError/qMean*100) % hrrError);
 
         if (hrrError/abs(qMean) < options.terminationTolerance) {
-            cout << "Terminating integration: ";
-            cout << "Heat release deviation less than relative tolerance." << endl;
+            logFile.write("Terminating integration: ", false);
+            logFile.write("Heat release deviation less than relative tolerance.");
             return true;
         } else if (hrrError < options.terminationAbsTol) {
-            cout << "Terminating integration: ";
-            cout << "Heat release rate deviation less than absolute tolerance." << endl;
+            logFile.write("Terminating integration: ", false);
+            logFile.write("Heat release rate deviation less than absolute tolerance.");
             return true;
         } else if (tNow-tStart > options.terminationMaxTime ) {
-          cout << "Terminating integration: Maximum integration time reached." << endl;
+            logFile.write("Terminating integration: Maximum integration time reached.");
           return true;
         } else {
-            cout << format("Continuing integration. t = %8.6f") % (tNow-timeVector[0]) << endl;
+            logFile.write(format("Continuing integration. t = %8.6f") % (tNow-timeVector[0]));
         }
 
     }
@@ -482,9 +478,9 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile, 
         fileName << options.outputDir << "/" << fileNameStr << ".h5";
     }
     if (errorFile) {
-        cout << "Writing error output file: " << fileName.str() << endl;
+        logFile.write(format("Writing error output file: %s") % fileName.str());
     } else {
-        cout << "Writing output file: " << fileName.str() << endl;
+        logFile.write(format("Writing output file: %s") % fileName.str());
     }
 
     // Erase the existing file and create a new one
@@ -610,7 +606,8 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile, 
     }
 
     if (errorFile && options.stopIfError) {
-      cout << "Error outputs remaining until termination: " << options.errorStopCount << endl;
+        logFile.write(format("Error outputs remaining until termination: %i") %
+                options.errorStopCount);
       if (options.errorStopCount-- <= 0) {
         throw debugException("Too many integration failures.");
       }
@@ -850,7 +847,7 @@ void FlameSolver::updateLeftBC()
     }
 
     if (prev != grid.leftBC) {
-        cout << "updateLeftBC: BC changed from " << prev << " to " << grid.leftBC << "." << endl;
+        logFile.write(format("updateLeftBC: BC changed from %i to %i.") % prev % grid.leftBC);
     }
 }
 
@@ -1129,8 +1126,7 @@ void FlameSolver::extractProductionState(int stage)
 void FlameSolver::integrateConvectionTerms(double t, int stage)
 {
     if (debugParameters::veryVerbose) {
-        cout << format("convection term %i/2...") % stage;
-        cout.flush();
+        logFile.write(format("convection term %i/2...") % stage, false);
     }
 
     convectionTimer.start();
@@ -1142,19 +1138,17 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
 {
     if (debugParameters::veryVerbose) {
         if (stage) {
-            cout << format("Source term %i/2...") % stage;
+            logFile.write(format("Source term %i/2...") % stage, false);
         } else {
-            cout << format("Source term...");
+            logFile.write("Source term...", false);
         }
-        cout.flush();
     }
 
     reactionTimer.start();
     int err = 0;
     for (size_t j=0; j<nPoints; j++) {
         if (debugParameters::veryVerbose) {
-            cout << j;
-            cout.flush();
+            logFile.write(j, false);
         }
         if (useCVODE[j]) {
             if (int(j) == options.debugSourcePoint && t >= options.debugSourceTime) {
@@ -1179,16 +1173,17 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
                 err = sourceSolvers[j].integrateToTime(t);
             }
             if (err && err != CV_TSTOP_RETURN) {
-                cout << "Error at j = " << j << endl;
-                cout << "T = " << sourceTerms[j].T << endl;
-                cout << "U = " << sourceTerms[j].U << endl;
-                cout << "Y = " << sourceTerms[j].Y << endl;
-                writeStateFile((format("prod%i_error_t%.6f_j%03i") % stage % t % j).str(), true, false);
+                logFile.write(format("Error at j = %i") % j);
+                logFile.write(format("T = %s") % sourceTerms[j].T);
+                logFile.write(format("U = %s") % sourceTerms[j].U);
+                logFile.write("Y = ", false);
+                logFile.write(sourceTerms[j].Y);
+                writeStateFile((format("prod%i_error_t%.6f_j%03i") %
+                        stage % t % j).str(), true, false);
             }
 
             if (debugParameters::veryVerbose) {
-                cout << " [" << sourceSolvers[j].getNumSteps() << "]...";
-                cout.flush();
+                logFile.write(format(" [%i]...") % sourceSolvers[j].getNumSteps(), false);
             }
 
         } else {
@@ -1212,16 +1207,17 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
                 err = sourceTermsQSS[j].integrateToTime(t-tNow);
             }
             if (err) {
-                cout << "Error at j = " << j << endl;
-                cout << "T = " << sourceTermsQSS[j].T << endl;
-                cout << "U = " << sourceTermsQSS[j].U << endl;
-                cout << "Y = " << sourceTermsQSS[j].Y << endl;
-                writeStateFile((format("prod%i_error_t%.6f_j%03i") % stage % t % j).str(), true, false);
+                logFile.write(format("Error at j = %i") % j);
+                logFile.write(format("T = %s") % sourceTerms[j].T);
+                logFile.write(format("U = %s") % sourceTerms[j].U);
+                logFile.write("Y = ", false);
+                logFile.write(sourceTerms[j].Y);
+                writeStateFile((format("prod%i_error_t%.6f_j%03i") %
+                        stage % t % j).str(), true, false);
             }
 
             if (debugParameters::veryVerbose) {
-                cout << " [" << sourceTermsQSS[j].gcount << "]...";
-                cout.flush();
+                logFile.write(format(" [%i]...") % sourceTermsQSS[j].gcount, false);
             }
 
         }
@@ -1232,8 +1228,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
 void FlameSolver::integrateDiffusionTerms(double t, int stage)
 {
     if (debugParameters::veryVerbose) {
-        cout << format("diffusion terms %i/2...") % stage;
-        cout.flush();
+        logFile.write(format("diffusion terms %i/2...") % stage, false);
     }
 
     diffusionTimer.start();
@@ -1257,10 +1252,12 @@ void FlameSolver::update_xStag(const double t, const bool updateIntError)
         ( (xFlameTarget-xFlameActual) + (flamePosIntegralError + (xFlameTarget-xFlameActual)*(t-tFlamePrev))*options.xFlameIntegralGain );
 
     if (debugParameters::debugFlameRadiusControl) {
-        cout << "rFlameControl: " << "rF = " << xFlameActual << "   control = " << controlSignal;
-        cout << "   P = " <<  options.xFlameProportionalGain*(xFlameTarget-xFlameActual);
-        cout << "   I = " << options.xFlameProportionalGain*flamePosIntegralError*options.xFlameIntegralGain;
-        cout << "  dt = " << t-tFlamePrev << endl;
+        logFile.write(format("rFlameControl: rF=%g;  control=%g;  P=%g;  I=%g;  dt=%g") %
+                xFlameActual %
+                controlSignal %
+                (options.xFlameProportionalGain*(xFlameTarget-xFlameActual)) %
+                (options.xFlameProportionalGain*flamePosIntegralError*options.xFlameIntegralGain) %
+                (t-tFlamePrev));
     }
 
     double a = strainfunc.a(t);
@@ -1385,7 +1382,7 @@ double FlameSolver::getFlamePosition(void)
 
 void FlameSolver::generateProfile(void)
 {
-    cout << "Generating initial profiles from given fuel and oxidizer compositions." << endl;
+    logFile.write("Generating initial profiles from given fuel and oxidizer compositions.");
 
     // Set up a CanteraGas object to use for calculating the initial profiles
     nSpec = gas.nSpec;
@@ -1555,7 +1552,7 @@ void FlameSolver::loadProfile(void)
         inputFilename = options.restartFile;
     }
 
-    cout << "Reading initial condition from " << inputFilename << endl;
+    logFile.write(format("Reading initial condition from %s") % inputFilename);
     DataFile infile(inputFilename);
     x = infile.readVector("x");
 
@@ -1695,13 +1692,13 @@ dvector FlameSolver::calculateReactantMixture(void)
 
 void FlameSolver::printPerformanceStats(void)
 {
-    cout << endl << "   *** Performance Stats ***       time   ( call count )" << endl;
+    logFile.write("\n   *** Performance Stats ***       time   ( call count )");
     printPerfString("                General Setup: ", setupTimer);
     printPerfString("             Split Term Setup: ", splitTimer);
     printPerfString("    Reaction Term Integration: ", reactionTimer);
     printPerfString("   Diffusion Term Integration: ", diffusionTimer);
     printPerfString("  Convection Term Integration: ", convectionTimer);
-    cout << endl << " Subcomponents:" << endl;
+    logFile.write("\n Subcomponents:");
     printPerfString("               Reaction Rates: ", reactionRatesTimer);
     printPerfString("         Transport Properties: ", transportTimer);
     printPerfString("          - thermal cond.    : ", conductivityTimer);
@@ -1711,12 +1708,12 @@ void FlameSolver::printPerformanceStats(void)
     printPerfString("   Source Jacobian Evaluation: ", jacobianTimer);
     printPerfString("   UTW Convection Integration: ", convectionSystem.utwTimer);
     printPerfString("    Yk Convection Integration: ", convectionSystem.speciesTimer);
-    cout << endl;
+    logFile.write("\n", false);
 }
 
 void FlameSolver::printPerfString(const std::string& label, const perfTimer& T) const
 {
-    cout << format("%s %9.3f (%12i)") % label % T.getTime() % T.getCallCount() << endl;
+    logFile.write(format("%s %9.3f (%12i)") % label % T.getTime() % T.getCallCount());
 }
 
 void FlameSolver::updateTransportDomain()

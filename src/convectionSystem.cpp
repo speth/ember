@@ -621,8 +621,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
     int i = 0;
 
     if (debugParameters::veryVerbose) {
-        cout << "UTW...";
-        cout.flush();
+        logFile.write("UTW...", false);
     }
 
     // CVODE returns CV_TSTOP_RETURN when the solver has reached tf
@@ -636,8 +635,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
 
     speciesTimer.start();
     if (debugParameters::veryVerbose) {
-        cout << "Yk...";
-        cout.flush();
+        logFile.write("Yk...", false);
     }
     // Integrate the species systems
     for (size_t k=0; k<nSpec; k++) {

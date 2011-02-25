@@ -1,9 +1,6 @@
 #include "dataFile.h"
 #include "debugUtils.h"
-#include "boost/filesystem.hpp"
-
-using std::cout;
-using std::endl;
+#include <boost/filesystem.hpp>
 
 DataFile::DataFile(void)
     : file(0)
@@ -60,7 +57,7 @@ void DataFile::writeVector(const std::string& name, const dvector& v)
 
     hsize_t dims = v.size();
     if (dims == 0) {
-        cout << "DataFile::writeVector: Warning: '" << name << "' is empty." << endl;
+        logFile.write(format("DataFile::writeVector: Warning: '%s' is empty.") % name);
         return;
     }
 
@@ -111,7 +108,7 @@ void DataFile::writeArray2D(const std::string& name, const Cantera::Array2D& y)
     dims[1] = yt.nRows();
 
     if (dims[0] == 0 || dims[1] == 0) {
-        cout << "DataFile::writeArray2D: Warning: '" << name << "' is empty." << endl;
+        logFile.write(format("DataFile::writeArray2D: Warning: '%s' is empty.") % name);
         return;
     }
 
@@ -221,8 +218,8 @@ void dataFileTest()
         }
     }
 
-    cout << "rows:" << A.nRows() << endl;
-    cout << "cols:" << A.nColumns() << endl;
+    logFile.write(format("rows: %i") % A.nRows());
+    logFile.write(format("cols: %i") % A.nColumns());
 
     f.writeArray2D("A", A);
     f.close();
@@ -230,11 +227,11 @@ void dataFileTest()
     DataFile g("test.h5");
     dvector w = g.readVector("v");
     for (size_t i=0; i<w.size(); i++) {
-        cout << w[i] << endl;
+        logFile.write(format("%g") % w[i]);
     }
 
-    cout << g.readScalar("x") << endl;
-    cout << g.readArray2D("A") << endl;
+    logFile.write(format("%g") % g.readScalar("x"));
+    logFile.write(g.readArray2D("A"));
 
     g.close();
 }

@@ -9,7 +9,7 @@ class Options(object):
 class Paths(Options):
     inputDir = "input"
     outputDir = "run/test1"
-
+    logFile = None # write output to stdout
 
 class General(Options):
     fixedBurnedVal = True

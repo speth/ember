@@ -3,9 +3,6 @@
 #include <iostream>
 #include "mathUtils.h" // debug
 
-using std::cout;
-using std::endl;
-
 sundialsCVODE::sundialsCVODE(unsigned int n)
     : y(n)
     , abstol(n)
@@ -471,7 +468,7 @@ void sundialsIDA::initialize(void)
     if (calcIC) {
         flag = IDACalcIC(sundialsMem, IDA_YA_YDP_INIT, t0+1e-4);
         if (check_flag(&flag, "IDACalcIC", 1)) {
-            std::cout << "IDACalcIC Error" << std::endl;
+            logFile.write("IDACalcIC Error");
             throw debugException("sundialsIDA::initialize: error in IDACalcIC");
         }
 
@@ -544,13 +541,12 @@ void sundialsIDA::printStats(clock_t dt)
     } else {
         retval = IDAGetNumSteps(sundialsMem, &nst);
         if (dt == 0) {
-            cout << "IDA solver took " << nst << " steps." << endl << endl;
+            logFile.write(format("IDA solver took %i steps.\n") % nst);
         } else {
-            cout << "IDA solver took " << nst << " steps in "
-                << ((double) dt)/CLOCKS_PER_SEC << " seconds." << endl << endl;
+            logFile.write(format("IDA solver took %i steps in %f seconds.\n") %
+                    nst % (((double) dt)/CLOCKS_PER_SEC));
         }
     }
-
 }
 
 int sundialsIDA::check_flag(void *flagvalue, const char *funcname, int opt)

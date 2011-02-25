@@ -1,14 +1,10 @@
 #include "qssintegrator.h"
-
-#include <boost/format.hpp>
+#include "debugUtils.h"
 
 #include <iostream>
 
-using std::cout;
-using std::endl;
 using std::abs;
 using mathUtils::sign;
-using boost::format;
 
 QSSIntegrator::QSSIntegrator()
 {
@@ -185,14 +181,14 @@ int QSSIntegrator::integrateOneStep(double tf) {
 
         if (dt <= dtmin + 1e-16*tn) {
             // Integration failed with a timestep that is too small.
-            cout << "QSSIntegrator failed: timestep too small." << endl;
-            cout << format("dt = %e, tn = %e, dtmin = %e") % dt % tn % dtmin << endl;
-            cout << "     i    q[i]     d[i]     y[i]    rtau[i]    dtc    q[i]-d[i]    ys[i]    ymin[i]" << endl;
+            logFile.write("QSSIntegrator failed: timestep too small.");
+            logFile.write(format("dt = %e, tn = %e, dtmin = %e") % dt % tn % dtmin);
+            logFile.write("     i    q[i]     d[i]     y[i]    rtau[i]    dtc    q[i]-d[i]    ys[i]    ymin[i]");
 
             for (size_t i=0; i<N; i++) {
                 double dtc = epsmin*y[i]/(abs(q[i]-d[i]) + 1.0e-30);
-                cout << format("%3i %9e %9e %9e %9e %9e %9e %9e %9e") % i % q[i] %
-                        d[i] % y[i] % rtau[i] % dtc % (q[i]-d[i]) % ys[i] % ymin[i] << endl;
+                logFile.write(format("%3i %9e %9e %9e %9e %9e %9e %9e %9e") % i % q[i] %
+                        d[i] % y[i] % rtau[i] % dtc % (q[i]-d[i]) % ys[i] % ymin[i]);
             }
 
             // Return, indicating an error.

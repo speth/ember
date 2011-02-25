@@ -4,9 +4,6 @@
 
 #include <boost/python.hpp>
 
-using std::cout;
-using std::endl;
-
 void configOptions::readOptionsFile(const std::string& filename)
 {
     theConfig = new libconfig::Config;
@@ -15,12 +12,12 @@ void configOptions::readOptionsFile(const std::string& filename)
     // read input file
     if (boost::filesystem::exists(filename)) {
         cfg.readFile(filename.c_str());
-        cout << "Reading configuration options from " << filename << endl;
+        logFile.write(format("Reading configuration options from %s") % filename);
     } else {
         throw debugException("configOptions::readOptionsFile: Error: Input file \"" + filename + "\" does not exist.");
     }
 
-    cout << std::boolalpha; // prints "true" and "false" rather than 1 and 0
+
     cfg.setAutoConvert(true);
 
     // Read options from the configuration file
@@ -73,7 +70,8 @@ void configOptions::readOptionsFile(const std::string& filename)
     if (haveRestartFile) {
         haveRestartFile = boost::filesystem::exists(inputDir + "/" + restartFile);
         if (!haveRestartFile) {
-            cout << "  Warning: couldn't find restart file \"" << inputDir+"/"+restartFile << "\"" << endl;
+            logFile.write(format("  Warning: couldn't find restart file '%s/%s'") %
+                    inputDir % restartFile);
         }
     }
 
@@ -213,7 +211,8 @@ void configOptions::readOptionsFile(const std::string& filename)
         for (int i=0; i<strainCount; i++) {
             strainRateList.push_back(strainSetting[i]);
         }
-        cout << "    read option: strainParameters.list = " << strainRateList << endl;
+        logFile.write("    read option: strainParameters.list = ", false);
+        logFile.write(strainRateList);
         multiRun = true;
     } else {
         // Strain Rate Parameters
@@ -249,7 +248,7 @@ void configOptions::readOptionsFile(const std::string& filename)
 
     gridAlpha = (curvedFlame) ? 1 : 0;
 
-    cout << "Finished reading configuration options." << endl;
+    logFile.write("Finished reading configuration options.");
     delete theConfig;
 }
 
@@ -258,10 +257,10 @@ bool configOptions::readOption(const std::string name, T1& value, const T2 defau
 {
     bool readVal = theConfig->lookupValue(name, value);
     if (readVal) {
-        cout << "    read option: " << name << " = " << value << endl;
+        logFile.write(format("    read option: %s = %s") % name % value);
     } else {
         value = defaultVal;
-        cout << " * used default: " << name << " = " << defaultVal << endl;
+        logFile.write(format(" * used default: %s = %s") % name % defaultVal);
     }
     return readVal;
 }
@@ -271,7 +270,7 @@ bool configOptions::readOptionQuietDefault(const std::string name, T1& value, co
 {
     bool readVal = theConfig->lookupValue(name, value);
     if (readVal) {
-            cout << "    read option: " << name << " = " << value << endl;
+        logFile.write(format("    read option: %s = %s") % name % value);
     } else {
         value = defaultVal;
     }
@@ -307,6 +306,11 @@ configOptions::configOptions(const boost::python::object& conf)
     const object& paths = conf.attr("paths");
     readOption(paths, "inputDir", inputDir);
     readOption(paths, "outputDir", outputDir);
+
+    string logFileName;
+    if (readOption(paths, "logFile", logFileName)) {
+        logFile.open(logFileName);
+    }
 
     // General
     const object& general = conf.attr("general");
@@ -361,7 +365,8 @@ configOptions::configOptions(const boost::python::object& conf)
     if (haveRestartFile) {
         haveRestartFile = boost::filesystem::exists(inputDir + "/" + restartFile);
         if (!haveRestartFile) {
-            cout << "  Warning: couldn't find restart file \"" << inputDir+"/"+restartFile << "\"" << endl;
+            logFile.write(format("WARNING: couldn't find restart file '%s/%s'") %
+                inputDir % restartFile);
         }
     }
 

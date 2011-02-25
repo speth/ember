@@ -11,8 +11,6 @@
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
 using namespace mathUtils;
-using std::cout;
-using std::endl;
 
 int main(int argc, char** argv)
 {
@@ -37,17 +35,17 @@ int main(int argc, char** argv)
         //miscTest();
     }
     catch (Cantera::CanteraError) {
-        Cantera::showErrors(cout);
+        Cantera::showErrors(std::cout);
         throw;
     } catch (libconfig::ParseException err) {
-        cout << "Error in config file \"" << inputFile << "\": ";
-        cout << err.getError() << " on line " << err.getLine() << endl;
+        logFile.write(format("Error in config file '%s': %s on line %i") %
+                inputFile % err.getError() % err.getLine());
         throw;
     } catch (debugException& e) {
-        cout << e.errorString << endl;
+        logFile.write(e.errorString);
         throw;
     } catch (...) {
-        cout << "I have no idea what went wrong!" << endl;
+        logFile.write("I have no idea what went wrong!");
         throw;
     }
 
@@ -56,14 +54,11 @@ int main(int argc, char** argv)
 
 void strainedFlame(const std::string& inputFile)
 {
-    // This version string is automatically updated during the build process
-    std::string REVISION = "84";
-    std::string BUILDDATE = "2009-11-03 17:28:02";
-    cout << "**** strainedFlame (1Dflame Version 2.1." << REVISION << ")  [" << BUILDDATE << "] ****\n" << std::endl;
-
     // Read configuration from inputFile
     configOptions mainOptions;
     mainOptions.readOptionsFile(inputFile);
+
+    logFile.write("**** strainedFlame (1Dflame Version 2.2) ****\n");
 
     if (mainOptions.strainRateList.size()!=0) {
         // *** For each strain rate in strainRateList, run until steady-state is reached,
@@ -88,8 +83,8 @@ void strainedFlame(const std::string& inputFile)
                 mainOptions.restartFile = mainOptions.outputDir+"/"+restartFile+".h5";
                 mainOptions.useRelativeRestartPath = false;
                 mainOptions.haveRestartFile = true;
-                cout << "Skipping run at strain rate a = " << a << " because the output file \"" <<
-                    restartFile << "\" already exists." << endl;
+                logFile.write(format("Skipping run at strain rate a = %g"
+                        " because the output file '%s' already exists.") % a % restartFile);
 
                 DataFile oldOutFile(mainOptions.outputDir+"/"+historyFile+".h5");
                 dvector oldTime = oldOutFile.readVector("t");
@@ -102,7 +97,8 @@ void strainedFlame(const std::string& inputFile)
                 int iStart = findFirst(oldTime > tEnd - mainOptions.terminationPeriod);
                 int iEnd = oldTime.size()-1;
                 if (iStart == -1) {
-                    cout << "Warning: old data file did not contain data spanning the requested period." << endl;
+                    logFile.write("Warning: old data file did not contain data"
+                            " spanning the requested period.");
                     iStart = iEnd/2;
                 }
                 eps.push_back(a);
@@ -120,14 +116,14 @@ void strainedFlame(const std::string& inputFile)
                 theFlameSolver.setOptions(mainOptions);
 
                 // Low Res Run:
-                cout << "Beginning run at strain rate a = " << a << endl;
-                 theFlameSolver.initialize();
-                 theFlameSolver.tStart = 0;
+                logFile.write(format("Beginning run at strain rate a = %g") % a);
+                theFlameSolver.initialize();
+                theFlameSolver.tStart = 0;
                 theFlameSolver.options.integratorRelTol = mainOptions.integratorRelTol;
                 theFlameSolver.options.terminationTolerance = mainOptions.terminationTolerance;
                 theFlameSolver.options.terminationPeriod = mainOptions.terminationPeriod;
                 theFlameSolver.run();
-                cout << "Completed run at strain rate a = " << a << endl;
+                logFile.write(format("Completed run at strain rate a = %g") % a);
 
                 // Write data needed for the next run
                 mainOptions.fileNumberOverride = false;
@@ -140,7 +136,8 @@ void strainedFlame(const std::string& inputFile)
                 theFlameSolver.writeTimeseriesFile("out_eps"+stringify(a,4));
 
                 // Append and save the integral data for this run
-                int iStart = findFirst(theFlameSolver.timeVector > (theFlameSolver.tNow - mainOptions.terminationPeriod));
+                int iStart = findFirst(theFlameSolver.timeVector >
+                                       (theFlameSolver.tNow - mainOptions.terminationPeriod));
                 int iEnd = theFlameSolver.timestepVector.size()-1;
                 eps.push_back(a);
                 Q.push_back(mean(theFlameSolver.heatReleaseRate, iStart, iEnd));
@@ -196,7 +193,7 @@ void chemistryTest(void)
     gas.setState_TPX(300,101325,"N2:3.76, O2:1.0, CH4:0.5");
     vector<double> wnet(53);
     gas.getNetProductionRates(&wnet[0]);
-    cout << wnet << endl;
+    logFile.write(wnet);
     return;
 
 
