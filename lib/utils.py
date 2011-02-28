@@ -1,6 +1,7 @@
 import numpy as np
 import Cantera as ct
 import h5py
+import os
 
 class Struct(object):
     """
