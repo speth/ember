@@ -49,20 +49,18 @@ env.Library('lib/libadapchem.a',
 common = [f for f in Glob('src/build/*.cpp')
           if 'strainedFlame.cpp' not in f.name]
 
-# The main 1dflame program
-pyro = env.Program('bin/1dflameV2', common + ['src/build/strainedFlame.cpp'])
-env.Alias('pyro', pyro)
-
-# The python module
+# The Python module
 pyenv = env.Clone()
 pyenv.Append(LIBS=pythonlibs)
-pylib = pyenv.SharedLibrary('lib/_pyro.so',
-                          common + Glob('python/build/*.cpp'),
-                          SHLIBPREFIX='')
+env.Alias('pylib',
+          pyenv.SharedLibrary('lib/_pyro.so',
+                              common + Glob('python/build/*.cpp'),
+                              SHLIBPREFIX=''))
 
 # Test programs
-env.Alias('qsstest', env.Program('bin/qsstest', common+['test/build/test_qssintegrator.cpp']))
+env.Alias('qsstest',
+          env.Program('bin/qsstest',
+                      common+['test/build/test_qssintegrator.cpp']))
 
-
-Default([pyro,pylib])
-env.Alias('all', ['pyro','qsstest','pylib'])
+Default(['pylib'])
+env.Alias('all', ['qsstest','pylib'])
