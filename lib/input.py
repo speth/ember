@@ -16,12 +16,13 @@ class Paths(Options):
 class General(Options):
     fixedBurnedVal = True
     fixedLeftLocation = False
-    unburnedLeft = True
     curvedFlame = False
     twinFlame = False
 
-    chemistryIntegrator = "qss"
+    unburnedLeft = True # applies to premixed flames
+    fuelLeft = True # applies to diffusion flames
 
+    chemistryIntegrator = "qss"
     errorStopCount = 100
 
 
@@ -75,12 +76,16 @@ class InitialCondition(Options):
     # file = "restart-steady3-split.h5"
     restartFile = None
 
+    flameType = "premixed"
+
     # These properties will override parameters read from the file
     # Set them to None to use values from the restart file
-    Tu = 300
+    Tu = 300 # for premixed flames
+    Tfuel = 300 # for diffusion flames
+    Toxidizer = 300 # for diffusion flames
     fuel = "CH4:1.0"
     oxidizer = "N2:3.76, O2:1.0"
-    equivalenceRatio = 0.75
+    equivalenceRatio = 0.75 # for premixed flames
 
     pressure = 101325
 
@@ -88,6 +93,16 @@ class InitialCondition(Options):
     nPoints = 100
     xLeft = -0.002
     xRight = 0.002
+
+    # Sane defaults for premixed flames
+    centerWidth = 0.000
+    slopeWidth = 0.0005
+    smoothCount = 4
+
+    # Good choices for diffusion flames:
+    #centerWidth = 0.002
+    #slopeWidth = 0.001
+    #smoothCount = 4
 
 
 class StrainParameters(Options):

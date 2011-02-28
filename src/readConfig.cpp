@@ -315,6 +315,8 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(general, "fixedBurnedVal", fixedBurnedVal);
     readOption(general, "fixedLeftLocation", fixedLeftLoc);
     readOption(general, "unburnedLeft", unburnedLeft);
+    readOption(general, "fuelLeft", fuelLeft);
+
     readOption(general, "curvedFlame", curvedFlame);
     readOption(general, "twinFlame", twinFlame);
     stopIfError = readOption(general, "errorStopCount", errorStopCount);
@@ -357,6 +359,9 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(ic, "nPoints", nPoints);
     readOption(ic, "xLeft", xLeft);
     readOption(ic, "xRight", xRight);
+    readOption(ic, "centerWidth", initialCenterWidth);
+    readOption(ic, "slopeWidth", initialSlopeWidth);
+    readOption(ic, "smoothCount", initialSmoothCount);
     haveRestartFile = readOption(ic, "restartFile", restartFile);
     useRelativeRestartPath = true;
     if (haveRestartFile) {
@@ -369,7 +374,10 @@ configOptions::configOptions(const boost::python::object& conf)
 
     overrideTu = readOption(ic, "Tu", Tu);
     overrideReactants = readOption(ic, "fuel", fuel);
+    readOption(ic, "flameType", flameType);
     readOption(ic, "oxidizer", oxidizer);
+    readOption(ic, "Tfuel", Tfuel);
+    readOption(ic, "Toxidizer", Toxidizer);
     readOption(ic, "equivalenceRatio", equivalenceRatio);
     readOption(ic, "pressure", pressure);
 

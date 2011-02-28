@@ -83,6 +83,23 @@ void FlameSolver::initialize(void)
     resizeAuxiliary();
 }
 
+void FlameSolver::tryrun(void)
+{
+    try {
+        run();
+    }
+    catch (Cantera::CanteraError) {
+        Cantera::showErrors(std::cout);
+        throw;
+    } catch (debugException& e) {
+        logFile.write(e.errorString);
+        throw;
+    } catch (...) {
+        logFile.write("I have no idea what went wrong!");
+        throw;
+    }
+}
+
 void FlameSolver::run(void)
 {
     totalTimer.start();
@@ -120,7 +137,7 @@ void FlameSolver::run(void)
             for (size_t j=0; j<nPoints; j++) {
                 if (T[j] < 295 || T[j] > 3000) {
                     logFile.write(format("WARNING: Unexpected Temperature: T = %f at j = %i")
-                            % T[j] % j)
+                            % T[j] % j);
                     error = true;
                 }
             }
@@ -1405,15 +1422,6 @@ void FlameSolver::generateProfile(void)
         x[j] = xLeft + j * dx;
     }
 
-    grid.alpha = (options.curvedFlame) ? 1 : 0;
-    grid.unburnedLeft = options.unburnedLeft;
-    grid.updateValues();
-    grid.updateBoundaryIndices();
-
-    int jm = (grid.ju+grid.jb)/2; // midpoint of the profiles.
-    int jl = jm - 4;
-    int jr = jm + 4;
-
     U.resize(nPoints);
     T.resize(nPoints);
     Yb.resize(nSpec);
@@ -1425,66 +1433,151 @@ void FlameSolver::generateProfile(void)
     Tu = options.Tu;
     gas.pressure = options.pressure;
 
-    // Reactants
-    dvector reactants = calculateReactantMixture();
-    gas.setStateMole(reactants, Tu);
-    rhou = gas.getDensity();
-    gas.getMassFractions(Yu);
-    gas.getMassFractions(&Y(0,grid.ju));
+    grid.alpha = (options.curvedFlame) ? 1 : 0;
+    grid.unburnedLeft = options.unburnedLeft;
+    grid.updateValues();
+    grid.updateBoundaryIndices();
 
-    // Products
-    Cantera::equilibrate(gas.thermo,"HP");
-    Tb = gas.thermo.temperature();
-    rhob = gas.getDensity();
-    gas.thermo.getMassFractions(&Yb[0]);
-    gas.thermo.getMassFractions(&Y(0,grid.jb));
+    int jm = (grid.ju+grid.jb)/2; // midpoint of the profiles.
 
-    // Diluent in the middle
-    gas.thermo.setState_TPY(Tu, gas.pressure, options.oxidizer);
-    gas.thermo.getMassFractions(&Y(0,jm));
-
-    if (options.unburnedLeft) {
-        rhoLeft = rhou;
-        Tleft = Tu;
-        Yleft = Yu;
-        rhoRight = rhob;
-        Tright = Tb;
-        Yright = Yb;
-    } else {
-        rhoLeft = rhob;
-        Tleft = Tb;
-        Yleft = Yb;
-        rhoRight = rhou;
-        Tright = Tu;
-        Yright = Yu;
+    // Make sure the initial profile fits in the domain
+    double scale = 0.8*(x[jj]-x[0]) /
+            (options.initialCenterWidth + 2 * options.initialSlopeWidth);
+    if (scale < 1.0) {
+        options.initialCenterWidth *= scale;
+        options.initialSlopeWidth *= scale;
     }
 
-    T[0] = Tleft; T[grid.jj] = Tright;
-    T[jm] = T[grid.ju];
+    // Determine the grid indices that define each segment of the initial profile
+    int centerPointCount = round(0.5 * options.initialCenterWidth / dx);
+    int slopePointCount = round(options.initialSlopeWidth / dx);
+    int jl2 = jm - centerPointCount;
+    int jl1 = jl2 - slopePointCount;
+    int jr1 = jm + centerPointCount;
+    int jr2 = jr1 + slopePointCount;
+    int nSmooth = options.initialSmoothCount;
 
+    if (options.flameType == "premixed") {
+        // Reactants
+        dvector reactants = calculateReactantMixture();
+        gas.setStateMole(reactants, Tu);
+        rhou = gas.getDensity();
+        gas.getMassFractions(Yu);
 
-    for (int j=1; j<jl; j++) {
+        // Products
+        Cantera::equilibrate(gas.thermo,"HP");
+        Tb = gas.thermo.temperature();
+        rhob = gas.getDensity();
+        gas.thermo.getMassFractions(&Yb[0]);
+
+        // Diluent in the middle
+        gas.thermo.setState_TPY(Tu, gas.pressure, options.oxidizer);
+        gas.thermo.getMassFractions(&Y(0,jm));
+
+        if (options.unburnedLeft) {
+            rhoLeft = rhou;
+            Tleft = Tu;
+            Yleft = Yu;
+            rhoRight = rhob;
+            Tright = Tb;
+            Yright = Yb;
+        } else {
+            rhoLeft = rhob;
+            Tleft = Tb;
+            Yleft = Yb;
+            rhoRight = rhou;
+            Tright = Tu;
+            Yright = Yu;
+        }
+
+        T[0] = Tleft;
+        T[grid.jj] = Tright;
+        T[jm] = T[grid.ju];
+
+    } else if (options.flameType == "diffusion") {
+        // Stoichiometric mixture at the center
+        options.equivalenceRatio = 1.0;
+        dvector products = calculateReactantMixture();
+        gas.setStateMole(products, 0.5*(options.Tfuel+options.Toxidizer));
+        Cantera::equilibrate(gas.thermo,"HP");
+
+        Tb = gas.thermo.temperature();
+        rhob = gas.getDensity();
+        gas.thermo.getMassFractions(&Yb[0]);
+        gas.thermo.getMassFractions(&Y(0,jm));
+
+        gas.thermo.setState_TPX(options.Tfuel, options.pressure, options.fuel);
+        double rhoFuel = gas.getDensity();
+        dvector Yfuel(nSpec);
+        gas.getMassFractions(Yfuel);
+
+        gas.thermo.setState_TPX(options.Toxidizer, options.pressure, options.oxidizer);
+        double rhoOxidizer = gas.getDensity();
+        dvector Yoxidizer(nSpec);
+        gas.getMassFractions(Yoxidizer);
+
+        if (options.fuelLeft) {
+            rhoLeft = rhoFuel;
+            Tleft = options.Tfuel;
+            Yleft = Yfuel;
+            rhoRight = rhoOxidizer;
+            Tright = options.Toxidizer;
+            Yright = Yoxidizer;
+        } else {
+            rhoLeft = rhoOxidizer;
+            Tleft = options.Toxidizer;
+            Yleft = Yoxidizer;
+            rhoRight = rhoFuel;
+            Tright = options.Tfuel;
+            Yright = Yfuel;
+        }
+
+        rhou = rhoLeft; // arbitrary
+
+        T[0] = Tleft;
+        T[grid.jj] = Tright;
+        T[jm] = Tb;
+
+    } else {
+        throw debugException("Invalid flameType: " + options.flameType);
+    }
+
+    for (size_t k=0; k<nSpec; k++) {
+        Y(k, 0) = Yleft[k];
+        Y(k, jj) = Yright[k];
+    }
+
+    for (int j=1; j<jl1; j++) {
         for (size_t k=0; k<nSpec; k++) {
             Y(k,j) = Y(k,0);
         }
         T[j] = T[0];
     }
 
-    for (int j=jl; j<jm; j++) {
+    for (int j=jl1; j<jl2; j++) {
+        double delta_x = x[jl2]-x[jl1];
         for (size_t k=0; k<nSpec; k++) {
-            Y(k,j) = Y(k,0) + (Y(k,jm)-Y(k,0))*(x[j]-x[jl])/(x[jm]-x[jl]);
+            Y(k,j) = Y(k,0) + (Y(k,jm)-Y(k,0))*(x[j]-x[jl1])/delta_x;
         }
-        T[j] = T[0] + (T[jm]-T[0])*(x[j]-x[jl])/(x[jm]-x[jl]);
+        T[j] = T[0] + (T[jm]-T[0])*(x[j]-x[jl1])/delta_x;
     }
 
-    for (int j=jm+1; j<jr; j++) {
+    for (int j=jl2; j<jr1; j++) {
         for (size_t k=0; k<nSpec; k++) {
-            Y(k,j) = Y(k,jm) + (Y(k,grid.jj)-Y(k,jm))*(x[j]-x[jm])/(x[jr]-x[jm]);
+            Y(k,j) = Y(k,jm);
         }
-        T[j] = T[jm] + (T[grid.jj]-T[jm])*(x[j]-x[jm])/(x[jr]-x[jm]);
+        T[j] = T[jm];
     }
 
-    for (size_t j=jr; j<nPoints; j++) {
+    for (int j=jr1; j<jr2; j++) {
+        double delta_x = x[jr2]-x[jr1];
+        for (size_t k=0; k<nSpec; k++) {
+            Y(k,j) = Y(k,jm) + (Y(k,grid.jj)-Y(k,jm))*(x[j]-x[jr1])/delta_x;
+        }
+        T[j] = T[jm] + (T[grid.jj]-T[jm])*(x[j]-x[jr1])/delta_x;
+    }
+
+    for (size_t j=jr2; j<nPoints; j++) {
         for (size_t k=0; k<nSpec; k++) {
             Y(k,j) = Y(k,grid.jj);
         }
@@ -1497,7 +1590,7 @@ void FlameSolver::generateProfile(void)
             yTemp[j] = Y(k,j);
         }
 
-        for (size_t i=0; i<10; i++) {
+        for (int i=0; i<nSmooth; i++) {
             mathUtils::smooth(yTemp);
         }
 
@@ -1506,7 +1599,7 @@ void FlameSolver::generateProfile(void)
         }
     }
 
-    for (size_t i=0; i<5; i++) {
+    for (int i=0; i<nSmooth; i++) {
         mathUtils::smooth(T);
     }
 

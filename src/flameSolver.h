@@ -33,6 +33,7 @@ public:
     void setOptions(const configOptions& options); //!< Set options read from the configuration file
     void initialize(void); //!< call to generate profiles and perform one-time setup
     void run(void); //!< Start the time integration
+    void tryrun(void);
 
     // Called internally by initialize()
     virtual void generateProfile(); //!< Generate initial conditions based on boundary conditions

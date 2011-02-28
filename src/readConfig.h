@@ -56,6 +56,9 @@ public:
     //! Also sets #gridAlpha = 1. Otherwise, #gridAlpha = 0.
     bool curvedFlame;
     bool unburnedLeft;
+    bool fuelLeft;
+
+    std::string flameType; //!< "premixed" or "diffusion"
 
     int regridStepInterval;
     int outputStepInterval;
@@ -107,13 +110,20 @@ public:
     double equivalenceRatio;
     double pressure;
 
-    double Tu;
+    double Tu; //!< Temperature of the unburned mixture for premixed flames
+    double Tfuel; //!< Temperature of the fuel for diffusion flames
+    double Toxidizer; //!< Temperature of the oxidizer for diffusion flames
     double strainRateInitial, strainRateFinal;
     double strainRateDt, strainRateT0;
 
     // Definition of the starting grid: nPoints evenly spaced between xLeft and xRight
     int nPoints;
     double xLeft, xRight;
+
+    // Parameters for the initial profile
+    double initialCenterWidth;
+    double initialSlopeWidth;
+    int initialSmoothCount;
 
     // Tolerances for adaptation and regridding
     double vtol, dvtol, rmTol, dampConst, gridMin, gridMax;

@@ -9,7 +9,7 @@ void exportFlameSolver()
     class_<FlameSolver>("FlameSolver")
         .def(init<object>())
         .def("initialize", &FlameSolver::initialize)
-        .def("run", &FlameSolver::run)
+        .def("run", &FlameSolver::tryrun)
         .def("writeStateFile", &FlameSolver::writeStateFile)
         ;
 }
