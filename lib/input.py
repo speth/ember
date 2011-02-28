@@ -204,21 +204,27 @@ class TerminationCondition(Options):
     timeMax = 0.8
 
 
-class Config(Options):
-    paths = Paths()
-    general = General()
-    chemistry = Chemistry()
-    adapchem = None
-    transportElimination = TransportElimination()
-    # By default, don't use adapchem
-    # adapchem = Adapchem()
-    grid = Grid()
-    initialCondition = InitialCondition()
-    strainParameters = StrainParameters()
-    positionControl = None # PositionControl()
-    times = Times()
-    cvodeTolerances = CvodeTolerances()
-    qssTolerances = QssTolerances()
-    debug = Debug()
-    outputFiles = OutputFiles()
-    terminationCondition = TerminationCondition()
+class Config(object):
+    def __init__(self, *args):
+        opts = {}
+        for arg in args:
+            assert isinstance(arg, Options)
+            opts[arg.__class__.__name__] = arg
+
+        get = lambda cls: opts.get(cls.__name__) or cls()
+
+        self.paths = get(Paths)
+        self.general = get(General)
+        self.chemistry = get(Chemistry)
+        self.adapchem = opts.get('Adapchem')
+        self.transportElimination = get(TransportElimination)
+        self.grid = get(Grid)
+        self.initialCondition = get(InitialCondition)
+        self.strainParameters = get(StrainParameters)
+        self.positionControl = get(PositionControl)
+        self.times = get(Times)
+        self.cvodeTolerances = get(CvodeTolerances)
+        self.qssTolerances = get(QssTolerances)
+        self.debug = get(Debug)
+        self.outputFiles = get(OutputFiles)
+        self.terminationCondition = get(TerminationCondition)
