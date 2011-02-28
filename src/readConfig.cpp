@@ -125,7 +125,6 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOption("general.unburnedLeft",unburnedLeft, true);
     readOption("general.curvedFlame",curvedFlame, false);
     readOption("general.twinFlame",twinFlame, false);
-    readOption("general.steadyOnly",steadyOnly, false);
 
     if (cfg.exists("times.regridTimeInterval") || cfg.exists("times.regridStepInterval")) {
         readOptionQuietDefault("times.regridTimeInterval",regridTimeInterval, 100);
@@ -153,7 +152,6 @@ void configOptions::readOptionsFile(const std::string& filename)
 
     readOption("times.currentStateStepInterval", currentStateStepInterval, 2000);
     readOption("times.terminateStepInterval", terminateStepInterval, 100);
-    readOption("times.integratorRestartInterval",integratorRestartInterval, 200);
     readOption("times.maxTimestep",maxTimestep, 1.0e-3);
     readOption("times.globalTimestep", globalTimestep, 1.0e-4);
     readOption("times.diffusionTimestep", diffusionTimestep, 1.0e-6);
@@ -319,7 +317,6 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(general, "unburnedLeft", unburnedLeft);
     readOption(general, "curvedFlame", curvedFlame);
     readOption(general, "twinFlame", twinFlame);
-    readOption(general, "steadyOnly", steadyOnly);
     stopIfError = readOption(general, "errorStopCount", errorStopCount);
 
     // Chemistry
@@ -435,7 +432,6 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(times, "profileStepInterval", profileStepInterval);
     readOption(times, "currentStateStepInterval", currentStateStepInterval);
     readOption(times, "terminateStepInterval", terminateStepInterval);
-    readOption(times, "integratorRestartInterval", integratorRestartInterval);
     readOption(times, "maxTimestep", maxTimestep);
     readOption(times, "globalTimestep", globalTimestep);
     readOption(times, "diffusionTimestep", diffusionTimestep);
@@ -493,7 +489,6 @@ configOptions::configOptions(const boost::python::object& conf)
     }
     readOption(output, "splitHeatReleaseRate", outputSplitHeatReleaseRate);
     readOption(output, "debugIntegratorStages", outputDebugIntegratorStages);
-
 
     // Termination Conditions
     const object& termination = conf.attr("terminationCondition");

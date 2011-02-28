@@ -6,10 +6,12 @@ class Options(object):
             else:
                 raise KeyError('Unrecognized configuration option: %s' % key)
 
+
 class Paths(Options):
     inputDir = "input"
     outputDir = "run/test1"
     logFile = None # write output to stdout
+
 
 class General(Options):
     fixedBurnedVal = True
@@ -17,12 +19,11 @@ class General(Options):
     unburnedLeft = True
     curvedFlame = False
     twinFlame = False
-    centeredDifferences = False
-    steadyOnly = True
 
     chemistryIntegrator = "qss"
 
     errorStopCount = 100
+
 
 class Chemistry(Options):
     mechanismFile = "chem.xml"
@@ -108,6 +109,7 @@ class PositionControl(Options):
     proportionalGain = 10
     integralGain = 800
 
+
 class Times(Options):
     tStart = 0
     globalTimestep = 5e-6
@@ -125,9 +127,6 @@ class Times(Options):
     # Output intervals for flame profiles
     profileStepInterval = 5
     profileTimeInterval = 1e-4
-
-    # Preventative integrator restart
-    integratorRestartInterval = 800
 
     currentStateStepInterval = 10
     terminateStepInterval = 10

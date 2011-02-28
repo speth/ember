@@ -55,7 +55,6 @@ public:
     //! If specified, the leftmost grid point will not extend beyond x = 0.
     //! Also sets #gridAlpha = 1. Otherwise, #gridAlpha = 0.
     bool curvedFlame;
-    bool steadyOnly;
     bool unburnedLeft;
 
     int regridStepInterval;
@@ -63,7 +62,6 @@ public:
     int profileStepInterval;
     int currentStateStepInterval; // number of time steps before updating profNow.h5 and outNow.h5
     int terminateStepInterval;
-    int integratorRestartInterval;
     double regridTimeInterval;
     double outputTimeInterval;
     double profileTimeInterval;
