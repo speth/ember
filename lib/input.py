@@ -27,7 +27,7 @@ class General(Options):
 
 
 class Chemistry(Options):
-    mechanismFile = "chem.xml"
+    mechanismFile = "ucsd-methane.xml"
     phaseID = "gas"
     transportModel = "Mix"
 
