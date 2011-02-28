@@ -1,34 +1,42 @@
 Getting Started with the 1dflameV2 Code
 
-[Last updated 5/21/2009]
-
-0. Dependinces: These directions assume you are using a Linux system
+0. Dependencies: These directions assume you are using a Linux system
 with the following installed:
-   * Matlab
-   * Boost.Build
+   * Python (>=2.6)
+   * Boost
+   * SCons
    * Cantera
-   * Sundials
-   * Libconfig
+   * Sundials (2.4)
+   * HDF5
 
 1. The 1dflameV2 code is stored in a Git repository on Pharos. To
 check out a copy of the code, run:
 
-    $ git clone pharos:/var/cache/git/1dflameV2.git
+    $ cd
+    $ mkdir -p src
+    $ cd src
+    $ git clone pharos.mit.edu:/var/cache/git/1dflameV2.git
 
-2. Edit the file "1dflameV2/Jamroot" to point to the correct include
+2. Edit the file "1dflameV2/SConstruct" to point to the correct include
 and library directories for your system.
 
 3. Compiling the Code:
 
     $ cd 1dflameV2
-    $ bjam
+    $ scons
 
-This produces the binary "bin/1dflameV2".
+This produces the python module "lib/_pyro.so".
 
-4. Prepare your kinetics mechanism. If you're starting with a
+4. Add the "Pyro" Python module to your Python search path. The easiest way
+to do this is by creating a symlink into your user Python module path:
+
+    $ mkdir -p ~/.local/lib/python2.6/site-packages
+    $ ln -s ~/src/1dflameV2/lib ~/.local/lib/python2.6/site-packages/pyro
+
+5. Prepare your kinetics mechanism. If you're starting with a
 mechanism that's in the Chemkin format, it will need to be converted:
 
-    $ source /usr/local/bin/setup_cantera
+    $ source /wherever/cantera/is/installed/setup_cantera
     $ ck2cti -i <mech> -t <thermo> -tr <transport>
 
 This will produce mech.cti, which needs to be further converted:
@@ -37,22 +45,26 @@ This will produce mech.cti, which needs to be further converted:
 
 to produce mech.xml.
 
-5. Prepare the input file, based on the one specified in
+6. Prepare the input file, based on the one specified in
 
-    1dflameV2/input/example-input.txt
+    1dflameV2/input/example-premixed.py
 
-Specify mech.xml (which needs to be in whatever directory is specified
-as the "input" directory in input file) as the mechanismFile and "gas"
-as the phaseID. The other parameters you may want to change are in the
-InitialCondition and StrainParameters section of the input file.
+A complete list of all available input parameters may be found in
+"lib/input.py". Specify the path to your mechanism file (which needs to
+be in whatever directory is specified as the "input" directory in input file)
+as the mechanismFile and "gas" as the phaseID. The other parameters you
+may want to change are in the Paths, InitialCondition, and StrainParameters sections.
 
-6. Run the code: The code takes the path to the input file as an
-argument. The code relies on the Matlab libraries for saving data, so
-the path to those libraries must be specified.
+7. Run the code:
 
-    $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/matlab_r2007a/bin/glnxa64
-    $ ./1dflameV2 input/myinputfile.txt
+     python myInputFile.py &
 
-7. Examine the output files:
-   * integral.mat contains integral flame properties (flame speed, e.g.) as a function of time
-   * profNNNNNN.mat contain the temperature & species profiles output periodically.
+This may take a while. You can watch the solver's progress as it is written to
+the file specified by "Paths.logFile" in the input file.
+
+8. Examine the output files. The files are HDF5 data files, which can be read
+using the Python h5py module or Matlab.
+
+   * outNow.h5 contains integral flame properties (e.g. flame speed) as a function of time
+   * profNNNNNN.h5 contain the temperature & species profiles output periodically.
+   * profNow.h5 contains the most recently saved profiles.
