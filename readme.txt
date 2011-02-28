@@ -33,6 +33,10 @@ to do this is by creating a symlink into your user Python module path:
     $ mkdir -p ~/.local/lib/python2.6/site-packages
     $ ln -s ~/src/1dflameV2/lib ~/.local/lib/python2.6/site-packages/pyro
 
+And similarly for Cantera (optional):
+
+    $ ln -s /path/to/cantera/lib/python2.6/site-packages/Cantera ~/.local/lib/python2.6/site-packages/
+
 5. Prepare your kinetics mechanism. If you're starting with a
 mechanism that's in the Chemkin format, it will need to be converted:
 
@@ -68,3 +72,10 @@ using the Python h5py module or Matlab.
    * outNow.h5 contains integral flame properties (e.g. flame speed) as a function of time
    * profNNNNNN.h5 contain the temperature & species profiles output periodically.
    * profNow.h5 contains the most recently saved profiles.
+
+Using the pyro utils module:
+
+    $ ipython -pylab
+    >>> import pyro
+    >>> prof = pyro.load('run/test/profNow.h5')
+    >>> plot(prof.x, prof.T)
