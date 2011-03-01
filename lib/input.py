@@ -12,7 +12,6 @@ class Paths(Options):
     outputDir = "run/test1"
     logFile = None # write output to stdout
 
-
 class General(Options):
     fixedBurnedVal = True
     fixedLeftLocation = False
@@ -193,15 +192,19 @@ class OutputFiles(Options):
 
 
 class TerminationCondition(Options):
+    # Integrate until either of the following conditions is satisfied.
+    # To disable steady-state check, set 'measurement=None', and give
+    # a sane value for tEnd.
+
     # Integrate until a specific time:
-    tEnd = 0.010
+    tEnd = 1000
 
     # Integrate until <measurement> is steady to within <tolerance> for <time>
-    measurement = "Q"
-    tolerance = 2e-4
-    abstol = 0.5
-    steadyPeriod = 0.005
-    timeMax = 0.8
+    measurement = "Q" # integral heat release rate
+    tolerance = 5e-5 # allowable relative RMS variation
+    abstol = 0.5 # allowable absolute RMS variation
+    steadyPeriod = 0.002 # time period over which heat release rate must be steady
+    timeMax = 0.8 # give up at this time
 
 
 class Config(object):

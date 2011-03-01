@@ -448,20 +448,20 @@ bool FlameSolver::checkTerminationCondition(void)
         double qMean = mathUtils::mean(heatReleaseRate,j1,j2);
         double hrrError = 0;
         for (int j=j1; j<=j2; j++) {
-            hrrError += abs(heatReleaseRate[j]-qMean);
+            hrrError += pow(heatReleaseRate[j]-qMean, 2);
         }
-        hrrError /= (j2-j1+1);
+        hrrError = sqrt(hrrError) / (j2-j1+1);
 
-        logFile.write(format("Heat release rate deviation = %6.3f%%. hrrError = %9.4e") %
+        logFile.write(format("Heat release rate RMS error = %6.3f%%. absolute error: %9.4e") %
                 (hrrError/qMean*100) % hrrError);
 
         if (hrrError/abs(qMean) < options.terminationTolerance) {
             logFile.write("Terminating integration: ", false);
-            logFile.write("Heat release deviation less than relative tolerance.");
+            logFile.write("Heat release RMS variation less than relative tolerance.");
             return true;
         } else if (hrrError < options.terminationAbsTol) {
             logFile.write("Terminating integration: ", false);
-            logFile.write("Heat release rate deviation less than absolute tolerance.");
+            logFile.write("Heat release rate RMS variation less than absolute tolerance.");
             return true;
         } else if (tNow-tStart > options.terminationMaxTime ) {
             logFile.write("Terminating integration: Maximum integration time reached.");
