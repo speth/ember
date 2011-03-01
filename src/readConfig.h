@@ -157,9 +157,6 @@ public:
     int errorStopCount;
     bool stopIfError;
 
-    dvector strainRateList;
-    bool multiRun; // true if strainRateList is supplied
-
     int outputFileNumber; // number of output files written
     bool fileNumberOverride; // true if outputFileNumbe was given in the input file
 

@@ -74,6 +74,7 @@ class InitialCondition(Options):
     # Read Initial profile from a file.
     # file = "restart-steady3-split.h5"
     restartFile = None
+    relativeRestartPath = True # restart file path is relative to inputDir
 
     flameType = "premixed"
 

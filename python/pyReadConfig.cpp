@@ -13,6 +13,5 @@ void exportReadConfig()
         .def_readwrite("restartFile", &configOptions::restartFile)
         .def_readwrite("useRelativeRestartPath", &configOptions::useRelativeRestartPath)
         .def_readwrite("overrideTu", &configOptions::overrideTu)
-        .def_readwrite("strainRateList", &configOptions::strainRateList)
         ;
 }

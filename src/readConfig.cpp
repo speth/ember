@@ -203,31 +203,15 @@ void configOptions::readOptionsFile(const std::string& filename)
     readOptionQuietDefault("debug.sourcePoint", debugSourcePoint, -1);
     readOptionQuietDefault("debug.debugSourceTime", debugSourceTime, 0);
 
-    if (cfg.exists("strainParameters.list")) {
-        libconfig::Setting& strainSetting = cfg.lookup("strainParameters.list");
-        int strainCount = strainSetting.getLength();
-        for (int i=0; i<strainCount; i++) {
-            strainRateList.push_back(strainSetting[i]);
-        }
-        logFile.write("    read option: strainParameters.list = ", false);
-        logFile.write(strainRateList);
-        multiRun = true;
-    } else {
-        // Strain Rate Parameters
-        readOption("strainParameters.initial", strainRateInitial, 100);
-        readOption("strainParameters.final", strainRateFinal, 100);
-        readOption("strainParameters.tStart", strainRateT0, 1.0e-3);
-        readOption("strainParameters.dt", strainRateDt, 0.0e0);
-        multiRun = false;
-    }
+    // Strain Rate Parameters
+    readOption("strainParameters.initial", strainRateInitial, 100);
+    readOption("strainParameters.final", strainRateFinal, 100);
+    readOption("strainParameters.tStart", strainRateT0, 1.0e-3);
+    readOption("strainParameters.dt", strainRateDt, 0.0e0);
 
-    if (multiRun) {
-        terminateForSteadyQdot = true;
-    } else {
-        std::string terminationMeasurement;
-        readOptionQuietDefault("terminationCondition.measurement",terminationMeasurement, "");
-        terminateForSteadyQdot = (terminationMeasurement == "Q");
-    }
+    std::string terminationMeasurement;
+    readOptionQuietDefault("terminationCondition.measurement",terminationMeasurement, "");
+    terminateForSteadyQdot = (terminationMeasurement == "Q");
 
     if (terminateForSteadyQdot) {
         readOption("terminationCondition.time",terminationPeriod, 0.01);
@@ -364,6 +348,7 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(ic, "smoothCount", initialSmoothCount);
     haveRestartFile = readOption(ic, "restartFile", restartFile);
     useRelativeRestartPath = true;
+    readOption(ic, "relativeRestartPath", useRelativeRestartPath);
     if (haveRestartFile) {
         haveRestartFile = boost::filesystem::exists(inputDir + "/" + restartFile);
         if (!haveRestartFile) {
@@ -383,16 +368,10 @@ configOptions::configOptions(const boost::python::object& conf)
 
     // Strain Rate Parameters
     const object& strain = conf.attr("strainParameters");
-    if (strain.attr("rates") != None) {
-        readOption(strain, "rates", strainRateList);
-        multiRun = true;
-    } else {
-        readOption(strain, "initial", strainRateInitial);
-        readOption(strain, "final", strainRateFinal);
-        readOption(strain, "tStart", strainRateT0);
-        readOption(strain, "dt", strainRateDt);
-        multiRun = false;
-    }
+    readOption(strain, "initial", strainRateInitial);
+    readOption(strain, "final", strainRateFinal);
+    readOption(strain, "tStart", strainRateT0);
+    readOption(strain, "dt", strainRateDt);
 
     const object& positionControl = conf.attr("positionControl");
     if (positionControl != None) {
@@ -501,13 +480,10 @@ configOptions::configOptions(const boost::python::object& conf)
     // Termination Conditions
     const object& termination = conf.attr("terminationCondition");
     readOption(termination, "tEnd", tEnd);
-    if (multiRun) {
-        terminateForSteadyQdot = true;
-    } else {
-        string terminationMeasurement;
-        readOption(termination, "measurement", terminationMeasurement);
-        terminateForSteadyQdot = (terminationMeasurement == "Q");
-    }
+
+    string terminationMeasurement;
+    readOption(termination, "measurement", terminationMeasurement);
+    terminateForSteadyQdot = (terminationMeasurement == "Q");
 
     if (terminateForSteadyQdot) {
         readOption(termination, "steadyPeriod", terminationPeriod);
