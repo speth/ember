@@ -3,6 +3,7 @@ import Cantera as ct
 import h5py
 import os
 import _pyro
+import time
 
 class Struct(object):
     """
@@ -76,7 +77,12 @@ def multirun(conf):
         print 'No strain rate list specified'
         return
 
-    logFile = file(conf.paths.logFile, 'w')
+    _logFile = file(conf.paths.logFile, 'w')
+    def log(message):
+        _logFile.write(message)
+        _logFile.write('\n')
+        _logFile.flush()
+
     conf.initialCondition.relativeRestartPath = False
 
     Q = []
@@ -95,16 +101,16 @@ def multirun(conf):
             # integral flame properties from the existing profiles and
             # advance to the next strain rate.
 
-            logFile.write('Skipping run at strain rate a = %g'
-                          ' because the output file "%s" already exists.' % (a, restartFile))
+            log('Skipping run at strain rate a = %g'
+                ' because the output file "%s" already exists.' % (a, restartFile))
 
             # Compute integral properties using points from the last half
             # of the termination-check period
             data = HDFStruct(historyPath)
             mask = data.t > data.t[-1] - 0.5*conf.times.terminationPeriod
             if not any(mask):
-                logFile.write('Warning: old data file did not contain data'
-                              ' spanning the requested period.')
+                log('Warning: old data file did not contain data'
+                    ' spanning the requested period.')
                 mask = data.t > 0.5*data.t[-1]
 
             Q.append(np.mean(data.Q[mask]))
@@ -115,15 +121,19 @@ def multirun(conf):
         else:
             # Data is not already present, so run the flame solver for this strain rate
 
-            logFile.write('Beginning run at strain rate a = %g s^-1' % a)
+            log('Beginning run at strain rate a = %g s^-1' % a)
 
             conf.strainParameters.initial = a
             conf.strainParameters.final = a
+            conf.paths.logFile = os.path.join(conf.paths.outputDir, 'log-eps%04i.txt' % a)
             solver = _pyro.FlameSolver(conf)
+            t1 = time.time()
             solver.initialize()
             solver.run()
+            t2 = time.time()
 
-            logFile.write('Completed run at strain rate a = %g s^-1' % a)
+            log('Completed run at strain rate a = %g s^-1' % a)
+            log('Integration took %.1f seconds.' % (t2-t1))
 
             solver.writeStateFile(restartFile)
             tRun = np.array(solver.timeVector)
