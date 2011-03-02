@@ -202,7 +202,7 @@ class TerminationCondition(Options):
 
     # Integrate until <measurement> is steady to within <tolerance> for <time>
     measurement = "Q" # integral heat release rate
-    tolerance = 5e-5 # allowable relative RMS variation
+    tolerance = 1e-4 # allowable relative RMS variation
     abstol = 0.5 # allowable absolute RMS variation
     steadyPeriod = 0.002 # time period over which heat release rate must be steady
     timeMax = 0.8 # give up at this time

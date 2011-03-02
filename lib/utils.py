@@ -84,6 +84,8 @@ def multirun(conf):
         _logFile.flush()
 
     conf.initialCondition.relativeRestartPath = False
+    if not os.path.exists(conf.paths.outputDir):
+        os.mkdir(conf.paths.outputDir, 0755)
 
     Q = []
     Sc = []
@@ -107,7 +109,7 @@ def multirun(conf):
             # Compute integral properties using points from the last half
             # of the termination-check period
             data = HDFStruct(historyPath)
-            mask = data.t > data.t[-1] - 0.5*conf.times.terminationPeriod
+            mask = data.t > data.t[-1] - 0.5*conf.terminationCondition.steadyPeriod
             if not any(mask):
                 log('Warning: old data file did not contain data'
                     ' spanning the requested period.')
@@ -135,7 +137,7 @@ def multirun(conf):
             log('Completed run at strain rate a = %g s^-1' % a)
             log('Integration took %.1f seconds.' % (t2-t1))
 
-            solver.writeStateFile(restartFile)
+            solver.writeStateFile(restartFile, False, False)
             tRun = np.array(solver.timeVector)
             QRun = np.array(solver.heatReleaseRate)
             ScRun = np.array(solver.consumptionSpeed)
@@ -143,7 +145,7 @@ def multirun(conf):
 
             # Compute integral properties using points from the last half
             # of the termination-check period
-            mask = tRun > tRun[-1] - 0.5*conf.times.terminationPeriod
+            mask = tRun > tRun[-1] - 0.5*conf.terminationCondition.steadyPeriod
             Q.append(np.mean(QRun[mask]))
             Sc.append(np.mean(ScRun[mask]))
             xFlame.append(np.mean(xFlameRun[mask]))
