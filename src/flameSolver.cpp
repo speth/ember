@@ -1851,7 +1851,7 @@ void FlameSolver::updateTransportDomain()
                 dYdtProduction(k,j) = ydotSource[kSpecies+k];
             }
         } else {
-            dvector& ySource = sourceTermsQSS[j].y;
+            dvector ySource(nVars);
             ySource[kMomentum] = U[j];
             ySource[kEnergy] = T[j];
             for (size_t k=0; k<nSpec; k++) {
