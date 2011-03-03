@@ -153,8 +153,12 @@ def multirun(conf):
         conf.initialCondition.restartFile = restartPath
 
         # Sort by strain rate:
-        strainRates, Q, Sc, xFlame = zip(*sorted(zip(strainRates, Q, Sc, xFlame)))
-        data = h5py.File(os.path.join(conf.paths.outputDir, "integral.h5"))
+        strainRates, Q, Sc, xFlame = map(list, zip(*sorted(zip(strainRates, Q, Sc, xFlame))))
+
+        integralFile = os.path.join(conf.paths.outputDir, "integral.h5")
+        if os.path.exists(integralFile):
+            os.unlink(integralFile)
+        data = h5py.File(integralFile)
         data['a'] = strainRates
         data['Q'] = Q
         data['Sc'] = Sc
