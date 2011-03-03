@@ -71,12 +71,27 @@ def get_qdot(gas, profile, pressure=101325):
     return np.array(q)
 
 
+def run(conf):
+    if not os.path.isdir(conf.paths.outputDir):
+        os.mkdir(conf.paths.outputDir, 0755)
+    confOutPath = os.path.join(conf.paths.outputDir, 'config')
+    if (os.path.exists(confOutPath)):
+        os.unlink(confOutPath)
+    confOut = file(confOutPath, 'w')
+    confOut.write(conf.stringify())
+
+    solver = _pyro.FlameSolver(conf)
+    solver.initialize()
+    solver.run()
+
+
 def multirun(conf):
     strainRates = conf.strainParameters.rates
     if not strainRates:
         print 'No strain rate list specified'
         return
 
+    conf.strainParameters.rates = None
     _logFile = file(conf.paths.logFile, 'w')
     def log(message):
         _logFile.write(message)
@@ -94,9 +109,11 @@ def multirun(conf):
     for a in strainRates:
         restartFile = 'prof_eps%04i' % a
         historyFile = 'out_eps%04i' % a
+        configFile = 'conf_eps%04i' % a
 
         restartPath = os.path.join(conf.paths.outputDir, restartFile)
         historyPath = os.path.join(conf.paths.outputDir, historyFile)
+        configPath = os.path.join(conf.paths.outputDir, configFile)
 
         if os.path.exists(restartPath) and os.path.exists(historyPath):
             # If the output files already exist, we simply retrieve the
@@ -124,6 +141,8 @@ def multirun(conf):
             # Data is not already present, so run the flame solver for this strain rate
 
             log('Beginning run at strain rate a = %g s^-1' % a)
+            confOut = file(configFile)
+            confOut.write(conf.stringify())
 
             conf.strainParameters.initial = a
             conf.strainParameters.final = a

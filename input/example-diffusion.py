@@ -18,6 +18,4 @@ conf = Config(
           profileStepInterval=20),
     TerminationCondition(tEnd=0.010))
 
-solver = FlameSolver(conf)
-solver.initialize()
-solver.run()
+run(conf)

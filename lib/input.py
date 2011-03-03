@@ -1,3 +1,5 @@
+import numbers
+
 class Options(object):
     def __init__(self, **kwargs):
         for key,value in kwargs.iteritems():
@@ -5,6 +7,28 @@ class Options(object):
                 setattr(self, key, value)
             else:
                 raise KeyError('Unrecognized configuration option: %s' % key)
+
+    def _stringify(self, indent=0):
+        ans = []
+        spaces = None
+        for attr in dir(self):
+            if not attr.startswith('_'):
+                value = getattr(self, attr)
+                if not isinstance(value, numbers.Number):
+                    value = '%r' % value
+
+                if not spaces:
+                    header = ' '*indent + self.__class__.__name__ + '('
+                    spaces = ' '*len(header)
+
+                else:
+                    header = spaces
+
+                ans.append('%s%s=%s,' % (header, attr, value))
+
+        ans[-1] = ans[-1][:-1] + ')'
+
+        return ans
 
 
 class Paths(Options):
@@ -232,3 +256,11 @@ class Config(object):
         self.debug = get(Debug)
         self.outputFiles = get(OutputFiles)
         self.terminationCondition = get(TerminationCondition)
+
+    def stringify(self):
+        ans = []
+        for item in self.__dict__.itervalues():
+            if isinstance(item, Options):
+                ans.append('\n'.join(item._stringify(4)))
+        ans[-1] = ans[-1]+')'
+        return 'conf = Config(\n' + ',\n'.join(ans[:-1]) + ')\n'
