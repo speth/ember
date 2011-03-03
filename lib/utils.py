@@ -141,7 +141,7 @@ def multirun(conf):
             # Data is not already present, so run the flame solver for this strain rate
 
             log('Beginning run at strain rate a = %g s^-1' % a)
-            confOut = file(configFile)
+            confOut = file(configPath, 'w')
             confOut.write(conf.stringify())
 
             conf.strainParameters.initial = a
@@ -157,6 +157,7 @@ def multirun(conf):
             log('Integration took %.1f seconds.' % (t2-t1))
 
             solver.writeStateFile(restartFile, False, False)
+            solver.writeTimeseriesFile(historyFile)
             tRun = np.array(solver.timeVector)
             QRun = np.array(solver.heatReleaseRate)
             ScRun = np.array(solver.consumptionSpeed)
