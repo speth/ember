@@ -208,11 +208,12 @@ private:
     double targetFlamePosition(double t); //!< [m]
 
     void printPerformanceStats(void);
-    void printPerfString(const std::string& label, const perfTimer& T) const;
+    void printPerfString(const std::string& label, const perfTimer& T);
 
     void updateTransportDomain();
 
     int alpha; //!< curved grid exponent. alpha = 1 for curved flames, 0 for planar flames.
+    std::ofstream statsFile;
 
     // Performance Timers
     // Just the total time:

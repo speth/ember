@@ -1785,13 +1785,18 @@ dvector FlameSolver::calculateReactantMixture(void)
 
 void FlameSolver::printPerformanceStats(void)
 {
-    logFile.write("\n   *** Performance Stats ***       time   ( call count )");
+    std::string filename = options.outputDir + "/stats";
+    if (boost::filesystem::exists(filename)) {
+        boost::filesystem::remove(filename);
+    }
+    statsFile.open(filename.c_str(), ios::trunc | ios::out);
+    statsFile << "\n   *** Performance Stats ***       time   ( call count )\n";
     printPerfString("                General Setup: ", setupTimer);
     printPerfString("             Split Term Setup: ", splitTimer);
     printPerfString("    Reaction Term Integration: ", reactionTimer);
     printPerfString("   Diffusion Term Integration: ", diffusionTimer);
     printPerfString("  Convection Term Integration: ", convectionTimer);
-    logFile.write("\n Subcomponents:");
+    statsFile << "\n Subcomponents:\n";
     printPerfString("               Reaction Rates: ", reactionRatesTimer);
     printPerfString("         Transport Properties: ", transportTimer);
     printPerfString("          - thermal cond.    : ", conductivityTimer);
@@ -1802,12 +1807,12 @@ void FlameSolver::printPerformanceStats(void)
     printPerfString("    Adaptive Transport Domain: ", adaptiveTransportTimer);
     printPerfString("   UTW Convection Integration: ", convectionSystem.utwTimer);
     printPerfString("    Yk Convection Integration: ", convectionSystem.speciesTimer);
-    logFile.write("\n", false);
+    statsFile.close();
 }
 
-void FlameSolver::printPerfString(const std::string& label, const perfTimer& T) const
+void FlameSolver::printPerfString(const std::string& label, const perfTimer& T)
 {
-    logFile.write(format("%s %9.3f (%12i)") % label % T.getTime() % T.getCallCount());
+    statsFile << format("%s %9.3f (%12i)\n") % label % T.getTime() % T.getCallCount();
 }
 
 void FlameSolver::updateTransportDomain()

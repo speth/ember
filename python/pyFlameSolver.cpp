@@ -6,7 +6,7 @@ using namespace boost::python;
 
 void exportFlameSolver()
 {
-    class_<FlameSolver>("FlameSolver")
+    class_<FlameSolver, boost::noncopyable>("FlameSolver")
         .def(init<object>())
         .def("initialize", &FlameSolver::initialize)
         .def("run", &FlameSolver::tryrun)
