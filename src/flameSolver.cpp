@@ -176,16 +176,15 @@ void FlameSolver::run(void)
         }
         convectionSystem.set_rVzero(rVzero);
 
-        setupTimer.stop();
-
-        splitTimer.start();
         if (nEliminate >= options.transportEliminationStepInterval) {
             updateTransportDomain();
             nEliminate = 0;
         } else {
             nEliminate++;
         }
+        setupTimer.stop();
 
+        splitTimer.start();
         for (size_t j=0; j<nPoints; j++) {
             diffusionTerms[kMomentum].B[j] = 1/rho[j];
             diffusionTerms[kEnergy].B[j] = 1/(rho[j]*cp[j]);
@@ -210,7 +209,6 @@ void FlameSolver::run(void)
                 i++;
             }
         }
-
         splitTimer.stop();
 
         if (t == tStart && options.outputProfiles) {
@@ -991,6 +989,7 @@ void FlameSolver::setProductionSolverState(double tInitial)
 
 void FlameSolver::calculateSplitDerivatives(double t)
 {
+    splitTimer.resume();
     Array2D dYdtSplit(nSpec, nPoints, 0);
 
     // Evaluate derivatives from the diffusion terms
@@ -1046,6 +1045,7 @@ void FlameSolver::calculateSplitDerivatives(double t)
     }
 
     convectionSystem.setSplitDerivatives(dTdtSplit, dYdtSplit);
+    splitTimer.stop();
 }
 
 void FlameSolver::extractConvectionState(int stage)
@@ -1799,6 +1799,7 @@ void FlameSolver::printPerformanceStats(void)
     printPerfString("          - diffusion coeff. : ", diffusivityTimer);
     printPerfString("     Thermodynamic Properties: ", thermoTimer);
     printPerfString("   Source Jacobian Evaluation: ", jacobianTimer);
+    printPerfString("    Adaptive Transport Domain: ", adaptiveTransportTimer);
     printPerfString("   UTW Convection Integration: ", convectionSystem.utwTimer);
     printPerfString("    Yk Convection Integration: ", convectionSystem.speciesTimer);
     logFile.write("\n", false);
@@ -1815,6 +1816,7 @@ void FlameSolver::updateTransportDomain()
         return;
     }
 
+    adaptiveTransportTimer.start();
     Array2D dYdtTransport(nSpec, nPoints);
     Array2D dYdtProduction(nSpec, nPoints);
 
@@ -1832,7 +1834,7 @@ void FlameSolver::updateTransportDomain()
     }
 
     // Evaluate the reaction term (using the current reduced mechanism, if any)
-    // for reach component
+    // for each component
     for (size_t j=0; j<nPoints; j++) {
         if (useCVODE[j]) {
             sdVector& ySource = sourceSolvers[j].y;
@@ -1949,4 +1951,5 @@ void FlameSolver::updateTransportDomain()
         grid.leftComponents[kSpecies+k] = (diffusionStartIndices[k] == 0 && convectionStartIndices[k] == 0);
         grid.rightComponents[kSpecies+k] = (diffusionStopIndices[k] == jj && convectionStopIndices[k] == jj);
     }
+    adaptiveTransportTimer.stop();
 }

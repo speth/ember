@@ -223,6 +223,7 @@ private:
               convectionTimer, regridTimer;
 
     // These account for special parts of the code
-    perfTimer reactionRatesTimer, transportTimer, thermoTimer, jacobianTimer;
+    perfTimer reactionRatesTimer, transportTimer, thermoTimer;
+    perfTimer jacobianTimer, adaptiveTransportTimer;
     perfTimer conductivityTimer, viscosityTimer, diffusivityTimer;
 };
