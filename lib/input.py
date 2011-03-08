@@ -249,7 +249,7 @@ class Config(object):
         self.grid = get(Grid)
         self.initialCondition = get(InitialCondition)
         self.strainParameters = get(StrainParameters)
-        self.positionControl = get(PositionControl)
+        self.positionControl = opts.get('PositionControl')
         self.times = get(Times)
         self.cvodeTolerances = get(CvodeTolerances)
         self.qssTolerances = get(QssTolerances)
