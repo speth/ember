@@ -59,7 +59,14 @@ be in whatever directory is specified as the "input" directory in input file)
 as the mechanismFile and "gas" as the phaseID. The other parameters you
 may want to change are in the Paths, InitialCondition, and StrainParameters sections.
 
-7. Run the code:
+7a. Check the configuration for errors
+
+    python myInputFile.py validate
+
+If this prints "Validation completed successfully.", you're all set. Otherwise,
+try to correct the indicated error and try again.
+
+7b. Run the code:
 
      python myInputFile.py &
 

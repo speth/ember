@@ -1,4 +1,6 @@
 import numbers
+import os
+import Cantera
 
 class Options(object):
     def __init__(self, **kwargs):
@@ -35,6 +37,7 @@ class Paths(Options):
     inputDir = "input"
     outputDir = "run/test1"
     logFile = None # write output to stdout
+
 
 class General(Options):
     fixedBurnedVal = True
@@ -264,3 +267,59 @@ class Config(object):
                 ans.append('\n'.join(item._stringify(4)))
         ans[-1] = ans[-1]+')'
         return 'conf = Config(\n' + ',\n'.join(ans[:-1]) + ')\n'
+
+    def validate(self):
+        error = False
+
+        # Check valid choices for string options
+        error = self.checkString(self.terminationCondition,
+                                 'measurement', ('Q', None)) or error
+        error = self.checkString(self.initialCondition,
+                                 'flameType', ('premixed', 'diffusion')) or error
+        error = self.checkString(self.general,
+                                 'chemistryIntegrator', ('cvode', 'qss')) or error
+        erro = self.checkString(self.chemistry,
+                                'transportModel', ('Multi', 'Mix')) or error
+
+        # Make sure the mechanism file is in the correct place
+        mech = os.path.join(self.paths.inputDir, self.chemistry.mechanismFile)
+        if not os.path.exists(mech):
+            error = True
+            print "Error: Couldn't find mechanism file %r.\n" % mech
+
+        # Make sure that the mechanism file actually works and contains the
+        # specified fuel and oxidizer species
+        gas = Cantera.IdealGasMix(mech, id=self.chemistry.phaseID)
+        gas.set(X=self.initialCondition.fuel)
+        gas.set(X=self.initialCondition.oxidizer)
+
+        # Make sure the restart file is in the correct place (if specified)
+        if self.initialCondition.restartFile:
+            if self.initialCondition.relativeRestartPath:
+                restar = os.path.join(self.paths.inputDir,
+                                      self.initialCondition.restartFile)
+            else:
+                restart = self.initialCondition.restartFile
+
+            if not os.path.exists(restart):
+                error = True
+                print "Error: Couldn't find restart file %r.\n" % restart
+
+        # QSS Solver is incompatible with adapchem
+        if self.adapchem and general.chemistryIntegrator == 'qss':
+            error = True
+            print 'Error: QSS integrator is incompatible with Adapchem.\n'
+
+        if not error:
+            print 'Validation completed successfully.'
+
+    def checkString(self, options, attrname, choices):
+        value = getattr(options, attrname)
+        if value not in choices:
+            print 'Error: Invalid option for %s.%s: %r' % (options.__class__.__name__,
+                                                           attrname,
+                                                           value)
+            print '       Valid options are: %r\n' % list(choices)
+            return True
+        else:
+            return False

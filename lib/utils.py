@@ -2,6 +2,7 @@ import numpy as np
 import Cantera as ct
 import h5py
 import os
+import sys
 import _pyro
 import time
 
@@ -72,6 +73,11 @@ def get_qdot(gas, profile, pressure=101325):
 
 
 def run(conf):
+    # Validate the configuration and exit
+    if len(sys.argv) > 1 and sys.argv[1].lower() == 'validate':
+        conf.validate()
+        return
+
     if not os.path.isdir(conf.paths.outputDir):
         os.mkdir(conf.paths.outputDir, 0755)
     confOutPath = os.path.join(conf.paths.outputDir, 'config')
@@ -86,6 +92,11 @@ def run(conf):
 
 
 def multirun(conf):
+    # Validate the configuration and exit
+    if len(sys.argv) > 1 and sys.argv[1].lower() == 'validate':
+        conf.validate()
+        return
+
     strainRates = conf.strainParameters.rates
     if not strainRates:
         print 'No strain rate list specified'
