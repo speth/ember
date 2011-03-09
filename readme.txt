@@ -8,6 +8,7 @@ with the following installed:
    * Cantera
    * Sundials (2.4)
    * HDF5
+   * Doxygen (optional)
 
 1. The 1dflameV2 code is stored in a Git repository on Pharos. To
 check out a copy of the code, run:
@@ -37,7 +38,13 @@ And similarly for Cantera (optional):
 
     $ ln -s /path/to/cantera/lib/python2.6/site-packages/Cantera ~/.local/lib/python2.6/site-packages/
 
-5. Prepare your kinetics mechanism. If you're starting with a
+5. Prepare the documentation (optional)
+
+    $ doxygen
+
+To view the HTML docs, open "doc/html/index.html" in your web browser.
+
+6. Prepare your kinetics mechanism. If you're starting with a
 mechanism that's in the Chemkin format, it will need to be converted:
 
     $ source /wherever/cantera/is/installed/setup_cantera
@@ -49,7 +56,7 @@ This will produce mech.cti, which needs to be further converted:
 
 to produce mech.xml.
 
-6. Prepare the input file, based on the one specified in
+7. Prepare the input file, based on the one specified in
 
     1dflameV2/input/example-premixed.py
 
@@ -59,21 +66,21 @@ be in whatever directory is specified as the "input" directory in input file)
 as the mechanismFile and "gas" as the phaseID. The other parameters you
 may want to change are in the Paths, InitialCondition, and StrainParameters sections.
 
-7a. Check the configuration for errors
+8a. Check the configuration for errors
 
     python myInputFile.py validate
 
 If this prints "Validation completed successfully.", you're all set. Otherwise,
 try to correct the indicated error and try again.
 
-7b. Run the code:
+8b. Run the code:
 
      python myInputFile.py &
 
 This may take a while. You can watch the solver's progress as it is written to
 the file specified by "Paths.logFile" in the input file.
 
-8. Examine the output files. The files are HDF5 data files, which can be read
+9. Examine the output files. The files are HDF5 data files, which can be read
 using the Python h5py module or Matlab.
 
    * outNow.h5 contains integral flame properties (e.g. flame speed) as a function of time

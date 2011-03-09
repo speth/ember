@@ -1,0 +1,18 @@
+/*! \mainpage Pyro User's Guide
+
+<b>Pyro</b> is a code for simulating unsteady, quasi-one-dimensional flames
+subjected to arbitrarily varying strain rates and curvature.
+
+This manual is divided in the following sections:
+- \subpage gettingStarted
+- \subpage flameModel
+- \subpage Governing Equations
+- \subpage Boundary and Initial Conditions
+- \subpage Numerical Solution Method\
+*/
+
+//-----------------------------------------------------------
+
+/*! \page gettingStarted Getting Started
+\verbinclude "readme.txt"
+*/
