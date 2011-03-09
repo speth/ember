@@ -24,7 +24,7 @@ startlibs = 'adapchem cklib'.split()
 cantera = '''thermo transport kinetics equil tpx ctnumerics 
              ctmath ctf2c ctcxx ctbase clib'''.split()
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
-lastlibs = 'gfortran hdf5 config++ blas lapack boost_filesystem'.split()
+lastlibs = 'gfortran hdf5 blas lapack boost_filesystem'.split()
 pythonlibs = 'boost_python python2.6'.split()
 
 env = Environment(CPPPATH=['/opt/cantera-gcc/include',

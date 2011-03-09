@@ -1,8 +1,9 @@
 #pragma once
-#include "libconfig.h++"
-#include <string>
 #include "mathUtils.h"
 
+#include <string>
+
+// Forward declaration to avoid needing to #include boost/python.hpp
 namespace boost { namespace python { namespace api { class object; } } }
 
 // indices of the respective equations / solution components
@@ -15,9 +16,6 @@ public:
 
     //! Create a configOptions object from a parallel python data structure
     configOptions(const boost::python::api::object& conf);
-
-    //! Populate the members of this class with the contents of the configuration file
-    void readOptionsFile(const std::string& filename);
 
     std::string inputDir; //!< [paths.inputDir] Directory where input files are located.
 
@@ -172,20 +170,8 @@ public:
     double xStag;
 
 private:
-    // load the config option "name" into "value", with "defaultVal" as the default.
-    // Return true if a non-default value was found
-    template <class T1, class T2>
-    bool readOption(const std::string name, T1& value, const T2 defaultVal);
-
-    // Same as readOption, but does not print if the default was used
-    template <class T1, class T2>
-    bool readOptionQuietDefault(const std::string name, T1& value, const T2 defaultVal);
-
-    // Python version of readOption: load the config option "name" from "conf" into "value",
+    // Load the config option "name" from "conf" into "value",
     // Return true if value was not None
     template <class T1>
     bool readOption(const boost::python::api::object& conf, const char* name, T1& value);
-
-    libconfig::Config* theConfig;
-
 };
