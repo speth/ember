@@ -49,6 +49,7 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(general, "curvedFlame", curvedFlame);
     readOption(general, "twinFlame", twinFlame);
     stopIfError = readOption(general, "errorStopCount", errorStopCount);
+    readOption(general, "chemistryIntegrator", chemistryIntegrator);
 
     // Chemistry
     const object& chem = conf.attr("chemistry");
@@ -190,13 +191,11 @@ configOptions::configOptions(const boost::python::object& conf)
 
     // CVODE options
     const object& cvode = conf.attr("cvodeTolerances");
-    if (cvode != None) {
-        readOption(cvode, "relativeTolerance", integratorRelTol);
-        readOption(cvode, "momentumAbsTol", integratorMomentumAbsTol);
-        readOption(cvode, "energyAbsTol", integratorEnergyAbsTol);
-        readOption(cvode, "speciesAbsTol", integratorSpeciesAbsTol);
-        readOption(cvode, "minimumTimestep", integratorMinTimestep);
-    }
+    readOption(cvode, "relativeTolerance", integratorRelTol);
+    readOption(cvode, "momentumAbsTol", integratorMomentumAbsTol);
+    readOption(cvode, "energyAbsTol", integratorEnergyAbsTol);
+    readOption(cvode, "speciesAbsTol", integratorSpeciesAbsTol);
+    readOption(cvode, "minimumTimestep", integratorMinTimestep);
 
     // QSS integrator options
     const object& qss = conf.attr("qssTolerances");
