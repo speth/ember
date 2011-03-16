@@ -132,6 +132,14 @@ class InitialCondition(Options):
     #smoothCount = 4
 
 
+class Ignition(Options):
+    tStart = 0 # [s]
+    duration = 1e-3 # [s]
+    energy = 0 # [W/m^2]
+    center = 0 # [m]
+    stddev = 1e-4 # [m]
+
+
 class StrainParameters(Options):
     initial = 400
     final = 400
@@ -251,6 +259,7 @@ class Config(object):
         self.transportElimination = get(TransportElimination)
         self.grid = get(Grid)
         self.initialCondition = get(InitialCondition)
+        self.ignition = get(Ignition)
         self.strainParameters = get(StrainParameters)
         self.positionControl = opts.get('PositionControl')
         self.times = get(Times)

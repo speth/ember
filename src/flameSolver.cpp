@@ -707,6 +707,7 @@ void FlameSolver::resizeAuxiliary()
             system->resize(nSpec);
             system->gas = &gas;
             system->ckGas = ckGas;
+            system->options = &options;
             system->usingAdapChem = options.usingAdapChem;
             system->thermoTimer = &thermoTimer;
             system->reactionRatesTimer = &reactionRatesTimer;
@@ -715,6 +716,8 @@ void FlameSolver::resizeAuxiliary()
             system->rhou = rhou;
             system->W = W;
             system->j = j;
+            system->x = x[j];
+
 
             // Create and initialize the new Sundials solver
             sundialsCVODE* solver = new sundialsCVODE(nVars);
@@ -739,6 +742,7 @@ void FlameSolver::resizeAuxiliary()
             qssSolver->resize(nSpec);
             qssSolver->gas = &gas;
             qssSolver->ckGas = ckGas;
+            qssSolver->options = &options;
             qssSolver->usingAdapChem = options.usingAdapChem;
             qssSolver->thermoTimer = &thermoTimer;
             qssSolver->reactionRatesTimer = &reactionRatesTimer;
@@ -746,6 +750,7 @@ void FlameSolver::resizeAuxiliary()
             qssSolver->rhou = rhou;
             qssSolver->W = W;
             qssSolver->j = j;
+
 
             qssSolver->ymin.assign(nVars, options.qss_minval);
             qssSolver->ymin[kMomentum] = -1e4;
@@ -794,6 +799,12 @@ void FlameSolver::resizeAuxiliary()
     // Resize the jCorr stabilizer
     jCorrSolver.resize(nPoints, 1, 1);
     jCorrSystem.setGrid(grid);
+
+    // Set the grid position for each of the source solvers
+    for (size_t j=0; j<nPoints; j++) {
+        sourceTerms[j].x = x[j];
+        sourceTermsQSS[j].x = x[j];
+    }
 }
 
 void FlameSolver::updateCrossTerms()

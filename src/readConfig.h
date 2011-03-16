@@ -114,6 +114,13 @@ public:
     double strainRateInitial, strainRateFinal;
     double strainRateDt, strainRateT0;
 
+    // Ignition parameters
+    double ignition_tStart;
+    double ignition_duration;
+    double ignition_energy;
+    double ignition_center;
+    double ignition_stddev;
+
     // Definition of the starting grid: nPoints evenly spaced between xLeft and xRight
     int nPoints;
     double xLeft, xRight;

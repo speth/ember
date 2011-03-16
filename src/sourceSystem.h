@@ -39,6 +39,8 @@ public:
     // A class that provides the strain rate and its time derivative
     StrainFunction strainFunction;
 
+    configOptions* options;
+
     // current state variables
     double U, dUdt; // tangential velocity
     double T, dTdt; // temperature
@@ -63,6 +65,7 @@ public:
     // other parameters
     size_t nSpec;
     int j; // grid index for this system
+    double x; // grid position for this system
     dvector W; // species molecular weights [kg/kmol]
     double rhou; // density of the unburned mixture
 
@@ -103,6 +106,8 @@ public:
     // A class that provides the strain rate and its time derivative
     StrainFunction strainFunction;
 
+    configOptions* options;
+
     // current state variables
     double U, dUdtQ, dUdtD; // tangential velocity
     double T, dTdtQ, dTdtD; // temperature
@@ -118,6 +123,7 @@ public:
     // other parameters
     size_t nSpec;
     int j; // grid index for this system
+    double x; // grid position for this system
     dvector W; // species molecular weights [kg/kmol]
     double rhou; // density of the unburned mixture
 

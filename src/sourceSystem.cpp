@@ -57,6 +57,12 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
         qDot -= wDot[k]*hk[k];
     }
 
+    if (t >= options->ignition_tStart && t < options->ignition_tStart + options->ignition_duration) {
+        qDot += options->ignition_energy /
+                (options->ignition_stddev * sqrt(2 * M_PI) * options->ignition_duration) *
+                exp(-pow(x - options->ignition_center, 2) / (2 * pow(options->ignition_stddev, 2)));
+    }
+
     double a = strainFunction.a(t);
     double dadt = strainFunction.dadt(t);
 
@@ -323,6 +329,12 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d,
     qDot = 0.0;
     for (size_t k=0; k<nSpec; k++) {
         qDot -= (wDotQ[k]-wDotD[k])*hk[k];
+    }
+
+    if (t >= options->ignition_tStart && t < options->ignition_tStart + options->ignition_duration) {
+        qDot += options->ignition_energy /
+                (options->ignition_stddev * sqrt(2 * M_PI) * options->ignition_duration) *
+                exp(-pow(x - options->ignition_center, 2) / (2 * pow(options->ignition_stddev, 2)));
     }
 
     double a = strainFunction.a(t);

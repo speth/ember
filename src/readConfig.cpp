@@ -112,6 +112,14 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(ic, "equivalenceRatio", equivalenceRatio);
     readOption(ic, "pressure", pressure);
 
+    // Ignition parameters
+    const object& ignition = conf.attr("ignition");
+    readOption(ignition, "tStart", ignition_tStart);
+    readOption(ignition, "duration", ignition_duration);
+    readOption(ignition, "energy", ignition_energy);
+    readOption(ignition, "center", ignition_center);
+    readOption(ignition, "stddev", ignition_stddev);
+
     // Strain Rate Parameters
     const object& strain = conf.attr("strainParameters");
     readOption(strain, "initial", strainRateInitial);
