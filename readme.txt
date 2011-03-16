@@ -9,6 +9,14 @@ with the following installed:
    * Sundials (2.4)
    * HDF5
    * Doxygen (optional)
+   * doxypy (See step 0a)
+
+0a. Installing Doxypy:
+
+    $ cd ~/src
+    $ git clone https://github.com/0xCAFEBABE/doxypy.git
+    $ cd doxypy/src
+    $ python setup.py install --user
 
 1. The 1dflameV2 code is stored in a Git repository on Pharos. To
 check out a copy of the code, run:
