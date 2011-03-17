@@ -66,7 +66,6 @@ public:
     double regridTimeInterval;
     double outputTimeInterval;
     double profileTimeInterval;
-    double maxTimestep;
     double globalTimestep; // timestep size for the outer solver
     double diffusionTimestep; // timestep for diffusion solver
 
@@ -157,7 +156,6 @@ public:
     double terminationTolerance; // relative tolerance for termination
     double terminationAbsTol; // absolute tolerance
     double terminationPeriod; // period over which to require constant heat release rate
-    double terminationMaxTime; // stop integration at this time regardless of the heat release rate
 
     int errorStopCount;
     bool stopIfError;

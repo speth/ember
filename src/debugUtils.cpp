@@ -2,12 +2,7 @@
 
 bool debugParameters::debugAdapt;
 bool debugParameters::debugRegrid;
-bool debugParameters::debugSundials;
-bool debugParameters::debugJacobian;
-bool debugParameters::debugCalcIC;
 bool debugParameters::debugTimesteps;
-bool debugParameters::debugSolverStats;
-bool debugParameters::debugPerformanceStats;
 bool debugParameters::debugFlameRadiusControl;
 bool debugParameters::veryVerbose;
 LogFile logFile;

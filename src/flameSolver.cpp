@@ -413,7 +413,7 @@ void FlameSolver::run(void)
             regridTimer.stop();
         }
 
-        if (debugParameters::debugPerformanceStats && (nTotal % 10 == 0)) {
+        if (nTotal % 10 == 0) {
             printPerformanceStats();
         }
         nTotal++;
@@ -461,9 +461,6 @@ bool FlameSolver::checkTerminationCondition(void)
             logFile.write("Terminating integration: ", false);
             logFile.write("Heat release rate RMS variation less than absolute tolerance.");
             return true;
-        } else if (tNow-tStart > options.terminationMaxTime ) {
-            logFile.write("Terminating integration: Maximum integration time reached.");
-          return true;
         } else {
             logFile.write(format("Continuing integration. t = %8.6f") % (tNow-timeVector[0]));
         }

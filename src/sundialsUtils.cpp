@@ -507,45 +507,43 @@ void sundialsIDA::printStats(clock_t dt)
     long int nst, nje, nre, netf, ncfn, nge, npe, nps;
     int retval;
 
-    if (debugParameters::debugSolverStats) {
-        retval = IDAGetNumSteps(sundialsMem, &nst);
-        check_flag(&retval, "IDAGetNumSteps", 1);
-        retval = IDAGetNumResEvals(sundialsMem, &nre);
-        check_flag(&retval, "IDAGetNumResEvals", 1);
-        retval = IDAGetNumErrTestFails(sundialsMem, &netf);
-        check_flag(&retval, "IDAGetNumErrTestFails", 1);
-        retval = IDAGetNumNonlinSolvConvFails(sundialsMem, &ncfn);
-        check_flag(&retval, "IDAGetNumNonlinSolvConvFails", 1);
-        if (findRoots) {
-            retval = IDAGetNumGEvals(sundialsMem, &nge);
-            check_flag(&retval, "IDAGetNumGEvals", 1);
-        }
-        retval = IDASpilsGetNumJtimesEvals(sundialsMem, &nje);
-        check_flag(&retval, "IDASpilsGetNumJtimesEvals", 1);
-        retval = IDASpilsGetNumPrecEvals(sundialsMem, &npe);
-        check_flag(&retval, "IDASpilsGetPrecEvals", 1);
-        retval = IDASpilsGetNumPrecSolves(sundialsMem, &nps);
-        check_flag(&retval, "IDASpilsGetNumPrecSolves", 1);
+    retval = IDAGetNumSteps(sundialsMem, &nst);
+    check_flag(&retval, "IDAGetNumSteps", 1);
+    retval = IDAGetNumResEvals(sundialsMem, &nre);
+    check_flag(&retval, "IDAGetNumResEvals", 1);
+    retval = IDAGetNumErrTestFails(sundialsMem, &netf);
+    check_flag(&retval, "IDAGetNumErrTestFails", 1);
+    retval = IDAGetNumNonlinSolvConvFails(sundialsMem, &ncfn);
+    check_flag(&retval, "IDAGetNumNonlinSolvConvFails", 1);
+    if (findRoots) {
+        retval = IDAGetNumGEvals(sundialsMem, &nge);
+        check_flag(&retval, "IDAGetNumGEvals", 1);
+    }
+    retval = IDASpilsGetNumJtimesEvals(sundialsMem, &nje);
+    check_flag(&retval, "IDASpilsGetNumJtimesEvals", 1);
+    retval = IDASpilsGetNumPrecEvals(sundialsMem, &npe);
+    check_flag(&retval, "IDASpilsGetPrecEvals", 1);
+    retval = IDASpilsGetNumPrecSolves(sundialsMem, &nps);
+    check_flag(&retval, "IDASpilsGetNumPrecSolves", 1);
 
-        printf("\nIDA Solver Statistics: \n\n");
-        printf("Number of steps                    = %ld\n", nst);
-        printf("Number of residual evaluations     = %ld\n", nre);
-        printf("Number of error test failures      = %ld\n", netf);
-        printf("Number of nonlinear conv. failures = %ld\n", ncfn);
-        if (findRoots) {
-            printf("Number of root fn. evaluations     = %ld\n", nge);
-        }
-        printf("Number of J-v Evaluations          = %ld\n", nje);
-        printf("Number of preconditioner evals.    = %ld\n", npe);
-        printf("Number of preconditioner solves    = %ld\n", nps);
+    printf("\nIDA Solver Statistics: \n\n");
+    printf("Number of steps                    = %ld\n", nst);
+    printf("Number of residual evaluations     = %ld\n", nre);
+    printf("Number of error test failures      = %ld\n", netf);
+    printf("Number of nonlinear conv. failures = %ld\n", ncfn);
+    if (findRoots) {
+        printf("Number of root fn. evaluations     = %ld\n", nge);
+    }
+    printf("Number of J-v Evaluations          = %ld\n", nje);
+    printf("Number of preconditioner evals.    = %ld\n", npe);
+    printf("Number of preconditioner solves    = %ld\n", nps);
+
+    retval = IDAGetNumSteps(sundialsMem, &nst);
+    if (dt == 0) {
+        logFile.write(format("IDA solver took %i steps.\n") % nst);
     } else {
-        retval = IDAGetNumSteps(sundialsMem, &nst);
-        if (dt == 0) {
-            logFile.write(format("IDA solver took %i steps.\n") % nst);
-        } else {
-            logFile.write(format("IDA solver took %i steps in %f seconds.\n") %
-                    nst % (((double) dt)/CLOCKS_PER_SEC));
-        }
+        logFile.write(format("IDA solver took %i steps in %f seconds.\n") %
+                nst % (((double) dt)/CLOCKS_PER_SEC));
     }
 }
 

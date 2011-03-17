@@ -173,7 +173,6 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(times, "profileStepInterval", profileStepInterval);
     readOption(times, "currentStateStepInterval", currentStateStepInterval);
     readOption(times, "terminateStepInterval", terminateStepInterval);
-    readOption(times, "maxTimestep", maxTimestep);
     readOption(times, "globalTimestep", globalTimestep);
     readOption(times, "diffusionTimestep", diffusionTimestep);
 
@@ -181,12 +180,7 @@ configOptions::configOptions(const boost::python::object& conf)
     const object& debug = conf.attr("debug");
     readOption(debug, "adaptation", debugParameters::debugAdapt);
     readOption(debug, "regridding", debugParameters::debugRegrid);
-    readOption(debug, "sundials", debugParameters::debugSundials);
-    readOption(debug, "jacobian", debugParameters::debugJacobian);
-    readOption(debug, "calcIC", debugParameters::debugCalcIC);
     readOption(debug, "timesteps", debugParameters::debugTimesteps);
-    readOption(debug, "solverStats", debugParameters::debugSolverStats);
-    readOption(debug, "performanceStats", debugParameters::debugPerformanceStats);
     readOption(debug, "flameRadiusControl", debugParameters::debugFlameRadiusControl);
     #ifdef NDEBUG
         readOption(debug, "veryVerbose", debugParameters::veryVerbose);
@@ -239,7 +233,6 @@ configOptions::configOptions(const boost::python::object& conf)
 
     if (terminateForSteadyQdot) {
         readOption(termination, "steadyPeriod", terminationPeriod);
-        readOption(termination, "timeMax", terminationMaxTime);
         readOption(termination, "tolerance", terminationTolerance);
         readOption(termination, "abstol", terminationAbsTol);
     }
