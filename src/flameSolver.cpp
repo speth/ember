@@ -68,8 +68,8 @@ void FlameSolver::initialize(void)
     }
 
     grid.setSize(x.size());
-    convectionSystem.setLeftBC(Tleft, Yleft);
     convectionSystem.setGas(gas);
+    convectionSystem.setLeftBC(Tleft, Yleft);
     convectionSystem.setTolerances(options);
 
     for (size_t k=0; k<nVars; k++) {

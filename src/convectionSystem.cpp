@@ -529,6 +529,8 @@ void ConvectionSystemSplit::setLeftBC(const double Tleft, const dvector& Yleft_)
 {
     utwSystem.Tleft = Tleft;
     Yleft = Yleft_;
+    gas->setStateMass(Yleft, Tleft);
+    utwSystem.Wleft = gas->getMixtureMolecularWeight();
 }
 
 void ConvectionSystemSplit::set_rVzero(const double rVzero)
