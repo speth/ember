@@ -1,5 +1,4 @@
-""" @package Input
-
+""" \file input.py
 A set of classes for specifiying input parameters for the Pyro solver.
 
 Create a Config object to be passed to "run" or "multirun". Sane
