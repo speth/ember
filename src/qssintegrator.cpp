@@ -97,7 +97,7 @@ int QSSIntegrator::integrateToTime(double tf)
 
 int QSSIntegrator::integrateOneStep(double tf) {
     // Evaluate the derivatives at the initial state.
-    odefun(tn, y, q, d);
+    odefun(tn + tstart, y, q, d);
     gcount += 1;
 
     if (firstStep) {
