@@ -1,6 +1,12 @@
 #include "diffusionSystem.h"
 #include <assert.h>
 
+DiffusionSystem::DiffusionSystem()
+    : yInf(0)
+    , wallConst(0)
+{
+}
+
 void DiffusionSystem::get_A(sdBandMatrix& A)
 {
     // Build the matrix A describing the linear ODE
@@ -28,6 +34,10 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
             double c0 = centerArea/centerVol * (D[0]+D[1]) / (hh[0] * B[0]);
             A(0,0) = -c0;
             A(0,1) = c0;
+        } else if (grid.leftBC == BoundaryCondition::WallFlux) {
+            jStart = 1;
+            A(0,0) = -c1[0]*c2[0] - B[0] * wallConst;
+            A(0,1) = c1[0]*c2[0];
         } else  { // (leftBC == BoundaryCondition::ZeroGradient)
             // In the case of a zero gradient boundary condition, the boundary value
             // is not computed, and the value one point in is computed by substituting
@@ -75,6 +85,9 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
 void DiffusionSystem::get_C(dvector& other_c)
 {
     other_c.assign(splitConst.begin(), splitConst.end());
+    if (grid.leftBC == BoundaryCondition::WallFlux) {
+        other_c[0] += yInf * wallConst * B[0];
+    }
 }
 
 void DiffusionSystem::setGrid(const oneDimGrid& other)

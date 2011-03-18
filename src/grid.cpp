@@ -205,7 +205,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
         }
 
         // Special minimum grid size for flames pinned at x=0
-        if (j == 0 && leftBC == BoundaryCondition::ControlVolume) {
+        if (j == 0 && (leftBC == BoundaryCondition::ControlVolume ||
+                       leftBC == BoundaryCondition::WallFlux))
+        {
             double xLeftMin = min(centerGridMin, 0.005*x[jj]);
             if (hh[j] < xLeftMin) {
                 insert = false;
@@ -336,7 +338,9 @@ void oneDimGrid::adapt(vector<dvector>& y)
         }
 
         // Special fixed grid for flames pinned at x=0
-        if (j == 1 && leftBC == BoundaryCondition::ControlVolume) {
+        if (j == 1 && (leftBC == BoundaryCondition::ControlVolume ||
+                       leftBC == BoundaryCondition::WallFlux))
+        {
             if (debugParameters::debugAdapt) {
                 logFile.write("Adapt: no removal - fixed grid near r = 0.");
             }
@@ -474,7 +478,10 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
         }
     }
 
-    if (fixedLeftLoc && leftBC != BoundaryCondition::ControlVolume) {
+    if (fixedLeftLoc &&
+        leftBC != BoundaryCondition::ControlVolume &&
+        leftBC != BoundaryCondition::WallFlux)
+    {
         if (!pointAdded && debugParameters::debugRegrid) {
             logFile.write("Regrid: Adding point to force left boundary toward x = 0");
         }

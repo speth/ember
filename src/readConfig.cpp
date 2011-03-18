@@ -103,6 +103,18 @@ configOptions::configOptions(const boost::python::object& conf)
         }
     }
 
+    // Wall flux boundary condition
+    const object& wall = conf.attr("wallFlux");
+    if (wall != None) {
+        wallFlux = true;
+        readOption(wall, "Tinf", Tinf);
+        readOption(wall, "Kwall", Kwall);
+    } else {
+        wallFlux = false;
+        Tinf = Tu;
+        Kwall = 0;
+    }
+
     overrideTu = readOption(ic, "Tu", Tu);
     overrideReactants = readOption(ic, "fuel", fuel);
     readOption(ic, "flameType", flameType);

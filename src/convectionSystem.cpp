@@ -45,7 +45,9 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     // Convection term only contributes in the ControlVolume case
     dUdt[0] = 0; // zero-gradient condition for U is handled in diffusion term
 
-    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+    if (grid.leftBC == BoundaryCondition::ControlVolume ||
+        grid.leftBC == BoundaryCondition::WallFlux)
+    {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         double rVzero_mod = std::max(rV[0], 0.0);
 
@@ -87,7 +89,9 @@ void ConvectionSystemUTW::get_diagonal
     // dUdot/dU
     linearU[0] = 0;
 
-    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+    if (grid.leftBC == BoundaryCondition::ControlVolume ||
+        grid.leftBC == BoundaryCondition::WallFlux)
+    {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         double rVzero_mod = std::max(rV[0], 0.0);
 
@@ -120,7 +124,9 @@ int ConvectionSystemUTW::bandedJacobian(const realtype t, const sdVector& y,
     // dUdot/dU
     J(0*nVars+kMomentum, 0*nVars+kMomentum) = 0;
 
-    if (grid.leftBC == BoundaryCondition::ControlVolume) {
+    if (grid.leftBC == BoundaryCondition::ControlVolume ||
+        grid.leftBC == BoundaryCondition::WallFlux)
+    {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         double rVzero_mod = std::max(rV[0], 0.0);
 
@@ -248,7 +254,9 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
 
     // Left boundary conditions.
     // Convection term only contributes in the ControlVolume case
-    if (startIndex == 0 && grid.leftBC == BoundaryCondition::ControlVolume) {
+    if (startIndex == 0 && (grid.leftBC == BoundaryCondition::ControlVolume ||
+                            grid.leftBC == BoundaryCondition::WallFlux))
+    {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         // Note: v[0] actually contains r*v[0] in this case
         double rvzero_mod = std::max(v[0], 0.0);
@@ -286,7 +294,9 @@ void ConvectionSystemY::get_diagonal(const realtype t, dvector& linearY)
     // Left boundary conditions.
     // Convection term only contributes in the ControlVolume case
 
-    if (startIndex == 0 && grid.leftBC == BoundaryCondition::ControlVolume) {
+    if (startIndex == 0 && (grid.leftBC == BoundaryCondition::ControlVolume ||
+                            grid.leftBC == BoundaryCondition::WallFlux))
+    {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         // Note: v[0] actually contains r*v[0] in this case
         double rvzero_mod = std::max(v[0], 0.0);
@@ -317,7 +327,9 @@ int ConvectionSystemY::bandedJacobian(const realtype t, const sdVector& y,
     // Left boundary condition.
     // Convection term only contributes in the ControlVolume case
 
-    if (startIndex == 0 && grid.leftBC == BoundaryCondition::ControlVolume) {
+    if (startIndex == 0 && (grid.leftBC == BoundaryCondition::ControlVolume ||
+                            grid.leftBC == BoundaryCondition::WallFlux))
+    {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         double rvzero_mod = std::max(v[0], 0.0);
 

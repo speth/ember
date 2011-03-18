@@ -237,7 +237,7 @@ class InitialCondition(Options):
     restartFile = None
 
     ## True if the restart file path is relative to Paths.inputDir.
-    relativeRestartPath = True 
+    relativeRestartPath = True
 
     ## "premixed" or "diffusion"
     flameType = "premixed"
@@ -290,6 +290,14 @@ class InitialCondition(Options):
     smoothCount = 4
 
 
+class WallFlux(Options):
+    ## Reference temperature for the wall heat flux
+    Tinf = 300
+
+    ## Conductance of the wall [W/m^2-K]
+    Kwall = 100
+
+
 class Ignition(Options):
     """
     Parameters for an artificial heat release rate function which can
@@ -298,13 +306,13 @@ class Ignition(Options):
     """
 
     ## Beginning of the external heat release rate pulse [s].
-    tStart = 0 
+    tStart = 0
 
     ## Duration of the external heat release rate pulse [s].
     duration = 1e-3
 
     ## Integral amplitude of the pulse [W/m^2].
-    energy = 0 
+    energy = 0
 
     # Location of the center of the pulse [m].
     center = 0 # [m]
@@ -319,7 +327,7 @@ class StrainParameters(Options):
 
     The strain rate changes linearly from #initial to #final over a
     period of #dt seconds, starting at #tStart.
-    """   
+    """
     initial = 400
     final = 400
     tStart = 0.000
@@ -353,7 +361,7 @@ class PositionControl(Options):
     #integralGain.
     """
 
-    xInitial = 0.0025  
+    xInitial = 0.0025
     xFinal = 0.0025
     dt = 0.01
     tStart = 0
@@ -386,7 +394,7 @@ class Times(Options):
     ## Maximum number of steps between storing integral flame
     ## properties.
     outputStepInterval = 1
-    
+
     ## Maximum time between storing integral flame properties.
     outputTimeInterval = 1e-5
 
@@ -427,7 +435,7 @@ class QssTolerances(Options):
     """ Tolerances for the QSS chemistry integrator """
 
     ## Accuracy parameter for determining the next timestep.
-    epsmin = 2e-2 
+    epsmin = 2e-2
 
     ## Accuracy parameter for repeating timesteps
     epsmax = 1e1
@@ -515,7 +523,7 @@ class TerminationCondition(Options):
 
     (1) #tEnd is reached
     (2) The heat release rate (#measurement) reaches a steady-state
-        value to within #tolerance (RMS) over a time period of 
+        value to within #tolerance (RMS) over a time period of
         #steadyPeriod, or the mean heat release rate over #steadyPeriod
         is less than #abstol.
 
@@ -552,6 +560,7 @@ class Config(object):
         self.transportElimination = get(TransportElimination)
         self.grid = get(Grid)
         self.initialCondition = get(InitialCondition)
+        self.wallFlux = opts.get('WallFlux')
         self.ignition = get(Ignition)
         self.strainParameters = get(StrainParameters)
         self.positionControl = opts.get('PositionControl')

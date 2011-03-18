@@ -3,7 +3,7 @@
 #include "readConfig.h"
 
 namespace BoundaryCondition {
-    enum BC { FixedValue, ZeroGradient, ControlVolume };
+    enum BC { FixedValue, ZeroGradient, ControlVolume, WallFlux };
 }
 
 class oneDimGrid

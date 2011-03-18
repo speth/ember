@@ -18,7 +18,7 @@ class DiffusionSystem : public LinearODE, public GridBased
     // the diffusion coefficients D, and the finite difference formula used.
 
 public:
-    DiffusionSystem() {}
+    DiffusionSystem();
 
     // Provide the matrix associated with the ODE to the integrator
     void get_A(sdBandMatrix& J);
@@ -45,4 +45,9 @@ public:
 
     // Number of points in the region to be solved (= jRight - jLeft + 1)
     int N;
+
+    // Parameters for wall flux boundary condition
+    double yInf;
+    double wallConst;
+
 };

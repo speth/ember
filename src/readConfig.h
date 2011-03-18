@@ -113,6 +113,11 @@ public:
     double strainRateInitial, strainRateFinal;
     double strainRateDt, strainRateT0;
 
+    // Wall Flux properties
+    bool wallFlux; //<! True if wall flux is applied when x[0] == 0
+    double Tinf; //<! Temperature used for computing wall heat flux
+    double Kwall; //<! Thermal conductance of the wall at x = 0
+
     // Ignition parameters
     double ignition_tStart;
     double ignition_duration;

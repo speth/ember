@@ -79,6 +79,10 @@ void FlameSolver::initialize(void)
         diffusionTerms.push_back(term);
         diffusionSolvers.push_back(integrator);
     }
+    if (options.wallFlux) {
+        diffusionTerms[kEnergy].yInf = options.Tinf;
+        diffusionTerms[kEnergy].wallConst = options.Kwall;
+    }
 
     resizeAuxiliary();
 }
