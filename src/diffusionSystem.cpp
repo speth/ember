@@ -26,8 +26,8 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
             double centerVol = pow(x[1], grid.alpha+1)/(grid.alpha+1);
             double centerArea = pow(x[1],grid.alpha);
             double c0 = centerArea/centerVol * (D[0]+D[1]) / (hh[0] * B[0]);
-            A(0,0) = c0;
-            A(0,1) = - c0;
+            A(0,0) = -c0;
+            A(0,1) = c0;
         } else  { // (leftBC == BoundaryCondition::ZeroGradient)
             // In the case of a zero gradient boundary condition, the boundary value
             // is not computed, and the value one point in is computed by substituting

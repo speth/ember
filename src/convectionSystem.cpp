@@ -43,7 +43,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
 
     // Left boundary conditions.
     // Convection term only contributes in the ControlVolume case
-    dUdt[0] = Uconst[0]; // zero-gradient condition for U no matter what
+    dUdt[0] = 0; // zero-gradient condition for U is handled in diffusion term
 
     if (grid.leftBC == BoundaryCondition::ControlVolume) {
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
@@ -191,12 +191,10 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     U.resize(nPoints);
     dUdt.resize(nPoints);
     dUdx.resize(nPoints);
-    Uconst.resize(nPoints);
 
     T.resize(nPoints);
     dTdt.resize(nPoints);
     dTdx.resize(nPoints);
-    Tconst.resize(nPoints);
     dTdtSplit.resize(nPoints, 0);
 
     Wmx.resize(nPoints);
@@ -531,6 +529,9 @@ void ConvectionSystemSplit::setLeftBC(const double Tleft, const dvector& Yleft_)
     Yleft = Yleft_;
     gas->setStateMass(Yleft, Tleft);
     utwSystem.Wleft = gas->getMixtureMolecularWeight();
+    for (size_t k=0; k<nSpec; k++) {
+        speciesSystems[k].Yleft = Yleft[k];
+    }
 }
 
 void ConvectionSystemSplit::set_rVzero(const double rVzero)

@@ -43,10 +43,6 @@ public:
     dvector dTdtSplit;
     dvector dWdtSplit;
 
-    // Temporaries for the neglected terms
-    dvector Tconst;
-    dvector Uconst;
-
     // Cantera data
     CanteraGas* gas;
 

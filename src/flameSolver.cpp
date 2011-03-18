@@ -791,6 +791,7 @@ void FlameSolver::resizeAuxiliary()
     diffusionSolvers[kEnergy].resize(nPoints, 1, 1);
 
     convectionSystem.resize(nPoints, nPointsConvection, nSpec);
+    convectionSystem.setLeftBC(Tleft, Yleft);
     convectionSystem.setGrid(grid);
 
     // Resize the jCorr stabilizer

@@ -17,7 +17,7 @@ sundialsCVODE::sundialsCVODE(unsigned int n)
     maxNumSteps = 500;
     minStep = 0;
     errorCount = 0;
-    errorStopCount = 100;
+    errorStopCount = 0;
 }
 
 sundialsCVODE::~sundialsCVODE(void)
