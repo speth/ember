@@ -22,6 +22,10 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
         c2[j] = rphalf[j+jLeft]*(D[j]+D[j+1])/hh[j+jLeft];
     }
 
+    assert(mathUtils::notnan(c1));
+    assert(mathUtils::notnan(c2));
+    assert(mathUtils::notnan(splitLinear));
+
     // Left boundary value
     size_t jStart;
     if (jLeft == 0) {
@@ -86,6 +90,7 @@ void DiffusionSystem::get_C(dvector& other_c)
     if (grid.leftBC == BoundaryCondition::WallFlux) {
         other_c[0] += yInf * wallConst * B[0];
     }
+    assert(mathUtils::notnan(other_c));
 }
 
 void DiffusionSystem::setGrid(const oneDimGrid& other)

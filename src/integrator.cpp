@@ -1,4 +1,5 @@
 #include "integrator.h"
+#include <assert.h>
 
 Integrator::Integrator()
     : t(0)
@@ -165,6 +166,7 @@ void BDFIntegrator::step()
                 y[i] = -y[i]/(h/8.0) - c[i];
             }
             BandGBTRS(LU->forSundials(), &p[0], &y[0]);
+            assert(mathUtils::notnan(y));
         }
 
     } else {
@@ -183,6 +185,7 @@ void BDFIntegrator::step()
         }
         yprev.assign(tmp.begin(), tmp.end());
         BandGBTRS(LU->forSundials(), &p[0], &y[0]);
+        assert(mathUtils::notnan(y));
     }
 
     stepCount++;

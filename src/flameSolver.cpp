@@ -216,7 +216,7 @@ void FlameSolver::run(void)
         splitTimer.stop();
 
         if (t == tStart && options.outputProfiles) {
-            writeStateFile();
+            writeStateFile("", false, false);
         }
 
         if (options.outputDebugIntegratorStages) {
@@ -839,9 +839,10 @@ void FlameSolver::updateCrossTerms()
 
     jCorrSolver.initialize(0, options.diffusionTimestep);
     jCorrSolver.integrateToTime(options.globalTimestep);
+    assert(mathUtils::notnan(jCorrSolver.y));
+
     jCorr = jCorrSolver.y;
 
-    assert(mathUtils::notnan(jCorr));
 
     for (size_t j=1; j<jj; j++) {
         sumcpj[j] = 0;
