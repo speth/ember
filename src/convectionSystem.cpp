@@ -217,7 +217,7 @@ void ConvectionSystemUTW::initialize()
 
 void ConvectionSystemUTW::V2rV(void)
 {
-    V[0] = rV[0];
+    rV[0] = V[0];
     if (alpha == 0) {
         for (size_t j=1; j<nPoints; j++) {
             rV[j] = V[j];
