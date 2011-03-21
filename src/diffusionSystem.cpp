@@ -29,9 +29,7 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
             jStart = 1;
         } else if (grid.leftBC == BoundaryCondition::ControlVolume) {
             jStart =  1;
-            double centerVol = pow(x[1], grid.alpha+1)/(grid.alpha+1);
-            double centerArea = pow(x[1],grid.alpha);
-            double c0 = centerArea/centerVol * (D[0]+D[1]) / (hh[0] * B[0]);
+            double c0 = B[0] * (D[0]+D[1]) / (2 * hh[0] * hh[0]);
             A(0,0) = -c0;
             A(0,1) = c0;
         } else if (grid.leftBC == BoundaryCondition::WallFlux) {
