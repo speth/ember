@@ -208,8 +208,8 @@ void oneDimGrid::adapt(vector<dvector>& y)
         if (j == 0 && (leftBC == BoundaryCondition::ControlVolume ||
                        leftBC == BoundaryCondition::WallFlux))
         {
-            double xLeftMin = min(centerGridMin, 0.005*x[jj]);
-            if (hh[j] < xLeftMin) {
+            double xLeftMin = min(centerGridMin, 0.02*x[jj]);
+            if (hh[j] < 2*xLeftMin) {
                 insert = false;
                 if (debugParameters::debugAdapt) {
                     logFile.write(format("Adapt: grid point addition canceled"

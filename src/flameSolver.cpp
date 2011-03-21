@@ -867,7 +867,10 @@ void FlameSolver::updateLeftBC()
 {
     BoundaryCondition::BC prev = grid.leftBC;
 
-    if ((options.twinFlame || options.curvedFlame) && x[0] >= 0.0 && x[0] <= options.centerGridMin) {
+    if (options.wallFlux && x[0] >= 0.0 && x[0] <= options.centerGridMin) {
+        grid.leftBC = BoundaryCondition::WallFlux;
+    } else if ((options.twinFlame || options.curvedFlame) &&
+                x[0] >= 0.0 && x[0] <= options.centerGridMin) {
         grid.leftBC = BoundaryCondition::ControlVolume;
     } else if (grid.ju == 0 || (grid.jb == 0 && grid.fixedBurnedVal)) {
         grid.leftBC = BoundaryCondition::FixedValue;

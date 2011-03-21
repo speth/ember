@@ -33,13 +33,15 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
             jStart = 1;
         } else if (grid.leftBC == BoundaryCondition::ControlVolume) {
             jStart =  1;
-            double c0 = B[0] * (D[0]+D[1]) / (2 * hh[0] * hh[0]);
+            double c0 = B[0] * (grid.alpha + 1) * (D[0]+D[1]) / (2 * hh[0] * hh[0]);
             A(0,0) = -c0;
             A(0,1) = c0;
         } else if (grid.leftBC == BoundaryCondition::WallFlux) {
             jStart = 1;
-            A(0,0) = -c1[0]*c2[0] - B[0] * wallConst;
-            A(0,1) = c1[0]*c2[0];
+            double c0 = B[0] * (grid.alpha + 1) / hh[0];
+            double d = 0.5 * (D[0]+D[1]);
+            A(0,0) = - c0 * (d / hh[0] + wallConst);
+            A(0,1) = d * c0 / hh[0];
         } else  { // (leftBC == BoundaryCondition::ZeroGradient)
             // In the case of a zero gradient boundary condition, the boundary value
             // is not computed, and the value one point in is computed by substituting
@@ -88,7 +90,7 @@ void DiffusionSystem::get_C(dvector& other_c)
 {
     other_c.assign(splitConst.begin(), splitConst.end());
     if (grid.leftBC == BoundaryCondition::WallFlux) {
-        other_c[0] += yInf * wallConst * B[0];
+        other_c[0] += B[0] * (grid.alpha + 1) / hh[0] * wallConst * yInf;
     }
     assert(mathUtils::notnan(other_c));
 }
