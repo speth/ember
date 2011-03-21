@@ -1686,65 +1686,114 @@ void FlameSolver::loadProfile(void)
 
     infile.close();
 
-    if (options.overrideTu) {
-        T[grid.ju] = options.Tu;
-    }
-    Tu = T[grid.ju];
+    Tu = (options.overrideTu) ? options.Tu : T[grid.ju];
 
     CanteraGas gas;
     gas.setOptions(options);
     gas.initialize();
     size_t nSpec = gas.nSpec;
 
-    // save the burned gas properties for the case where burned values are not fixed
-    double TbSave = T[grid.jb];
-    dvector YbSave(nSpec);
-    for (size_t k=0; k<nSpec; k++) {
-        YbSave[k] = Y(k,grid.jb);
-    }
-
-    if (options.overrideReactants) {
-        dvector reactants = calculateReactantMixture();
-        gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
-        gas.thermo.getMassFractions(&Y(0,grid.ju));
-        gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
-        Cantera::equilibrate(gas.thermo,"HP");
-        gas.thermo.getMassFractions(&Y(0,grid.jb));
-        T[grid.jb] = gas.thermo.temperature();
-    }
-    Tb = T[grid.jb];
-
-    gas.setStateMass(&Y(0,grid.ju), T[grid.ju]);
-    rhou = gas.getDensity();
-    gas.setStateMass(&Y(0,grid.jb), T[grid.ju]);
-    rhob = gas.getDensity();
-    Yu.resize(nSpec); Yb.resize(nSpec);
-    for (size_t k=0; k<nSpec; k++) {
-        Yu[k] = Y(k,grid.ju);
-        Yb[k] = Y(k,grid.jb);
-    }
-
-    if (options.unburnedLeft) {
-        rhoLeft = rhou;
-        Tleft = Tu;
-        Yleft = Yu;
-        rhoRight = rhob;
-        Tright = Tb;
-        Yright = Yb;
-    } else {
-        rhoLeft = rhob;
-        Tleft = Tb;
-        Yleft = Yb;
-        rhoRight = rhou;
-        Tright = Tu;
-        Yright = Yu;
-    }
-
-    if (!options.fixedBurnedVal) {
-        T[grid.jb] = TbSave;
+    if (options.flameType == "premixed") {
+        // save the burned gas properties for the case where burned values are not fixed
+        double TbSave = T[grid.jb];
+        dvector YbSave(nSpec);
         for (size_t k=0; k<nSpec; k++) {
-            Y(k,grid.jb) = YbSave[k];
+            YbSave[k] = Y(k,grid.jb);
         }
+
+        if (options.overrideReactants) {
+            dvector reactants = calculateReactantMixture();
+            gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
+            gas.thermo.getMassFractions(&Y(0,grid.ju));
+            gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
+            Cantera::equilibrate(gas.thermo,"HP");
+            gas.thermo.getMassFractions(&Y(0,grid.jb));
+            T[grid.jb] = gas.thermo.temperature();
+        }
+        Tb = T[grid.jb];
+
+        gas.setStateMass(&Y(0,grid.ju), T[grid.ju]);
+        rhou = gas.getDensity();
+        gas.setStateMass(&Y(0,grid.jb), T[grid.ju]);
+        rhob = gas.getDensity();
+        Yu.resize(nSpec); Yb.resize(nSpec);
+        for (size_t k=0; k<nSpec; k++) {
+            Yu[k] = Y(k,grid.ju);
+            Yb[k] = Y(k,grid.jb);
+        }
+
+        if (options.unburnedLeft) {
+            rhoLeft = rhou;
+            Tleft = Tu;
+            Yleft = Yu;
+            rhoRight = rhob;
+            Tright = Tb;
+            Yright = Yb;
+        } else {
+            rhoLeft = rhob;
+            Tleft = Tb;
+            Yleft = Yb;
+            rhoRight = rhou;
+            Tright = Tu;
+            Yright = Yu;
+        }
+
+        if (!options.fixedBurnedVal) {
+            T[grid.jb] = TbSave;
+            for (size_t k=0; k<nSpec; k++) {
+                Y(k,grid.jb) = YbSave[k];
+            }
+        }
+
+        if (options.overrideTu) {
+            T[grid.ju] = Tu;
+        }
+
+    } else if (options.flameType == "diffusion") {
+        // Fuel composition
+        size_t jFuel = (options.fuelLeft) ? 0 : jj;
+        if (options.overrideReactants) {
+            gas.thermo.setState_TPX(options.Tfuel, options.pressure, options.fuel);
+        } else {
+            gas.thermo.setState_TPY(T[jFuel], options.pressure, &Y(0,jFuel));
+        }
+        double rhoFuel = gas.getDensity();
+        dvector Yfuel(nSpec);
+        gas.getMassFractions(Yfuel);
+        double Tfuel = gas.thermo.temperature();
+
+        // Oxidizer composition
+        size_t jOxidizer = (options.fuelLeft) ? jj : 0;
+        if (options.overrideReactants) {
+            gas.thermo.setState_TPX(options.Toxidizer, options.pressure, options.oxidizer);
+        } else {
+            gas.thermo.setState_TPY(T[jOxidizer], options.pressure, &Y(0,jOxidizer));
+        }
+        double rhoOxidizer = gas.getDensity();
+        dvector Yoxidizer(nSpec);
+        gas.getMassFractions(Yoxidizer);
+        double Toxidizer = gas.thermo.temperature();
+
+        if (options.fuelLeft) {
+            rhoLeft = rhoFuel;
+            Tleft = Tfuel;
+            Yleft = Yfuel;
+            rhoRight = rhoOxidizer;
+            Tright = Toxidizer;
+            Yright = Yoxidizer;
+        } else {
+            rhoLeft = rhoOxidizer;
+            Tleft = Toxidizer;
+            Yleft = Yoxidizer;
+            rhoRight = rhoFuel;
+            Tright = Tfuel;
+            Yright = Yfuel;
+        }
+
+        rhou = rhoLeft;
+
+    } else {
+        throw debugException("Invalid flameType: " + options.flameType);
     }
 
     updateLeftBC();
