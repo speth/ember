@@ -607,8 +607,8 @@ class Config(object):
         # Make sure the restart file is in the correct place (if specified)
         if self.initialCondition.restartFile:
             if self.initialCondition.relativeRestartPath:
-                restar = os.path.join(self.paths.inputDir,
-                                      self.initialCondition.restartFile)
+                restart = os.path.join(self.paths.inputDir,
+                                       self.initialCondition.restartFile)
             else:
                 restart = self.initialCondition.restartFile
 
