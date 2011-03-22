@@ -190,8 +190,8 @@ void FlameSolver::run(void)
 
         splitTimer.start();
         for (size_t j=0; j<nPoints; j++) {
-            diffusionTerms[kMomentum].B[j] = 1/rho[j];
-            diffusionTerms[kEnergy].B[j] = 1/(rho[j]*cp[j]);
+            diffusionTerms[kMomentum].B[j] = 1 / rho[j];
+            diffusionTerms[kEnergy].B[j] = 1 / (rho[j] * cp[j]);
 
             diffusionTerms[kMomentum].D[j] = mu[j];
             diffusionTerms[kEnergy].D[j] = lambda[j];
@@ -208,7 +208,7 @@ void FlameSolver::run(void)
                  j <= diffusionStopIndices[k];
                  j++)
             {
-                sys.B[i] = 1/rho[j];
+                sys.B[i] = 1 / rho[j];
                 sys.D[i] = rhoD(k,j);
                 i++;
             }
@@ -439,9 +439,9 @@ bool FlameSolver::checkTerminationCondition(void)
     if (options.terminateForSteadyQdot) {
         int j1 = mathUtils::findLast(timeVector < (tNow - options.terminationPeriod));
 
-        if (j1 == -1)
-        {
-            logFile.write(format("Continuing integration: t (%8.6f) < terminationPeriod (%8.6f)") %
+        if (j1 == -1) {
+            logFile.write(format(
+                    "Continuing integration: t (%8.6f) < terminationPeriod (%8.6f)") %
                     (tNow-timeVector[0]) % options.terminationPeriod);
             return false;
         }
@@ -458,12 +458,12 @@ bool FlameSolver::checkTerminationCondition(void)
                 (hrrError/qMean*100) % hrrError);
 
         if (hrrError/abs(qMean) < options.terminationTolerance) {
-            logFile.write("Terminating integration: ", false);
-            logFile.write("Heat release RMS variation less than relative tolerance.");
+            logFile.write("Terminating integration: "
+                    "Heat release RMS variation less than relative tolerance.");
             return true;
         } else if (hrrError < options.terminationAbsTol) {
-            logFile.write("Terminating integration: ", false);
-            logFile.write("Heat release rate RMS variation less than absolute tolerance.");
+            logFile.write("Terminating integration: "
+                    "Heat release rate RMS variation less than absolute tolerance.");
             return true;
         } else {
             logFile.write(format("Continuing integration. t = %8.6f") % (tNow-timeVector[0]));
@@ -473,7 +473,8 @@ bool FlameSolver::checkTerminationCondition(void)
     return false;
 }
 
-void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile, bool updateDerivatives)
+void FlameSolver::writeStateFile
+(const std::string fileNameStr, bool errorFile, bool updateDerivatives)
 {
     std::ostringstream fileName(ostringstream::out);
     bool incrementFileNumber = false;
@@ -518,7 +519,8 @@ void FlameSolver::writeStateFile(const std::string fileNameStr, bool errorFile, 
     outFile.writeScalar("dadt", strainfunc.dadt(tNow));
     outFile.writeScalar("fileNumber", options.outputFileNumber);
 
-    if (updateDerivatives && (options.outputTimeDerivatives || options.outputAuxiliaryVariables)) {
+    if (updateDerivatives && (options.outputTimeDerivatives ||
+            options.outputAuxiliaryVariables)) {
         calculateTimeDerivatives();
     }
 
@@ -777,7 +779,8 @@ void FlameSolver::resizeAuxiliary()
     // Resize solution vector for diffusion systems / solvers
     // With transport species elimination enabled, this is done later
     // to handle the varying number of grid points for each species
-    if (options.transportEliminationDiffusion || options.transportEliminationConvection) {
+    if (options.transportEliminationDiffusion ||
+            options.transportEliminationConvection) {
         diffusionTestSolver.resize(nPoints, 1, 1);
         diffusionTestTerm.setGrid(grid);
     } else {
@@ -833,7 +836,7 @@ void FlameSolver::updateCrossTerms()
     // Add a bit of artificial diffusion to jCorr to improve stability
     jCorrSolver.y = jCorr;
     for (size_t j=0; j<jj; j++) {
-        jCorrSystem.B[j] = lambda[j]/(rho[j]*cp[j]); // treat as Le = 1
+        jCorrSystem.B[j] = lambda[j] / (rho[j] * cp[j]); // treat as Le = 1
         jCorrSystem.D[j] = 1.0;
     }
 
@@ -847,15 +850,16 @@ void FlameSolver::updateCrossTerms()
     for (size_t j=1; j<jj; j++) {
         sumcpj[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
-            dYdtCross(k,j) = -0.5/(r[j]*rho[j]*dlj[j]) *
-                (rphalf[j]*(Y(k,j)+Y(k,j+1))*jCorr[j] - rphalf[j-1]*(Y(k,j-1)+Y(k,j))*jCorr[j-1]);
-            dYdtCross(k,j) -= 1/(r[j]*rho[j]*dlj[j]) *
-                (rphalf[j]*jSoret(k,j) - rphalf[j-1]*jSoret(k,j-1));
-            sumcpj[j] += 0.5*(cpSpec(k,j)+cpSpec(k,j+1))/W[k]*(jFick(k,j)
-                    + jSoret(k,j) + 0.5*(Y(k,j)+Y(k,j+1))*jCorr[j]);
+            dYdtCross(k,j) = -0.5 / (r[j] * rho[j] * dlj[j]) *
+                (rphalf[j] * (Y(k,j) + Y(k,j+1)) * jCorr[j] -
+                 rphalf[j-1] * (Y(k,j-1) + Y(k,j)) * jCorr[j-1]);
+            dYdtCross(k,j) -= 1 / (r[j] * rho[j] * dlj[j]) *
+                (rphalf[j] * jSoret(k,j) - rphalf[j-1] * jSoret(k,j-1));
+            sumcpj[j] += 0.5*(cpSpec(k,j) + cpSpec(k,j+1)) / W[k] *
+                (jFick(k,j) + jSoret(k,j) + 0.5 * (Y(k,j) + Y(k,j+1)) * jCorr[j]);
         }
-        double dTdx = cfm[j]*T[j-1] + cf[j]*T[j] + cfp[j]*T[j+1];
-        dTdtCross[j] = - 0.5*(sumcpj[j]+sumcpj[j-1]) * dTdx / (cp[j]*rho[j]);
+        double dTdx = cfm[j] * T[j-1] + cf[j] * T[j] + cfp[j] * T[j+1];
+        dTdtCross[j] = - 0.5 * (sumcpj[j] + sumcpj[j-1]) * dTdx / (cp[j] * rho[j]);
     }
 
     assert(mathUtils::notnan(dYdtCross.data()));
@@ -879,7 +883,8 @@ void FlameSolver::updateLeftBC()
     }
 
     if (prev != grid.leftBC) {
-        logFile.write(format("updateLeftBC: BC changed from %i to %i.") % prev % grid.leftBC);
+        logFile.write(format("updateLeftBC: BC changed from %i to %i.") %
+            prev % grid.leftBC);
     }
 }
 
@@ -1015,8 +1020,8 @@ void FlameSolver::calculateSplitDerivatives(double t)
         const dvector& ydotk = diffusionSolvers[kSpecies+k].get_ydot();
         size_t i = 0;
         for (size_t j = diffusionStartIndices[k];
-                         j <= diffusionStopIndices[k];
-                         j++)
+             j <= diffusionStopIndices[k];
+             j++)
         {
             dYdtSplit(k,j) = ydotk[i];
             i++;
@@ -1283,15 +1288,18 @@ void FlameSolver::update_xStag(const double t, const bool updateIntError)
 
     // controlSignal is approximately a*xStag
     double controlSignal = options.xFlameProportionalGain *
-        ( (xFlameTarget-xFlameActual) + (flamePosIntegralError + (xFlameTarget-xFlameActual)*(t-tFlamePrev))*options.xFlameIntegralGain );
+        ((xFlameTarget - xFlameActual) +
+        (flamePosIntegralError + (xFlameTarget - xFlameActual) * (t - tFlamePrev)) *
+        options.xFlameIntegralGain);
 
     if (debugParameters::debugFlameRadiusControl) {
         logFile.write(format("rFlameControl: rF=%g;  control=%g;  P=%g;  I=%g;  dt=%g") %
-                xFlameActual %
-                controlSignal %
-                (options.xFlameProportionalGain*(xFlameTarget-xFlameActual)) %
-                (options.xFlameProportionalGain*flamePosIntegralError*options.xFlameIntegralGain) %
-                (t-tFlamePrev));
+            xFlameActual %
+            controlSignal %
+            (options.xFlameProportionalGain * (xFlameTarget - xFlameActual)) %
+            (options.xFlameProportionalGain * flamePosIntegralError *
+            options.xFlameIntegralGain) %
+            (t - tFlamePrev));
     }
 
     double a = strainfunc.a(t);
@@ -1304,9 +1312,14 @@ void FlameSolver::update_xStag(const double t, const bool updateIntError)
 
 double FlameSolver::targetFlamePosition(double t)
 {
-    return (t <= options.xFlameT0) ? options.xFlameInitial
-        :  (t >= options.xFlameT0+options.xFlameDt) ? options.xFlameFinal
-        : options.xFlameInitial + (options.xFlameFinal-options.xFlameInitial)*(t-options.xFlameT0)/options.xFlameDt;
+    if (t <= options.xFlameT0) {
+        return options.xFlameInitial;
+    } else if (t >= options.xFlameT0 + options.xFlameDt) {
+        return options.xFlameFinal;
+    } else {
+        return options.xFlameInitial + (options.xFlameFinal - options.xFlameInitial) *
+            (t - options.xFlameT0) / options.xFlameDt;
+    }
 }
 
 void FlameSolver::calculateQdot()
@@ -1809,7 +1822,8 @@ void FlameSolver::loadProfile(void)
             double tmp = pow(x[0],2) + 2*rVcenter/rhoLeft;
             controlSignal = mathUtils::sign(tmp)*sqrt(abs(tmp));
         }
-        flamePosIntegralError = controlSignal/(options.xFlameProportionalGain*options.xFlameIntegralGain);
+        flamePosIntegralError = controlSignal /
+            (options.xFlameProportionalGain * options.xFlameIntegralGain);
     }
 }
 
@@ -1883,7 +1897,9 @@ void FlameSolver::printPerfString(const std::string& label, const perfTimer& T)
 
 void FlameSolver::updateTransportDomain()
 {
-    if (!options.transportEliminationDiffusion && !options.transportEliminationConvection) {
+    if (!options.transportEliminationDiffusion &&
+        !options.transportEliminationConvection)
+    {
         return;
     }
 
@@ -2019,8 +2035,10 @@ void FlameSolver::updateTransportDomain()
     grid.leftComponents.resize(nVars, true);
     grid.rightComponents.resize(nVars, true);
     for (size_t k=0; k<nSpec; k++) {
-        grid.leftComponents[kSpecies+k] = (diffusionStartIndices[k] == 0 && convectionStartIndices[k] == 0);
-        grid.rightComponents[kSpecies+k] = (diffusionStopIndices[k] == jj && convectionStopIndices[k] == jj);
+        grid.leftComponents[kSpecies+k] = (diffusionStartIndices[k] == 0 &&
+                                           convectionStartIndices[k] == 0);
+        grid.rightComponents[kSpecies+k] = (diffusionStopIndices[k] == jj &&
+                                            convectionStopIndices[k] == jj);
     }
     adaptiveTransportTimer.stop();
 }
