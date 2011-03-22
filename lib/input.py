@@ -548,8 +548,12 @@ class Config(object):
     def __init__(self, *args):
         opts = {}
         for arg in args:
-            assert isinstance(arg, Options)
-            opts[arg.__class__.__name__] = arg
+            if not isinstance(arg, Options):
+                raise TypeError('%r is not an instance of class Options' % arg)
+            name = arg.__class__.__name__
+            if name in opts:
+                raise ValueError('Multiple instances of class %r encountered' % name)
+            opts[name] = arg
 
         get = lambda cls: opts.get(cls.__name__) or cls()
 
