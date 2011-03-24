@@ -33,7 +33,8 @@ void CanteraGas::initialize()
 {
     // XML Information File
     if (!boost::filesystem::exists(mechanismFile)) {
-        throw debugException("Error: Cantera input file \"" + mechanismFile + "\" not found.");
+        throw debugException((format(
+            "Error: Cantera input file '%s' not found.") % mechanismFile).str());
     }
 
     rootXmlNode = Cantera::get_XML_File(mechanismFile);

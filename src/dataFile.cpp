@@ -42,7 +42,8 @@ double DataFile::readScalar(const std::string& name)
     dataspace = H5Dget_space(dataset);
 
     if (H5Sget_simple_extent_ndims(dataspace) !=  0) {
-        throw debugException("DataFile::readScalar: \"" + name + "\" is not a scalar.");
+        throw debugException((format(
+            "DataFile::readScalar: '%s' is not a scalar.") % name).str());
     }
 
     double value;
@@ -57,7 +58,8 @@ void DataFile::writeVector(const std::string& name, const dvector& v)
 
     hsize_t dims = v.size();
     if (dims == 0) {
-        logFile.write(format("DataFile::writeVector: Warning: '%s' is empty.") % name);
+        logFile.write(format(
+            "DataFile::writeVector: Warning: '%s' is empty.") % name);
         return;
     }
 
@@ -80,7 +82,8 @@ dvector DataFile::readVector(const std::string& name)
     dataspace = H5Dget_space(dataset);
 
     if (H5Sget_simple_extent_ndims(dataspace) != 1) {
-        throw debugException("DataFile::readVector: \"" + name + "\" is not a 1D array.");
+        throw debugException((format(
+            "DataFile::readVector: '%s' is not a 1D array.") % name).str());
     }
 
     hsize_t N = H5Sget_simple_extent_npoints(dataspace);
@@ -108,7 +111,8 @@ void DataFile::writeArray2D(const std::string& name, const Cantera::Array2D& y)
     dims[1] = yt.nRows();
 
     if (dims[0] == 0 || dims[1] == 0) {
-        logFile.write(format("DataFile::writeArray2D: Warning: '%s' is empty.") % name);
+        logFile.write(format(
+            "DataFile::writeArray2D: Warning: '%s' is empty.") % name);
         return;
     }
 
@@ -131,7 +135,8 @@ Cantera::Array2D DataFile::readArray2D(const std::string& name)
     dataspace = H5Dget_space(dataset);
 
     if (H5Sget_simple_extent_ndims(dataspace) != 2) {
-        throw debugException("DataFile::readVector: \"" + name + "\" is not a 1D array.");
+        throw debugException((format(
+            "DataFile::readVector: '%s' is not a 1D array.") % name).str());
     }
 
     hsize_t ndim = 2;
@@ -141,7 +146,8 @@ Cantera::Array2D DataFile::readArray2D(const std::string& name)
     Cantera::Array2D y(dimensions[0], dimensions[1]);
     Cantera::Array2D yt(dimensions[1], dimensions[0]);
 
-    H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &yt.data()[0]);
+    H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL,
+            H5S_ALL, H5P_DEFAULT, &yt.data()[0]);
     H5Dclose(dataset);
 
     // Take the transpose because Array2D is column-major
@@ -164,7 +170,8 @@ void DataFile::open(const std::string& in_filename)
     if (boost::filesystem::exists(filename)) {
         file = H5Fopen(filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
     } else {
-        file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+        file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC,
+                         H5P_DEFAULT, H5P_DEFAULT);
     }
     fileIsOpen = true;
 }
@@ -189,12 +196,14 @@ void DataFile::require_file_open()
     }
 }
 
-hid_t DataFile::get_dataset(const std::string& name, hid_t datatype, hid_t dataspace)
+hid_t DataFile::get_dataset
+(const std::string& name, hid_t datatype, hid_t dataspace)
 {
     if (H5Lexists(file, name.c_str(), H5P_DEFAULT)) {
         H5Ldelete(file, name.c_str(), H5P_DEFAULT);
     }
-    return H5Dcreate(file, name.c_str(), datatype, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    return H5Dcreate(file, name.c_str(), datatype, dataspace,
+                     H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 }
 
 void dataFileTest()

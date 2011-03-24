@@ -32,8 +32,10 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
             dWdx[j] = (Wmx[j] - Wmx[j-1]) / hh[j-1];
         }
 
-        rV[j+1] = rV[j] - hh[j] * (rV[j] * dTdx[j] - rphalf[j] * rho[j] * dTdtSplit[j]) / T[j];
-        rV[j+1] += hh[j] * (rV[j] * dWdx[j] - rphalf[j] * rho[j] * dWdtSplit[j]) / Wmx[j];
+        rV[j+1] = rV[j] - hh[j] *
+                (rV[j] * dTdx[j] - rphalf[j] * rho[j] * dTdtSplit[j]) / T[j];
+        rV[j+1] += hh[j] *
+                (rV[j] * dWdx[j] - rphalf[j] * rho[j] * dWdtSplit[j]) / Wmx[j];
         rV[j+1] -= hh[j] * rho[j] * U[j] * rphalf[j];
     }
 
@@ -453,7 +455,9 @@ void ConvectionSystemSplit::setGas(CanteraGas& gas_)
 }
 
 void ConvectionSystemSplit::resize
-(const size_t nPointsUTWNew, const vector<size_t>& nPointsSpecNew, const size_t nSpecNew)
+(const size_t nPointsUTWNew,
+ const vector<size_t>& nPointsSpecNew,
+ const size_t nSpecNew)
 {
     // Create or destroy the necessary speciesSystems if nSpec has changed
     if (nSpec != nSpecNew) {
@@ -513,7 +517,8 @@ void ConvectionSystemSplit::setSpeciesDomains
     stopIndices = &stopIndices_;
 }
 
-void ConvectionSystemSplit::setState(const dvector& U_, const dvector& T_, Array2D& Y_)
+void ConvectionSystemSplit::setState
+(const dvector& U_, const dvector& T_, Array2D& Y_)
 {
     U = U_;
     T = T_;

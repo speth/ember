@@ -14,14 +14,16 @@ FlameSolver::FlameSolver()
     : jCorrSolver(jCorrSystem)
     , diffusionTestSolver(diffusionTestTerm)
 {
-    convectionSystem.setSpeciesDomains(convectionStartIndices, convectionStopIndices);
+    convectionSystem.setSpeciesDomains(convectionStartIndices,
+                                       convectionStopIndices);
 }
 
 FlameSolver::FlameSolver(const boost::python::api::object& config)
     : jCorrSolver(jCorrSystem)
     , diffusionTestSolver(diffusionTestTerm)
 {
-    convectionSystem.setSpeciesDomains(convectionStartIndices, convectionStopIndices);
+    convectionSystem.setSpeciesDomains(convectionStartIndices,
+                                       convectionStopIndices);
     setOptions(configOptions(config));
 }
 
@@ -38,7 +40,6 @@ void FlameSolver::setOptions(const configOptions& _options)
 
 void FlameSolver::initialize(void)
 {
-    //theSys.copyOptions(); TODO: copy to self?
     strainfunc.setOptions(options);
 
     // Cantera initialization
@@ -50,13 +51,14 @@ void FlameSolver::initialize(void)
 
     // Chemkin & Adapchem Initialization
     if (options.usingAdapChem) {
-        ckGas.reset(new AdapChem(options.inputDir+"/"+options.chemkinMechanismFile,
-                                 true,
-                                 options.inputDir+"/"+options.adapchemInputFile,
-                                 options.inputDir+"/"+options.adapchemModelsFile,
-                                 options.inputDir+"/"+options.adapchemDefaultModelFile,
-                                 options.outputDir+"/"+options.adapchemDonemodelsFile,
-                                 options.outputDir+"/"+options.adapchemRestartFile));
+        ckGas.reset(new AdapChem(
+            options.inputDir+"/"+options.chemkinMechanismFile,
+            true,
+            options.inputDir+"/"+options.adapchemInputFile,
+            options.inputDir+"/"+options.adapchemModelsFile,
+            options.inputDir+"/"+options.adapchemDefaultModelFile,
+            options.outputDir+"/"+options.adapchemDonemodelsFile,
+            options.outputDir+"/"+options.adapchemRestartFile));
         ckGas->setPressure(options.pressure);
     }
 
@@ -140,8 +142,8 @@ void FlameSolver::run(void)
             bool error = false;
             for (size_t j=0; j<nPoints; j++) {
                 if (T[j] < 295 || T[j] > 3000) {
-                    logFile.write(format("WARNING: Unexpected Temperature: T = %f at j = %i")
-                            % T[j] % j);
+                    logFile.write(format(
+                        "WARNING: Unexpected Temperature: T = %f at j = %i") % T[j] % j);
                     error = true;
                 }
             }
@@ -165,7 +167,6 @@ void FlameSolver::run(void)
         updateChemicalProperties();
 
         if (options.usingAdapChem) {
-            // TODO: Determine whether this should be called before or after initializeStep
             ckGas->incrementStep();
 
             // Because AdapChem only assigns values for species in the
@@ -454,8 +455,9 @@ bool FlameSolver::checkTerminationCondition(void)
         }
         hrrError = sqrt(hrrError) / (j2-j1+1);
 
-        logFile.write(format("Heat release rate RMS error = %6.3f%%. absolute error: %9.4e") %
-                (hrrError/qMean*100) % hrrError);
+        logFile.write(format(
+            "Heat release rate RMS error = %6.3f%%. absolute error: %9.4e") %
+            (hrrError/qMean*100) % hrrError);
 
         if (hrrError/abs(qMean) < options.terminationTolerance) {
             logFile.write("Terminating integration: "
@@ -466,7 +468,8 @@ bool FlameSolver::checkTerminationCondition(void)
                     "Heat release rate RMS variation less than absolute tolerance.");
             return true;
         } else {
-            logFile.write(format("Continuing integration. t = %8.6f") % (tNow-timeVector[0]));
+            logFile.write(format(
+                "Continuing integration. t = %8.6f") % (tNow-timeVector[0]));
         }
 
     }
@@ -474,7 +477,7 @@ bool FlameSolver::checkTerminationCondition(void)
 }
 
 void FlameSolver::writeStateFile
-(const std::string fileNameStr, bool errorFile, bool updateDerivatives)
+(const std::string& fileNameStr, bool errorFile, bool updateDerivatives)
 {
     std::ostringstream fileName(ostringstream::out);
     bool incrementFileNumber = false;
@@ -632,7 +635,7 @@ void FlameSolver::writeStateFile
     }
 }
 
-void FlameSolver::writeTimeseriesFile(const std::string filename)
+void FlameSolver::writeTimeseriesFile(const std::string& filename)
 {
     DataFile outFile(options.outputDir+"/"+filename+".h5");
     outFile.writeVector("t", timeVector);
@@ -1222,11 +1225,14 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
             }
 
             if (debugParameters::veryVerbose) {
-                logFile.write(format(" [%i]...") % sourceSolvers[j].getNumSteps(), false);
+                logFile.write(format(
+                    " [%i]...") % sourceSolvers[j].getNumSteps(), false);
             }
 
         } else {
-            if (int(j) == options.debugSourcePoint && t >= options.debugSourceTime) {
+            if (int(j) == options.debugSourcePoint &&
+                t >= options.debugSourceTime)
+            {
                 ofstream steps;
                 steps.open("cvodeSteps.py");
                 sourceTermsQSS[j].writeState(steps, true);
@@ -1294,7 +1300,8 @@ void FlameSolver::update_xStag(const double t, const bool updateIntError)
         options.xFlameIntegralGain);
 
     if (debugParameters::debugFlameRadiusControl) {
-        logFile.write(format("rFlameControl: rF=%g;  control=%g;  P=%g;  I=%g;  dt=%g") %
+        logFile.write(format(
+            "rFlameControl: rF=%g;  control=%g;  P=%g;  I=%g;  dt=%g") %
             xFlameActual %
             controlSignal %
             (options.xFlameProportionalGain * (xFlameTarget - xFlameActual)) %
@@ -1712,7 +1719,8 @@ void FlameSolver::loadProfile(void)
     size_t nSpec = gas.nSpec;
 
     if (options.flameType == "premixed") {
-        // save the burned gas properties for the case where burned values are not fixed
+        // Save the burned gas properties for the case where the burned
+        // values are not fixed.
         double TbSave = T[grid.jb];
         dvector YbSave(nSpec);
         for (size_t k=0; k<nSpec; k++) {
@@ -1783,9 +1791,13 @@ void FlameSolver::loadProfile(void)
         // Oxidizer composition
         size_t jOxidizer = (options.fuelLeft) ? jj : 0;
         if (options.overrideReactants) {
-            gas.thermo.setState_TPX(options.Toxidizer, options.pressure, options.oxidizer);
+            gas.thermo.setState_TPX(options.Toxidizer,
+                                    options.pressure,
+                                    options.oxidizer);
         } else {
-            gas.thermo.setState_TPY(T[jOxidizer], options.pressure, &Y(0,jOxidizer));
+            gas.thermo.setState_TPY(T[jOxidizer],
+                                    options.pressure,
+                                    &Y(0,jOxidizer));
         }
         double rhoOxidizer = gas.getDensity();
         dvector Yoxidizer(nSpec);
@@ -1815,8 +1827,11 @@ void FlameSolver::loadProfile(void)
     }
 
     updateLeftBC();
-    double controlSignal;
-    if (grid.leftBC == BoundaryCondition::ControlVolume && options.xFlameControl) {
+
+    if (grid.leftBC == BoundaryCondition::ControlVolume &&
+        options.xFlameControl)
+    {
+        double controlSignal;
         if (alpha == 0) {
             controlSignal = rVcenter/rhoLeft;
         } else {
@@ -1961,10 +1976,11 @@ void FlameSolver::updateTransportDomain()
         }
     }
 
-    // Evaluate the full convection term
-    // Because the convection solver includes the continuity equation containing
-    // drho/dt, we need to include the time derivatives from the other terms when
-    // evaluating the derivatives of this term, then subtract them from the output
+    // Evaluate the full convection term.
+    // Because the convection solver includes the continuity equation
+    // containing drho/dt, we need to include the time derivatives from
+    // the other terms when evaluating the derivatives of this term, then
+    // subtract them from the output.
     convectionStartIndices.assign(nSpec, 0);
     convectionStopIndices.assign(nSpec, jj);
     nPointsConvection.assign(nSpec, nPoints);

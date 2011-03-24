@@ -148,8 +148,8 @@ void oneDimGrid::adapt(vector<dvector>& y)
                 insert = true;
                 if (debugParameters::debugAdapt) {
                     logFile.write(format("Adapt: v resolution wants grid point"
-                            " j = %i, k = %i; |v(j+1)-v(j)|/vrange = %g > %g") %
-                            j % k % (abs(v[j+1]-v[j])/vRange) % vtol[k]);
+                        " j = %i, k = %i; |v(j+1)-v(j)|/vrange = %g > %g") %
+                        j % k % (abs(v[j+1]-v[j])/vRange) % vtol[k]);
                 }
             }
 
@@ -157,9 +157,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
             if (j!=0 && j!=jj-1 && abs(dv[j+1]-dv[j]) > dvtol[k]*dvRange) {
                 insert = true;
                 if (debugParameters::debugAdapt) {
-                    logFile.write(format("Adapt: dv resolution (global) wants grid point"
-                            " j = %i, k = %i; |dv(j+1)-dv(j)|/vrange = %g > % g") %
-                            j % k % (abs(dv[j+1]-dv[j])/dvRange) % dvtol[k]);
+                    logFile.write(format(
+                        "Adapt: dv resolution (global) wants grid point"
+                        " j = %i, k = %i; |dv(j+1)-dv(j)|/vrange = %g > % g") %
+                        j % k % (abs(dv[j+1]-dv[j])/dvRange) % dvtol[k]);
                 }
             }
         }
@@ -168,9 +169,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
         if (hh[j] > dampConst*dampVal[j]) {
             insert = true;
             if (debugParameters::debugAdapt) {
-                logFile.write(format("Adapt: damping criterion wants a grid point"
-                        " j = %i; hh[j] = %g > %g") %
-                        j % hh[j] % (dampConst*dampVal[j]));
+                logFile.write(format(
+                    "Adapt: damping criterion wants a grid point"
+                    " j = %i; hh[j] = %g > %g") %
+                    j % hh[j] % (dampConst*dampVal[j]));
             }
         }
 
@@ -178,9 +180,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
         if (hh[j] > gridMax) {
             insert = true;
             if (debugParameters::debugAdapt) {
-                logFile.write(format("Adapt: Maximum grid size criterion wants a grid point"
-                        " j = %i; hh[j] = %g < %g") %
-                        j % hh[j] % gridMax);
+                logFile.write(format(
+                    "Adapt: Maximum grid size criterion wants a grid point"
+                    " j = %i; hh[j] = %g < %g") %
+                    j % hh[j] % gridMax);
             }
         }
 
@@ -188,9 +191,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
         if (j!=0 && hh[j]/hh[j-1] > uniformityTol) {
             insert = true;
             if (debugParameters::debugAdapt) {
-                logFile.write(format("Adapt: left uniformity wants grid point"
-                        " j = %i; hh(j)/hh(j-1) = %g > %g") %
-                        j % (hh[j]/hh[j-1]) % uniformityTol);
+                logFile.write(format(
+                    "Adapt: left uniformity wants grid point"
+                    " j = %i; hh(j)/hh(j-1) = %g > %g") %
+                    j % (hh[j]/hh[j-1]) % uniformityTol);
             }
         }
 
@@ -213,8 +217,8 @@ void oneDimGrid::adapt(vector<dvector>& y)
                 insert = false;
                 if (debugParameters::debugAdapt) {
                     logFile.write(format("Adapt: grid point addition canceled"
-                            " by minimum center grid size j = %i; hh[j] = %g < %g") %
-                            j % hh[j] % (2*xLeftMin));
+                        " by minimum center grid size j = %i; hh[j] = %g < %g") %
+                        j % hh[j] % (2*xLeftMin));
                 }
             }
         }
@@ -224,8 +228,8 @@ void oneDimGrid::adapt(vector<dvector>& y)
             insert = false;
             if (debugParameters::debugAdapt) {
                 logFile.write(format("Adapt: grid point addition canceled"
-                        " by minimum grid size j = %i; hh[j] = %g < %g") %
-                        j % hh[j] % (2*gridMin));
+                    " by minimum grid size j = %i; hh[j] = %g < %g") %
+                    j % hh[j] % (2*gridMin));
             }
         }
 
@@ -279,9 +283,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
             // resolution of v
             if (abs(v[j+1]-v[j-1]) > rmTol*vtol[k]*vRange) {
                 if (debugParameters::debugAdapt) {
-                    logFile.write(format("Adapt: no removal - v res. j = %i, k = %i;"
-                            " |v[j+1]-v[j-1]|/vtrange = %g > %g") %
-                            j % k % (abs(v[j+1]-v[j-1])/vRange) % (vtol[k]*rmTol));
+                    logFile.write(format(
+                        "Adapt: no removal - v res. j = %i, k = %i;"
+                        " |v[j+1]-v[j-1]|/vtrange = %g > %g") %
+                        j % k % (abs(v[j+1]-v[j-1])/vRange) % (vtol[k]*rmTol));
                 }
                 remove = false;
             }
@@ -289,9 +294,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
             // resolution of dv
             if (j!=2 && j!=jj-1 && abs(dv[j+1]-dv[j-1]) > rmTol*dvtol[k]*dvRange) {
                 if (debugParameters::debugAdapt) {
-                    logFile.write(format("Adapt: no removal - dv res. j = %i, k = %i;"
-                            " |dv(j+1)-dv(j-1)|/dvrange = %g > %g") %
-                            j % k % (abs(dv[j+1]-dv[j-1])/dvRange) % (dvtol[k]*rmTol));
+                    logFile.write(format(
+                        "Adapt: no removal - dv res. j = %i, k = %i;"
+                        " |dv(j+1)-dv(j-1)|/dvrange = %g > %g") %
+                        j % k % (abs(dv[j+1]-dv[j-1])/dvRange) % (dvtol[k]*rmTol));
                 }
                 remove = false;
             }
@@ -300,9 +306,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
         // Damping of high-frequency numerical error
         if (hh[j]+hh[j-1] >= rmTol*dampConst*dampVal[j]) {
             if (debugParameters::debugAdapt) {
-                logFile.write(format("Adapt: no removal - damping criterion. j = %i;"
-                        " hh(j)+hh(j-1) = %g > %g") %
-                        j % (hh[j]+hh[j-1]) % (dampConst*dampVal[j]));
+                logFile.write(format(
+                    "Adapt: no removal - damping criterion. j = %i;"
+                    " hh(j)+hh(j-1) = %g > %g") %
+                    j % (hh[j]+hh[j-1]) % (dampConst*dampVal[j]));
             }
             remove = false;
         }
@@ -310,9 +317,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
         // Enforce maximum grid size
         if (hh[j]+hh[j-1] > gridMax) {
             if (debugParameters::debugAdapt) {
-                logFile.write(format("Adapt: no removal - maximum grid size. j = %i;"
-                        " hh(j)+hh(j-1) = %g > %g") %
-                        j % (hh[j]+hh[j-1]) % gridMax);
+                logFile.write(format(
+                    "Adapt: no removal - maximum grid size. j = %i;"
+                    " hh(j)+hh(j-1) = %g > %g") %
+                    j % (hh[j]+hh[j-1]) % gridMax);
             }
             remove = false;
         }
@@ -320,9 +328,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
         // Enforce left uniformity
         if (j>=2 && hh[j]+hh[j-1] > uniformityTol*hh[j-2]) {
             if (debugParameters::debugAdapt) {
-                logFile.write(format("Adapt: no removal - left uniformity. j = %i;"
-                        " (hh(j)+hh(j-1))/hh(j-2) = %g > %g") %
-                        j % ((hh[j]+hh[j-1])/hh[j-2]) % uniformityTol);
+                logFile.write(format(
+                    "Adapt: no removal - left uniformity. j = %i;"
+                    " (hh(j)+hh(j-1))/hh(j-2) = %g > %g") %
+                    j % ((hh[j]+hh[j-1])/hh[j-2]) % uniformityTol);
             }
             remove = false;
         }
@@ -330,9 +339,10 @@ void oneDimGrid::adapt(vector<dvector>& y)
         // Enforce right uniformity
         if (j<=jj-2 && hh[j]+hh[j-1] > uniformityTol*hh[j+1]) {
             if (debugParameters::debugAdapt) {
-                logFile.write(format("Adapt: no removal - right uniformity. j = %i;"
-                        " (hh(j)+hh(j-1))/hh(j+1) = %g > %g") %
-                        j % ((hh[j]+hh[j-1])/hh[j+1]) % uniformityTol);
+                logFile.write(format(
+                    "Adapt: no removal - right uniformity. j = %i;"
+                    " (hh(j)+hh(j-1))/hh(j+1) = %g > %g") %
+                    j % ((hh[j]+hh[j-1])/hh[j+1]) % uniformityTol);
             }
             remove = false;
         }
@@ -377,7 +387,8 @@ void oneDimGrid::addPoint(int jInsert, vector<dvector>& y)
 
     double xInsert = 0.5*(x[jInsert+1]+x[jInsert]);
 
-    dampVal.insert(dampVal.begin()+jInsert+1, mathUtils::splines(x,dampVal, xInsert));
+    dampVal.insert(dampVal.begin()+jInsert+1,
+                   mathUtils::splines(x,dampVal, xInsert));
 
     foreach(dvector& row, y) {
         double yNew = mathUtils::splines(x, row, xInsert);
@@ -402,7 +413,8 @@ bool oneDimGrid::addRight(vector<dvector>& y)
     // Pick the comparison point for the grid flatness criterion,
     // depending on whether a zero-gradient condition is being enforced
 
-    // djMom is for momentum equation, which always uses a special zero-gradient condition
+    // djMom is for momentum equation, which always uses a special
+    // zero-gradient condition.
     int djMom = 1;
 
     // All other variables use fixed or zero gradient conditions
@@ -411,7 +423,8 @@ bool oneDimGrid::addRight(vector<dvector>& y)
 
     bool pointAdded = false; // Assume no addition
 
-    // check flatness of temperature, velocity and species profiles at the boundary
+    // Check flatness of temperature, velocity and species
+    // profiles at the boundary.
     for (size_t k=0; k<nVars; k++) {
         if (!rightComponents[k]) {
             continue;
@@ -420,9 +433,10 @@ bool oneDimGrid::addRight(vector<dvector>& y)
         double ymax = maxval(y[k]);
         if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTol && ymax > absvtol ) {
             if (!pointAdded && debugParameters::debugRegrid) {
-                logFile.write(format("Regrid: Flatness of component %i requires"
-                        " right addition: %g > %g") %
-                        k % (abs(y[k][jj]-y[k][jj-dj])/ymax) % boundaryTol);
+                logFile.write(format(
+                    "Regrid: Flatness of component %i requires"
+                    " right addition: %g > %g") %
+                    k % (abs(y[k][jj]-y[k][jj-dj])/ymax) % boundaryTol);
             }
             pointAdded = true;
             break;
@@ -483,7 +497,8 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
         leftBC != BoundaryCondition::WallFlux)
     {
         if (!pointAdded && debugParameters::debugRegrid) {
-            logFile.write("Regrid: Adding point to force left boundary toward x = 0");
+            logFile.write(
+                "Regrid: Adding point to force left boundary toward x = 0");
         }
         pointAdded = true;
     }
@@ -544,9 +559,10 @@ bool oneDimGrid::removeRight(vector<dvector>& y)
         double ymax = maxval(y[k]);
         if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTolRm && ymax > absvtol) {
             if (pointRemoved && debugParameters::debugRegrid) {
-                logFile.write(format("Regrid: Right removal prevented by component %i"
-                        " flatness: %g > %g") %
-                        k % (abs(y[k][jj]-y[k][jj-dj])/ymax) % boundaryTolRm);
+                logFile.write(format(
+                    "Regrid: Right removal prevented by component %i"
+                    " flatness: %g > %g") %
+                    k % (abs(y[k][jj]-y[k][jj-dj])/ymax) % boundaryTolRm);
             }
             pointRemoved = false;
             break;
@@ -589,9 +605,10 @@ bool oneDimGrid::removeLeft(vector<dvector>& y)
         double ymax = maxval(y[k]);
         if (abs(y[k][dj]-y[k][0])/ymax > boundaryTolRm && ymax > absvtol) {
             if (pointRemoved && debugParameters::debugRegrid) {
-                logFile.write(format("Regrid: Left removal prevented component %i"
-                        " flatness requirement: %g > %g") %
-                        k % (abs(y[k][dj]-y[k][0])/ymax) % boundaryTolRm);
+                logFile.write(format(
+                    "Regrid: Left removal prevented component %i"
+                    " flatness requirement: %g > %g") %
+                    k % (abs(y[k][dj]-y[k][0])/ymax) % boundaryTolRm);
             }
             pointRemoved = false;
         }
@@ -664,7 +681,8 @@ void oneDimGrid::regrid(vector<dvector>& y)
                 leftRemovalCount % suffix);
     }
 
-    updated = (updated || leftAddition || rightAddition || leftRemoval || rightRemoval);
+    updated = (updated || leftAddition || rightAddition ||
+               leftRemoval || rightRemoval);
 
     if (updated) {
         updateValues();

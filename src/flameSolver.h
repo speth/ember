@@ -53,9 +53,9 @@ public:
     //!        on the current state. This flag should only set if all of the solvers and auxillary
     //!        arrays are sized corresponding to the current state, e.g. after integration but
     //!        but before regridding.
-    void writeStateFile(const std::string fileName="", bool errorFile=false, bool updateDerivatives=true);
+    void writeStateFile(const std::string& fileName="", bool errorFile=false, bool updateDerivatives=true);
 
-    void writeTimeseriesFile(const std::string filename); //!< create out.h5 file
+    void writeTimeseriesFile(const std::string& filename); //!< create out.h5 file
 
     //! Compute integral heat release rate [W/m^2].
     //! Assumes that #qDot has already been updated.

@@ -18,6 +18,13 @@ QSSIntegrator::QSSIntegrator()
     abstol = 1e-8;
 
     stabilityCheck = true;
+
+    firstStep = true;
+    dt = 0;
+    ts = 0;
+    gcount = 0;
+    rcount = 0;
+    tn = 0;
 }
 
 void QSSIntegrator::initialize(dvector yIn, double tstart_)

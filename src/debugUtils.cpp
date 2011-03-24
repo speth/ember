@@ -46,7 +46,7 @@ debugException::debugException(void)
     errorString = "debugException: unspecified error.";
 }
 
-debugException::debugException(const std::string error)
+debugException::debugException(const std::string& error)
 {
     errorString = error;
 }

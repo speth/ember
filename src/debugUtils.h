@@ -55,5 +55,5 @@ public:
     std::string errorString;
     debugException(void);
     ~debugException(void) throw() {}
-    debugException(const std::string error);
+    debugException(const std::string& error);
 };
