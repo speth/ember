@@ -1256,7 +1256,8 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
             }
 
             if (debugParameters::veryVerbose) {
-                logFile.write(format(" [%i]...") % sourceTermsQSS[j].gcount, false);
+                logFile.write(format(" [%i/%i]...") % sourceTermsQSS[j].gcount
+                        % sourceTermsQSS[j].rcount, false);
             }
 
         }

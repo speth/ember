@@ -94,7 +94,7 @@ public:
     // The ODE function: ydot = f(t,y)
     void odefun(double t, const dvector& y, dvector& q, dvector& d, bool corrector=false);
 
-    void unroll_y(const dvector& y); // fill in current state variables from sdvector
+    void unroll_y(const dvector& y, bool corrector=false); // fill in current state variables from sdvector
     void roll_y(dvector& y) const; // fill in y with current state variables
     void roll_ydot(dvector& q, dvector& d) const; // fill in q and d with current time derivatives
 
@@ -138,6 +138,4 @@ private:
     dvector cpSpec; // species specific heat capacity [J/mol*K]
     double Wmx; // mixture molecular weight [kg/mol]
     dvector hk; // species enthalpies [J/kmol]
-
-    bool corrector;
 };

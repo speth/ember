@@ -301,10 +301,9 @@ void SourceSystemQSS::resize(size_t new_nSpec)
     hk.resize(nSpec);
 }
 
-void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d, bool _corrector)
+void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d, bool corrector)
 {
-    corrector = _corrector;
-    unroll_y(y);
+    unroll_y(y, corrector);
 
     // *** Update auxiliary data ***
     reactionRatesTimer->start();
@@ -352,7 +351,7 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d,
     roll_ydot(q, d);
 }
 
-void SourceSystemQSS::unroll_y(const dvector& y)
+void SourceSystemQSS::unroll_y(const dvector& y, bool corrector)
 {
     if (!corrector) {
         T = y[kEnergy];
