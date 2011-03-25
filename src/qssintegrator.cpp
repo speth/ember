@@ -25,6 +25,8 @@ QSSIntegrator::QSSIntegrator()
     gcount = 0;
     rcount = 0;
     tn = 0;
+
+    debug = false;
 }
 
 void QSSIntegrator::initialize(dvector yIn, double tstart_)
@@ -88,6 +90,13 @@ void QSSIntegrator::getInitialStepSize(double tf)
 
     double sqreps = 0.5;
     dt = std::min(sqreps/scrtch, tf);
+
+    if (debug) {
+        std::cout << "q = " << q << std::endl;
+        std::cout << "d = " << d << std::endl;
+        std::cout << "q-d = " << q-d << std::endl;
+        std::cout << "qss dt = " << dt << std::endl;
+    }
 }
 
 int QSSIntegrator::integrateToTime(double tf)

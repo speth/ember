@@ -1233,6 +1233,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
             if (int(j) == options.debugSourcePoint &&
                 t >= options.debugSourceTime)
             {
+                sourceTermsQSS[j].debug = true;
                 ofstream steps;
                 steps.open("cvodeSteps.py");
                 sourceTermsQSS[j].writeState(steps, true);
