@@ -32,6 +32,7 @@ public:
     double epsmax;
 
     double dtmin; //!< Minimum timestep allowed.
+    double dtmax; //!< Maximum timestep allowed.
     dvector ymin; //!< Minimum value allowed for each component
     double abstol; //!< Minimum component value to consider when determining stability / step size
 

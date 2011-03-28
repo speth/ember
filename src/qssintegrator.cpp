@@ -12,6 +12,7 @@ QSSIntegrator::QSSIntegrator()
     epsmax = 20;
     epsmin = 1e-2;
     dtmin = 1e-15;
+    dtmax = 1e-6;
     tstart = 0;
     itermax = 2;
     tfd = 1.000008;
@@ -90,13 +91,7 @@ void QSSIntegrator::getInitialStepSize(double tf)
 
     double sqreps = 0.5;
     dt = std::min(sqreps/scrtch, tf);
-
-    if (debug) {
-        std::cout << "q = " << q << std::endl;
-        std::cout << "d = " << d << std::endl;
-        std::cout << "q-d = " << q-d << std::endl;
-        std::cout << "qss dt = " << dt << std::endl;
-    }
+    dt = std::min(dt, dtmax);
 }
 
 int QSSIntegrator::integrateToTime(double tf)
@@ -243,6 +238,7 @@ int QSSIntegrator::integrateOneStep(double tf) {
 
         double dto = dt;
         dt = std::min(dt*(1.0/rteps + 0.005), tfd*(tf - tn));
+        dt = std::min(dt, dtmax);
         if (stabilityCheck) {
             dt = std::min(dt, dto/(stab+.001));
         }

@@ -80,6 +80,7 @@ public:
     double qss_epsmax;
     double qss_epsmin;
     double qss_dtmin;
+    double qss_dtmax;
     double qss_iterationCount;
     double qss_abstol;
     double qss_minval;

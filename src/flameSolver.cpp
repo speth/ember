@@ -763,6 +763,7 @@ void FlameSolver::resizeAuxiliary()
             qssSolver->epsmin = options.qss_epsmin;
             qssSolver->epsmax = options.qss_epsmax;
             qssSolver->dtmin = options.qss_dtmin;
+            qssSolver->dtmax = options.qss_dtmax;
             qssSolver->itermax = options.qss_iterationCount;
             qssSolver->abstol = options.qss_abstol;
             qssSolver->stabilityCheck = options.qss_stabilityCheck;

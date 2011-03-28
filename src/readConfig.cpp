@@ -216,6 +216,7 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(qss, "epsmax", qss_epsmax);
     readOption(qss, "epsmin", qss_epsmin);
     readOption(qss, "dtmin", qss_dtmin);
+    readOption(qss, "dtmax", qss_dtmax);
     readOption(qss, "iterationCount", qss_iterationCount);
     readOption(qss, "abstol", qss_abstol);
     readOption(qss, "minval", qss_minval);

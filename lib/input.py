@@ -443,6 +443,9 @@ class QssTolerances(Options):
     ## Minimum internal timestep
     dtmin = 1e-16
 
+    ## Maximum internal timestep
+    dtmax = 1e-6
+
     ## Number of corrector iterations per timestep.
     iterationCount = 1
 
