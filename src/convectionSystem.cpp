@@ -213,8 +213,9 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
 
 void ConvectionSystemUTW::initialize()
 {
-    //dTdtSplit.assign(nPoints, 0);
-    //dWdtSplit.assign(nPoints, 0);
+    splitConstU.assign(nPoints, 0);
+    splitConstT.assign(nPoints, 0);
+    splitConstW.assign(nPoints, 0);
 }
 
 void ConvectionSystemUTW::V2rV(void)
@@ -361,6 +362,11 @@ void ConvectionSystemY::resize(const size_t new_nPoints)
 {
     grid.setSize(new_nPoints);
     v.resize(nPoints);
+}
+
+void ConvectionSystemY::initialize()
+{
+    splitConst.assign(nPoints, 0);
 }
 
 void ConvectionSystemY::update_v(const double t)
@@ -559,8 +565,10 @@ void ConvectionSystemSplit::set_rVzero(const double rVzero)
 void ConvectionSystemSplit::initialize(const double t0)
 {
     // Initialize systems
+    // TODO: verify that this is redundant
     utwSystem.initialize();
 
+    // TODO: verify that this is redundant
     foreach (ConvectionSystemY& system, speciesSystems) {
         system.initialize();
     }
@@ -623,6 +631,29 @@ void ConvectionSystemSplit::setSplitDerivatives
              value += dYdtSplit(k,j)/W[k];
         }
         utwSystem.dWdtSplit[j] = - value * Wmx[j] * Wmx[j];
+    }
+}
+
+void ConvectionSystemSplit::setSplitConstants(const dvector& splitConstU,
+                                              const dvector& splitConstT,
+                                              const Array2D& splitConstY)
+{
+    utwSystem.splitConstT = splitConstT;
+    utwSystem.splitConstU = splitConstU;
+    for (size_t j=0; j<nPointsUTW; j++) {
+        double value = 0;
+        for (size_t k=0; k<nSpec; k++) {
+             value += splitConstY(k,j)/W[k];
+        }
+        utwSystem.splitConstW[j] = - value * Wmx[j] * Wmx[j];
+    }
+
+    for (size_t k=0; k<nSpec; k++) {
+        size_t i = 0;
+        for (size_t j=(*startIndices)[k]; j<=(*stopIndices)[k]; j++) {
+            speciesSystems[k].splitConst[i] = splitConstY(k,j);
+            i++;
+        }
     }
 }
 

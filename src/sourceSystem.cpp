@@ -296,9 +296,19 @@ void SourceSystemQSS::resize(size_t new_nSpec)
     dYdtQ.resize(nSpec, 0);
     dYdtD.resize(nSpec, 0);
     cpSpec.resize(nSpec);
+    splitConstY.resize(nSpec);
     wDotD.resize(nSpec);
     wDotQ.resize(nSpec);
     hk.resize(nSpec);
+}
+
+void SourceSystemQSS::initialize(const dvector& yIn, double tStart)
+{
+    QSSIntegrator::initialize(yIn, tStart);
+    splitConstY.assign(nSpec, 0);
+    splitConstT = 0;
+    splitConstU = 0;
+
 }
 
 void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d, bool corrector)

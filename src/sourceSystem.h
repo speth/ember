@@ -100,6 +100,7 @@ public:
 
     // Setup functions
     void resize(size_t nSpec);
+    void initialize(const dvector& yIn, double tStart);
 
     void writeState(ostream& out, bool init);
 
@@ -126,6 +127,10 @@ public:
     double x; // grid position for this system
     dvector W; // species molecular weights [kg/kmol]
     double rhou; // density of the unburned mixture
+
+    // Constant terms introduced by splitting method
+    dvector splitConstY;
+    double splitConstT, splitConstU;
 
     // Other quantities
     dvector wDotQ, wDotD; // species production / destruction rates [kmol/m^3*s]

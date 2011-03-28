@@ -39,9 +39,14 @@ public:
     double Wleft; // mixture molecular weight left boundary value
     double rVzero; // mass flux boundary value at j=0
 
-    // Diagonalized, linear approximations for terms neglected by splitting
+    // Net derivatives of the other split terms, used to calculate drho/dt
     dvector dTdtSplit;
     dvector dWdtSplit;
+
+    // Constant terms introduced by the splitting method
+    dvector splitConstT;
+    dvector splitConstW;
+    dvector splitConstU;
 
     // Cantera data
     CanteraGas* gas;
@@ -78,9 +83,11 @@ public:
     int bandedJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdBandMatrix& J);
 
     void resize(const size_t nPoints);
+    void initialize();
 
     double Yleft;
     int k; // species index (only needed for debugging)
+    dvector splitConst; // constant term introduced by splitting
 
     size_t startIndex;
     size_t stopIndex;
@@ -114,9 +121,14 @@ public:
     void initialize(const double t0);
     void evaluate(); // evaluate time derivatives and mass flux at the current state
 
-    // Time derivatives of species and temperature from the split terms are needed
+    // Time derivatives of species and temperature from the other split terms are needed
     // to correctly compute the density derivative appearing in the continuity equation
     void setSplitDerivatives(const dvector& dTdtSplit, const Array2D& dYdtSplit);
+
+    // Constants introduced by the splitting method
+    void setSplitConstants(const dvector& splitConstU,
+                           const dvector& splitConstT,
+                           const Array2D& splitConstY);
 
     void integrateToTime(const double tf);
     void unroll_y(); // convert the solver's solution vectors to the full U, Y, and T
