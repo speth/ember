@@ -8,8 +8,11 @@ class QSSIntegrator
 public:
     QSSIntegrator();
 
-    //! Initialize integrator at the start of each global timestep.
-    void initialize(dvector yIn, double tStart);
+    //! Initialize integrator arrays (problem size of N)
+    virtual void initialize(size_t N);
+
+    //! Set state at the start of a global timestep
+    void setState(const dvector& yIn, double tStart);
 
     //! Take as many steps as needed to reach tf.
     //! Note that tf is relative to tstart, not absolute.

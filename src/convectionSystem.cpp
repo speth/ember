@@ -76,6 +76,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     dWdt[jj] = 0;
 
     roll_ydot(ydot);
+    assert(mathUtils::notnan(ydot));
     return 0;
 }
 
@@ -524,7 +525,7 @@ void ConvectionSystemSplit::setSpeciesDomains
 }
 
 void ConvectionSystemSplit::setState
-(const dvector& U_, const dvector& T_, Array2D& Y_)
+(const dvector& U_, const dvector& T_, Array2D& Y_, double tInitial)
 {
     U = U_;
     T = T_;
@@ -544,6 +545,25 @@ void ConvectionSystemSplit::setState
             i++;
         }
     }
+
+    // Set integration domain for each species
+    for (size_t k=0; k<nSpec; k++) {
+        speciesSystems[k].startIndex = (*startIndices)[k];
+        speciesSystems[k].stopIndex = (*stopIndices)[k];
+    }
+
+    // Initialize solvers
+    utwSolver->t0 = tInitial;
+    utwSolver->maxNumSteps = 1000000;
+    utwSolver->minStep = 1e-16;
+    utwSolver->initialize();
+
+    foreach (sundialsCVODE& solver, speciesSolvers) {
+        solver.t0 = tInitial;
+        solver.maxNumSteps = 1000000;
+        solver.minStep = 1e-16;
+        solver.initialize();
+    }
 }
 
 void ConvectionSystemSplit::setLeftBC(const double Tleft, const dvector& Yleft_)
@@ -560,37 +580,6 @@ void ConvectionSystemSplit::setLeftBC(const double Tleft, const dvector& Yleft_)
 void ConvectionSystemSplit::set_rVzero(const double rVzero)
 {
     utwSystem.rVzero = rVzero;
-}
-
-void ConvectionSystemSplit::initialize(const double t0)
-{
-    // Initialize systems
-    // TODO: verify that this is redundant
-    utwSystem.initialize();
-
-    // TODO: verify that this is redundant
-    foreach (ConvectionSystemY& system, speciesSystems) {
-        system.initialize();
-    }
-
-    // Set integration domain for each species
-    for (size_t k=0; k<nSpec; k++) {
-        speciesSystems[k].startIndex = (*startIndices)[k];
-        speciesSystems[k].stopIndex = (*stopIndices)[k];
-    }
-
-    // Initialize solvers
-    utwSolver->t0 = t0;
-    utwSolver->maxNumSteps = 1000000;
-    utwSolver->minStep = 1e-16;
-    utwSolver->initialize();
-
-    foreach (sundialsCVODE& solver, speciesSolvers) {
-        solver.t0 = t0;
-        solver.maxNumSteps = 1000000;
-        solver.minStep = 1e-16;
-        solver.initialize();
-    }
 }
 
 void ConvectionSystemSplit::evaluate()

@@ -30,12 +30,10 @@ QSSIntegrator::QSSIntegrator()
     debug = false;
 }
 
-void QSSIntegrator::initialize(dvector yIn, double tstart_)
+void QSSIntegrator::initialize(size_t N_)
 {
-    N = yIn.size();
+    N = N_;
     y.resize(N);
-
-    tstart = tstart_;
 
     q.assign(N, 0);
     d.assign(N, 0);
@@ -46,22 +44,25 @@ void QSSIntegrator::initialize(dvector yIn, double tstart_)
     rtau.resize(N);
     qs.resize(N);
 
-    y.resize(N);
     ymin.resize(N, 1e-20);
     ym1.resize(N);
     ym2.resize(N);
     scratch.resize(N);
+}
 
-    tn = 0.0;
-
-    gcount = 0;
-    rcount = 0;
+void QSSIntegrator::setState(const dvector& yIn, double tstart_)
+{
+    assert(yIn.size() == N);
 
     // Store and limit to 'ymin' the initial values.
     for (size_t i=0; i<N; i++) {
         y[i] = std::max(yIn[i], ymin[i]);
     }
 
+    gcount = 0;
+    rcount = 0;
+    tstart = tstart_;
+    tn = 0.0;
     firstStep = true;
 }
 

@@ -118,13 +118,25 @@ private:
     void correctMassFractions();
 
     // Steps in the Strang split integration process
+
+    // Initalize term and evaluate its derivative
+    void evaluateDiffusionTerms(double t);
+    void evaluateProductionTerms(double t);
+    void evaluateConvectionTerms(double t);
+
+    // Prepare the balanced splitting terms for integration
+    void prepareDiffusionTerms();
+    void prepareProductionTerms();
+    void prepareConvectionTerms();
+
     void setDiffusionSolverState(double tInitial);
     void setConvectionSolverState(double tInitial, int stage);
     void setProductionSolverState(double tInitial);
-    void calculateSplitDerivatives(double t);
+
     void extractConvectionState(int stage);
     void extractDiffusionState(int stage);
-    void extractProductionState(int stage);
+    void extractProductionState();
+
     void integrateConvectionTerms(double t, int stage);
     void integrateProductionTerms(double t, int stage);
     void integrateDiffusionTerms(double t, int stage);
@@ -144,8 +156,9 @@ private:
     Array2D dYdt;
 
     // components of the time derivatives
-    Array2D dYdtDiff, dYdtProd;
-    dvector dTdtProd, dUdtProd;
+    Array2D dYdtDiff, dYdtProd, dYdtConv;
+    dvector dTdtDiff, dTdtProd, dTdtConv;
+    dvector dUdtDiff, dUdtProd, dUdtConv;
 
     // Auxiliary variables:
     dvector rho; //!< density [kg/m^3]
@@ -166,7 +179,7 @@ private:
     Array2D jSoret; //!< Soret mass flux [kg/m^2*s]
 
     // Heat release rate evaluated after each phase of the split solver
-    double qDotProd1, qDotProd2, qDotDiff1, qDotDiff2, qDotConv1, qDotConv2;
+    double qDotProd, qDotDiff1, qDotDiff2, qDotConv1, qDotConv2;
 
     Array2D dYdtCross; //!< dYdt due to gradients in other species and temperature
     dvector dTdtCross; //!< dTdt due to gradients in gas composition

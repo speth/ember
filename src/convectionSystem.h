@@ -115,10 +115,9 @@ public:
     void setGas(CanteraGas& gas);
     void resize(const size_t nPointsUTW, const vector<size_t>& nPointsSpec, const size_t nSpec);
     void setSpeciesDomains(vector<size_t>& startIndices, vector<size_t>& stopIndices);
-    void setState(const dvector& U, const dvector& T, Array2D& Y);
+    void setState(const dvector& U, const dvector& T, Array2D& Y, double tInitial);
     void setLeftBC(const double Tleft, const dvector& Yleft);
     void set_rVzero(const double rVzero);
-    void initialize(const double t0);
     void evaluate(); // evaluate time derivatives and mass flux at the current state
 
     // Time derivatives of species and temperature from the other split terms are needed

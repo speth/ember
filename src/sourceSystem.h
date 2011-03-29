@@ -98,9 +98,8 @@ public:
     void roll_y(dvector& y) const; // fill in y with current state variables
     void roll_ydot(dvector& q, dvector& d) const; // fill in q and d with current time derivatives
 
-    // Setup functions
-    void resize(size_t nSpec);
-    void initialize(const dvector& yIn, double tStart);
+    // Set problem size
+    void initialize(size_t nSpec);
 
     void writeState(ostream& out, bool init);
 
