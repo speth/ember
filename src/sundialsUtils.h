@@ -32,6 +32,7 @@ public:
     realtype& operator[](unsigned int i) const;
     N_Vector& forSundials(void) {return v;}
     unsigned int length(void) const {return n;}
+    size_t size() const {return n;}
 
 private:
     N_Vector v;

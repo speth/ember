@@ -37,7 +37,17 @@ namespace mathUtils
     int minloc(const dvector& v);
     int maxloc(const dvector& v);
 
-    bool notnan(const dvector& v); // returns true if v does not contain any NaNs
+    //! Returns true if v does not contain any NaNs
+    template <class T>
+    bool notnan(const T& v) {
+        for (size_t i=0; i<v.size(); i++) {
+            if (!(v[i] > 0) && !(v[i] <= 0)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     int nanloc(const dvector& v); // returns index of first NaN component. Returns -1 if none
 
     dvector abs(const dvector& v);

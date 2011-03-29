@@ -151,15 +151,6 @@ double mathUtils::range(const dvector& v, int iStart, int iEnd)
     return maxval(v,iStart,iEnd) - minval(v,iStart,iEnd);
 }
 
-bool mathUtils::notnan(const dvector& v) {
-    for (size_t i=0; i<v.size(); i++) {
-        if (!(v[i] > 0) && !(v[i] <= 0)) {
-            return false;
-        }
-    }
-    return true;
-}
-
 int mathUtils::nanloc(const dvector& v) {
     for (size_t i=0; i<v.size(); i++) {
         if (!(v[i] > 0) && !(v[i] <= 0)) {
