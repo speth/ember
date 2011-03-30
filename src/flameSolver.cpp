@@ -111,7 +111,8 @@ void FlameSolver::run(void)
     totalTimer.start();
 
     double t = tStart;
-    double dt = options.globalTimestep;
+    double dtMax = options.globalTimestep;
+    double dtPrev = 0.01 * dtMax;
 
     long int nTotal = 0; // total number of timesteps taken
     int nRegrid = 0; // number of time steps since regridding/adaptation
@@ -216,8 +217,6 @@ void FlameSolver::run(void)
         }
         splitTimer.stop();
 
-        double tNext = tNow + dt;
-
         // Set up solvers for split integration
 
         updateCrossTerms();
@@ -228,6 +227,22 @@ void FlameSolver::run(void)
         prepareDiffusionTerms();
         prepareProductionTerms();
         prepareConvectionTerms();
+
+        // Time step estimate:
+        double dt = dtMax;
+//        for (size_t j=0; j<nPoints; j++) {
+//            dt = min(dt, 0.2 * abs(T[j]/(dTdtConv[j] + dTdtDiff[j] + dTdtProd[j])));
+//            dt = min(dt, 0.2 * abs(U[j]/(dUdtConv[j] + dUdtDiff[j] + dUdtProd[j])));
+//            for (size_t k=0; k<nSpec; k++) {
+//                if (Y(k,j) > 1e-6) {
+//                    dt = min(dt, 0.2 * abs(Y(k,j)/(dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j))));
+//                }
+//            }
+//        }
+//        dt = max(dt, 1e-9);
+//        dt = 0.25 * dt + 0.75 * dtPrev;
+
+        double tNext = tNow + dt;
 
         if (t == tStart && options.outputProfiles) {
             writeStateFile("", false, false);
@@ -418,7 +433,7 @@ void FlameSolver::run(void)
                 resizeAuxiliary();
 
                 if (debugParameters::debugAdapt || debugParameters::debugRegrid) {
-                    writeStateFile("postAdapt", false, false);
+                    //writeStateFile("postAdapt", false, false);
                 }
                 grid.updated = false;
             }
@@ -607,16 +622,16 @@ void FlameSolver::writeStateFile
 
     if (options.outputResidualComponents || errorFile) {
 
-        outFile.writeVector("dUdtDiff", diffusionSolvers[kMomentum].get_ydot());
-        outFile.writeVector("dUdtConv", convectionSystem.dUdt);
+        outFile.writeVector("dUdtDiff", dUdtDiff);
+        outFile.writeVector("dUdtConv", dUdtConv);
         outFile.writeVector("dUdtProd", dUdtProd);
 
-        outFile.writeVector("dTdtDiff", diffusionSolvers[kEnergy].get_ydot());
-        outFile.writeVector("dTdtConv", convectionSystem.dTdt);
+        outFile.writeVector("dTdtDiff", dTdtDiff);
+        outFile.writeVector("dTdtConv", dTdtConv);
         outFile.writeVector("dTdtProd", dTdtProd);
         outFile.writeVector("dTdtCross", dTdtCross);
 
-        outFile.writeArray2D("dYdtConv", convectionSystem.dYdt);
+        outFile.writeArray2D("dYdtConv", dYdtConv);
         outFile.writeArray2D("dYdtDiff", dYdtDiff);
         outFile.writeArray2D("dYdtProd", dYdtProd);
         outFile.writeArray2D("dYdtCross", dYdtCross);
@@ -633,13 +648,13 @@ void FlameSolver::writeStateFile
         options.outputFileNumber++;
     }
 
-    if (errorFile && options.stopIfError) {
-        logFile.write(format("Error outputs remaining until termination: %i") %
-                options.errorStopCount);
-      if (options.errorStopCount-- <= 0) {
-        throw debugException("Too many integration failures.");
-      }
-    }
+//    if (errorFile && options.stopIfError) {
+//        logFile.write(format("Error outputs remaining until termination: %i") %
+//                options.errorStopCount);
+//      if (options.errorStopCount-- <= 0) {
+//        throw debugException("Too many integration failures.");
+//      }
+//    }
 }
 
 void FlameSolver::writeTimeseriesFile(const std::string& filename)
@@ -962,7 +977,7 @@ void FlameSolver::evaluateDiffusionTerms(double t)
     splitTimer.resume();
     for (size_t k=0; k<nVars; k++) {
         // TODO: Use timestep that is based on each component's diffusivity
-        diffusionSolvers[k].initialize(t, options.diffusionTimestep);
+        diffusionTerms[k].resetSplitConstants();
     }
     splitTimer.stop();
 
@@ -993,8 +1008,7 @@ void FlameSolver::evaluateProductionTerms(double t)
     for (size_t j=0; j<nPoints; j++) {
         if (useCVODE[j]) {
             // Initialize
-            sourceSolvers[j].t0 = t;
-            sourceSolvers[j].initialize();
+            sourceTerms[j].resetSplitConstants();
             sourceTerms[j].wDot.assign(nSpec, 0);
             sourceTerms[j].strainFunction.pin(t);
 
@@ -1009,6 +1023,7 @@ void FlameSolver::evaluateProductionTerms(double t)
         } else {
             // Initialize
             sourceTermsQSS[j].initialize(nSpec);
+            sourceTermsQSS[j].resetSplitConstants();
             sourceTermsQSS[j].strainFunction.pin(t);
 
             // Evaluate the derivative
@@ -1037,6 +1052,7 @@ void FlameSolver::evaluateConvectionTerms(double t)
     }
 
     convectionSystem.setSplitDerivatives(dTdtSplit, dYdtSplit);
+    convectionSystem.resetSplitConstants();
     setConvectionSolverState(t, 0);
     convectionSystem.evaluate();
 
@@ -1112,10 +1128,14 @@ void FlameSolver::prepareConvectionTerms()
     convectionSystem.setSplitConstants(splitConstU, splitConstT, splitConstY);
 }
 
-
 void FlameSolver::setDiffusionSolverState(double tInitial)
 {
     splitTimer.resume();
+
+    foreach (BDFIntegrator& integrator, diffusionSolvers) {
+        integrator.initialize(tInitial, options.diffusionTimestep);
+    }
+
     diffusionSolvers[kMomentum].y = U;
     diffusionSolvers[kEnergy].y = T;
     for (size_t k=0; k<nSpec; k++) {
@@ -1144,12 +1164,15 @@ void FlameSolver::setProductionSolverState(double tInitial)
     splitTimer.resume();
     for (size_t j=0; j<nPoints; j++) {
         if (useCVODE[j]) {
+            sourceSolvers[j].t0 = tInitial;
             sdVector& ySource = sourceSolvers[j].y;
             ySource[kMomentum] = U[j];
             ySource[kEnergy] = T[j];
             for (size_t k=0; k<nSpec; k++) {
                 ySource[kSpecies+k] = Y(k,j);
             }
+            sourceSolvers[j].initialize();
+
         } else {
             dvector ySource(nVars);
             ySource[kMomentum] = U[j];
@@ -1277,7 +1300,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
     int err = 0;
     for (size_t j=0; j<nPoints; j++) {
         if (debugParameters::veryVerbose) {
-            logFile.write(j, false);
+            logFile.write(format("%i") % j, false);
         }
         if (useCVODE[j]) {
             if (int(j) == options.debugSourcePoint && t >= options.debugSourceTime) {

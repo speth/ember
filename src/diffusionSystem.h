@@ -28,7 +28,7 @@ public:
 
     void setGrid(const oneDimGrid& grid);
     void resize(int N);
-    void initialize();
+    void resetSplitConstants();
 
     // the coefficients of the ODE
     dvector B; // pre-factor

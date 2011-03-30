@@ -113,7 +113,7 @@ void DiffusionSystem::resize(int N_)
     splitLinear.resize(N);
 }
 
-void DiffusionSystem::initialize()
+void DiffusionSystem::resetSplitConstants()
 {
     splitConst.assign(N, 0);
     splitLinear.assign(N, 0);

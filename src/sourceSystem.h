@@ -31,7 +31,7 @@ public:
 
     // Setup functions
     void resize(size_t nSpec);
-    void initialize();
+    void resetSplitConstants();
 
     void writeJacobian(sundialsCVODE& solver, ostream& out);
     void writeState(sundialsCVODE& solver, ostream& out, bool init);
@@ -46,9 +46,8 @@ public:
     double T, dTdt; // temperature
     dvector Y, dYdt; // species mass fractions
 
-    // Diagonalized, linear approximations for terms neglected by splitting
+    // Extra constant term introduced by splitting
     dvector splitConst; // constant terms
-    dvector splitLinear; // diagonal jacobian components
 
     // Diagonal Jacobian elements for this this term
     dvector diagonalJac;
@@ -100,6 +99,8 @@ public:
 
     // Set problem size
     void initialize(size_t nSpec);
+
+    void resetSplitConstants();
 
     void writeState(ostream& out, bool init);
 

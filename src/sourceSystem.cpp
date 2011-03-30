@@ -20,15 +20,12 @@ void SourceSystem::resize(size_t new_nSpec)
     wDot.resize(nSpec);
     hk.resize(nSpec);
     splitConst.resize(nSpec+2);
-    splitLinear.resize(nSpec+2);
     diagonalJac.resize(nSpec+2, 0);
 }
 
-void SourceSystem::initialize()
+void SourceSystem::resetSplitConstants()
 {
-    size_t nVars = splitConst.size();
-    splitConst.assign(nVars, 0);
-    splitLinear.assign(nVars, 0);
+    splitConst.assign(splitConst.size(), 0);
 }
 
 int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
@@ -67,10 +64,10 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     double dadt = strainFunction.dadt(t);
 
     // *** Calculate the time derivatives
-    dUdt = - U*U + rhou/rho*(dadt + a*a) + splitConst[kMomentum] + splitLinear[kMomentum]*U;
-    dTdt = qDot/(rho*cp) + splitConst[kEnergy] + splitLinear[kEnergy]*T;
+    dUdt = - U*U + rhou/rho*(dadt + a*a) + splitConst[kMomentum];
+    dTdt = qDot/(rho*cp) + splitConst[kEnergy];
     for (size_t k=0; k<nSpec; k++) {
-        dYdt[k] = wDot[k]*W[k]/rho + splitConst[kSpecies+k] + splitLinear[kSpecies+k]*Y[k];
+        dYdt[k] = wDot[k]*W[k]/rho + splitConst[kSpecies+k];
     }
 
     roll_ydot(ydot);
@@ -173,11 +170,6 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
 
     // dMomentum/dT
     J(kMomentum, kEnergy) = -A*drhodT/(rho*rho);
-
-    // contribution from the split terms
-    for (size_t k=0; k<nSpec+2; k++) {
-        J(k,k) += splitLinear[k];
-    }
 
     return 0;
 }
@@ -301,7 +293,10 @@ void SourceSystemQSS::initialize(size_t new_nSpec)
     wDotD.resize(nSpec);
     wDotQ.resize(nSpec);
     hk.resize(nSpec);
+}
 
+void SourceSystemQSS::resetSplitConstants()
+{
     splitConstY.assign(nSpec, 0);
     splitConstT = 0;
     splitConstU = 0;
@@ -346,11 +341,11 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d,
     double dadt = strainFunction.dadt(t);
 
     // *** Calculate the time derivatives
-    dUdtQ = rhou/rho*(dadt + a*a);
+    dUdtQ = rhou/rho*(dadt + a*a) + splitConstU;
     dUdtD = U*U;
-    dTdtQ = qDot/(rho*cp);
+    dTdtQ = qDot/(rho*cp) + splitConstT;
     for (size_t k=0; k<nSpec; k++) {
-        dYdtQ[k] = wDotQ[k] * W[k] / rho;
+        dYdtQ[k] = wDotQ[k] * W[k] / rho + splitConstY[k];
         dYdtD[k] = wDotD[k] * W[k] / rho;
     }
 

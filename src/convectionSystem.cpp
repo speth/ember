@@ -45,7 +45,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
 
     // Left boundary conditions.
     // Convection term only contributes in the ControlVolume case
-    dUdt[0] = 0; // zero-gradient condition for U is handled in diffusion term
+    dUdt[0] = splitConstU[0]; // zero-gradient condition for U is handled in diffusion term
 
     if (grid.leftBC == BoundaryCondition::ControlVolume ||
         grid.leftBC == BoundaryCondition::WallFlux)
@@ -53,27 +53,27 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         double rVzero_mod = std::max(rV[0], 0.0);
 
-        dTdt[0] = -rVzero_mod * (T[0] - Tleft) / (rho[0] * centerVol);
-        dWdt[0] = -rVzero_mod * (Wmx[0] - Wleft) / (rho[0] * centerVol);
+        dTdt[0] = -rVzero_mod * (T[0] - Tleft) / (rho[0] * centerVol) + splitConstT[0];
+        dWdt[0] = -rVzero_mod * (Wmx[0] - Wleft) / (rho[0] * centerVol) + splitConstW[0];
 
     } else { // FixedValue or ZeroGradient
-        dTdt[0] = 0;
-        dWdt[0] = 0;
+        dTdt[0] = splitConstT[0];
+        dWdt[0] = splitConstW[0];
     }
 
     // Intermediate points
     for (size_t j=1; j<jj; j++) {
-        dUdt[j] = -V[j] * dUdx[j] / rho[j];
-        dTdt[j] = -V[j] * dTdx[j] / rho[j];
-        dWdt[j] = -V[j] * dWdx[j] / rho[j];
+        dUdt[j] = -V[j] * dUdx[j] / rho[j] + splitConstU[j];
+        dTdt[j] = -V[j] * dTdx[j] / rho[j] + splitConstT[j];
+        dWdt[j] = -V[j] * dWdx[j] / rho[j] + splitConstW[j];
     }
 
     // Right boundary values
     // Convection term has nothing to contribute in any case,
     // So only the value from the other terms remains
-    dUdt[jj] = 0;
-    dTdt[jj] = 0;
-    dWdt[jj] = 0;
+    dUdt[jj] = splitConstU[jj];
+    dTdt[jj] = splitConstT[jj];
+    dWdt[jj] = splitConstW[jj];
 
     roll_ydot(ydot);
     assert(mathUtils::notnan(ydot));
@@ -212,7 +212,7 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     dWdtSplit.resize(nPoints, 0);
 }
 
-void ConvectionSystemUTW::initialize()
+void ConvectionSystemUTW::resetSplitConstants()
 {
     splitConstU.assign(nPoints, 0);
     splitConstT.assign(nPoints, 0);
@@ -264,9 +264,9 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
         double centerVol = pow(x[1],alpha+1) / (alpha+1);
         // Note: v[0] actually contains r*v[0] in this case
         double rvzero_mod = std::max(v[0], 0.0);
-        ydot[0] = -rvzero_mod * (y[0] - Yleft) / centerVol;
+        ydot[0] = -rvzero_mod * (y[0] - Yleft) / centerVol + splitConst[0];
     } else { // FixedValue, ZeroGradient, or truncated domain
-        ydot[0] = 0;
+        ydot[0] = splitConst[0];
     }
 
     // Intermediate points
@@ -278,14 +278,14 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
         } else {
             dYdx = (y[i] - y[i-1]) / hh[j-1];
         }
-        ydot[i] = -v[i] * dYdx;
+        ydot[i] = -v[i] * dYdx  + splitConst[i];
         i++;
     }
 
     // Right boundary values
     // Convection term has nothing to contribute in any case,
     // So only the value from the other terms remains
-    ydot[i] = 0;
+    ydot[i] = splitConst[i];
 
     return 0;
 }
@@ -365,7 +365,7 @@ void ConvectionSystemY::resize(const size_t new_nPoints)
     v.resize(nPoints);
 }
 
-void ConvectionSystemY::initialize()
+void ConvectionSystemY::resetSplitConstants()
 {
     splitConst.assign(nPoints, 0);
 }
@@ -620,6 +620,14 @@ void ConvectionSystemSplit::setSplitDerivatives
              value += dYdtSplit(k,j)/W[k];
         }
         utwSystem.dWdtSplit[j] = - value * Wmx[j] * Wmx[j];
+    }
+}
+
+void ConvectionSystemSplit::resetSplitConstants()
+{
+    utwSystem.resetSplitConstants();
+    foreach (ConvectionSystemY& system, speciesSystems) {
+        system.resetSplitConstants();
     }
 }
 

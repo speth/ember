@@ -29,7 +29,7 @@ public:
     void roll_ydot(sdVector& ydot) const; // fill in sdvector with current time derivatives
 
     void resize(const size_t nPoints);
-    void initialize();
+    void resetSplitConstants();
 
     dvector U, dUdt;
     dvector T, dTdt;
@@ -83,7 +83,7 @@ public:
     int bandedJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdBandMatrix& J);
 
     void resize(const size_t nPoints);
-    void initialize();
+    void resetSplitConstants();
 
     double Yleft;
     int k; // species index (only needed for debugging)
@@ -128,6 +128,8 @@ public:
     void setSplitConstants(const dvector& splitConstU,
                            const dvector& splitConstT,
                            const Array2D& splitConstY);
+
+    void resetSplitConstants();
 
     void integrateToTime(const double tf);
     void unroll_y(); // convert the solver's solution vectors to the full U, Y, and T
