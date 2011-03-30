@@ -14,10 +14,10 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
     size_t N = D.size();
 
     assert(N == jRight - jLeft + 1);
-    dvector c1(N);
-    dvector c2(N);
+    dvector c1(N, 0);
+    dvector c2(N, 0);
 
-    for (size_t j=0; j<=jRight-jLeft; j++) {
+    for (size_t j=1; j<=jRight-jLeft-1; j++) {
         c1[j] = 0.5*B[j]/(dlj[j+jLeft]*r[j+jLeft]);
         c2[j] = rphalf[j+jLeft]*(D[j]+D[j+1])/hh[j+jLeft];
     }
