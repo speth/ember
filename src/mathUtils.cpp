@@ -311,7 +311,9 @@ double mathUtils::interp1(const dvector& xIn, const dvector& yIn, const double x
 dvector mathUtils::splines(const dvector& xIn, const dvector& yIn, const dvector& xOut)
 {
     if (xIn.size() != yIn.size()) {
-        throw debugException("mathUtils::splines: error: xIn and yIn must be the same size.");
+        throw debugException((boost::format(
+            "mathUtils::splines: error: xIn (%i) and yIn (%i) must be the same size.") %
+            xIn.size() % yIn.size()).str());
     }
 
     int nOut = xOut.size();
@@ -340,7 +342,9 @@ dvector mathUtils::splines(const dvector& xIn, const dvector& yIn, const dvector
 double mathUtils::splines(const dvector& xIn, const dvector& yIn, const double xOut)
 {
     if (xIn.size() != yIn.size()) {
-        throw debugException("mathUtils::splines: error: xIn and yIn must be the same size.");
+        throw debugException((boost::format(
+            "mathUtils::splines: error: xIn (%i) and yIn (%i) must be the same size.") %
+            xIn.size() % yIn.size()).str());
     }
 
     int nIn = xIn.size();

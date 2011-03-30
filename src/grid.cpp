@@ -103,11 +103,12 @@ void oneDimGrid::adapt(vector<dvector>& y)
     //  are satisfied for all components at a point, it is removed.
 
     nVars = y.size();
+    assert(nAdapt <= nVars);
     setSize(y[0].size());
 
-    vtol.resize(nVars);
-    dvtol.resize(nVars);
-    for (size_t k=0; k<nVars; k++) {
+    vtol.resize(nAdapt);
+    dvtol.resize(nAdapt);
+    for (size_t k=0; k<nAdapt; k++) {
         vtol[k] = vtol_in;
         dvtol[k] = dvtol_in;
     }
@@ -127,7 +128,7 @@ void oneDimGrid::adapt(vector<dvector>& y)
         bool insert = false;
 
         // Consider tolerances for each variable v in the solution y
-        for (size_t k=0; k<nVars; k++) {
+        for (size_t k=0; k<nAdapt; k++) {
 
             dvector& v = y[k];
             for (size_t i=1; i<jj; i++) {
@@ -264,7 +265,7 @@ void oneDimGrid::adapt(vector<dvector>& y)
         bool remove = true;
 
         // Consider tolerances each variable v in the solution y
-        for (size_t k=0; k<nVars; k++) {
+        for (size_t k=0; k<nAdapt; k++) {
 
             dvector& v = y[k];
             for (size_t i=1; i<jj; i++) {
@@ -425,7 +426,7 @@ bool oneDimGrid::addRight(vector<dvector>& y)
 
     // Check flatness of temperature, velocity and species
     // profiles at the boundary.
-    for (size_t k=0; k<nVars; k++) {
+    for (size_t k=0; k<nAdapt; k++) {
         if (!rightComponents[k]) {
             continue;
         }
@@ -474,7 +475,7 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
 
     bool pointAdded = false;
     if (!fixedLeftLoc) {
-        for (size_t k=0; k<nVars; k++) {
+        for (size_t k=0; k<nAdapt; k++) {
             if (!leftComponents[k]) {
                 continue;
             }
@@ -551,7 +552,7 @@ bool oneDimGrid::removeRight(vector<dvector>& y)
     size_t djOther = (jb==jj && !fixedBurnedVal) ? 3 : 2;
 
     bool pointRemoved = true; // assume removal
-    for (size_t k=0; k<nVars; k++) {
+    for (size_t k=0; k<nAdapt; k++) {
         if (!rightComponents[k]) {
             continue;
         }
@@ -597,7 +598,7 @@ bool oneDimGrid::removeLeft(vector<dvector>& y)
         pointRemoved = false;
     }
 
-    for (size_t k=0; k<nVars; k++) {
+    for (size_t k=0; k<nAdapt; k++) {
         if (!leftComponents[k]) {
             continue;
         }
@@ -631,6 +632,7 @@ bool oneDimGrid::removeLeft(vector<dvector>& y)
 void oneDimGrid::regrid(vector<dvector>& y)
 {
     nVars = y.size();
+    assert(nAdapt <= nVars);
 
     setSize(y[0].size());
 

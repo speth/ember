@@ -51,7 +51,8 @@ public:
     dvector hh;
     dvector rphalf;
     dvector r;
-    size_t nVars; // number of solution variables at each grid point
+    size_t nVars; // number of variables at each grid point
+    size_t nAdapt; // Only the first nAdapt variables at each point are used for adaptation
     size_t nPoints; // number of grid point
     size_t jj; // index of last grid point ( = nPoints-1)
 
