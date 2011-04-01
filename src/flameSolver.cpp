@@ -218,6 +218,9 @@ void FlameSolver::run(void)
         splitTimer.stop();
 
         // Set up solvers for split integration
+        Uprev = U;
+        Tprev = T;
+        Yprev = Y;
 
         updateCrossTerms();
         evaluateDiffusionTerms(t);
@@ -310,6 +313,7 @@ void FlameSolver::run(void)
 
         // *** End of Strang-split integration step ***
         correctMassFractions();
+        calculateDensityDerivative(dt);
 
         t = tNext;
         tNow = tNext;
@@ -411,6 +415,7 @@ void FlameSolver::run(void)
                 }
                 currentSolution.push_back(tmp);
             }
+            currentSolution.push_back(drhodt);
 
             grid.nAdapt = nVars;
             grid.regrid(currentSolution);
@@ -443,6 +448,7 @@ void FlameSolver::run(void)
                 dUdtProd.resize(nPoints);
                 dTdtProd.resize(nPoints);
                 dYdtProd.resize(nSpec, nPoints);
+                drhodt.resize(nPoints);
                 for (size_t j=0; j<nPoints; j++) {
                     U[j] = currentSolution[kMomentum][j];
                     T[j] = currentSolution[kEnergy][j];
@@ -452,8 +458,8 @@ void FlameSolver::run(void)
                     }
                     dUdtProd[j] = currentSolution[nVars+kMomentum][j];
                     dTdtProd[j] = currentSolution[nVars+kEnergy][j];
+                    drhodt[j] = currentSolution[2*nVars][j];
                 }
-
 
                 correctMassFractions();
 
@@ -596,6 +602,7 @@ void FlameSolver::writeStateFile
         outFile.writeArray2D("wdot", wDot);
         outFile.writeArray2D("rhoD", rhoD);
         outFile.writeVector("lambda", lambda);
+        outFile.writeVector("drhodt", drhodt);
 
         outFile.writeVector("cp", cp);
         outFile.writeVector("mu", mu);
@@ -670,8 +677,6 @@ void FlameSolver::writeStateFile
         outFile.writeVector("dWdt", convectionSystem.dWdt);
         outFile.writeVector("dWdx", convectionSystem.utwSystem.dWdx);
         outFile.writeVector("dTdx", convectionSystem.utwSystem.dTdx);
-        outFile.writeVector("dWdtSplit", convectionSystem.utwSystem.dWdtSplit);
-        outFile.writeVector("dTdtSplit", convectionSystem.utwSystem.dTdtSplit);
     }
 
     outFile.close();
@@ -726,7 +731,6 @@ void FlameSolver::resizeAuxiliary()
     dTdt.resize(nPoints,0);
     dYdt.resize(nSpec,nPoints);
 
-
     dYdtCross.resize(nSpec, nPoints, 0);
     dYdtDiff.resize(nSpec, nPoints, 0);
     dYdtProd.resize(nSpec, nPoints, 0);
@@ -742,6 +746,7 @@ void FlameSolver::resizeAuxiliary()
     dUdtConv.resize(nPoints, 0);
 
     rho.resize(nPoints);
+    drhodt.resize(nPoints, 0);
     Wmx.resize(nPoints);
     mu.resize(nPoints);
     lambda.resize(nPoints);
@@ -1082,7 +1087,7 @@ void FlameSolver::evaluateConvectionTerms(double t)
         }
     }
 
-    convectionSystem.setSplitDerivatives(dTdtSplit, dYdtSplit);
+    convectionSystem.setDensityDerivative(drhodt);
     convectionSystem.resetSplitConstants();
     setConvectionSolverState(t, 0);
     convectionSystem.evaluate();
@@ -1554,6 +1559,15 @@ void FlameSolver::correctMassFractions() {
         gas.getMassFractions(&Y(0,j));
     }
     setupTimer.stop();
+}
+
+void FlameSolver::calculateDensityDerivative(double dt) {
+    for (size_t j=0; j<nPoints; j++) {
+        drhodt[j] = -rho[j] / T[j] * (T[j] - Tprev[j]) / dt;
+        for (size_t k=0; k<nSpec; k++) {
+            drhodt[j] -= rho[j] * Wmx[j] / W[k] * (Y(k,j) - Yprev(k,j)) / dt;
+        }
+    }
 }
 
 double FlameSolver::getHeatReleaseRate(void)
@@ -2127,7 +2141,6 @@ void FlameSolver::updateTransportDomain()
     }
 
     convectionSystem.setState(U, T, Y, tNow);
-    convectionSystem.setSplitDerivatives(dTdt, dYdt); // TODO: this is no longer correct
     convectionSystem.evaluate();
 
     for (size_t j=0; j<nPoints; j++) {

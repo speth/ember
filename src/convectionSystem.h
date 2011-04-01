@@ -39,9 +39,7 @@ public:
     double Wleft; // mixture molecular weight left boundary value
     double rVzero; // mass flux boundary value at j=0
 
-    // Net derivatives of the other split terms, used to calculate drho/dt
-    dvector dTdtSplit;
-    dvector dWdtSplit;
+    dvector drhodt;
 
     // Constant terms introduced by the splitting method
     dvector splitConstT;
@@ -122,7 +120,7 @@ public:
 
     // Time derivatives of species and temperature from the other split terms are needed
     // to correctly compute the density derivative appearing in the continuity equation
-    void setSplitDerivatives(const dvector& dTdtSplit, const Array2D& dYdtSplit);
+    void setDensityDerivative(const dvector& drhodt);
 
     // Constants introduced by the splitting method
     void setSplitConstants(const dvector& splitConstU,

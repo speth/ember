@@ -117,6 +117,9 @@ private:
     //! Correct the drift of the total mass fractions and reset any negative mass fractions.
     void correctMassFractions();
 
+    //! Calculate the time derivative of the density for use in the convection term
+    void calculateDensityDerivative(double dt);
+
     // Steps in the Strang split integration process
 
     // Initalize term and evaluate its derivative
@@ -150,6 +153,11 @@ private:
     dvector T; //!< temperature [K]
     Array2D Y; //!< species mass fractions, Y(k,j) [-]
 
+    // State variables at the beginning of the timestep
+    dvector Uprev;
+    dvector Tprev;
+    Array2D Yprev;
+
     // Time derivatives of state variables:
     dvector dUdt;
     dvector dTdt;
@@ -159,6 +167,7 @@ private:
     Array2D dYdtDiff, dYdtProd, dYdtConv;
     dvector dTdtDiff, dTdtProd, dTdtConv;
     dvector dUdtDiff, dUdtProd, dUdtConv;
+    dvector drhodt;
 
     // Auxiliary variables:
     dvector rho; //!< density [kg/m^3]

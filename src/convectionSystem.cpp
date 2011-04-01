@@ -32,10 +32,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
             dWdx[j] = (Wmx[j] - Wmx[j-1]) / hh[j-1];
         }
 
-        rV[j+1] = rV[j] - hh[j] *
-                (rV[j] * dTdx[j] - rphalf[j] * rho[j] * dTdtSplit[j]) / T[j];
-        rV[j+1] += hh[j] *
-                (rV[j] * dWdx[j] - rphalf[j] * rho[j] * dWdtSplit[j]) / Wmx[j];
+        rV[j+1] = rV[j] - hh[j] * drhodt[j];
         rV[j+1] -= hh[j] * rho[j] * U[j] * rphalf[j];
     }
 
@@ -204,12 +201,11 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     T.resize(nPoints);
     dTdt.resize(nPoints);
     dTdx.resize(nPoints);
-    dTdtSplit.resize(nPoints, 0);
+    drhodt.resize(nPoints, 0);
 
     Wmx.resize(nPoints);
     dWdt.resize(nPoints);
     dWdx.resize(nPoints);
-    dWdtSplit.resize(nPoints, 0);
 }
 
 void ConvectionSystemUTW::resetSplitConstants()
@@ -609,18 +605,9 @@ void ConvectionSystemSplit::evaluate()
     }
 }
 
-void ConvectionSystemSplit::setSplitDerivatives
-(const dvector& dTdtSplit, const Array2D& dYdtSplit)
+void ConvectionSystemSplit::setDensityDerivative(const dvector& drhodt)
 {
-    utwSystem.dTdtSplit = dTdtSplit;
-
-    for (size_t j=0; j<nPointsUTW; j++) {
-        double value = 0;
-        for (size_t k=0; k<nSpec; k++) {
-             value += dYdtSplit(k,j)/W[k];
-        }
-        utwSystem.dWdtSplit[j] = - value * Wmx[j] * Wmx[j];
-    }
+    utwSystem.drhodt = drhodt;
 }
 
 void ConvectionSystemSplit::resetSplitConstants()
