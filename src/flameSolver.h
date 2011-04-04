@@ -112,13 +112,13 @@ private:
     void updateChemicalProperties(); //!< Update thermodynamic, transport, and kinetic properties
     void updateLeftBC(); //!< Set boundary condition for left edge of domain
     void calculateQdot(); //!< Compute heat release rate using the current temperature and mass fractions
-    void calculateTimeDerivatives(); //!< Combine dUdt, dTdt and dYdt from the split solvers
+    void calculateTimeDerivatives_old(); //!< Combine dUdt, dTdt and dYdt from the split solvers
 
     //! Correct the drift of the total mass fractions and reset any negative mass fractions.
     void correctMassFractions();
 
-    //! Calculate the time derivative of the density for use in the convection term
-    void calculateDensityDerivative(double dt);
+    //! Calculate the apparent time derivatives for each term in the governing equations
+    void calculateTimeDerivatives(double dt);
 
     // Steps in the Strang split integration process
 
@@ -136,9 +136,9 @@ private:
     void setConvectionSolverState(double tInitial, int stage);
     void setProductionSolverState(double tInitial);
 
-    void extractConvectionState(int stage);
-    void extractDiffusionState(int stage);
-    void extractProductionState();
+    void extractConvectionState(double dt, int stage);
+    void extractDiffusionState(double dt, int stage);
+    void extractProductionState(double dt);
 
     void integrateConvectionTerms(double t, int stage);
     void integrateProductionTerms(double t, int stage);
@@ -168,6 +168,22 @@ private:
     dvector dTdtDiff, dTdtProd, dTdtConv;
     dvector dUdtDiff, dUdtProd, dUdtConv;
     dvector drhodt;
+
+    // State variables at the beginning of the current integrator stage
+    dvector Ustart;
+    dvector Tstart;
+    Array2D Ystart;
+
+    // Changes in each state variable for each terms of the governing equations
+    dvector deltaUconv;
+    dvector deltaUdiff;
+    dvector deltaUprod;
+    dvector deltaTconv;
+    dvector deltaTdiff;
+    dvector deltaTprod;
+    Array2D deltaYconv;
+    Array2D deltaYdiff;
+    Array2D deltaYprod;
 
     // Auxiliary variables:
     dvector rho; //!< density [kg/m^3]
@@ -225,6 +241,9 @@ private:
 
     //! Chemkin/AdapChem state mechanism data
     boost::shared_ptr<AdapChem> ckGas;
+
+    void rollVectorVector(vector<dvector>& vv, const dvector& u, const dvector& t, const Array2D& y) const;
+    void unrollVectorVector(const vector<dvector>& vv, dvector& u, dvector& t, Array2D& y, size_t i) const;
 
     void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); //!< [m]
