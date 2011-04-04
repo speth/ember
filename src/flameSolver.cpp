@@ -398,7 +398,6 @@ void FlameSolver::run(void)
             rollVectorVector(currentSolution, dUdtConv, dTdtConv, dYdtConv);
             rollVectorVector(currentSolution, dUdtDiff, dTdtDiff, dYdtDiff);
             rollVectorVector(currentSolution, dUdtProd, dTdtProd, dYdtProd);
-            currentSolution.push_back(drhodt);
 
             grid.nAdapt = nVars;
             grid.regrid(currentSolution);
@@ -428,7 +427,6 @@ void FlameSolver::run(void)
                 unrollVectorVector(currentSolution, dUdtConv, dTdtConv, dYdtConv, 1);
                 unrollVectorVector(currentSolution, dUdtDiff, dTdtDiff, dYdtDiff, 2);
                 unrollVectorVector(currentSolution, dUdtProd, dTdtProd, dYdtProd, 3);
-                drhodt = currentSolution[3*nVars];
 
                 correctMassFractions();
 
@@ -1059,7 +1057,17 @@ void FlameSolver::evaluateConvectionTerms(double t)
 //        }
 //    }
 
-    drhodt.assign(nPoints, 0);
+    drhodt.resize(nPoints);
+    for (size_t j=0; j<nPoints; j++) {
+        drhodt[j] = -rho[j] / T[j] *
+            (dTdtConv[j] + dTdtDiff[j] + dTdtProd[j] + dTdtCross[j]);
+
+        for (size_t k=0; k<nSpec; k++) {
+            drhodt[j] -= rho[j] * Wmx[j] / W[k] *
+                (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j) + dYdtCross(k,j));
+        }
+    }
+
     convectionSystem.setDensityDerivative(drhodt);
     convectionSystem.resetSplitConstants();
     setConvectionSolverState(t, 0);
@@ -1239,10 +1247,10 @@ void FlameSolver::extractConvectionState(double dt, int stage)
         deltaUconv[j] += U[j] - Ustart[j] -
             0.25 * dt * (dUdtProd[j] + dUdtDiff[j]);
         deltaTconv[j] += T[j] - Tstart[j] -
-            0.25 * dt * (dTdtProd[j] + dTdtProd[j] + dTdtCross[j]);
+            0.25 * dt * (dTdtProd[j] + dTdtDiff[j] + dTdtCross[j]);
         for (size_t k=0; k<nSpec; k++) {
             deltaYconv(k,j) += Y(k,j) - Ystart(k,j) -
-                0.25 * dt * (dYdtProd(k,j) + dYdtProd(k,j) + dYdtCross(k,j));
+                0.25 * dt * (dYdtProd(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
         }
     }
 
@@ -1327,7 +1335,7 @@ void FlameSolver::extractProductionState(double dt)
         deltaTprod[j] += T[j] - Tstart[j] -
             0.5 * dt * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
         for (size_t k=0; k<nSpec; k++) {
-            deltaYprod(k,j) = Y(k,j)-Ystart(k,j) -
+            deltaYprod(k,j) += Y(k,j)-Ystart(k,j) -
                 0.5 * dt * (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
         }
     }
@@ -1632,25 +1640,24 @@ void FlameSolver::correctMassFractions() {
 void FlameSolver::calculateTimeDerivatives(double dt)
 {
     for (size_t j=0; j<nPoints; j++) {
-        dUdtConv[j] = deltaUconv[j] / dt;
-        dUdtDiff[j] = deltaUdiff[j] / dt;
-        dUdtProd[j] = deltaUprod[j] / dt;
+        dUdtConv[j] = deltaUconv[j] / dt + 0.75 * dUdtConv[j];
+        dUdtDiff[j] = deltaUdiff[j] / dt + 0.75 * dUdtDiff[j];
+        dUdtProd[j] = deltaUprod[j] / dt + 0.5 * dUdtProd[j];
 
-        dTdtConv[j] = deltaTconv[j] / dt;
-        dTdtDiff[j] = deltaTdiff[j] / dt;
-        dTdtProd[j] = deltaTprod[j] / dt;
+        dTdtConv[j] = deltaTconv[j] / dt + 0.75 * dTdtConv[j];
+        dTdtDiff[j] = deltaTdiff[j] / dt + 0.75 * dTdtDiff[j];
+        dTdtProd[j] = deltaTprod[j] / dt + 0.5 * dTdtProd[j];
 
         drhodt[j] = -rho[j] / T[j] *
-            ((deltaTconv[j] + deltaTdiff[j] + deltaTprod[j]) / dt + dTdtCross[j]);
+            (dTdtConv[j] + dTdtDiff[j] + dTdtProd[j] + dTdtCross[j]);
 
         for (size_t k=0; k<nSpec; k++) {
-            dYdtConv(k,j) = deltaYconv(k,j) / dt;
-            dYdtDiff(k,j) = deltaYdiff(k,j) / dt;
-            dYdtProd(k,j) = deltaYprod(k,j) / dt;
+            dYdtConv(k,j) = deltaYconv(k,j) / dt + 0.75 * dYdtConv(k,j);
+            dYdtDiff(k,j) = deltaYdiff(k,j) / dt + 0.75 * dYdtDiff(k,j);
+            dYdtProd(k,j) = deltaYprod(k,j) / dt + 0.5 * dYdtProd(k,j);
 
             drhodt[j] -= rho[j] * Wmx[j] / W[k] *
-                ((deltaYprod(k,j) + deltaYdiff(k,j) + deltaYconv(k,j)) / dt +
-                    dYdtCross(k,j));
+                (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j) + dYdtCross(k,j));
         }
     }
 }
