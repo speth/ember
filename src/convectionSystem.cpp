@@ -624,6 +624,7 @@ void ConvectionSystemSplit::setSplitConstants(const dvector& splitConstU,
 {
     utwSystem.splitConstT = splitConstT;
     utwSystem.splitConstU = splitConstU;
+    utwSystem.splitConstW.resize(nPoints);
     for (size_t j=0; j<nPointsUTW; j++) {
         double value = 0;
         for (size_t k=0; k<nSpec; k++) {
@@ -634,6 +635,7 @@ void ConvectionSystemSplit::setSplitConstants(const dvector& splitConstU,
 
     for (size_t k=0; k<nSpec; k++) {
         size_t i = 0;
+        speciesSystems[k].splitConst.resize(nPointsSpec[k]);
         for (size_t j=(*startIndices)[k]; j<=(*stopIndices)[k]; j++) {
             speciesSystems[k].splitConst[i] = splitConstY(k,j);
             i++;

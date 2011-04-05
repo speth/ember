@@ -123,8 +123,6 @@ void FlameSolver::run(void)
     totalTimer.start();
 
     double t = tStart;
-    double dtMax = options.globalTimestep;
-    double dtPrev = 0.01 * dtMax;
 
     long int nTotal = 0; // total number of timesteps taken
     int nRegrid = 0; // number of time steps since regridding/adaptation
@@ -235,28 +233,11 @@ void FlameSolver::run(void)
         Yprev = Y;
 
         updateCrossTerms();
-        evaluateDiffusionTerms(t);
-        evaluateProductionTerms(t);
-        evaluateConvectionTerms(t);
-
         prepareDiffusionTerms();
         prepareProductionTerms();
         prepareConvectionTerms();
 
-        // Time step estimate:
-        double dt = dtMax;
-//        for (size_t j=0; j<nPoints; j++) {
-//            dt = min(dt, 0.2 * abs(T[j]/(dTdtConv[j] + dTdtDiff[j] + dTdtProd[j])));
-//            dt = min(dt, 0.2 * abs(U[j]/(dUdtConv[j] + dUdtDiff[j] + dUdtProd[j])));
-//            for (size_t k=0; k<nSpec; k++) {
-//                if (Y(k,j) > 1e-6) {
-//                    dt = min(dt, 0.2 * abs(Y(k,j)/(dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j))));
-//                }
-//            }
-//        }
-//        dt = max(dt, 1e-9);
-//        dt = 0.25 * dt + 0.75 * dtPrev;
-
+        double dt = options.globalTimestep;
         double tNext = tNow + dt;
 
         if (t == tStart && options.outputProfiles) {
@@ -978,111 +959,15 @@ void FlameSolver::updateChemicalProperties()
     }
 }
 
-void FlameSolver::evaluateDiffusionTerms(double t)
-{
-    splitTimer.resume();
-    for (size_t k=0; k<nVars; k++) {
-        // TODO: Use timestep that is based on each component's diffusivity
-        diffusionTerms[k].resetSplitConstants();
-    }
-    splitTimer.stop();
-
-    setDiffusionSolverState(t);
-
-    splitTimer.resume();
-//    dUdtDiff = diffusionSolvers[kMomentum].get_ydot();
-//    dTdtDiff = diffusionSolvers[kEnergy].get_ydot();
-
-    for (size_t k=0; k<nSpec; k++) {
-        const dvector& ydotk = diffusionSolvers[kSpecies+k].get_ydot();
-        size_t i = 0;
-        for (size_t j = diffusionStartIndices[k];
-             j <= diffusionStopIndices[k];
-             j++)
-        {
-//            dYdtDiff(k,j) = ydotk[i];
-            i++;
-        }
-    }
-    splitTimer.stop();
-}
-
-void FlameSolver::evaluateProductionTerms(double t)
-{
-    setProductionSolverState(t);
-    splitTimer.resume();
-    for (size_t j=0; j<nPoints; j++) {
-        if (useCVODE[j]) {
-            // Initialize
-            sourceTerms[j].resetSplitConstants();
-            sourceTerms[j].wDot.assign(nSpec, 0);
-            sourceTerms[j].strainFunction.pin(t);
-
-            // Evaluate the derivative
-            sdVector ydotSource(nVars);
-            sourceTerms[j].f(t, sourceSolvers[j].y, ydotSource);
-//            dUdtProd[j] = ydotSource[kMomentum];
-//            dTdtProd[j] = ydotSource[kEnergy];
-//            for (size_t k=0; k<nSpec; k++) {
-//                dYdtProd(k,j) = ydotSource[kSpecies+k];
-//            }
-        } else {
-            // Initialize
-            sourceTermsQSS[j].initialize(nSpec);
-            sourceTermsQSS[j].resetSplitConstants();
-            sourceTermsQSS[j].strainFunction.pin(t);
-
-            // Evaluate the derivative
-            dvector q(nVars), d(nVars);
-            sourceTermsQSS[j].odefun(t, sourceTermsQSS[j].y, q, d);
-            dUdtProd[j] = (q[kMomentum] - q[kMomentum]);
-            dTdtProd[j] = (q[kEnergy] - d[kEnergy]);
-            for (size_t k=0; k<nSpec; k++) {
-                dYdtProd(k,j) = (q[kSpecies+k] - d[kSpecies+k]);
-            }
-        }
-    }
-
-    splitTimer.stop();
-}
-
-void FlameSolver::evaluateConvectionTerms(double t)
-{
-//    dvector dTdtSplit(nPoints);
-//    Array2D dYdtSplit(nSpec, nPoints);
-//    for (size_t j=0; j<nPoints; j++) {
-//        dTdtSplit[j] = dTdtDiff[j] + dTdtProd[j] + dTdtCross[j];
-//        for (size_t k=0; k<nSpec; k++) {
-//            dYdtSplit(k,j) = dYdtDiff(k,j) + dYdtProd(k,j) + dYdtCross(k,j);
-//        }
-//    }
-
-    drhodt.resize(nPoints);
-    for (size_t j=0; j<nPoints; j++) {
-        drhodt[j] = -rho[j] / T[j] *
-            (dTdtConv[j] + dTdtDiff[j] + dTdtProd[j] + dTdtCross[j]);
-
-        for (size_t k=0; k<nSpec; k++) {
-            drhodt[j] -= rho[j] * Wmx[j] / W[k] *
-                (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j) + dYdtCross(k,j));
-        }
-    }
-
-    convectionSystem.setDensityDerivative(drhodt);
-    convectionSystem.resetSplitConstants();
-    setConvectionSolverState(t, 0);
-//    convectionSystem.evaluate();
-
-//    dUdtConv = convectionSystem.dUdt;
-//    dTdtConv = convectionSystem.dTdt;
-//    dYdtConv = convectionSystem.dYdt;
-}
-
 void FlameSolver::prepareDiffusionTerms()
 {
+    splitTimer.resume();
+
     deltaUdiff.assign(nPoints, 0);
     deltaTdiff.assign(nPoints, 0);
     deltaYdiff.data().assign(nSpec*nPoints, 0);
+
+    setDiffusionSolverState(tNow);
 
     for (size_t j=0; j<nPoints; j++) {
         diffusionTerms[kEnergy].splitConst[j] = -0.75 * dTdtDiff[j] +
@@ -1103,6 +988,7 @@ void FlameSolver::prepareDiffusionTerms()
             i++;
         }
     }
+    splitTimer.stop();
 }
 
 void FlameSolver::prepareProductionTerms()
@@ -1110,6 +996,8 @@ void FlameSolver::prepareProductionTerms()
     deltaUprod.assign(nPoints, 0);
     deltaTprod.assign(nPoints, 0);
     deltaYprod.data().assign(nSpec*nPoints, 0);
+
+    setProductionSolverState(tNow);
 
     for (size_t j=0; j<nPoints; j++) {
         if (useCVODE[j]) {
@@ -1139,6 +1027,21 @@ void FlameSolver::prepareConvectionTerms()
     deltaUconv.assign(nPoints, 0);
     deltaTconv.assign(nPoints, 0);
     deltaYconv.data().assign(nSpec*nPoints, 0);
+
+    setConvectionSolverState(tNow, 0);
+
+    drhodt.resize(nPoints);
+    for (size_t j=0; j<nPoints; j++) {
+        drhodt[j] = -rho[j] / T[j] *
+            (dTdtConv[j] + dTdtDiff[j] + dTdtProd[j] + dTdtCross[j]);
+
+        for (size_t k=0; k<nSpec; k++) {
+            drhodt[j] -= rho[j] * Wmx[j] / W[k] *
+                (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j) + dYdtCross(k,j));
+        }
+    }
+
+    convectionSystem.setDensityDerivative(drhodt);
 
     dvector splitConstT(nPoints);
     dvector splitConstU(nPoints);

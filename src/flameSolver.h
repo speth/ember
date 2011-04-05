@@ -122,11 +122,6 @@ private:
 
     // Steps in the Strang split integration process
 
-    // Initalize term and evaluate its derivative
-    void evaluateDiffusionTerms(double t);
-    void evaluateProductionTerms(double t);
-    void evaluateConvectionTerms(double t);
-
     // Prepare the balanced splitting terms for integration
     void prepareDiffusionTerms();
     void prepareProductionTerms();
