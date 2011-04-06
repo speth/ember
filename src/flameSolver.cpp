@@ -133,7 +133,7 @@ void FlameSolver::run(void)
     int nCurrentState = 0; // number of time steps since profNow.h5 and outNow.h5 were written
 
     // number of time steps since performing transport species elimination
-    int nEliminate = options.transportEliminationStepInterval;
+    int nEliminate = 0;
 
     double tOutput = t; // time of next integral flame parameters output (this step)
     double tRegrid = t + options.regridTimeInterval; // time of next regridding
@@ -1505,7 +1505,7 @@ void FlameSolver::calculateTimeDerivatives_old()
              j <= diffusionStopIndices[k];
              j++)
         {
-            dYdt(k,j) = dYdtDiff(k,j) = ydot[i];
+            dYdt(k,j) = ydot[i];
             i++;
         }
     }
@@ -1518,20 +1518,20 @@ void FlameSolver::calculateTimeDerivatives_old()
             sdVector ydotSource(nVars);
             sourceTerms[j].f(tNow, ySource, ydotSource);
 
-            dUdt[j] += dUdtProd[j] = ydotSource[kMomentum];
-            dTdt[j] += dTdtProd[j] = ydotSource[kEnergy];
+            dUdt[j] += ydotSource[kMomentum];
+            dTdt[j] += ydotSource[kEnergy];
             for (size_t k=0; k<nSpec; k++) {
-                dYdt(k,j) += dYdtProd(k,j) = ydotSource[kSpecies+k];
+                dYdt(k,j) += ydotSource[kSpecies+k];
             }
         } else {
             dvector& ySource = sourceTermsQSS[j].y;
             dvector q(nVars), d(nVars);
             sourceTermsQSS[j].odefun(tNow, ySource, q, d);
 
-            dUdt[j] += dUdtProd[j] = (q[kMomentum] - d[kMomentum]);
-            dTdt[j] += dTdtProd[j] = (q[kEnergy] - d[kEnergy]);
+            dUdt[j] += (q[kMomentum] - d[kMomentum]);
+            dTdt[j] += (q[kEnergy] - d[kEnergy]);
             for (size_t k=0; k<nSpec; k++) {
-                dYdt(k,j) += dYdtProd(k,j) = (q[kSpecies+k] - d[kSpecies+k]);
+                dYdt(k,j) += (q[kSpecies+k] - d[kSpecies+k]);
             }
         }
     }
@@ -2078,6 +2078,7 @@ void FlameSolver::updateTransportDomain()
     adaptiveTransportTimer.start();
     Array2D dYdtTransport(nSpec, nPoints);
     Array2D dYdtProduction(nSpec, nPoints);
+    Array2D dYdtTotal(nSpec, nPoints);
 
     // Evaluate the full diffusion term for each species
     diffusionTestSolver.initialize(0, options.diffusionTimestep);
@@ -2088,7 +2089,7 @@ void FlameSolver::updateTransportDomain()
             diffusionTestTerm.D[j] = rhoD(k,j);
         }
         const dvector& dYkdt_diff = diffusionTestSolver.get_ydot();
-        dYdt.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
+        dYdtTotal.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
         dYdtTransport.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
     }
 
@@ -2125,7 +2126,7 @@ void FlameSolver::updateTransportDomain()
             dvector q(nVars), d(nVars);
             sourceTermsQSS[j].odefun(tNow, ySource, q, d);
             for (size_t k=0; k<nSpec; k++) {
-                dYdt(k,j) += (q[kSpecies+k] = d[kSpecies+k]);
+                dYdtTotal(k,j) += (q[kSpecies+k] = d[kSpecies+k]);
                 dYdtProduction(k,j) = (q[kSpecies+k] - d[kSpecies+k]);
             }
 
@@ -2145,11 +2146,12 @@ void FlameSolver::updateTransportDomain()
     }
 
     convectionSystem.setState(U, T, Y, tNow);
+    convectionSystem.resetSplitConstants();
     convectionSystem.evaluate();
 
     for (size_t j=0; j<nPoints; j++) {
         for (size_t k=0; k<nSpec; k++) {
-            dYdt(k,j) += convectionSystem.dYdt(k,j);
+            dYdtTotal(k,j) += convectionSystem.dYdt(k,j);
             dYdtTransport(k,j) += convectionSystem.dYdt(k,j);
         }
     }
