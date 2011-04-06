@@ -519,10 +519,6 @@ class OutputFiles(Options):
     ## Write profiles after each stage of the split integrator.
     debugIntegratorStages = False
 
-    ## Include the heat release rate at the end of each step of the
-    ## split integrator in outNNNNNN.h5
-    splitHeatReleaseRate = False
-
 
 class TerminationCondition(Options):
     """

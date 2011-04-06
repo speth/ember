@@ -148,11 +148,6 @@ private:
     dvector T; //!< temperature [K]
     Array2D Y; //!< species mass fractions, Y(k,j) [-]
 
-    // State variables at the beginning of the timestep
-    dvector Uprev;
-    dvector Tprev;
-    Array2D Yprev;
-
     // Time derivatives of state variables:
     dvector dUdt;
     dvector dTdt;
@@ -197,9 +192,6 @@ private:
     Array2D hk; //!< species molar enthalpies [J/kmol]
     Array2D jFick; //!< Fickian mass flux [kg/m^2*s]
     Array2D jSoret; //!< Soret mass flux [kg/m^2*s]
-
-    // Heat release rate evaluated after each phase of the split solver
-    double qDotProd, qDotDiff1, qDotDiff2, qDotConv1, qDotConv2;
 
     Array2D dYdtCross; //!< dYdt due to gradients in other species and temperature
     dvector dTdtCross; //!< dTdt due to gradients in gas composition

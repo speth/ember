@@ -128,9 +128,8 @@ void FlameSolver::run(void)
     int nRegrid = 0; // number of time steps since regridding/adaptation
     int nOutput = 0; // number of time steps since storing integral flame parameters
     int nProfile = 0; // number of time steps since saving flame profiles
-    int nIntegrate = 0; // number of time steps since restarting integrator
     int nTerminate = 1; // number of steps since last checking termination condition
-    int nCurrentState = 0; // number of time steps since profNow.h5 and outNow.h5 were written
+    int nCurrentState = 0; // number of time steps since profNow.h5 and out.h5 were written
 
     // number of time steps since performing transport species elimination
     int nEliminate = 0;
@@ -200,6 +199,7 @@ void FlameSolver::run(void)
         }
         setupTimer.stop();
 
+        // Diffusion solvers: Energy and momentum
         splitTimer.start();
         for (size_t j=0; j<nPoints; j++) {
             diffusionTerms[kMomentum].B[j] = 1 / rho[j];
@@ -228,10 +228,6 @@ void FlameSolver::run(void)
         splitTimer.stop();
 
         // Set up solvers for split integration
-        Uprev = U;
-        Tprev = T;
-        Yprev = Y;
-
         updateCrossTerms();
         prepareDiffusionTerms();
         prepareProductionTerms();
@@ -299,7 +295,6 @@ void FlameSolver::run(void)
         nOutput++;
         nRegrid++;
         nProfile++;
-        nIntegrate++;
         nTerminate++;
         nCurrentState++;
 
@@ -316,14 +311,6 @@ void FlameSolver::run(void)
             heatReleaseRate.push_back(getHeatReleaseRate());
             consumptionSpeed.push_back(getConsumptionSpeed());
             flamePosition.push_back(getFlamePosition());
-
-            if (options.outputSplitHeatReleaseRate) {
-                qDotProd1Vec.push_back(qDotProd);
-                qDotDiff1Vec.push_back(qDotDiff1);
-                qDotDiff2Vec.push_back(qDotDiff2);
-                qDotConv1Vec.push_back(qDotConv1);
-                qDotConv2Vec.push_back(qDotConv2);
-            }
 
             tOutput = t + options.outputTimeInterval;
             nOutput = 0;
@@ -347,8 +334,9 @@ void FlameSolver::run(void)
         //     in files that are automatically overwritten,
         //     and save the time-series data (out.h5)
         if (nCurrentState >= options.currentStateStepInterval) {
+            calculateQdot();
             nCurrentState = 0;
-            writeTimeseriesFile("outNow");
+            writeTimeseriesFile("out");
             writeStateFile("profNow");
         }
 
@@ -397,8 +385,6 @@ void FlameSolver::run(void)
 
             // Perform updates that are necessary if the grid has changed
             if (grid.updated) {
-                nIntegrate = 0;
-
                 // Update species elimination at the start of the next time step
                 nEliminate = options.transportEliminationStepInterval;
 
@@ -430,6 +416,9 @@ void FlameSolver::run(void)
         }
         nTotal++;
     }
+
+    calculateQdot();
+    writeTimeseriesFile("out");
 
     // *** Integration has reached the termination condition
     if (options.outputProfiles) {
@@ -649,15 +638,6 @@ void FlameSolver::writeTimeseriesFile(const std::string& filename)
     outFile.writeVector("Sc", consumptionSpeed);
     outFile.writeVector("xFlame", flamePosition);
 
-    if (options.outputSplitHeatReleaseRate) {
-        outFile.writeVector("qDotProd1", qDotProd1Vec);
-        outFile.writeVector("qDotProd2", qDotProd2Vec);
-        outFile.writeVector("qDotDiff1", qDotDiff1Vec);
-        outFile.writeVector("qDotDiff2", qDotDiff2Vec);
-        outFile.writeVector("qDotConv1", qDotConv1Vec);
-        outFile.writeVector("qDotConv2", qDotConv2Vec);
-    }
-
     outFile.close();
 }
 
@@ -735,7 +715,6 @@ void FlameSolver::resizeAuxiliary()
             system->gas = &gas;
             system->ckGas = ckGas;
             system->options = &options;
-            system->usingAdapChem = options.usingAdapChem;
             system->thermoTimer = &thermoTimer;
             system->reactionRatesTimer = &reactionRatesTimer;
             system->jacobianTimer = &jacobianTimer;
@@ -744,7 +723,6 @@ void FlameSolver::resizeAuxiliary()
             system->W = W;
             system->j = j;
             system->x = x[j];
-
 
             // Create and initialize the new Sundials solver
             sundialsCVODE* solver = new sundialsCVODE(nVars);
@@ -770,14 +748,12 @@ void FlameSolver::resizeAuxiliary()
             qssSolver->gas = &gas;
             qssSolver->ckGas = ckGas;
             qssSolver->options = &options;
-            qssSolver->usingAdapChem = options.usingAdapChem;
             qssSolver->thermoTimer = &thermoTimer;
             qssSolver->reactionRatesTimer = &reactionRatesTimer;
             qssSolver->strainFunction = strainfunc;
             qssSolver->rhou = rhou;
             qssSolver->W = W;
             qssSolver->j = j;
-
 
             qssSolver->ymin.assign(nVars, options.qss_minval);
             qssSolver->ymin[kMomentum] = -1e4;
@@ -942,20 +918,6 @@ void FlameSolver::updateChemicalProperties()
         gas.getThermalDiffusionCoefficients(&Dkt(0,j));
         diffusivityTimer.stop();
         transportTimer.stop();
-
-        // Reaction rates
-        reactionRatesTimer.start();
-        if (options.usingAdapChem) {
-            ckGas->initializeStep(&Y(0,j), T[j], j);
-            ckGas->getReactionRates(&wDot(0,j));
-        } else {
-            gas.getReactionRates(&wDot(0,j));
-        }
-        qDot[j] = 0;
-        for (size_t k=0; k<nSpec; k++) {
-            qDot[j] -= wDot(k,j)*hk(k,j);
-        }
-        reactionRatesTimer.stop();
     }
 }
 
@@ -1171,11 +1133,6 @@ void FlameSolver::extractConvectionState(double dt, int stage)
 
     splitTimer.stop();
 
-    if (options.outputSplitHeatReleaseRate) {
-        calculateQdot();
-        (stage == 1) ? qDotConv1 : qDotConv2 = getHeatReleaseRate();
-    }
-
     if (options.outputDebugIntegratorStages) {
         writeStateFile((format("conv%i_t%.6f") % stage % tNow).str(), true, false);
     }
@@ -1213,11 +1170,6 @@ void FlameSolver::extractDiffusionState(double dt, int stage)
     }
 
     splitTimer.stop();
-
-    if (stage && options.outputSplitHeatReleaseRate) {
-        calculateQdot();
-        (stage == 1) ? qDotDiff1 : qDotDiff2 = getHeatReleaseRate();
-    }
 
     if (stage && options.outputDebugIntegratorStages) {
         writeStateFile((format("diff%i_t%.6f") % stage % tNow).str(), true, false);
@@ -1257,10 +1209,6 @@ void FlameSolver::extractProductionState(double dt)
         }
     }
     splitTimer.stop();
-
-    if (options.outputSplitHeatReleaseRate) {
-        qDotProd = getHeatReleaseRate();
-    }
 
     if (options.outputDebugIntegratorStages) {
         writeStateFile((format("prod_t%.6f") % tNow).str(), true, false);
@@ -1471,6 +1419,7 @@ double FlameSolver::targetFlamePosition(double t)
 
 void FlameSolver::calculateQdot()
 {
+    reactionRatesTimer.start();
     for (size_t j=0; j<nPoints; j++) {
         gas.setStateMass(&Y(0,j), T[j]);
         gas.getEnthalpies(&hk(0,j));
@@ -1486,6 +1435,7 @@ void FlameSolver::calculateQdot()
             qDot[j] -= wDot(k,j)*hk(k,j);
         }
     }
+    reactionRatesTimer.stop();
 }
 
 

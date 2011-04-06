@@ -234,7 +234,6 @@ configOptions::configOptions(const boost::python::object& conf)
         outputFileNumber = 0;
         fileNumberOverride = readOption(output, "firstFileNumber", outputFileNumber);
     }
-    readOption(output, "splitHeatReleaseRate", outputSplitHeatReleaseRate);
     readOption(output, "debugIntegratorStages", outputDebugIntegratorStages);
 
     // Termination Conditions

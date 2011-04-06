@@ -91,7 +91,7 @@ the file specified by "Paths.logFile" in the input file.
 9. Examine the output files. The files are HDF5 data files, which can be read
 using the Python h5py module or Matlab.
 
-   * outNow.h5 contains integral flame properties (e.g. flame speed) as a function of time
+   * out.h5 contains integral flame properties (e.g. flame speed) as a function of time
    * profNNNNNN.h5 contain the temperature & species profiles output periodically.
    * profNow.h5 contains the most recently saved profiles.
 

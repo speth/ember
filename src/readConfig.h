@@ -61,7 +61,7 @@ public:
     int regridStepInterval;
     int outputStepInterval;
     int profileStepInterval;
-    int currentStateStepInterval; // number of time steps before updating profNow.h5 and outNow.h5
+    int currentStateStepInterval; // number of time steps before updating profNow.h5 and out.h5
     int terminateStepInterval;
     double regridTimeInterval;
     double outputTimeInterval;
@@ -151,7 +151,6 @@ public:
     bool outputAuxiliaryVariables;
     bool outputTimeDerivatives;
     bool outputHeatReleaseRate;
-    bool outputSplitHeatReleaseRate;
     bool outputResidualComponents;
     bool outputProfiles;
     bool outputDebugIntegratorStages;

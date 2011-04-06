@@ -56,7 +56,6 @@ public:
     // Cantera data
     CanteraGas* gas;
     boost::shared_ptr<AdapChem> ckGas;
-    bool usingAdapChem;
     perfTimer* reactionRatesTimer;
     perfTimer* thermoTimer;
     perfTimer* jacobianTimer;
@@ -117,7 +116,6 @@ public:
     // Cantera data
     CanteraGas* gas;
     boost::shared_ptr<AdapChem> ckGas;
-    bool usingAdapChem;
     perfTimer* reactionRatesTimer;
     perfTimer* thermoTimer;
 
