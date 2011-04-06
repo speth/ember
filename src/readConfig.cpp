@@ -50,6 +50,7 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(general, "twinFlame", twinFlame);
     stopIfError = readOption(general, "errorStopCount", errorStopCount);
     readOption(general, "chemistryIntegrator", chemistryIntegrator);
+    readOption(general, "splittingMethod", splittingMethod);
 
     // Chemistry
     const object& chem = conf.attr("chemistry");

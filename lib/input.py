@@ -96,6 +96,10 @@ class General(Options):
     ## variable-order BDF).
     chemistryIntegrator = "qss"
 
+    ## Method to use for splitting the convection / diffusion / reaction
+    ## terms. Options are "strang" and "balanced".
+    splittingMethod = "balanced"
+
     ## Number of integration failures to tolerate in the chemistry
     ## integrator before aborting.
     errorStopCount = 100
@@ -596,8 +600,10 @@ class Config(object):
                                  'flameType', ('premixed', 'diffusion')) or error
         error = self.checkString(self.general,
                                  'chemistryIntegrator', ('cvode', 'qss')) or error
-        erro = self.checkString(self.chemistry,
+        error = self.checkString(self.chemistry,
                                 'transportModel', ('Multi', 'Mix')) or error
+        error = self.checkString(self.general,
+                                 'splittingMethod', ('strang', 'balanced')) or error
 
         # Make sure the mechanism file is in the correct place
         mech = os.path.join(self.paths.inputDir, self.chemistry.mechanismFile)

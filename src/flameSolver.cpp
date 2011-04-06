@@ -969,6 +969,11 @@ void FlameSolver::prepareDiffusionTerms()
 
     setDiffusionSolverState(tNow);
 
+    if (options.splittingMethod != "balanced") {
+        splitTimer.stop();
+        return;
+    }
+
     for (size_t j=0; j<nPoints; j++) {
         diffusionTerms[kEnergy].splitConst[j] = -0.75 * dTdtDiff[j] +
             0.25 * (dTdtProd[j] + dTdtConv[j] + dTdtCross[j]);
@@ -998,6 +1003,9 @@ void FlameSolver::prepareProductionTerms()
     deltaYprod.data().assign(nSpec*nPoints, 0);
 
     setProductionSolverState(tNow);
+    if (options.splittingMethod != "balanced") {
+        return;
+    }
 
     for (size_t j=0; j<nPoints; j++) {
         if (useCVODE[j]) {
@@ -1043,17 +1051,20 @@ void FlameSolver::prepareConvectionTerms()
 
     convectionSystem.setDensityDerivative(drhodt);
 
-    dvector splitConstT(nPoints);
-    dvector splitConstU(nPoints);
-    Array2D splitConstY(nSpec, nPoints);
-    for (size_t j=0; j<nPoints; j++) {
-        splitConstT[j] = -0.75 * dTdtConv[j] +
-            0.25 * (dTdtProd[j] + dTdtDiff[j] + dTdtCross[j]);
-        splitConstU[j] = -0.75 * dUdtConv[j] +
-            0.25 * (dUdtProd[j] + dUdtDiff[j]);
-        for (size_t k=0; k<nSpec; k++) {
-            splitConstY(k,j) = -0.75 * dYdtConv(k,j) +
-                0.25 * (dYdtProd(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
+    dvector splitConstT(nPoints, 0);
+    dvector splitConstU(nPoints, 0);
+    Array2D splitConstY(nSpec, nPoints, 0);
+
+    if (options.splittingMethod == "balanced") {
+        for (size_t j=0; j<nPoints; j++) {
+            splitConstT[j] = -0.75 * dTdtConv[j] +
+                0.25 * (dTdtProd[j] + dTdtDiff[j] + dTdtCross[j]);
+            splitConstU[j] = -0.75 * dUdtConv[j] +
+                0.25 * (dUdtProd[j] + dUdtDiff[j]);
+            for (size_t k=0; k<nSpec; k++) {
+                splitConstY(k,j) = -0.75 * dYdtConv(k,j) +
+                    0.25 * (dYdtProd(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
+            }
         }
     }
 
@@ -1146,14 +1157,15 @@ void FlameSolver::extractConvectionState(double dt, int stage)
         }
     }
 
+    double split(options.splittingMethod == "balanced");
     for (size_t j=0; j<nPoints; j++) {
         deltaUconv[j] += U[j] - Ustart[j] -
-            0.25 * dt * (dUdtProd[j] + dUdtDiff[j]);
+            split * 0.25 * dt * (dUdtProd[j] + dUdtDiff[j]);
         deltaTconv[j] += T[j] - Tstart[j] -
-            0.25 * dt * (dTdtProd[j] + dTdtDiff[j] + dTdtCross[j]);
+            split * 0.25 * dt * (dTdtProd[j] + dTdtDiff[j] + dTdtCross[j]);
         for (size_t k=0; k<nSpec; k++) {
             deltaYconv(k,j) += Y(k,j) - Ystart(k,j) -
-                0.25 * dt * (dYdtProd(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
+                split * 0.25 * dt * (dYdtProd(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
         }
     }
 
@@ -1188,14 +1200,15 @@ void FlameSolver::extractDiffusionState(double dt, int stage)
         }
     }
 
+    double split(options.splittingMethod == "balanced");
     for (size_t j=0; j<nPoints; j++) {
         deltaUdiff[j] += U[j]-Ustart[j] -
-            0.25 * dt * (dUdtProd[j] + dUdtConv[j]);
+            split * 0.25 * dt * (dUdtProd[j] + dUdtConv[j]);
         deltaTdiff[j] += T[j]-Tstart[j] -
-            0.25 * dt * (dTdtProd[j] + dTdtConv[j] + dTdtCross[j]);
+            split * 0.25 * dt * (dTdtProd[j] + dTdtConv[j] + dTdtCross[j]);
         for (size_t k=0; k<nSpec; k++) {
             deltaYdiff(k,j) += Y(k,j)-Ystart(k,j) -
-                0.25 * dt * (dYdtProd(k,j) + dYdtConv(k,j) + dYdtCross(k,j));
+                split * 0.25 * dt * (dYdtProd(k,j) + dYdtConv(k,j) + dYdtCross(k,j));
         }
     }
 
@@ -1232,14 +1245,15 @@ void FlameSolver::extractProductionState(double dt)
         }
     }
 
+    double split(options.splittingMethod == "balanced");
     for (size_t j=0; j<nPoints; j++) {
         deltaUprod[j] += U[j] - Ustart[j] -
-            0.5 * dt * (dUdtConv[j] + dUdtDiff[j]);
+            split * 0.5 * dt * (dUdtConv[j] + dUdtDiff[j]);
         deltaTprod[j] += T[j] - Tstart[j] -
-            0.5 * dt * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
+            split * 0.5 * dt * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
         for (size_t k=0; k<nSpec; k++) {
             deltaYprod(k,j) += Y(k,j)-Ystart(k,j) -
-                0.5 * dt * (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
+                split * 0.5 * dt * (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
         }
     }
     splitTimer.stop();
@@ -1542,25 +1556,20 @@ void FlameSolver::correctMassFractions() {
 
 void FlameSolver::calculateTimeDerivatives(double dt)
 {
+    double split(options.splittingMethod == "balanced");
     for (size_t j=0; j<nPoints; j++) {
-        dUdtConv[j] = deltaUconv[j] / dt + 0.75 * dUdtConv[j];
-        dUdtDiff[j] = deltaUdiff[j] / dt + 0.75 * dUdtDiff[j];
-        dUdtProd[j] = deltaUprod[j] / dt + 0.5 * dUdtProd[j];
+        dUdtConv[j] = deltaUconv[j] / dt + split * 0.75 * dUdtConv[j];
+        dUdtDiff[j] = deltaUdiff[j] / dt + split * 0.75 * dUdtDiff[j];
+        dUdtProd[j] = deltaUprod[j] / dt + split * 0.5 * dUdtProd[j];
 
-        dTdtConv[j] = deltaTconv[j] / dt + 0.75 * dTdtConv[j];
-        dTdtDiff[j] = deltaTdiff[j] / dt + 0.75 * dTdtDiff[j];
-        dTdtProd[j] = deltaTprod[j] / dt + 0.5 * dTdtProd[j];
-
-        drhodt[j] = -rho[j] / T[j] *
-            (dTdtConv[j] + dTdtDiff[j] + dTdtProd[j] + dTdtCross[j]);
+        dTdtConv[j] = deltaTconv[j] / dt + split * 0.75 * dTdtConv[j];
+        dTdtDiff[j] = deltaTdiff[j] / dt + split * 0.75 * dTdtDiff[j];
+        dTdtProd[j] = deltaTprod[j] / dt + split * 0.5 * dTdtProd[j];
 
         for (size_t k=0; k<nSpec; k++) {
-            dYdtConv(k,j) = deltaYconv(k,j) / dt + 0.75 * dYdtConv(k,j);
-            dYdtDiff(k,j) = deltaYdiff(k,j) / dt + 0.75 * dYdtDiff(k,j);
-            dYdtProd(k,j) = deltaYprod(k,j) / dt + 0.5 * dYdtProd(k,j);
-
-            drhodt[j] -= rho[j] * Wmx[j] / W[k] *
-                (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j) + dYdtCross(k,j));
+            dYdtConv(k,j) = deltaYconv(k,j) / dt + split * 0.75 * dYdtConv(k,j);
+            dYdtDiff(k,j) = deltaYdiff(k,j) / dt + split * 0.75 * dYdtDiff(k,j);
+            dYdtProd(k,j) = deltaYprod(k,j) / dt + split * 0.5 * dYdtProd(k,j);
         }
     }
 }
