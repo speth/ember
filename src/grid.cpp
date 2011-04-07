@@ -35,6 +35,8 @@ void oneDimGrid::setOptions(const configOptions& options)
 
     boundaryTol = options.boundaryTol;
     boundaryTolRm = options.boundaryTolRm;
+    boundaryQdotTol = options.boundaryQdotTol;
+    boundaryQdotTolRm = options.boundaryQdotTolRm;
     addPointCount = options.addPointCount;
     alpha = options.gridAlpha;
 }
@@ -466,6 +468,53 @@ bool oneDimGrid::addRight(vector<dvector>& y)
 
 }
 
+
+bool oneDimGrid::addRightUnstrained(vector<dvector>& y, dvector& qdot)
+{
+    // *** Criteria for addition to right (j==jj) ***
+
+    // Pick the point to check for the heat release rate criterion,
+    // depending on whether a zero-gradient condition is being enforced
+    size_t j = (jb==jj && !fixedBurnedVal) ? jj : jj-1;
+
+    bool pointAdded = false; // Assume no addition
+
+    // Check flatness of temperature, velocity and species
+    // profiles at the boundary.
+    double qmax = maxval(qdot);
+    if (abs(qdot[j]) > qmax * boundaryQdotTol) {
+        if (!pointAdded && debugParameters::debugRegrid) {
+            logFile.write(format(
+                "Regrid: Relative magnitude of heat release rate requires"
+                " right addition: %g > %g * %g") %
+                qdot[j] % qmax % boundaryQdotTol);
+        }
+        pointAdded = true;
+    }
+
+    if (!pointAdded && debugParameters::debugRegrid) {
+        logFile.write("Regrid: no addition on right");
+    }
+
+    if (pointAdded) {
+        logFile.write("Regrid: Adding points to right side.");
+
+        for (size_t i=0; i<addPointCount; i++) {
+            x.push_back(x[jj] + (x[jj]-x[jj-1]));
+            qdot.push_back(qdot[jj]);
+            for (size_t k=0; k<nVars; k++) {
+                // keep constant boundary value
+                y[k].push_back(y[k][jj]);
+            }
+            setSize(nPoints+1);
+        }
+        updateBoundaryIndices();
+    }
+
+    return pointAdded;
+}
+
+
 bool oneDimGrid::addLeft(vector<dvector>& y)
 {
     // *** Criteria for addition to the left (j==0) ***
@@ -583,6 +632,40 @@ bool oneDimGrid::removeRight(vector<dvector>& y)
     return pointRemoved;
 }
 
+bool oneDimGrid::removeRightUnstrained(vector<dvector>& y, dvector& qdot)
+{
+    // *** Criterion for removal from the right (j==jj) ***
+
+    // Comparison point for heat release rate criterion, depending on
+    // zero-gradient or fixed value boundary condition
+    size_t j = (jb==jj && !fixedBurnedVal) ? jj : jj-1;
+
+    bool pointRemoved = true; // assume removal
+    double qmax = maxval(qdot);
+    if (abs(qdot[j]) > qmax * boundaryQdotTolRm) {
+        if (debugParameters::debugRegrid) {
+            logFile.write(format(
+                "Regrid: Right removal prevented by heat release rate tolerance:"
+                " %g > %g * %g") %
+                abs(qdot[j]) % qmax % boundaryQdotTolRm);
+        }
+        pointRemoved = false;
+    }
+
+    if (jj < 3) {
+        pointRemoved = false;
+    }
+
+    if (pointRemoved) {
+        removePoint(jj,y);
+        qdot.erase(qdot.begin() + jj);
+        setSize(nPoints-1);
+        updateBoundaryIndices();
+    }
+
+    return pointRemoved;
+}
+
 bool oneDimGrid::removeLeft(vector<dvector>& y)
 {
     // *** Criteria for removal from the left (j==0) ***
@@ -666,6 +749,67 @@ void oneDimGrid::regrid(vector<dvector>& y)
     }
 
     int leftRemovalCount = 0;
+    if (!leftAddition) {
+        bool continueRemoval = true;
+        while (continueRemoval) {
+            continueRemoval = removeLeft(y);
+            if (continueRemoval) {
+                leftRemoval = true;
+                leftRemovalCount++;
+            }
+        }
+    }
+
+    if (leftRemovalCount > 0) {
+        std::string suffix = (leftRemovalCount == 1) ? "" : "s";
+        logFile.write(format("Removed %i point%s from the left side.") %
+                leftRemovalCount % suffix);
+    }
+
+    updated = (updated || leftAddition || rightAddition ||
+               leftRemoval || rightRemoval);
+
+    if (updated) {
+        updateValues();
+        updateBoundaryIndices();
+    }
+}
+
+void oneDimGrid::regridUnstrained(vector<dvector>& y, dvector& qdot)
+{
+    nVars = y.size();
+    assert(nAdapt <= nVars);
+
+    setSize(y[0].size());
+
+    bool rightAddition = addRightUnstrained(y, qdot);
+    bool rightRemoval = false;
+    int rightRemovalCount = 0;
+
+    if (!rightAddition) {
+        bool continueRemoval = true;
+        while (continueRemoval) {
+            continueRemoval = removeRightUnstrained(y, qdot);
+            if (continueRemoval) {
+                rightRemoval = true;
+                rightRemovalCount++;
+            }
+        }
+    }
+
+    if (rightRemovalCount > 0) {
+        std::string suffix = (rightRemovalCount == 1) ? "" : "s";
+        logFile.write(format("Removed %i point%s from the right side.") %
+                rightRemovalCount % suffix);
+    }
+
+    // By default, all components count for regridding on the left (unburned) side
+    leftComponents.resize(nVars, true);
+
+    bool leftAddition = addLeft(y);
+    bool leftRemoval = false;
+    int leftRemovalCount = 0;
+
     if (!leftAddition) {
         bool continueRemoval = true;
         while (continueRemoval) {

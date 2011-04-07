@@ -369,10 +369,15 @@ void FlameSolver::run(void)
             rollVectorVector(currentSolution, dUdtProd, dTdtProd, dYdtProd);
 
             grid.nAdapt = nVars;
-            grid.regrid(currentSolution);
-            grid.dampVal.resize(grid.x.size());
+            if (strainfunc.a(tNow) == 0) {
+                calculateQdot();
+                grid.regridUnstrained(currentSolution, qDot);
+            } else {
+                grid.regrid(currentSolution);
+            }
 
             // dampVal sets a limit on the maximum grid size
+            grid.dampVal.resize(grid.x.size());
             for (size_t j=0; j<nPoints; j++) {
                 double num = min(mu[j],lambda[j]/cp[j]);
                 for (size_t k=0; k<nSpec; k++) {

@@ -38,6 +38,8 @@ public:
 
     double boundaryTol;
     double boundaryTolRm;
+    double boundaryQdotTol;
+    double boundaryQdotTolRm;
     size_t addPointCount; // number of points to add when regridding
 
     // true for each component that counts for evaluating boundary grid point tolerances
@@ -58,7 +60,6 @@ public:
 
     bool updated; // true if the grid changed on the last call to adapt or regrid
 
-
     // Update the grid based on the solutionState, and adjust it to fit
     // on the new grid. Each element of the solutionState is a vector
     // containing the value of a solution variable at each grid point.
@@ -67,6 +68,7 @@ public:
     // regrid inserts and removes points at the ends of the problem domain
     void adapt(vector<dvector>& y);
     void regrid(vector<dvector>& y);
+    void regridUnstrained(vector<dvector>& y, dvector& qdot);
     void setOptions(const configOptions& options);
     void updateValues(void);
     void setSize(const size_t N);
@@ -77,8 +79,6 @@ public:
     BoundaryCondition::BC rightBC;
 
 private:
-    configOptions options;
-
     void removePoint(int jRemove, vector<dvector>& y);
     void addPoint(int jInsert, vector<dvector>& y);
 
@@ -86,6 +86,8 @@ private:
     bool removeLeft(vector<dvector>& y);
     bool addRight(vector<dvector>& y);
     bool addLeft(vector<dvector>& y);
+    bool addRightUnstrained(vector<dvector>& y, dvector& q);
+    bool removeRightUnstrained(vector<dvector>& y, dvector& q);
 };
 
 

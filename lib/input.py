@@ -214,6 +214,14 @@ class Grid(Options):
     ## than boundaryTol.
     boundaryTolRm = 1e-5
 
+    ## Relative tolerance on heat release rate for adding points to the
+    ## right edge of the domain for unstrained flames
+    boundaryQdotTol = 2e-6
+
+    ## Relative tolerance on heat release rate for removing points from the
+    ## right edge of the domain for unstrained flames
+    boundaryQdotTolRm = 5e-7
+
     ## Number of points to add when extending a boundary to satisfy
     ## boundaryTol.
     addPointCount = 3
