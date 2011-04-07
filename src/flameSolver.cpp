@@ -1114,6 +1114,9 @@ void FlameSolver::extractConvectionState(double dt, int stage)
             Y(k,j) = convectionSystem.Y(k,j);
         }
     }
+    assert(mathUtils::notnan(T));
+    assert(mathUtils::notnan(U));
+    assert(mathUtils::notnan(Y.data()));
 
     double split(options.splittingMethod == "balanced");
     for (size_t j=0; j<nPoints; j++) {
@@ -1152,6 +1155,9 @@ void FlameSolver::extractDiffusionState(double dt, int stage)
             i++;
         }
     }
+    assert(mathUtils::notnan(T));
+    assert(mathUtils::notnan(U));
+    assert(mathUtils::notnan(Y.data()));
 
     double split(options.splittingMethod == "balanced");
     for (size_t j=0; j<nPoints; j++) {
@@ -1192,6 +1198,9 @@ void FlameSolver::extractProductionState(double dt)
             }
         }
     }
+    assert(mathUtils::notnan(T));
+    assert(mathUtils::notnan(U));
+    assert(mathUtils::notnan(Y.data()));
 
     double split(options.splittingMethod == "balanced");
     for (size_t j=0; j<nPoints; j++) {
