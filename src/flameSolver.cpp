@@ -42,6 +42,8 @@ void FlameSolver::initialize(void)
 {
     strainfunc.setOptions(options);
 
+    flamePosIntegralError = 0;
+
     // Cantera initialization
     gas.initialize();
     nSpec = gas.nSpec;
@@ -1376,6 +1378,7 @@ void FlameSolver::unrollVectorVector
 
 void FlameSolver::update_xStag(const double t, const bool updateIntError)
 {
+    calculateQdot();
     xFlameActual = getFlamePosition();
     xFlameTarget = targetFlamePosition(t);
     if (updateIntError) {
