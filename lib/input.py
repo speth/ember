@@ -498,16 +498,16 @@ class OutputFiles(Options):
     ## Include the heat release rate as a function of space
     heatReleaseRate = True
 
-    ## Include variables such as transport properties and grid
-    ## parameters to the net time derivatives.
-    auxiliaryVariables = True
-
-    ## Include the time derivatives of the state variables.
-    timeDerivatives = True
-
     ## Include the reaction / diffusion / convection contributions to
     ## the net time derivative of each state variable
-    residualComponents = True
+    timeDerivatives = True
+
+    ## Include variables such as transport properties and grid
+    ## parameters that can be recomputed from the state variables.
+    extraVariables = False
+
+    ## Include other miscellaneous variables
+    auxiliaryVariables = False
 
     ## Used to generate a continuous sequence of output files after
     ## restarting the code.

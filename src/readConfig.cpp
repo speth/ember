@@ -230,7 +230,7 @@ configOptions::configOptions(const boost::python::object& conf)
         readOption(output, "heatReleaseRate", outputHeatReleaseRate);
         readOption(output, "auxiliaryVariables", outputAuxiliaryVariables);
         readOption(output, "timeDerivatives", outputTimeDerivatives);
-        readOption(output, "residualComponents", outputResidualComponents);
+        readOption(output, "extraVariables", outputExtraVariables);
         outputFileNumber = 0;
         fileNumberOverride = readOption(output, "firstFileNumber", outputFileNumber);
     }

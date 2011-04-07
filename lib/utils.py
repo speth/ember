@@ -72,6 +72,88 @@ def get_qdot(gas, profile, pressure=101325):
     return np.array(q)
 
 
+def expandProfile(prof, gas):
+    N = len(prof.x)
+
+    # Grid properties
+    try:
+        gridAlpha = prof.gridAlpha
+    except AttributeError:
+        gridAlpha = 0
+
+    prof.hh = np.zeros(N)
+    prof.cfp = np.zeros(N)
+    prof.cf = np.zeros(N)
+    prof.cfm = np.zeros(N)
+    prof.rphalf = np.zeros(N)
+    prof.dlj = np.zeros(N)
+
+    for j in range(N-1):
+        prof.hh[j] = prof.x[j+1] - prof.x[j]
+        prof.rphalf[j] = (0.5 * (prof.x[j]+prof.x[j+1]))**prof.gridAlpha
+
+    hh = prof.hh
+    for j in range(1, N-1):
+        prof.cfp[j] = hh[j-1]/(hh[j]*(hh[j]+hh[j-1]))
+        prof.cf[j] = (hh[j]-hh[j-1])/(hh[j]*hh[j-1])
+        prof.cfm[j] = -hh[j]/(hh[j-1]*(hh[j]+hh[j-1]))
+        prof.dlj[j] = 0.5 * (prof.x[j+1] - prof.x[j-1])
+
+    # Thermodynamic / Transport / Kinetic properties
+    K = gas.nSpecies()
+
+    try:
+        P = prof.P
+    except AttributeError:
+        P = 101325
+
+    prof.rho = np.zeros(N)
+    prof.wdot = np.zeros((K,N))
+    prof.q = np.zeros(N)
+    prof.rhoD = np.zeros((K,N))
+    prof.k = np.zeros(N)
+    prof.cp = np.zeros(N)
+    prof.mu = np.zeros(N)
+    prof.Wmx = np.zeros(N)
+    prof.Dkt = np.zeros((K,N))
+    prof.jFick = np.zeros((K,N))
+    prof.jSoret = np.zeros((K,N))
+    prof.jCorr = np.zeros(N)
+
+    for j in range(N):
+        gas.set(T=prof.T[j], Y=prof.Y[:,j], P=P)
+        prof.rho[j] = gas.density()
+        hk = gas.enthalpies_RT() * prof.T[j] * ct.GasConstant
+        wdot = gas.netProductionRates()
+        prof.wdot[:,j] = wdot
+        prof.q[j] = -np.dot(wdot,hk)
+
+        Dbin = gas.binaryDiffCoeffs()
+        prof.Dkt[:,j] = gas.thermalDiffCoeffs()
+
+        for k in range(K):
+            X = gas.moleFractions()
+            Y = gas.massFractions()
+            sum1 = sum(X[i]/Dbin[k,i] for i in range(K) if i != k)
+            sum2 = sum(Y[i]/Dbin[k,i] for i in range(K) if i != k)
+            prof.rhoD[k,j] = prof.rho[j]/(sum1 + X[k]/(1-Y[k])*sum2)
+
+        prof.k[j] = gas.thermalConductivity()
+        prof.cp[j] = gas.cp_mass()
+        prof.mu[j] = gas.viscosity()
+        prof.Wmx[j] = gas.meanMolecularWeight()
+
+    for j in range(1, N-1):
+        for k in range(K):
+            prof.jFick[k,j] = -0.5 * ((prof.rhoD[k,j] + prof.rhoD[k,j+1]) *
+                                      ((prof.Y[k,j+1]-prof.Y[k,j])/prof.hh[j]))
+            prof.jSoret[k,j] = -0.5 * ((prof.Dkt[k,j]/prof.T[j] +
+                                        prof.Dkt[k,j+1]/prof.T[j+1]) *
+                                        (prof.T[j+1]-prof.T[j])/prof.hh[j])
+            prof.jCorr[j] -= prof.jFick[k,j] + prof.jSoret[k,j]
+
+    prof.W = gas.molecularWeights()
+
 def run(conf):
     # Validate the configuration and exit
     if len(sys.argv) > 1 and sys.argv[1].lower() == 'validate':

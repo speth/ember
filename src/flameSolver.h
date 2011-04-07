@@ -148,11 +148,6 @@ private:
     dvector T; //!< temperature [K]
     Array2D Y; //!< species mass fractions, Y(k,j) [-]
 
-    // Time derivatives of state variables:
-    dvector dUdt;
-    dvector dTdt;
-    Array2D dYdt;
-
     // components of the time derivatives
     Array2D dYdtDiff, dYdtProd, dYdtConv;
     dvector dTdtDiff, dTdtProd, dTdtConv;

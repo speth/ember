@@ -151,7 +151,7 @@ public:
     bool outputAuxiliaryVariables;
     bool outputTimeDerivatives;
     bool outputHeatReleaseRate;
-    bool outputResidualComponents;
+    bool outputExtraVariables;
     bool outputProfiles;
     bool outputDebugIntegratorStages;
 
