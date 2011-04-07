@@ -293,6 +293,8 @@ void SourceSystemQSS::initialize(size_t new_nSpec)
     wDotD.resize(nSpec);
     wDotQ.resize(nSpec);
     hk.resize(nSpec);
+
+    enforce_ymin[kMomentum] = false;
 }
 
 void SourceSystemQSS::resetSplitConstants()
@@ -341,13 +343,16 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d,
     double dadt = strainFunction.dadt(t);
 
     // *** Calculate the time derivatives
-    dUdtQ = rhou/rho*(dadt + a*a) + splitConstU;
-    dUdtD = U*U;
+    dUdtQ = rhou/rho*(dadt + a*a) - U*U + splitConstU;
+    dUdtD = 0;
     dTdtQ = qDot/(rho*cp) + splitConstT;
     for (size_t k=0; k<nSpec; k++) {
         dYdtQ[k] = wDotQ[k] * W[k] / rho + splitConstY[k];
         dYdtD[k] = wDotD[k] * W[k] / rho;
     }
+
+    assert(dUdtQ > -1e100 && dUdtQ < 1e100);
+    assert(dUdtD > -1e100 && dUdtD < 1e100);
 
     roll_ydot(q, d);
 }

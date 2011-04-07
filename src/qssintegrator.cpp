@@ -45,6 +45,7 @@ void QSSIntegrator::initialize(size_t N_)
     qs.resize(N);
 
     ymin.resize(N, 1e-20);
+    enforce_ymin.resize(N, true);
     ym1.resize(N);
     ym2.resize(N);
     scratch.resize(N);
@@ -56,7 +57,9 @@ void QSSIntegrator::setState(const dvector& yIn, double tstart_)
 
     // Store and limit to 'ymin' the initial values.
     for (size_t i=0; i<N; i++) {
-        y[i] = std::max(yIn[i], ymin[i]);
+        if (enforce_ymin[i]) {
+            y[i] = std::max(yIn[i], ymin[i]);
+        }
     }
 
     gcount = 0;
@@ -119,7 +122,12 @@ int QSSIntegrator::integrateOneStep(double tf) {
     // Store starting values
     ts = tn;
     for (size_t i=0; i<N; i++) {
-        rtau[i] = dt*d[i]/y[i];
+        if (enforce_ymin[i]) {
+            assert(d[i] == 0);
+            rtau[i] = dt*d[i]/y[i];
+        } else {
+            rtau[i] = 0;
+        }
         ys[i] = y[i];
         qs[i] = q[i];
         rtaus[i] = rtau[i];
@@ -162,12 +170,17 @@ int QSSIntegrator::integrateOneStep(double tf) {
             gcount += 1;
             eps = 1.0e-10;
 
+            double rtaub;
             for (size_t i=0; i<N; i++) {
-               double rtaub = 0.5*(rtaus[i]+dt*d[i]/y[i]);
-               double alpha = (180.+rtaub*(60.+rtaub*(11.+rtaub))) /
-                              (360. + rtaub*(60. + rtaub*(12. + rtaub)));
-               double qt = qs[i]*(1.0 - alpha) + q[i]*alpha;
-               scratch[i] = (qt - ys[i]*rtaub/dt) / (1.0 + alpha*rtaub);
+                if (enforce_ymin[i]) {
+                    rtaub = 0.5*(rtaus[i]+dt*d[i]/y[i]);
+                } else {
+                    rtaub = 0;
+                }
+                double alpha = (180.+rtaub*(60.+rtaub*(11.+rtaub))) /
+                               (360. + rtaub*(60. + rtaub*(12. + rtaub)));
+                double qt = qs[i]*(1.0 - alpha) + q[i]*alpha;
+                scratch[i] = (qt - ys[i]*rtaub/dt) / (1.0 + alpha*rtaub);
             }
         }
 
