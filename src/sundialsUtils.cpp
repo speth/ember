@@ -6,6 +6,7 @@
 sundialsCVODE::sundialsCVODE(unsigned int n)
     : y(n)
     , abstol(n)
+    , tInt(0)
     , bandwidth_upper(-1)
     , bandwidth_lower(-1)
     , _initialized(false)

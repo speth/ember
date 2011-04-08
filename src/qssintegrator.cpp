@@ -133,8 +133,6 @@ int QSSIntegrator::integrateOneStep(double tf) {
         rtaus[i] = rtau[i];
     }
 
-    // double rswitch = 5.965900; // rswitch for 4-4 pade: 5.9659
-
     // Repeat integration until a successful timestep has been taken
     while (true) {
         // Find the predictor terms.

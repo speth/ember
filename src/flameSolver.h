@@ -235,7 +235,6 @@ private:
 
     void updateTransportDomain();
 
-    int alpha; //!< curved grid exponent. alpha = 1 for curved flames, 0 for planar flames.
     std::ofstream statsFile;
 
     // Performance Timers

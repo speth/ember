@@ -110,7 +110,7 @@ protected:
     dvector& cfm;
     dvector& cf;
     dvector& cfp;
-    int& alpha;
+    int& alpha; //!< curved grid exponent. alpha = 1 for curved flames, 0 for planar flames.
 
     size_t& nPoints;
     size_t& jj;
