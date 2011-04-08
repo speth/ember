@@ -297,6 +297,18 @@ void SourceSystemQSS::initialize(size_t new_nSpec)
     enforce_ymin[kMomentum] = false;
 }
 
+void SourceSystemQSS::setOptions(configOptions& options_)
+{
+    options = &options_;
+    epsmin = options->qss_epsmin;
+    epsmax = options->qss_epsmax;
+    dtmin = options->qss_dtmin;
+    dtmax = options->qss_dtmax;
+    itermax = options->qss_iterationCount;
+    abstol = options->qss_abstol;
+    stabilityCheck = options->qss_stabilityCheck;
+}
+
 void SourceSystemQSS::resetSplitConstants()
 {
     splitConstY.assign(nSpec, 0);

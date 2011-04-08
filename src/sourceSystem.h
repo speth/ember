@@ -98,6 +98,7 @@ public:
 
     // Set problem size
     void initialize(size_t nSpec);
+    void setOptions(configOptions& options);
 
     void resetSplitConstants();
 

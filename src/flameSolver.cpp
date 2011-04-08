@@ -746,25 +746,17 @@ void FlameSolver::resizeAuxiliary()
             // Create the new SourceSystemQSS
             SourceSystemQSS* qssSolver = new SourceSystemQSS();
             qssSolver->initialize(nSpec);
+            qssSolver->setOptions(options);
             qssSolver->gas = &gas;
             qssSolver->ckGas = ckGas;
-            qssSolver->options = &options;
             qssSolver->thermoTimer = &thermoTimer;
             qssSolver->reactionRatesTimer = &reactionRatesTimer;
             qssSolver->strainFunction = strainfunc;
             qssSolver->rhou = rhou;
             qssSolver->W = W;
             qssSolver->j = j;
-
             qssSolver->ymin.assign(nVars, options.qss_minval);
             qssSolver->ymin[kMomentum] = -1e4;
-            qssSolver->epsmin = options.qss_epsmin;
-            qssSolver->epsmax = options.qss_epsmax;
-            qssSolver->dtmin = options.qss_dtmin;
-            qssSolver->dtmax = options.qss_dtmax;
-            qssSolver->itermax = options.qss_iterationCount;
-            qssSolver->abstol = options.qss_abstol;
-            qssSolver->stabilityCheck = options.qss_stabilityCheck;
 
             sourceTermsQSS.push_back(qssSolver);
             useCVODE.push_back(options.chemistryIntegrator == "cvode");
@@ -899,8 +891,6 @@ void FlameSolver::updateBC()
         logFile.write(format("updateBC: Right BC changed from %i to %i.") %
                       rightPrev % grid.rightBC);
     }
-
-
 }
 
 void FlameSolver::updateChemicalProperties()
