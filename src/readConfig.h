@@ -140,7 +140,7 @@ public:
     double vtol, dvtol, rmTol, dampConst, gridMin, gridMax;
     double uniformityTol, absvtol;
     double boundaryTol, boundaryTolRm;
-    double boundaryQdotTol, boundaryQdotTolRm;
+    double unstrainedDownstreamWidth;
     int addPointCount;
 
     double tStart, tEnd;

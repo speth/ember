@@ -173,9 +173,8 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(grid, "absvtol", absvtol);
     readOption(grid, "boundaryTol", boundaryTol);
     readOption(grid, "boundaryTolRm", boundaryTolRm);
-    readOption(grid, "boundaryQdotTol", boundaryQdotTol);
-    readOption(grid, "boundaryQdotTolRm", boundaryQdotTolRm);
     readOption(grid, "addPointCount", addPointCount);
+    readOption(grid, "unstrainedDownstreamWidth", unstrainedDownstreamWidth);
 
     // Times
     const object& times = conf.attr("times");

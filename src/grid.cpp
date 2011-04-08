@@ -35,8 +35,7 @@ void oneDimGrid::setOptions(const configOptions& options)
 
     boundaryTol = options.boundaryTol;
     boundaryTolRm = options.boundaryTolRm;
-    boundaryQdotTol = options.boundaryQdotTol;
-    boundaryQdotTolRm = options.boundaryQdotTolRm;
+    unstrainedDownstreamWidth = options.unstrainedDownstreamWidth;
     addPointCount = options.addPointCount;
     alpha = options.gridAlpha;
 }
@@ -475,20 +474,30 @@ bool oneDimGrid::addRightUnstrained(vector<dvector>& y, dvector& qdot)
 
     // Pick the point to check for the heat release rate criterion,
     // depending on whether a zero-gradient condition is being enforced
-    size_t j = (jb==jj && !fixedBurnedVal) ? jj : jj-1;
-
     bool pointAdded = false; // Assume no addition
 
-    // Check flatness of temperature, velocity and species
-    // profiles at the boundary.
-    double qmax = maxval(qdot);
-    if (abs(qdot[j]) > qmax * boundaryQdotTol) {
-        if (!pointAdded && debugParameters::debugRegrid) {
-            logFile.write(format(
-                "Regrid: Relative magnitude of heat release rate requires"
-                " right addition: %g > %g * %g") %
-                qdot[j] % qmax % boundaryQdotTol);
+    size_t jqMax = maxloc(qdot);
+
+    double qMax = qdot[jqMax];
+    size_t jLeft = 0;
+    size_t jRight = jj;
+    for (size_t j=jqMax; j>=1; j--) {
+        if (std::abs(qdot[j]) < 0.01 * qMax) {
+            jLeft = j;
+            break;
         }
+    }
+
+    for (size_t j=jqMax; j<=jj; j++) {
+        if (std::abs(qdot[j]) < 0.01 * qMax) {
+            jRight = j;
+            break;
+        }
+    }
+
+    double reactionWidth = x[jRight] - x[jLeft];
+
+    if (x[jqMax] + unstrainedDownstreamWidth * reactionWidth > x[jj]) {
         pointAdded = true;
     }
 
@@ -636,20 +645,31 @@ bool oneDimGrid::removeRightUnstrained(vector<dvector>& y, dvector& qdot)
 {
     // *** Criterion for removal from the right (j==jj) ***
 
-    // Comparison point for heat release rate criterion, depending on
-    // zero-gradient or fixed value boundary condition
-    size_t j = (jb==jj && !fixedBurnedVal) ? jj : jj-1;
+    bool pointRemoved = false;
 
-    bool pointRemoved = true; // assume removal
-    double qmax = maxval(qdot);
-    if (abs(qdot[j]) > qmax * boundaryQdotTolRm) {
-        if (debugParameters::debugRegrid) {
-            logFile.write(format(
-                "Regrid: Right removal prevented by heat release rate tolerance:"
-                " %g > %g * %g") %
-                abs(qdot[j]) % qmax % boundaryQdotTolRm);
+    size_t jqMax = maxloc(qdot);
+
+    double qMax = qdot[jqMax];
+    size_t jLeft = 0;
+    size_t jRight = jj;
+    for (size_t j=jqMax; j>=1; j--) {
+        if (std::abs(qdot[j]) < 0.01 * qMax) {
+            jLeft = j;
+            break;
         }
-        pointRemoved = false;
+    }
+
+    for (size_t j=jqMax; j<=jj; j++) {
+        if (std::abs(qdot[j]) < 0.01 * qMax) {
+            jRight = j;
+            break;
+        }
+    }
+
+    double reactionWidth = x[jRight] - x[jLeft];
+
+    if (x[jj] > x[jqMax] + 1.25 * unstrainedDownstreamWidth * reactionWidth) {
+        pointRemoved = true;
     }
 
     if (jj < 3) {

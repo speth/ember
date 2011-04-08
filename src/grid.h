@@ -38,8 +38,7 @@ public:
 
     double boundaryTol;
     double boundaryTolRm;
-    double boundaryQdotTol;
-    double boundaryQdotTolRm;
+    double unstrainedDownstreamWidth;
     size_t addPointCount; // number of points to add when regridding
 
     // true for each component that counts for evaluating boundary grid point tolerances
