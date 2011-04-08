@@ -171,9 +171,12 @@ void FlameSolver::run(void)
                 Y(k,0) = Yleft[k];
             }
         }
-        T[jj] = Tright;
-        for (size_t k=0; k<nSpec; k++) {
-            Y(k,jj) = Yright[k];
+
+        if (grid.rightBC == BoundaryCondition::FixedValue) {
+            T[jj] = Tright;
+            for (size_t k=0; k<nSpec; k++) {
+                Y(k,jj) = Yright[k];
+            }
         }
 
         updateChemicalProperties();
@@ -187,7 +190,7 @@ void FlameSolver::run(void)
             wDot.data().assign(wDot.data().size(), 0);
         }
 
-        updateLeftBC();
+        updateBC();
         if (options.xFlameControl) {
             update_xStag(t, true); // calculate the value of rVzero
         }
@@ -865,9 +868,10 @@ void FlameSolver::updateCrossTerms()
     assert(mathUtils::notnan(dTdtCross));
 }
 
-void FlameSolver::updateLeftBC()
+void FlameSolver::updateBC()
 {
-    BoundaryCondition::BC prev = grid.leftBC;
+    BoundaryCondition::BC leftPrev = grid.leftBC;
+    BoundaryCondition::BC rightPrev = grid.rightBC;
 
     if (options.wallFlux && x[0] >= 0.0 && x[0] <= options.centerGridMin) {
         grid.leftBC = BoundaryCondition::WallFlux;
@@ -880,10 +884,23 @@ void FlameSolver::updateLeftBC()
         grid.leftBC = BoundaryCondition::ZeroGradient;
     }
 
-    if (prev != grid.leftBC) {
-        logFile.write(format("updateLeftBC: BC changed from %i to %i.") %
-            prev % grid.leftBC);
+    if (options.flameType == "premixed" && grid.jb == jj && !grid.fixedBurnedVal) {
+        grid.rightBC = BoundaryCondition::Floating;
+    } else {
+        grid.rightBC = BoundaryCondition::FixedValue;
     }
+
+    if (leftPrev != grid.leftBC) {
+        logFile.write(format("updateBC: Left BC changed from %i to %i.") %
+                      leftPrev % grid.leftBC);
+    }
+
+    if (rightPrev != grid.rightBC) {
+        logFile.write(format("updateBC: Right BC changed from %i to %i.") %
+                      rightPrev % grid.rightBC);
+    }
+
+
 }
 
 void FlameSolver::updateChemicalProperties()
@@ -1885,7 +1902,7 @@ void FlameSolver::loadProfile(void)
         throw debugException("Invalid flameType: " + options.flameType);
     }
 
-    updateLeftBC();
+    updateBC();
 
     if (grid.leftBC == BoundaryCondition::ControlVolume &&
         options.xFlameControl)

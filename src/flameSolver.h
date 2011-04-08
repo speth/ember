@@ -110,7 +110,7 @@ private:
     void resizeAuxiliary(); //!< Handle resizing of data structures as grid size changes
     void updateCrossTerms(); //!< calculates values of cross-component terms: jSoret, sumcpj, and jCorr
     void updateChemicalProperties(); //!< Update thermodynamic, transport, and kinetic properties
-    void updateLeftBC(); //!< Set boundary condition for left edge of domain
+    void updateBC(); //!< Set boundary condition for left edge of domain
     void calculateQdot(); //!< Compute heat release rate using the current temperature and mass fractions
     void calculateTimeDerivatives_old(); //!< Combine dUdt, dTdt and dYdt from the split solvers
 

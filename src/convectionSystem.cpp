@@ -66,11 +66,18 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     }
 
     // Right boundary values
-    // Convection term has nothing to contribute in any case,
-    // So only the value from the other terms remains
-    dUdt[jj] = splitConstU[jj];
-    dTdt[jj] = splitConstT[jj];
-    dWdt[jj] = splitConstW[jj];
+    if (rV[jj] < 0  || grid.rightBC == BoundaryCondition::FixedValue) {
+        // Convection term has nothing to contribute in this case,
+        // So only the value from the other terms remains
+        dUdt[jj] = splitConstU[jj];
+        dTdt[jj] = splitConstT[jj];
+        dWdt[jj] = splitConstW[jj];
+    } else {
+        // Outflow  at the boundary
+        dUdt[jj] = splitConstU[jj] - V[jj] * (U[jj]-U[jj-1])/hh[jj-1]/rho[jj];
+        dTdt[jj] = splitConstT[jj] - V[jj] * (T[jj]-T[jj-1])/hh[jj-1]/rho[jj];
+       dWdt[jj] = splitConstW[jj] - V[jj] * (Wmx[jj]-Wmx[jj-1])/hh[jj-1]/rho[jj];
+    }
 
     roll_ydot(ydot);
     assert(mathUtils::notnan(ydot));
@@ -279,9 +286,14 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
     }
 
     // Right boundary values
-    // Convection term has nothing to contribute in any case,
-    // So only the value from the other terms remains
-    ydot[i] = splitConst[i];
+    if (v[i] < 0 || grid.rightBC == BoundaryCondition::FixedValue || i != jj) {
+        // Convection term has nothing to contribute in this case,
+        // So only the value from the other terms remains
+        ydot[i] = splitConst[i];
+    } else {
+        // outflow boundary condition
+        ydot[i] = splitConst[i] - v[i] * (y[i]-y[i-1])/hh[i-1];
+    }
 
     return 0;
 }
