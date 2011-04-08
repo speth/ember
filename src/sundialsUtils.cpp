@@ -6,22 +6,23 @@
 sundialsCVODE::sundialsCVODE(unsigned int n)
     : y(n)
     , abstol(n)
+    , findRoots(false)
+    , maxNumSteps(500)
+    , minStep(0)
     , tInt(0)
+    , nRoots(0)
+    , errorCount(0)
+    , errorStopCount(0)
+    , theODE(NULL)
+    , sundialsMem(NULL)
+    , nEq(n)
     , bandwidth_upper(-1)
     , bandwidth_lower(-1)
     , _initialized(false)
 {
-    nEq = n;
-    sundialsMem = NULL;
-    findRoots = false;
-    nRoots = 0;
-    maxNumSteps = 500;
-    minStep = 0;
-    errorCount = 0;
-    errorStopCount = 0;
 }
 
-sundialsCVODE::~sundialsCVODE(void)
+sundialsCVODE::~sundialsCVODE()
 {
     CVodeFree(&sundialsMem);
 }
@@ -30,6 +31,7 @@ void sundialsCVODE::initialize()
 {
     theODE->initialize();
 
+    int flag = 0;
     if (_initialized) {
         // Starting over with a new IC, but the same ODE
         flag = CVodeReInit(sundialsMem, t0, y.forSundials());
@@ -110,7 +112,7 @@ void sundialsCVODE::setBandwidth(int upper, int lower)
 
 int sundialsCVODE::integrateToTime(realtype t)
 {
-    flag = CVode(sundialsMem, t, y.forSundials(), &tInt, CV_NORMAL);
+    int flag = CVode(sundialsMem, t, y.forSundials(), &tInt, CV_NORMAL);
     if (flag != CV_SUCCESS) {
         errorCount += 1;
         if (errorCount > errorStopCount) {
@@ -123,7 +125,7 @@ int sundialsCVODE::integrateToTime(realtype t)
 int sundialsCVODE::integrateOneStep(realtype tf)
 {
     CVodeSetStopTime(sundialsMem, tf);
-    flag = CVode(sundialsMem, tf, y.forSundials(), &tInt, CV_ONE_STEP);
+    int flag = CVode(sundialsMem, tf, y.forSundials(), &tInt, CV_ONE_STEP);
     if (flag != CV_SUCCESS && flag != CV_TSTOP_RETURN) {
         errorCount += 1;
         if (errorCount > errorStopCount) {
@@ -133,16 +135,16 @@ int sundialsCVODE::integrateOneStep(realtype tf)
     return flag;
 }
 
-int sundialsCVODE::getRootInfo(void)
+int sundialsCVODE::getRootInfo()
 {
-    flagr = CVodeGetRootInfo(sundialsMem, &rootsFound[0]);
-    if (check_flag(&flagr, "CVodeGetRootInfo", 1)) {
+    int flag = CVodeGetRootInfo(sundialsMem, &rootsFound[0]);
+    if (check_flag(&flag, "CVodeGetRootInfo", 1)) {
         throw debugException("sundialsCVODE::getRootInfo: error in CVodeGetRootInfo");
     }
-    return flagr;
+    return flag;
 }
 
-void sundialsCVODE::printStats(void)
+void sundialsCVODE::printStats()
 {
   long int nst, nfe, nsetups, nje, nfeLS, nni, ncfn, netf, nge;
   int flag;
@@ -292,7 +294,7 @@ sdVector::sdVector(const sdVector& other)
     n = other.n;
 }
 
-sdVector::~sdVector(void)
+sdVector::~sdVector()
 {
     if (alloc) {
         N_VDestroy_Serial(v);
@@ -330,13 +332,13 @@ sdMatrix::sdMatrix(DenseMat other)
     M = other;
 }
 
-sdMatrix::sdMatrix(void)
+sdMatrix::sdMatrix()
 {
     alloc = false;
     M = NULL;
 }
 
-sdMatrix::~sdMatrix(void) {
+sdMatrix::~sdMatrix() {
     if (alloc) {
     	DestroyMat(M);
     }
@@ -366,13 +368,13 @@ sdBandMatrix::sdBandMatrix(BandMat other)
     M = other;
 }
 
-sdBandMatrix::sdBandMatrix(void)
+sdBandMatrix::sdBandMatrix()
 {
     alloc = false;
     M = NULL;
 }
 
-sdBandMatrix::~sdBandMatrix(void) {
+sdBandMatrix::~sdBandMatrix() {
     if (alloc) {
         DestroyMat(M);
     }
@@ -392,27 +394,28 @@ realtype& sdBandMatrix::operator() (long int i, long int j) const
 
 sundialsIDA::sundialsIDA(unsigned int n)
     : abstol(n)
+    , findRoots(false)
+    , calcIC(false)
+    , imposeConstraints(false)
     , y(n)
     , ydot(n)
     , y0(n)
     , ydot0(n)
     , componentId(n)
     , constraints(n)
+    , nRoots(0)
+    , theDAE(NULL)
+    , sundialsMem(NULL)
+    , nEq(n)
 {
-    nEq = n;
-    sundialsMem = NULL;
-    findRoots = false;
-    nRoots = 0;
-    imposeConstraints = false;
-    calcIC = false;
 }
 
-sundialsIDA::~sundialsIDA(void)
+sundialsIDA::~sundialsIDA()
 {
     IDAFree(&sundialsMem);
 }
 
-void sundialsIDA::initialize(void)
+void sundialsIDA::initialize()
 {
     sundialsMem = IDACreate();
     if (check_flag((void *)sundialsMem, "IDACreate", 0)) {
@@ -421,6 +424,7 @@ void sundialsIDA::initialize(void)
 
     IDASetUserData(sundialsMem, theDAE);
 
+    int flag;
     if (calcIC)    {
         // Pick an appropriate initial condition for ydot and algebraic components of y
         flag = IDASetId(sundialsMem, componentId.forSundials());
@@ -483,24 +487,24 @@ void sundialsIDA::initialize(void)
 
 int sundialsIDA::integrateToTime(realtype t)
 {
-    flag = IDASolve(sundialsMem, t, &tInt, y.forSundials(),
+    int flag = IDASolve(sundialsMem, t, &tInt, y.forSundials(),
         ydot.forSundials(), IDA_NORMAL);
     return flag;
 }
 
-int sundialsIDA::integrateOneStep(void)
+int sundialsIDA::integrateOneStep()
 {
-    flag = IDASolve(sundialsMem, tInt+1, &tInt, y.forSundials(),
+    int flag = IDASolve(sundialsMem, tInt+1, &tInt, y.forSundials(),
         ydot.forSundials(), IDA_ONE_STEP);
     return flag;
 }
 
-int sundialsIDA::getRootInfo(void)
+int sundialsIDA::getRootInfo()
 {
-    flagr = IDAGetRootInfo(sundialsMem, &rootsFound[0]);
-    if (check_flag(&flagr, "IDAGetRootInfo", 1))
+    int flag = IDAGetRootInfo(sundialsMem, &rootsFound[0]);
+    if (check_flag(&flag, "IDAGetRootInfo", 1))
         throw debugException("sundialsIDA::getRootInfo: error in IDAGetRootInfo.");
-    return flagr;
+    return flag;
 }
 
 void sundialsIDA::printStats(clock_t dt)
@@ -577,7 +581,7 @@ int sundialsIDA::check_flag(void *flagvalue, const char *funcname, int opt)
   return 0;
 }
 
-double sundialsIDA::getStepSize(void)
+double sundialsIDA::getStepSize()
 {
     double dt;
     IDAGetCurrentStep(sundialsMem, &dt);
@@ -594,14 +598,14 @@ void sundialsIDA::setMaxStepSize(double dt)
     IDASetMaxStep(sundialsMem, dt);
 }
 
-int sundialsIDA::getLastOrder(void)
+int sundialsIDA::getLastOrder()
 {
     int order;
     IDAGetLastOrder(sundialsMem, &order);
     return order;
 }
 
-void sundialsIDA::disableErrorOutput(void)
+void sundialsIDA::disableErrorOutput()
 {
     IDASetErrFile(sundialsMem, NULL);
 }

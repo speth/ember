@@ -658,7 +658,6 @@ void ConvectionSystemSplit::setSplitConstants(const dvector& splitConstU,
 void ConvectionSystemSplit::integrateToTime(const double tf)
 {
     // Integrate the UTW system while storing the value of v after each timestep
-    //boost::shared_ptr<vecInterpolator> vInterp(new vecInterpolator());
     utwTimer.start();
     vInterp->clear();
 

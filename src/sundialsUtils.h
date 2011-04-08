@@ -26,13 +26,13 @@ public:
     sdVector(unsigned int n);
     sdVector(N_Vector other);
     sdVector(const sdVector& other);
-    ~sdVector(void);
+    ~sdVector();
 
     realtype& operator[](unsigned int i);
     realtype& operator[](unsigned int i) const;
-    N_Vector& forSundials(void) {return v;}
-    unsigned int length(void) const {return n;}
-    size_t size() const {return n;}
+    N_Vector& forSundials() { return v; }
+    unsigned int length() const { return n; }
+    size_t size() const { return n; }
 
 private:
     N_Vector v;
@@ -48,11 +48,11 @@ class sdMatrix
 public:
     sdMatrix(unsigned int n, unsigned int m);
     sdMatrix(DenseMat other);
-    sdMatrix(void);
-    ~sdMatrix(void);
+    sdMatrix();
+    ~sdMatrix();
     realtype& operator()(unsigned int i, unsigned int j);
     realtype& operator()(unsigned int i, unsigned int j) const;
-    realtype* forSundials(void) {return M->data;}
+    realtype* forSundials() { return M->data; }
 
 private:
     DenseMat M;
@@ -64,11 +64,11 @@ class sdBandMatrix
 public:
     sdBandMatrix(long int N, long int bwUpper, long int bwLower);
     sdBandMatrix(BandMat other);
-    sdBandMatrix(void);
-    ~sdBandMatrix(void);
+    sdBandMatrix();
+    ~sdBandMatrix();
     realtype& operator()(long int i, long int j);
     realtype& operator()(long int i, long int j) const;
-    BandMat& forSundials(void) {return M;}
+    BandMat& forSundials() { return M; }
 
 private:
     BandMat M;
@@ -77,12 +77,14 @@ private:
 
 class sdODE {
 public:
-    virtual int f(const realtype t, const sdVector& y, sdVector& ydot)=0;
-    virtual int g(realtype t, sdVector& y, realtype* gOut) {return 0;}
-    virtual int denseJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J) {return -1;}
-    virtual int bandedJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdBandMatrix& J) {return -1;}
+    virtual int f(const realtype t, const sdVector& y, sdVector& ydot) = 0;
+    virtual int g(realtype t, sdVector& y, realtype* gOut) { return 0; }
+    virtual int denseJacobian(const realtype t, const sdVector& y,
+                              const sdVector& ydot, sdMatrix& J) { return -1; }
+    virtual int bandedJacobian(const realtype t, const sdVector& y,
+                               const sdVector& ydot, sdBandMatrix& J) { return -1; }
     virtual void initialize() {}
-    virtual ~sdODE(void) {}
+    virtual ~sdODE() {}
 };
 
 // wrapper class for the Sundials CVODE solver
@@ -132,7 +134,7 @@ public:
     //            flag >= 0
     //   opt == 2 means function allocates memory so check if returned
     //            NULL pointer
-    static int check_flag(void *flagvalue, const char *funcname, int opt);
+    static int check_flag(void* flagvalue, const char* funcname, int opt);
 
     realtype tInt; // time reached by integrator
     std::vector<int> rootsFound;
@@ -142,20 +144,17 @@ public:
     int errorStopCount;
 
 private:
-
-    static int f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data);
-    static int g(realtype t, N_Vector yIn, realtype *gout, void *g_data);
+    static int f(realtype t, N_Vector yIn, N_Vector ydotIn, void* f_data);
+    static int g(realtype t, N_Vector yIn, realtype *gout, void* g_data);
     static int denseJac(int N, realtype t, N_Vector yIn,
-                        N_Vector fy, DenseMat Jin, void *jac_data,
+                        N_Vector fy, DenseMat Jin, void* jac_data,
                         N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
     static int bandJac(int N, int mupper, int mLower, realtype t,
                        N_Vector y, N_Vector fy, DlsMat Jac, void* user_data,
                        N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
     sdODE* theODE;
-    void *sundialsMem;
-    int flag;
-    int flagr;
+    void* sundialsMem;
     int nEq;
 
     int bandwidth_upper;
@@ -167,23 +166,23 @@ private:
 
 class sdDAE {
 public:
-    virtual int f(realtype t, sdVector& y, sdVector& ydot, sdVector& res)=0;
-    virtual int g(realtype t, sdVector& y, sdVector& ydot, realtype* gOut) {return -1;}
+    virtual int f(realtype t, sdVector& y, sdVector& ydot, sdVector& res) = 0;
+    virtual int g(realtype t, sdVector& y, sdVector& ydot, realtype* gOut) { return -1; }
 
     virtual int Jac(realtype t, sdVector& y, sdVector& ydot, sdVector& res,
-                    realtype c_j, sdMatrix& J) {return -1;}
+                    realtype c_j, sdMatrix& J) { return -1; }
 
     virtual int JvProd(realtype t, sdVector& yIn, sdVector& ydotIn, sdVector& resIn,
-                       sdVector& vIn, sdVector& JvIn, realtype c_j) {return -1;}
+                       sdVector& vIn, sdVector& JvIn, realtype c_j) { return -1; }
 
     virtual int preconditionerSetup(realtype t, sdVector& yIn, sdVector& ydotIn,
-                                    sdVector& resIn, realtype c_j) {return -1;}
+                                    sdVector& resIn, realtype c_j) { return -1; }
 
     virtual int preconditionerSolve(realtype t, sdVector& yIn, sdVector& ydotIn,
                                     sdVector& resIn, sdVector& rhs, sdVector& outVec,
-                                    realtype c_j, realtype delta) {return -1;}
+                                    realtype c_j, realtype delta) { return -1; }
 
-    virtual ~sdDAE(void) {}
+    virtual ~sdDAE() {}
 };
 
 // wrapper class for the Sundials IDA solver
@@ -192,9 +191,9 @@ class sundialsIDA
 {
 public:
     sundialsIDA(unsigned int n);
-    ~sundialsIDA(void);
+    ~sundialsIDA();
 
-    void initialize(void);
+    void initialize();
     int integrateToTime(realtype t);
     int integrateOneStep();
     void setDAE(sdDAE* newDAE);
@@ -208,13 +207,13 @@ public:
     //            flag >= 0
     //   opt == 2 means function allocates memory so check if returned
     //            NULL pointer
-    static int check_flag(void *flagvalue, const char *funcname, int opt);
+    static int check_flag(void* flagvalue, const char* funcname, int opt);
 
-    double getStepSize(void);
+    double getStepSize();
     void setInitialStepSize(double dt);
     void setMaxStepSize(double dt);
-    int getLastOrder(void);
-    void disableErrorOutput(void);
+    int getLastOrder();
+    void disableErrorOutput();
 
     realtype reltol;
     sdVector abstol;
@@ -237,10 +236,10 @@ public:
 
     std::vector<int> rootsFound;
     unsigned int nRoots;
-private:
 
-    static int f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void *f_data); // f(y) = res
-    static int g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, void *g_data);
+private:
+    static int f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void* f_data); // f(y) = res
+    static int g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, void* g_data);
 
     static int Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn,
                    N_Vector res, realtype c_j, void* jac_data, DenseMat Jin,
@@ -259,8 +258,6 @@ private:
                                    realtype c_j, realtype delta, void* p_data,
                                    N_Vector tmp);
     sdDAE* theDAE;
-    void *sundialsMem;
-    int flag;
-    int flagr;
+    void* sundialsMem;
     int nEq;
 };
