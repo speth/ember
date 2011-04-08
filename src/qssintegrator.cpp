@@ -123,9 +123,9 @@ int QSSIntegrator::integrateOneStep(double tf) {
     ts = tn;
     for (size_t i=0; i<N; i++) {
         if (enforce_ymin[i]) {
-            assert(d[i] == 0);
             rtau[i] = dt*d[i]/y[i];
         } else {
+            assert(d[i] == 0);
             rtau[i] = 0;
         }
         ys[i] = y[i];
