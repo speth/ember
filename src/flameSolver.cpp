@@ -1224,7 +1224,13 @@ void FlameSolver::integrateConvectionTerms(double t, int stage)
     }
 
     convectionTimer.start();
-    convectionSystem.integrateToTime(t);
+    try {
+        convectionSystem.integrateToTime(t);
+    } catch (debugException& e) {
+        logFile.write(e.errorString);
+        writeStateFile("err_convectionIntegration", true, false);
+        throw;
+    }
     convectionTimer.stop();
 }
 
