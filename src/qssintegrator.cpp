@@ -59,6 +59,8 @@ void QSSIntegrator::setState(const dvector& yIn, double tstart_)
     for (size_t i=0; i<N; i++) {
         if (enforce_ymin[i]) {
             y[i] = std::max(yIn[i], ymin[i]);
+        } else {
+            y[i] = yIn[i];
         }
     }
 
