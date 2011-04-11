@@ -363,6 +363,13 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d,
         dYdtD[k] = wDotD[k] * W[k] / rho;
     }
 
+    assert(rhou > 0);
+    assert(rho > 0);
+    assert(dadt > -1e100 && dadt < 1e100);
+    assert(a > -1e100 && a < 1e100);
+    assert(U > -1e100 && U < 1e100);
+    assert(splitConstU > -1e100 && splitConstU < 1e100);
+
     assert(dUdtQ > -1e100 && dUdtQ < 1e100);
     assert(dUdtD > -1e100 && dUdtD < 1e100);
 

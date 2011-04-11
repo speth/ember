@@ -970,28 +970,34 @@ void FlameSolver::prepareProductionTerms()
     deltaYprod.data().assign(nSpec*nPoints, 0);
 
     setProductionSolverState(tNow);
-    if (options.splittingMethod != "balanced") {
-        return;
-    }
-
-    for (size_t j=0; j<nPoints; j++) {
-        if (useCVODE[j]) {
-            sourceTerms[j].splitConst[kEnergy] = -0.5 * dTdtProd[j] +
-                0.5 * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
-            sourceTerms[j].splitConst[kMomentum] = -0.5 * dUdtProd[j] +
-                0.5 * (dUdtConv[j] + dUdtDiff[j]);
-            for (size_t k=0; k<nSpec; k++) {
-                sourceTerms[j].splitConst[kSpecies+k] = -0.5 * dYdtProd(k,j) +
-                    0.5 * (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
+    if (options.splittingMethod == "strang") {
+        for (size_t j=0; j<nPoints; j++) {
+            if (useCVODE[j]) {
+                sourceTerms[j].resetSplitConstants();
+            } else {
+                sourceTermsQSS[j].resetSplitConstants();
             }
-        } else {
-            sourceTermsQSS[j].splitConstT = -0.5 * dTdtProd[j] +
-                0.5 * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
-            sourceTermsQSS[j].splitConstU = -0.5 * dUdtProd[j] +
-                0.5 * (dUdtConv[j] + dUdtDiff[j]);
-            for (size_t k=0; k<nSpec; k++) {
-                sourceTermsQSS[j].splitConstY[k] = -0.5 * dYdtProd(k,j) +
-                    0.5 * (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
+        }
+    } else { // options.splittingMethod == "balanced"
+        for (size_t j=0; j<nPoints; j++) {
+            if (useCVODE[j]) {
+                sourceTerms[j].splitConst[kEnergy] = -0.5 * dTdtProd[j] +
+                    0.5 * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
+                sourceTerms[j].splitConst[kMomentum] = -0.5 * dUdtProd[j] +
+                    0.5 * (dUdtConv[j] + dUdtDiff[j]);
+                for (size_t k=0; k<nSpec; k++) {
+                    sourceTerms[j].splitConst[kSpecies+k] = -0.5 * dYdtProd(k,j) +
+                        0.5 * (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
+                }
+            } else {
+                sourceTermsQSS[j].splitConstT = -0.5 * dTdtProd[j] +
+                    0.5 * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
+                sourceTermsQSS[j].splitConstU = -0.5 * dUdtProd[j] +
+                    0.5 * (dUdtConv[j] + dUdtDiff[j]);
+                for (size_t k=0; k<nSpec; k++) {
+                    sourceTermsQSS[j].splitConstY[k] = -0.5 * dYdtProd(k,j) +
+                        0.5 * (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
+                }
             }
         }
     }
