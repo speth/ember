@@ -936,29 +936,43 @@ void FlameSolver::prepareDiffusionTerms()
 
     setDiffusionSolverState(tNow);
 
-    if (options.splittingMethod != "balanced") {
-        splitTimer.stop();
-        return;
-    }
-
-    for (size_t j=0; j<nPoints; j++) {
-        diffusionTerms[kEnergy].splitConst[j] = -0.75 * dTdtDiff[j] +
-            0.25 * (dTdtProd[j] + dTdtConv[j] + dTdtCross[j]);
-        diffusionTerms[kMomentum].splitConst[j] = -0.75 * dUdtDiff[j] +
-            0.25 * (dUdtProd[j] + dUdtConv[j]);
-    }
-
-    for (size_t k=0; k<nSpec; k++) {
-        dvector& splitConstY = diffusionTerms[kSpecies+k].splitConst;
-        size_t i = 0;
-        for (size_t j = diffusionStartIndices[k];
-             j <= diffusionStopIndices[k];
-             j++)
-        {
-            splitConstY[i] = -0.75 * dYdtDiff(k,j) +
-                0.25 * (dYdtProd(k,j) + dYdtConv(k,j) + dYdtCross(k,j));
-            i++;
+    if (options.splittingMethod == "balanced") {
+        for (size_t j=0; j<nPoints; j++) {
+            diffusionTerms[kEnergy].splitConst[j] = -0.75 * dTdtDiff[j] +
+                0.25 * (dTdtProd[j] + dTdtConv[j] + dTdtCross[j]);
+            diffusionTerms[kMomentum].splitConst[j] = -0.75 * dUdtDiff[j] +
+                0.25 * (dUdtProd[j] + dUdtConv[j]);
         }
+
+        for (size_t k=0; k<nSpec; k++) {
+            dvector& splitConstY = diffusionTerms[kSpecies+k].splitConst;
+            size_t i = 0;
+            for (size_t j = diffusionStartIndices[k];
+                 j <= diffusionStopIndices[k];
+                 j++)
+            {
+                splitConstY[i] = -0.75 * dYdtDiff(k,j) +
+                    0.25 * (dYdtProd(k,j) + dYdtConv(k,j) + dYdtCross(k,j));
+                i++;
+            }
+        }
+    } else { // options.splittingMethod == "strang"
+        for (size_t j=0; j<nPoints; j++) {
+            diffusionTerms[kEnergy].splitConst[j] = dTdtCross[j];
+        }
+
+        for (size_t k=0; k<nSpec; k++) {
+            dvector& splitConstY = diffusionTerms[kSpecies+k].splitConst;
+            size_t i = 0;
+            for (size_t j = diffusionStartIndices[k];
+                 j <= diffusionStopIndices[k];
+                 j++)
+            {
+                splitConstY[i] = dYdtCross(k,j);
+                i++;
+            }
+        }
+
     }
     splitTimer.stop();
 }
@@ -1012,13 +1026,25 @@ void FlameSolver::prepareConvectionTerms()
     setConvectionSolverState(tNow, 0);
 
     drhodt.resize(nPoints);
-    for (size_t j=0; j<nPoints; j++) {
-        drhodt[j] = -rho[j] / T[j] *
-            (dTdtConv[j] + dTdtDiff[j] + dTdtProd[j] + dTdtCross[j]);
+    if (options.splittingMethod == "balanced") {
+        for (size_t j=0; j<nPoints; j++) {
+            drhodt[j] = -rho[j] / T[j] *
+                (dTdtConv[j] + dTdtDiff[j] + dTdtProd[j] + dTdtCross[j]);
 
-        for (size_t k=0; k<nSpec; k++) {
-            drhodt[j] -= rho[j] * Wmx[j] / W[k] *
-                (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j) + dYdtCross(k,j));
+            for (size_t k=0; k<nSpec; k++) {
+                drhodt[j] -= rho[j] * Wmx[j] / W[k] *
+                    (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j) + dYdtCross(k,j));
+            }
+        }
+    } else { // options.splittingMethod = "strang"
+        for (size_t j=0; j<nPoints; j++) {
+            drhodt[j] = -rho[j] / T[j] *
+                (dTdtConv[j] + dTdtDiff[j] + dTdtProd[j]);
+
+            for (size_t k=0; k<nSpec; k++) {
+                drhodt[j] -= rho[j] * Wmx[j] / W[k] *
+                    (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j));
+            }
         }
     }
 
