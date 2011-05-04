@@ -16,6 +16,7 @@ conf = Config(
 import numbers
 import os
 import Cantera
+import numpy as np
 
 class Options(object):
     """ Base class for elements of Config """
@@ -618,6 +619,13 @@ class Config(object):
         gas.set(X=self.initialCondition.fuel)
         gas.set(X=self.initialCondition.oxidizer)
 
+        # Make sure that the mechanism file has sane rate coefficients
+        if self.initialCondition.flameType == 'premixed':
+            Tcheck = self.initialCondition.Tu
+        else:
+            Tcheck = min(self.initialCondition.Tfuel, self.initialCondition.Toxidizer)
+        error |= self.checkRateConstants(gas, Tcheck)
+
         # Make sure the restart file is in the correct place (if specified)
         if self.initialCondition.restartFile:
             if self.initialCondition.relativeRestartPath:
@@ -635,7 +643,9 @@ class Config(object):
             error = True
             print 'Error: QSS integrator is incompatible with Adapchem.\n'
 
-        if not error:
+        if error:
+            print 'Validation failed.'
+        else:
             print 'Validation completed successfully.'
 
     def checkString(self, options, attrname, choices):
@@ -648,3 +658,29 @@ class Config(object):
             return True
         else:
             return False
+
+    def checkRateConstants(self, gas, T):
+        """
+        A function for finding reactions with suspiciously high
+        rate constants at low temperatures.
+        """
+        gas.set(T=300, P=101325, Y=np.ones(gas.nSpecies()))
+        Rf = gas.fwdRateConstants()
+        Rr = gas.revRateConstants()
+        error = False
+        for i in range(len(Rf)):
+            if Rf[i] > 1e30:
+                error = True
+                print ('WARNING: Excessively high forward rate constant'
+                       ' for reaction %i at T = %6.2f K' % (i+1,T))
+                print '    Reaction equation: %s' % gas.reactionEqn(i)
+                print '    Forward rate constant: %e' % Rf[i]
+
+            if Rr[i] > 1e30:
+                error = True
+                print ('WARNING: Excessively high reverse rate constant'
+                       ' for reaction %i at T = %6.2f K' % (i+1,T))
+                print '    Reaction equation: %s' % gas.reactionEqn(i)
+                print '    Reverse rate constant: %e' % Rr[i]
+
+        return error
