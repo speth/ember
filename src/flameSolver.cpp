@@ -40,67 +40,80 @@ void FlameSolver::setOptions(const configOptions& _options)
 
 void FlameSolver::initialize(void)
 {
-    strainfunc.setOptions(options);
+    try {
+        strainfunc.setOptions(options);
 
-    flamePosIntegralError = 0;
+        flamePosIntegralError = 0;
 
-    // Cantera initialization
-    gas.initialize();
-    nSpec = gas.nSpec;
-    nVars = nSpec + 2;
-    W.resize(nSpec);
-    gas.getMolecularWeights(W);
+        // Cantera initialization
+        gas.initialize();
+        nSpec = gas.nSpec;
+        nVars = nSpec + 2;
+        W.resize(nSpec);
+        gas.getMolecularWeights(W);
 
-    // Chemkin & Adapchem Initialization
-    if (options.usingAdapChem) {
-        ckGas.reset(new AdapChem(
-            options.inputDir+"/"+options.chemkinMechanismFile,
-            true,
-            options.inputDir+"/"+options.adapchemInputFile,
-            options.inputDir+"/"+options.adapchemModelsFile,
-            options.inputDir+"/"+options.adapchemDefaultModelFile,
-            options.outputDir+"/"+options.adapchemDonemodelsFile,
-            options.outputDir+"/"+options.adapchemRestartFile));
-        ckGas->setPressure(options.pressure);
+        // Chemkin & Adapchem Initialization
+        if (options.usingAdapChem) {
+            ckGas.reset(new AdapChem(
+                options.inputDir+"/"+options.chemkinMechanismFile,
+                true,
+                options.inputDir+"/"+options.adapchemInputFile,
+                options.inputDir+"/"+options.adapchemModelsFile,
+                options.inputDir+"/"+options.adapchemDefaultModelFile,
+                options.outputDir+"/"+options.adapchemDonemodelsFile,
+                options.outputDir+"/"+options.adapchemRestartFile));
+            ckGas->setPressure(options.pressure);
+        }
+
+        // Initial Conditions
+        if (options.haveRestartFile) {
+            loadProfile();
+        } else {
+            generateProfile();
+        }
+
+        grid.setSize(x.size());
+        convectionSystem.setGas(gas);
+        convectionSystem.setLeftBC(Tleft, Yleft);
+        convectionSystem.setTolerances(options);
+
+        for (size_t k=0; k<nVars; k++) {
+            DiffusionSystem* term = new DiffusionSystem();
+            BDFIntegrator* integrator = new BDFIntegrator(*term);
+            integrator->resize(nPoints, 1, 1);
+            diffusionTerms.push_back(term);
+            diffusionSolvers.push_back(integrator);
+        }
+        if (options.wallFlux) {
+            diffusionTerms[kEnergy].yInf = options.Tinf;
+            diffusionTerms[kEnergy].wallConst = options.Kwall;
+        }
+
+        dUdtConv.assign(nPoints, 0);
+        dUdtDiff.assign(nPoints, 0);
+        dUdtProd.assign(nPoints, 0);
+
+        dTdtConv.assign(nPoints, 0);
+        dTdtDiff.assign(nPoints, 0);
+        dTdtProd.assign(nPoints, 0);
+
+        dYdtConv.data().assign(nSpec*nPoints, 0);
+        dYdtDiff.data().assign(nSpec*nPoints, 0);
+        dYdtProd.data().assign(nSpec*nPoints, 0);
+
+        resizeAuxiliary();
+    }
+    catch (Cantera::CanteraError) {
+        Cantera::showErrors(std::cout);
+        throw;
+    } catch (debugException& e) {
+        logFile.write(e.errorString);
+        throw;
+    } catch (...) {
+        logFile.write("I have no idea what went wrong!");
+        throw;
     }
 
-    // Initial Conditions
-    if (options.haveRestartFile) {
-        loadProfile();
-    } else {
-        generateProfile();
-    }
-
-    grid.setSize(x.size());
-    convectionSystem.setGas(gas);
-    convectionSystem.setLeftBC(Tleft, Yleft);
-    convectionSystem.setTolerances(options);
-
-    for (size_t k=0; k<nVars; k++) {
-        DiffusionSystem* term = new DiffusionSystem();
-        BDFIntegrator* integrator = new BDFIntegrator(*term);
-        integrator->resize(nPoints, 1, 1);
-        diffusionTerms.push_back(term);
-        diffusionSolvers.push_back(integrator);
-    }
-    if (options.wallFlux) {
-        diffusionTerms[kEnergy].yInf = options.Tinf;
-        diffusionTerms[kEnergy].wallConst = options.Kwall;
-    }
-
-    dUdtConv.assign(nPoints, 0);
-    dUdtDiff.assign(nPoints, 0);
-    dUdtProd.assign(nPoints, 0);
-
-    dTdtConv.assign(nPoints, 0);
-    dTdtDiff.assign(nPoints, 0);
-    dTdtProd.assign(nPoints, 0);
-
-    dYdtConv.data().assign(nSpec*nPoints, 0);
-    dYdtDiff.data().assign(nSpec*nPoints, 0);
-    dYdtProd.data().assign(nSpec*nPoints, 0);
-
-    resizeAuxiliary();
 }
 
 void FlameSolver::tryrun(void)
