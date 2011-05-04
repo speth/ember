@@ -1357,10 +1357,10 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
             }
             if (err) {
                 logFile.write(format("Error at j = %i") % j);
-                logFile.write(format("T = %s") % sourceTerms[j].T);
-                logFile.write(format("U = %s") % sourceTerms[j].U);
+                logFile.write(format("T = %s") % sourceTermsQSS[j].T);
+                logFile.write(format("U = %s") % sourceTermsQSS[j].U);
                 logFile.write("Y = ", false);
-                logFile.write(sourceTerms[j].Y);
+                logFile.write(sourceTermsQSS[j].Y);
                 writeStateFile((format("prod%i_error_t%.6f_j%03i") %
                         stage % t % j).str(), true, false);
             }
