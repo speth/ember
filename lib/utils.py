@@ -131,12 +131,13 @@ def expandProfile(prof, gas):
         Dbin = gas.binaryDiffCoeffs()
         prof.Dkt[:,j] = gas.thermalDiffCoeffs()
 
+        eps = 1e-15;
         for k in range(K):
             X = gas.moleFractions()
             Y = gas.massFractions()
             sum1 = sum(X[i]/Dbin[k,i] for i in range(K) if i != k)
-            sum2 = sum(Y[i]/Dbin[k,i] for i in range(K) if i != k)
-            prof.rhoD[k,j] = prof.rho[j]/(sum1 + X[k]/(1-Y[k])*sum2)
+            sum2 = sum((Y[i]+eps/K)/Dbin[k,i] for i in range(K) if i != k)
+            prof.rhoD[k,j] = prof.rho[j]/(sum1 + X[k]/(1+eps-Y[k])*sum2)
 
         prof.k[j] = gas.thermalConductivity()
         prof.cp[j] = gas.cp_mass()

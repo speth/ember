@@ -175,7 +175,8 @@ void CanteraGas::getWeightedDiffusionCoefficientsMass(double* rhoD)
     thermo.getMoleFractions(&X[0]);
     transport->getBinaryDiffCoeffs(nSpec, &Dbin(0,0));
     double rho = thermo.density();
-
+    double eps = 1e-14/Y.size(); // Avoid 0/0 as Y[k] -> 1
+    double Keps = 1e-14;
     // See Kee, p. 528, Eq. 12.178
     for (size_t k=0; k<nSpec; k++) {
         double sum1 = 0;
@@ -186,9 +187,9 @@ void CanteraGas::getWeightedDiffusionCoefficientsMass(double* rhoD)
                 continue;
             }
             sum1 += X[i]/Dbin(k,i);
-            sum2 += Y[i]/Dbin(k,i);
+            sum2 += (Y[i]+eps)/Dbin(k,i);
         }
-        rhoD[k] = rho/(sum1 + X[k]/(1-Y[k])*sum2);
+        rhoD[k] = rho/(sum1 + X[k]/(1+Keps-Y[k])*sum2);
     }
 }
 
