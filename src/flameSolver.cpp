@@ -932,7 +932,7 @@ void FlameSolver::updateChemicalProperties()
         viscosityTimer.stop();
 
         diffusivityTimer.start();
-        gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j));
+        gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j), 1e-4);
         gas.getThermalDiffusionCoefficients(&Dkt(0,j));
         diffusivityTimer.stop();
         transportTimer.stop();

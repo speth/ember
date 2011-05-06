@@ -2,6 +2,9 @@
 #include "boost/filesystem.hpp"
 #include "debugUtils.h"
 
+#include <boost/foreach.hpp>
+#define foreach BOOST_FOREACH
+
 CanteraGas::CanteraGas()
     : rootXmlNode(NULL)
     , phaseXmlNode(NULL)
@@ -136,7 +139,7 @@ void CanteraGas::getMolecularWeights(double* W) const
 
 double CanteraGas::getViscosity() const
 {
-    return transport->viscosity();
+    return transport->viscosity(1e-5);
 }
 
 double CanteraGas::getThermalConductivity() const
@@ -175,8 +178,9 @@ void CanteraGas::getWeightedDiffusionCoefficientsMass(double* rhoD)
     thermo.getMoleFractions(&X[0]);
     transport->getBinaryDiffCoeffs(nSpec, &Dbin(0,0));
     double rho = thermo.density();
-    double eps = 1e-14/Y.size(); // Avoid 0/0 as Y[k] -> 1
     double Keps = 1e-14;
+    double eps = Keps/Y.size(); // Avoid 0/0 as Y[k] -> 1
+
     // See Kee, p. 528, Eq. 12.178
     for (size_t k=0; k<nSpec; k++) {
         double sum1 = 0;
@@ -188,6 +192,48 @@ void CanteraGas::getWeightedDiffusionCoefficientsMass(double* rhoD)
             }
             sum1 += X[i]/Dbin(k,i);
             sum2 += (Y[i]+eps)/Dbin(k,i);
+        }
+        rhoD[k] = rho/(sum1 + X[k]/(1+Keps-Y[k])*sum2);
+    }
+}
+
+void CanteraGas::getWeightedDiffusionCoefficientsMass(double* rhoD, double threshold)
+{
+    thermo.getMassFractions(&Y[0]);
+    thermo.getMoleFractions(&X[0]);
+    kMajor.clear();
+    for (size_t k=0; k<nSpec; k++) {
+        if (X[k] > threshold) {
+            kMajor.push_back(k);
+        }
+    }
+    //transport->getBinaryDiffCoeffs(nSpec, &Dbin(0,0));
+    double rho = thermo.density();
+    double Keps = 1e-14;
+    double eps = Keps/Y.size(); // Avoid 0/0 as Y[k] -> 1
+
+    // See Kee, p. 528, Eq. 12.178
+    for (size_t k=0; k<nSpec; k++) {
+        double sum1 = 0;
+        double sum2 = 0;
+        if (X[k] > threshold) {
+            for (size_t i=0; i<nSpec; i++) {
+                if (i==k) {
+                    continue;
+                }
+                double Dki = transport->getBinaryDiffCoeff(k,i);
+                sum1 += X[i]/Dki;
+                sum2 += (Y[i]+eps)/Dki;
+            }
+        } else {
+            foreach (size_t i, kMajor) {
+                if (i==k) {
+                    continue;
+                }
+                double Dki = transport->getBinaryDiffCoeff(k,i);
+                sum1 += X[i]/Dki;
+                sum2 += (Y[i]+eps)/Dki;
+            }
         }
         rhoD[k] = rho/(sum1 + X[k]/(1+Keps-Y[k])*sum2);
     }

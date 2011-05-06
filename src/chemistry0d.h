@@ -60,6 +60,7 @@ public:
 
     // Diffusion coefficients for calculating j[k] = - rho * D[k] * grad(Y[k])
     void getWeightedDiffusionCoefficientsMass(double* rhoD);
+    void getWeightedDiffusionCoefficientsMass(double* rhoD, double threshold);
     void getWeightedDiffusionCoefficientsMass(dvector& rhoD);
 
     void getThermalDiffusionCoefficients(dvector& Dkt) const;
@@ -96,4 +97,5 @@ private:
     Array2D Dbin; // binary diffusion coefficients for species k
     dvector X; // mole fractions
     dvector Y; // mass fractions
+    vector<size_t> kMajor; // indices of species with mole fractions above some threshold
 };
