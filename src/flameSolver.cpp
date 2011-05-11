@@ -749,6 +749,8 @@ void FlameSolver::resizeAuxiliary()
             solver->reltol = options.integratorRelTol;
             solver->linearMultistepMethod = CV_BDF;
             solver->nonlinearSolverMethod = CV_NEWTON;
+//            solver->linearMultistepMethod = CV_ADAMS;
+//            solver->nonlinearSolverMethod = CV_FUNCTIONAL;
             solver->maxNumSteps = 1000000;
             solver->minStep = options.integratorMinTimestep;
 
@@ -932,7 +934,7 @@ void FlameSolver::updateChemicalProperties()
         viscosityTimer.stop();
 
         diffusivityTimer.start();
-        gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j), 1e-4);
+        gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j));
         gas.getThermalDiffusionCoefficients(&Dkt(0,j));
         diffusivityTimer.stop();
         transportTimer.stop();

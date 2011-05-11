@@ -27,6 +27,20 @@ sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
 lastlibs = 'gfortran hdf5 blas lapack boost_filesystem'.split()
 pythonlibs = 'boost_python python2.6'.split()
 
+def CheckMemberFunction(context, function, includes=""):
+    context.Message('Checking for %s... ' % function)
+    src = """
+%(include)s
+int main(int argc, char** argv) {
+    &%(func)s;
+    return 0;
+}
+""" % {'func':function,
+       'include':includes}
+    result = context.TryLink(src, '.cpp')
+    context.Result(result)
+    return result
+
 env = Environment(CPPPATH=['/opt/cantera-gcc/include',
                            '/opt/sundials-2.4.0-gcc/include',
                            '/usr/include/python2.6'],
@@ -37,6 +51,15 @@ env = Environment(CPPPATH=['/opt/cantera-gcc/include',
                   FORTRANFLAGS=fortFlags,
                   F90FLAGS=fortFlags,
                   LIBS=startlibs + sundials + cantera + pythonlibs + lastlibs)
+
+tests = {}
+conf = Configure(env, custom_tests={'CheckMemberFunction': CheckMemberFunction})
+tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
+    "Cantera::MixTransport::getMixDiffCoeffsMass",
+    includes="#include <cantera/Cantera.h>\n#include <cantera/transport.h>")
+
+if tests['CanteraExtendedTransport']:
+    env.Append(CPPFLAGS=['-DCANTERA_EXTENDED_TRANSPORT'])
 
 env.Library('lib/libcklib.a', 'adapchem/build/cklib.f')
 

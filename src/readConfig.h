@@ -89,7 +89,8 @@ public:
 
     std::string gasMechanismFile;
     std::string gasPhaseID;
-    bool usingMultiTransport;
+    std::string transportModel;
+    double transportThreshold;
 
     // Adapchem configuration
     bool usingAdapChem;

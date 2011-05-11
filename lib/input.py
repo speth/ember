@@ -119,8 +119,11 @@ class Chemistry(Options):
     ## converted using ck2cti and cti2ctml.
     phaseID = "gas"
 
-    ## Transport model to use. Valid options are "Mix" and "Multi"
+    ## Transport model to use. Valid options are "Mix", "Multi", and "Approx"
     transportModel = "Mix"
+
+    ## Mole fraction threshold for including species with transportModel = "Approx"
+    threshold = 1e-5
 
 
 class Adapchem(Options):
@@ -603,7 +606,7 @@ class Config(object):
         error = self.checkString(self.general,
                                  'chemistryIntegrator', ('cvode', 'qss')) or error
         error = self.checkString(self.chemistry,
-                                'transportModel', ('Multi', 'Mix')) or error
+                                'transportModel', ('Multi', 'Mix', 'Approx')) or error
         error = self.checkString(self.general,
                                  'splittingMethod', ('strang', 'balanced')) or error
 

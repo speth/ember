@@ -56,14 +56,8 @@ configOptions::configOptions(const boost::python::object& conf)
     const object& chem = conf.attr("chemistry");
     readOption(chem, "mechanismFile", gasMechanismFile);
     readOption(chem, "phaseID", gasPhaseID);
-    string transportModel = extract<string>(chem.attr("transportModel"));
-    if (transportModel == "Multi") {
-        usingMultiTransport = true;
-    } else if (transportModel == "Mix") {
-        usingMultiTransport = false;
-    } else {
-        throw debugException("configOptions::readOptionsFile: Invalid Transport Model specified (general.transportModel).");
-    }
+    readOption(chem, "transportModel", transportModel);
+    readOption(chem, "threshold", transportThreshold);
 
     // Chemkin//Adapchem
     const object& adapchem = conf.attr("adapchem");

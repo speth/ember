@@ -18,6 +18,29 @@
 #define Cantera_CXX Cantera
 #endif
 
+#ifdef CANTERA_EXTENDED_TRANSPORT
+class ApproxMixTransport : public Cantera::MixTransport
+{
+public:
+    ApproxMixTransport(Cantera::ThermoPhase& thermo,
+                       Cantera::TransportFactory& factory);
+    void setThreshold(double threshold);
+
+    double viscosity();
+    void getMixDiffCoeffs(double* const d);
+    void getMixDiffCoeffsMass(double* const d);
+    void getMixDiffCoeffsMole(double* const d);
+
+private:
+    void updateViscosity_T();
+    void updateDiff_T();
+    void update_C();
+
+    double _threshold;
+    vector<size_t> _kMajor; // indices of the species where X[k] >= threshold
+};
+#endif
+
 class CanteraGas
 {
     // This class groups together a set of Cantera objects needed for calculating
@@ -60,7 +83,6 @@ public:
 
     // Diffusion coefficients for calculating j[k] = - rho * D[k] * grad(Y[k])
     void getWeightedDiffusionCoefficientsMass(double* rhoD);
-    void getWeightedDiffusionCoefficientsMass(double* rhoD, double threshold);
     void getWeightedDiffusionCoefficientsMass(dvector& rhoD);
 
     void getThermalDiffusionCoefficients(dvector& Dkt) const;
@@ -85,8 +107,8 @@ public:
 private:
     std::string mechanismFile;
     std::string phaseID;
-
-    bool usingMultiTransport; // use multicomponent transport model? (vs. mixture-averaged)
+    std::string transportModel;
+    double transportThreshold;
 
     Cantera::XML_Node* rootXmlNode;
     Cantera::XML_Node* phaseXmlNode;
