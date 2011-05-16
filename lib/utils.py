@@ -161,7 +161,7 @@ def run(conf):
         return
 
     if not os.path.isdir(conf.paths.outputDir):
-        os.mkdir(conf.paths.outputDir, 0755)
+        os.makedirs(conf.paths.outputDir, 0755)
     confOutPath = os.path.join(conf.paths.outputDir, 'config')
     if (os.path.exists(confOutPath)):
         os.unlink(confOutPath)
