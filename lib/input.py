@@ -610,6 +610,19 @@ class Config(object):
         error = self.checkString(self.general,
                                  'splittingMethod', ('strang', 'balanced')) or error
 
+        # Position control can only be used with "twin" or "curved" flames
+        if (self.positionControl is not None and
+            not self.general.twinFlame and
+            not self.general.curvedFlame):
+            error = True
+            print ("Error: PositionControl can only be used when either 'twinFlame'\n"
+                   "       or 'curvedFlame' is set to True.")
+
+        # twinFlame and curvedFlame are mutually exclusive:
+        if self.general.curvedFlame and self.general.twinFlame:
+            error = True
+            print "Error: 'twinFlame' and 'curvedFlame' are mutually exclusive."
+
         # Make sure the mechanism file is in the correct place
         mech = os.path.join(self.paths.inputDir, self.chemistry.mechanismFile)
         if not os.path.exists(mech):
