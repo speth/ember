@@ -623,6 +623,18 @@ class Config(object):
             error = True
             print "Error: 'twinFlame' and 'curvedFlame' are mutually exclusive."
 
+        # the "fuelLeft" option only makes sense for diffusion flames
+        if (self.initialCondition.flameType == 'premixed' and
+            'fuelLeft' in self.general.__dict__):
+            error = True
+            print "Error: 'general.fuelLeft' should not be specified for premixed flames."
+
+        # the "unburnedLeft" option only makes sense for premixed flames
+        if (self.initialCondition.flameType == 'diffusion' and
+            'unburnedLeft' in self.general.__dict__):
+            error = True
+            print "Error: 'general.unburnedLeft' should not be specified for diffusion flames."
+
         # Make sure the mechanism file is in the correct place
         mech = os.path.join(self.paths.inputDir, self.chemistry.mechanismFile)
         if not os.path.exists(mech):
