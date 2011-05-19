@@ -1784,20 +1784,22 @@ void FlameSolver::generateProfile(void)
         jm = 0;
     }
 
-    // TODO: Generate a better profile for the curved flame case
-    dvector V(nPoints);
-    V[jm] = 0;
-    for (size_t j=jm+1; j<nPoints; j++) {
-        V[j] = V[j-1] - rho[j]*U[j]*(x[j]-x[j-1]);
-    }
-
-    if (jm != 0) {
-        for (size_t j=jm; j>0; j--) {
-            V[j-1] = V[j] + rho[j-1]*U[j-1]*(x[j]-x[j-1]);
+    if ((options.twinFlame || options.curvedFlame) && !options.xFlameControl) {
+        rVzero = 0;
+    } else {
+        dvector V(nPoints);
+        V[jm] = 0;
+        for (size_t j=jm+1; j<nPoints; j++) {
+            V[j] = V[j-1] - rho[j]*U[j]*(x[j]-x[j-1]);
         }
-    }
 
-    rVzero = V[0];
+        if (jm != 0) {
+            for (size_t j=jm; j>0; j--) {
+                V[j-1] = V[j] + rho[j-1]*U[j-1]*(x[j]-x[j-1]);
+            }
+        }
+        rVzero = V[0];
+    }
 }
 
 void FlameSolver::loadProfile(void)
