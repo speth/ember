@@ -498,35 +498,30 @@ bool FlameSolver::checkTerminationCondition(void)
 void FlameSolver::writeStateFile
 (const std::string& fileNameStr, bool errorFile, bool updateDerivatives)
 {
-    std::ostringstream fileName(ostringstream::out);
+    std::string filename;
     bool incrementFileNumber = false;
 
     if (fileNameStr.length() == 0) {
-        // Determine the name of the output file (outXXXXXX.h5)
+        // Determine the name of the output file (profXXXXXX.h5)
         incrementFileNumber = true;
-        if (errorFile) {
-            fileName << options.outputDir << "/error";
-        } else {
-            fileName << options.outputDir << "/prof";
-        }
-        fileName.flags(ios_base::right);
-        fileName.fill('0');
-        fileName.width(6);
-        fileName << options.outputFileNumber << ".h5";
+        std::string prefix = (errorFile) ? "error" : "prof";
+        filename = (format("%s/%s%06i.h5") %
+            options.outputDir % prefix % options.outputFileNumber).str();
     } else {
-        fileName << options.outputDir << "/" << fileNameStr << ".h5";
+        filename = (format("%s/%s.h5") % options.outputDir % fileNameStr).str();
     }
+
     if (errorFile) {
-        logFile.write(format("Writing error output file: %s") % fileName.str());
+        logFile.write(format("Writing error output file: %s") % filename);
     } else {
-        logFile.write(format("Writing output file: %s") % fileName.str());
+        logFile.write(format("Writing output file: %s") % filename);
     }
 
     // Erase the existing file and create a new one
-    if (boost::filesystem::exists(fileName.str())) {
-        boost::filesystem::remove(fileName.str());
+    if (boost::filesystem::exists(filename)) {
+        boost::filesystem::remove(filename);
     }
-    DataFile outFile(fileName.str());
+    DataFile outFile(filename);
 
     updateChemicalProperties();
     convectionSystem.evaluate();
