@@ -649,13 +649,16 @@ void FlameSolver::writeStateFile
 
 void FlameSolver::writeTimeseriesFile(const std::string& filename)
 {
-    DataFile outFile(options.outputDir+"/"+filename+".h5");
+    std::string fullfilename = options.outputDir+"/"+filename+".h5";
+    if (boost::filesystem::exists(fullfilename)) {
+        boost::filesystem::remove(fullfilename);
+    }
+    DataFile outFile(fullfilename);
     outFile.writeVector("t", timeVector);
     outFile.writeVector("dt", timestepVector);
     outFile.writeVector("Q", heatReleaseRate);
     outFile.writeVector("Sc", consumptionSpeed);
     outFile.writeVector("xFlame", flamePosition);
-
     outFile.close();
 }
 
