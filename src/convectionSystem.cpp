@@ -84,41 +84,6 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     return 0;
 }
 
-void ConvectionSystemUTW::get_diagonal
-(const realtype t, dvector& linearU, dvector& linearT)
-{
-    // Assume that f has just been called and that all auxiliary
-    // arrays are in a consistent state.
-
-    // Left boundary conditions.
-    // Convection term only contributes in the ControlVolume case
-
-    // dUdot/dU
-    linearU[0] = 0;
-
-    if (grid.leftBC == BoundaryCondition::ControlVolume ||
-        grid.leftBC == BoundaryCondition::WallFlux)
-    {
-        double centerVol = pow(x[1],alpha+1) / (alpha+1);
-        double rVzero_mod = std::max(rV[0], 0.0);
-
-        // dTdot/dT
-        linearT[0] = -rVzero_mod / (rho[0] * centerVol);
-
-    } else { // FixedValue or ZeroGradient
-        linearT[0] = 0;
-    }
-
-    // Intermediate points
-    for (size_t j=1; j<jj; j++) {
-        // depends on upwinding to calculated dT/dx etc.
-        double value = (rV[j] < 0 || j == 0) ? V[j] / (rho[j] * hh[j])
-                                             : -V[j] / (rho[j] * hh[j-1]);
-        linearU[j] = value;
-        linearT[j] = value;
-    }
-}
-
 void ConvectionSystemUTW::unroll_y(const sdVector& y)
 {
     for (size_t j=0; j<nPoints; j++) {
@@ -250,38 +215,6 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
     return 0;
 }
 
-void ConvectionSystemY::get_diagonal(const realtype t, dvector& linearY)
-{
-    // Assume that f has just been called and that all auxiliary
-    // arrays are in a consistent state.
-
-    // Left boundary conditions.
-    // Convection term only contributes in the ControlVolume case
-
-    if (startIndex == 0 && (grid.leftBC == BoundaryCondition::ControlVolume ||
-                            grid.leftBC == BoundaryCondition::WallFlux))
-    {
-        double centerVol = pow(x[1],alpha+1) / (alpha+1);
-        // Note: v[0] actually contains r*v[0] in this case
-        double rvzero_mod = std::max(v[0], 0.0);
-
-        linearY[0] = -rvzero_mod / centerVol;
-
-    } else { // FixedValue, ZeroGradient, or truncated domain
-        linearY[0] = 0;
-    }
-
-    // Intermediate points
-    size_t i = 1;
-    for (size_t j=startIndex+1; j<stopIndex; j++) {
-        // depends on upwinding to calculated dT/dx etc.
-        linearY[i] = (v[i] < 0) ? v[i] / hh[j]
-                                : -v[i] / hh[j-1];
-        i++;
-    }
-    linearY[i] = 0;
-}
-
 void ConvectionSystemY::resize(const size_t new_nPoints)
 {
     grid.setSize(new_nPoints);
@@ -341,23 +274,6 @@ ConvectionSystemSplit::ConvectionSystemSplit()
     , stopIndices(NULL)
     , gas(NULL)
 {
-}
-
-void ConvectionSystemSplit::get_diagonal
-(const realtype t, dvector& dU, dvector& dT, Array2D& dY)
-{
-    // Called after evaluate()
-    utwSystem.get_diagonal(t, dU, dT);
-
-    for (size_t k=0; k<nSpec; k++) {
-        dvector dYk(nPointsSpec[k], 0);
-        speciesSystems[k].get_diagonal(t, dYk);
-        size_t i = 0;
-        for (size_t j=(*startIndices)[k]; j<(*stopIndices)[k]; j++) {
-            dY(k,j) = dYk[i];
-            i++;
-        }
-    }
 }
 
 void ConvectionSystemSplit::setGrid(const oneDimGrid& grid)

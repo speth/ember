@@ -135,16 +135,6 @@ const dvector& BDFIntegrator::get_ydot()
     return ydot;
 }
 
-const dvector& BDFIntegrator::get_diagonal()
-{
-    Adiag.resize(N);
-    // Assume that A has already been updated
-    for (int i=0; i<N; i++) {
-        Adiag[i] = (*A)(i,i);
-    }
-    return Adiag;
-}
-
 void BDFIntegrator::step()
 {
     if (stepCount == 0) {

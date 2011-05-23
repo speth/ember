@@ -19,9 +19,6 @@ public:
 
     // The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
-    // This uses an explicit integrator, so the full Jacobian is not needed. However,
-    // we still need the diagonal elements to implement the splitting method
-    void get_diagonal(const realtype t, dvector& dU, dvector& dT);
 
     void unroll_y(const sdVector& y); // fill in current state variables from sdvector
     void roll_y(sdVector& y) const; // fill in sdvector with current state variables
@@ -76,7 +73,6 @@ public:
 
     // The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
-    void get_diagonal(const realtype t, dvector& dy);
 
     void resize(const size_t nPoints);
     void resetSplitConstants();
@@ -103,8 +99,6 @@ class ConvectionSystemSplit : public GridBased
     // convection term for all components.
 public:
     ConvectionSystemSplit();
-
-    void get_diagonal(const realtype t, dvector& dU, dvector& dT, Array2D& dY);
 
     void setGrid(const oneDimGrid& grid);
     void setTolerances(const configOptions& options);
