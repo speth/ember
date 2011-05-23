@@ -395,8 +395,10 @@ class Times(Options):
     ## Timestep used for operator splitting.
     globalTimestep = 5e-6
 
-    ## Timestep used by the diffusion integrator.
-    diffusionTimestep = 1e-7
+    ## Control for timestep used by the diffusion integrator.
+    ## Actual timestep will be this multiplier times the stability
+    ## limit an explicit integrator.
+    diffusionTimestepMultiplier = 10
 
     ## Maximum amount of time before regridding / adaptation.
     regridTimeInterval = 100

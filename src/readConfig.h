@@ -67,7 +67,7 @@ public:
     double outputTimeInterval;
     double profileTimeInterval;
     double globalTimestep; // timestep size for the outer solver
-    double diffusionTimestep; // timestep for diffusion solver
+    double diffusionTimestepMultiplier; // timestep for diffusion solver
     std::string splittingMethod;
 
     std::string chemistryIntegrator;

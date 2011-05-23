@@ -847,7 +847,12 @@ void FlameSolver::updateCrossTerms()
         jCorrSystem.D[j] = 1.0;
     }
 
-    jCorrSolver.initialize(0, options.diffusionTimestep);
+    double dt = options.globalTimestep;
+    for (size_t j=1; j<jj; j++) {
+        dt = std::min(dt, options.diffusionTimestepMultiplier*dlj[j]*dlj[j]/(jCorrSystem.B[j]));
+    }
+
+    jCorrSolver.initialize(0, dt);
     jCorrSolver.integrateToTime(options.globalTimestep);
     assert(mathUtils::notnan(jCorrSolver.y));
 
@@ -1090,8 +1095,15 @@ void FlameSolver::setDiffusionSolverState(double tInitial)
     Tstart = T;
     Ystart = Y;
 
+    size_t k = 0;
     foreach (BDFIntegrator& integrator, diffusionSolvers) {
-        integrator.initialize(tInitial, options.diffusionTimestep);
+        double dt = options.globalTimestep;
+        for (size_t j=1; j<jj; j++) {
+            dt = std::min(dt, options.diffusionTimestepMultiplier*dlj[j]*dlj[j] /
+                              (diffusionTerms[k].B[j]*diffusionTerms[k].D[j]));
+        }
+        integrator.initialize(tInitial, dt);
+        k++;
     }
 
     diffusionSolvers[kMomentum].y = U;
@@ -2051,7 +2063,7 @@ void FlameSolver::updateTransportDomain()
     Array2D dYdtTotal(nSpec, nPoints);
 
     // Evaluate the full diffusion term for each species
-    diffusionTestSolver.initialize(0, options.diffusionTimestep);
+    diffusionTestSolver.initialize(0, options.globalTimestep); // dt here is arbitrary
     for (size_t k=0; k<nSpec; k++) {
         for (size_t j=0; j<nPoints; j++) {
             diffusionTestSolver.y[j] = Y(k,j);

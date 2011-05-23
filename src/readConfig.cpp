@@ -182,7 +182,7 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(times, "currentStateStepInterval", currentStateStepInterval);
     readOption(times, "terminateStepInterval", terminateStepInterval);
     readOption(times, "globalTimestep", globalTimestep);
-    readOption(times, "diffusionTimestep", diffusionTimestep);
+    readOption(times, "diffusionTimestepMultiplier", diffusionTimestepMultiplier);
 
     // Debug parameters
     const object& debug = conf.attr("debug");
