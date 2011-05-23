@@ -63,7 +63,7 @@ double mathUtils::maxval(const dvector& v, int iStart, int iEnd)
     if (iStart < 0 || iEnd > n)
         throw debugException("mathUtils::maxval: bad range specified");
 
-    double val = v[0];
+    double val = v[iStart];
     for (int i=iStart; i<=iEnd; i++) {
         if (v[i] > val) {
             val = v[i];
@@ -79,7 +79,7 @@ double mathUtils::minval(const dvector& v, int iStart, int iEnd)
     if (iStart < 0 || iEnd > n)
         throw debugException("mathUtils::minval: bad range specified");
 
-    double val = v[0];
+    double val = v[iStart];
     for (int i=iStart; i<=iEnd; i++) {
         if (v[i] < val) {
             val = v[i];

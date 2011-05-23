@@ -21,7 +21,7 @@ cppFlags = releaseCppFlags if mode == 'release' else debugCppFlags
 fortFlags = releaseFortFlags if mode == 'release' else debugFortFlags
 
 startlibs = 'adapchem cklib'.split()
-cantera = '''thermo transport kinetics equil tpx ctnumerics 
+cantera = '''thermo transport kinetics equil tpx ctnumerics
              ctmath ctf2c ctcxx ctbase clib'''.split()
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
 lastlibs = 'gfortran hdf5 blas lapack boost_filesystem'.split()
@@ -80,10 +80,15 @@ env.Alias('pylib',
                               common + Glob('python/build/*.cpp'),
                               SHLIBPREFIX=''))
 
-# Test programs
-env.Alias('qsstest',
-          env.Program('bin/qsstest',
-                      common+['test/build/test_qssintegrator.cpp']))
+# UnitTest++ tests
+testenv = env.Clone()
+testenv.Append(LIBS=['UnitTest++'],
+               CPPPATH=['../UnitTest++/src/'],
+               LIBPATH=['../UnitTest++'])
+test_program = testenv.Program('bin/unittest',
+                               common + Glob('test/build/*.cpp'))
+test_alias = testenv.Alias('test', [test_program], test_program[0].abspath)
+AlwaysBuild(test_alias)
 
 Default(['pylib'])
-env.Alias('all', ['qsstest','pylib'])
+env.Alias('all', ['qsstest','pylib','test'])

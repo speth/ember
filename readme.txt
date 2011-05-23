@@ -5,11 +5,12 @@ with the following installed:
    * Python (>=2.6)
    * Boost
    * SCons
-   * Cantera
+   * Cantera (>= 1.8)
    * Sundials (2.4)
-   * HDF5
+   * HDF5 (>= 1.8.0)
    * Doxygen (optional)
-   * doxypy (See step 0a)
+   * doxypy (optional, see step 0a)
+   * UnitTest++ (optional, see step 0b)
 
 0a. Installing Doxypy:
 
@@ -17,6 +18,13 @@ with the following installed:
     $ git clone https://github.com/0xCAFEBABE/doxypy.git
     $ cd doxypy/src
     $ python setup.py install --user
+
+0b. Installing UnitTest++
+
+    $ cd ~/src
+    $ svn co https://unittest-cpp.svn.sourceforge.net/svnroot/unittest-cpp/UnitTest++ UnitTest++
+    $ cd UnitTest++
+    $ make all
 
 1. The 1dflameV2 code is stored in a Git repository on Pharos. To
 check out a copy of the code, run:
@@ -26,12 +34,13 @@ check out a copy of the code, run:
     $ cd src
     $ git clone pharos.mit.edu:/var/cache/git/1dflameV2.git
 
+
 2. Edit the file "1dflameV2/SConstruct" to point to the correct include
 and library directories for your system.
 
 3. Compiling the Code:
 
-    $ cd 1dflameV2
+    $ cd ~/src/1dflameV2
     $ scons
 
 This produces the python module "lib/_pyro.so".
