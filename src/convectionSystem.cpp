@@ -119,54 +119,6 @@ void ConvectionSystemUTW::get_diagonal
     }
 }
 
-int ConvectionSystemUTW::bandedJacobian(const realtype t, const sdVector& y,
-                                     const sdVector& ydot, sdBandMatrix& J)
-{
-    // Assume that f has just been called and that all auxiliary
-    // arrays are in a consistent state.
-
-    // Left boundary conditions.
-    // Convection term only contributes in the ControlVolume case
-
-    // dUdot/dU
-    J(0*nVars+kMomentum, 0*nVars+kMomentum) = 0;
-
-    if (grid.leftBC == BoundaryCondition::ControlVolume ||
-        grid.leftBC == BoundaryCondition::WallFlux)
-    {
-        double centerVol = pow(x[1],alpha+1) / (alpha+1);
-        double rVzero_mod = std::max(rV[0], 0.0);
-
-        // dTdot/dT
-        J(0*nVars+kEnergy, 0*nVars+kEnergy) =
-                -rVzero_mod / (rho[0] * centerVol);
-
-        // dWdot/dW
-        J(0*nVars+kWmx, 0*nVars+kWmx) = -rVzero_mod / (rho[0] * centerVol);
-
-    } else { // FixedValue or ZeroGradient
-        J(0*nVars+kEnergy, 0*nVars+kEnergy) = 0;
-        // J(0*nVars+kWmx, 0*nVars+kWmx) = 0;
-    }
-
-    // Intermediate points
-    for (size_t j=1; j<jj; j++) {
-        // depends on upwinding to calculated dT/dx etc.
-        double value = (rV[j] < 0 || j == 0) ? V[j] / (rho[j] * hh[j])
-                                             : -V[j] / (rho[j] * hh[j-1]);
-        J(j*nVars+kMomentum, j*nVars+kMomentum) = value;
-        J(j*nVars+kEnergy, j*nVars+kEnergy) = value;
-        J(j*nVars+kWmx, j*nVars+kWmx) = value;
-    }
-
-    // Right boundary conditions
-    J(jj*nVars+kMomentum, jj*nVars+kMomentum) = 0;
-    J(jj*nVars+kEnergy, jj*nVars+kEnergy) = 0;
-    // J(jj*nVars+kWmx, jj*nVars+kWmx) = 0;
-
-    return 0;
-}
-
 void ConvectionSystemUTW::unroll_y(const sdVector& y)
 {
     for (size_t j=0; j<nPoints; j++) {
@@ -330,43 +282,6 @@ void ConvectionSystemY::get_diagonal(const realtype t, dvector& linearY)
     linearY[i] = 0;
 }
 
-int ConvectionSystemY::bandedJacobian(const realtype t, const sdVector& y,
-                                     const sdVector& ydot, sdBandMatrix& J)
-{
-    // Assume that f has just been called and that all auxiliary
-    // arrays are in a consistent state.
-
-    // Left boundary condition.
-    // Convection term only contributes in the ControlVolume case
-
-    if (startIndex == 0 && (grid.leftBC == BoundaryCondition::ControlVolume ||
-                            grid.leftBC == BoundaryCondition::WallFlux))
-    {
-        double centerVol = pow(x[1],alpha+1) / (alpha+1);
-        double rvzero_mod = std::max(v[0], 0.0);
-
-        J(0,0) = -rvzero_mod / centerVol;
-
-    } else { // FixedValue, ZeroGradient or truncated domain
-        J(0,0) = 0;
-    }
-
-    // Intermediate points
-    size_t i = 1;
-    for (size_t j=startIndex+1; j<stopIndex; j++) {
-        // depends on upwinding to calculated dT/dx etc.
-        double value = (v[i] < 0) ? v[i] / hh[j]
-                                  : -v[i] / hh[j-1];
-        J(i,i) = value;
-        i++;
-    }
-
-    // Right boundary condition
-    J(i,i) = 0;
-
-    return 0;
-}
-
 void ConvectionSystemY::resize(const size_t new_nPoints)
 {
     grid.setSize(new_nPoints);
@@ -511,8 +426,8 @@ void ConvectionSystemSplit::resize
         utwSolver->setODE(&utwSystem);
         utwSolver->setBandwidth(0,0);
         utwSolver->reltol = reltol;
-        utwSolver->linearMultistepMethod = CV_BDF;
-        utwSolver->nonlinearSolverMethod = CV_NEWTON;
+        utwSolver->linearMultistepMethod = CV_ADAMS;
+        utwSolver->nonlinearSolverMethod = CV_FUNCTIONAL;
         for (size_t j=0; j<nPointsUTW; j++) {
             utwSolver->abstol[3*j+kMomentum] = abstolU;
             utwSolver->abstol[3*j+kEnergy] = abstolT;
@@ -727,8 +642,8 @@ void ConvectionSystemSplit::configureSolver(sundialsCVODE& solver, const size_t 
     for (size_t j=0; j<nPointsSpec[k]; j++) {
         solver.abstol[j] = abstolY;
     }
-    solver.linearMultistepMethod = CV_BDF;
-    solver.nonlinearSolverMethod = CV_NEWTON;
+    solver.linearMultistepMethod = CV_ADAMS;
+    solver.nonlinearSolverMethod = CV_FUNCTIONAL;
 
     speciesSystems[k].resize(nPointsSpec[k]);
     speciesSystems[k].startIndex = (*startIndices)[k];

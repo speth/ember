@@ -749,8 +749,6 @@ void FlameSolver::resizeAuxiliary()
             solver->reltol = options.integratorRelTol;
             solver->linearMultistepMethod = CV_BDF;
             solver->nonlinearSolverMethod = CV_NEWTON;
-//            solver->linearMultistepMethod = CV_ADAMS;
-//            solver->nonlinearSolverMethod = CV_FUNCTIONAL;
             solver->maxNumSteps = 1000000;
             solver->minStep = options.integratorMinTimestep;
 
