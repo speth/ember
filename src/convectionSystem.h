@@ -27,6 +27,9 @@ public:
     void resize(const size_t nPoints);
     void resetSplitConstants();
 
+    void updateContinuityBoundaryCondition(const dvector& qdot,
+                                           ContinuityBoundaryCondition::BC newBC);
+
     dvector U, dUdt;
     dvector T, dTdt;
     dvector Wmx, dWdt;
@@ -54,6 +57,10 @@ public:
     dvector dUdx;
     dvector dTdx;
     dvector dWdx;
+
+    ContinuityBoundaryCondition::BC continuityBC;
+    size_t jContBC; // The point at which the continuity equation BC is applied
+    double xVzero; // Location of the stagnation point (if using fixedZero BC)
 
 private:
     void V2rV();

@@ -6,6 +6,8 @@
 
 ConvectionSystemUTW::ConvectionSystemUTW()
     : gas(NULL)
+    , continuityBC(ContinuityBoundaryCondition::Left)
+    , jContBC(0)
     , nVars(3)
 {
 }
@@ -19,9 +21,45 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     }
 
     // *** Calculate V ***
-    rV[0] = rVzero;
+    if (continuityBC == ContinuityBoundaryCondition::Left) {
+        rV[0] = rVzero;
+        for (size_t j=0; j<nPoints-1; j++) {
+            rV[j+1] = rV[j] - hh[j] * (drhodt[j] + rho[j] * U[j] * rphalf[j]);
+        }
+    } else if (continuityBC == ContinuityBoundaryCondition::Zero) {
+        // jContBC is the point just to the right of the stagnation point
+        size_t j = jContBC;
+        double dVdx0 = - drhodt[j] - rho[j] * U[j] * rphalf[j];
+        if (jContBC != 0) {
+            dVdx0 = 0.5 * dVdx0 - 0.5 * (drhodt[j-1] + rho[j-1] * U[j-1] * rphalf[j-1]);
+        }
+
+        rV[j] = (x[j] - xVzero) * dVdx0;
+        for (j=jContBC; j<jj; j++) {
+            rV[j+1] = rV[j] - hh[j] * (drhodt[j] + rho[j] * U[j] * rphalf[j]);
+        }
+
+        if (jContBC != 0) {
+            j = jContBC-1;
+//            dVdx0 = - drhodt[j] - rho[j] * U[j] * rphalf[j];
+            rV[j] = (x[j] - xVzero) * dVdx0;
+            for (j=jContBC-1; j>0; j--) {
+                rV[j-1] = rV[j] + hh[j-1] * (drhodt[j-1] + rho[j-1] * U[j-1] * rphalf[j-1]);
+            }
+        }
+    } else {
+        for (size_t j=jContBC; j<nPoints-1; j++) {
+            rV[j+1] = rV[j] - hh[j] * (drhodt[j] + rho[j] * U[j] * rphalf[j]);
+        }
+        for (size_t j=jContBC; j>0; j--) {
+            rV[j-1] = rV[j] + hh[j-1] * (drhodt[j] + rho[j] * U[j] * rphalf[j]);
+        }
+    }
+
+    rV2V();
+
+    // *** Calculate upwinded convective derivatives
     for (size_t j=0; j<nPoints-1; j++) {
-        // Compute the upwinded convective derivative
         if (rV[j] < 0 || j == 0) {
             dTdx[j] = (T[j+1] - T[j]) / hh[j];
             dUdx[j] = (U[j+1] - U[j]) / hh[j];
@@ -31,12 +69,8 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
             dUdx[j] = (U[j] - U[j-1]) / hh[j-1];
             dWdx[j] = (Wmx[j] - Wmx[j-1]) / hh[j-1];
         }
-
-        rV[j+1] = rV[j] - hh[j] * drhodt[j];
-        rV[j+1] -= hh[j] * rho[j] * U[j] * rphalf[j];
     }
 
-    rV2V();
 
     // *** Calculate dW/dt, dU/dt, dT/dt
 
@@ -137,6 +171,99 @@ void ConvectionSystemUTW::resetSplitConstants()
     splitConstU.assign(nPoints, 0);
     splitConstT.assign(nPoints, 0);
     splitConstW.assign(nPoints, 0);
+}
+
+void ConvectionSystemUTW::updateContinuityBoundaryCondition
+(const dvector& qdot, ContinuityBoundaryCondition::BC newBC)
+{
+    assert(mathUtils::notnan(V));
+    continuityBC = newBC;
+    double qmax = 0;
+    double Tmid = 0.5 * (T[0] + T[jj]);
+    size_t jStart;
+
+    switch (continuityBC) {
+    case ContinuityBoundaryCondition::Left:
+        jContBC = 0;
+        break;
+
+    case ContinuityBoundaryCondition::Right:
+        jContBC = jj;
+        break;
+
+    case ContinuityBoundaryCondition::Qdot:
+        jContBC = 0;
+        for (size_t j=0; j<nPoints; j++) {
+            if (qdot[j] > qmax) {
+                qmax = qdot[j];
+                jContBC = j;
+            }
+        }
+        break;
+
+    case ContinuityBoundaryCondition::Zero:
+        // Grid point closest to the old stagnation point location
+        if (x[jj] > xVzero) {
+            jStart = mathUtils::findFirst(x > xVzero);
+        } else {
+            jStart = jj;
+        }
+
+        jContBC = jStart;
+        for (size_t i=1; jStart+i<=jj || jStart>=i; i++) {
+            if (jStart+i <= jj &&
+                mathUtils::sign(V[jStart+i]) != mathUtils::sign(V[jStart]))
+            {
+                jContBC = jStart+i;
+                break;
+            } else if (jStart>=i &&
+                       mathUtils::sign(V[jStart-i]) != mathUtils::sign(V[jStart]))
+            {
+                jContBC = jStart-i+1;
+                break;
+            }
+        }
+
+        if (jContBC == 0) {
+            // Stagnation point is beyond the left end of the domain
+            assert(V[jContBC] <= 0);
+            xVzero = x[0] - V[0]*hh[0]/(V[1]-V[0]);
+        } else if (jContBC == jj) {
+            // Stagnation point is beyond the right end of the domain
+            assert(V[jContBC] >= 0);
+            xVzero = x[jj] - V[jj]*hh[jj-1]/(V[jj]-V[jj-1]);
+        } else {
+            // Stagnation point just to the left of jContBC
+            assert(V[jContBC] * V[jContBC-1] <= 0); // test opposite sign
+            xVzero = x[jContBC] - V[jContBC] * hh[jContBC-1] / (V[jContBC] - V[jContBC-1]);
+        }
+
+        break;
+
+    case ContinuityBoundaryCondition::Temp:
+        jContBC = 0;
+        if (T[jj] >= T[0]) {
+            // T increases left to right
+            for (size_t j=0; j<nPoints; j++) {
+                if (T[j] > Tmid) {
+                    jContBC = j;
+                    break;
+                }
+            }
+        } else {
+            // T increases right to left
+            for (size_t j=0; j<nPoints; j++) {
+                if (T[j] < Tmid) {
+                    jContBC = j;
+                    break;
+                }
+            }
+        }
+        break;
+
+    default:
+        throw debugException("ConvectionSystemUTW::updateContinuityBoundaryCondition failed.");
+    }
 }
 
 void ConvectionSystemUTW::V2rV(void)

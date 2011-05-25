@@ -52,6 +52,20 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(general, "chemistryIntegrator", chemistryIntegrator);
     readOption(general, "splittingMethod", splittingMethod);
 
+    std::string bcString;
+    readOption(general, "continuityBC", bcString);
+    if (bcString == "fixedLeft") {
+        continuityBC = ContinuityBoundaryCondition::Left;
+    } else if (bcString == "fixedRight") {
+        continuityBC = ContinuityBoundaryCondition::Right;
+    } else if (bcString == "fixedQdot") {
+        continuityBC = ContinuityBoundaryCondition::Qdot;
+    } else if (bcString == "fixedTemperature") {
+        continuityBC = ContinuityBoundaryCondition::Temp;
+    } else if (bcString == "stagnationPoint") {
+        continuityBC = ContinuityBoundaryCondition::Zero;
+    }
+
     // Chemistry
     const object& chem = conf.attr("chemistry");
     readOption(chem, "mechanismFile", gasMechanismFile);

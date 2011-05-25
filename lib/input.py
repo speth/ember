@@ -92,6 +92,11 @@ class General(Options):
     ## condition. Applicable only to diffusion flames.
     fuelLeft = True
 
+    ## Method for setting the boundary condition for the continuity equation
+    ## Valid options are: 'fixedLeft', 'fixedRight', 'fixedQdot',
+    ## 'fixedTemperature', and 'stagnationPoint'.
+    continuityBC = "fixedLeft"
+
     ## Integrator to use for the chemical source terms. Choices are
     ## "qss" (explicit, quasi-steady state) and "cvode" (implicit,
     ## variable-order BDF).
@@ -611,6 +616,11 @@ class Config(object):
                                 'transportModel', ('Multi', 'Mix', 'Approx')) or error
         error = self.checkString(self.general,
                                  'splittingMethod', ('strang', 'balanced')) or error
+
+        error = self.checkString(self.general,
+                                 'continuityBC',
+                                 ('fixedLeft', 'fixedRight', 'fixedQdot',
+                                  'fixedTemperature', 'stagnationPoint')) or error
 
         # Position control can only be used with "twin" or "curved" flames
         if (self.positionControl is not None and

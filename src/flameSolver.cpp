@@ -102,6 +102,35 @@ void FlameSolver::initialize(void)
         dYdtProd.data().assign(nSpec*nPoints, 0);
 
         resizeAuxiliary();
+        updateChemicalProperties();
+        // Determine initial condition for V
+        dvector& V(convectionSystem.utwSystem.V);
+        V.resize(nPoints);
+        if ((options.twinFlame || options.curvedFlame) && !options.xFlameControl) {
+            rVzero = 0;
+            V[0] = 0;
+            for (size_t j=1; j<nPoints; j++) {
+                V[j] = V[j-1] - rho[j]*U[j]*(x[j]-x[j-1]);
+            }
+        } else {
+            // Put the stagnation point on the burned side of the flame
+            size_t jz = (grid.ju + 3 * grid.jb) / 4;
+            convectionSystem.utwSystem.xVzero = x[jz];
+            V[jz] = 0;
+
+            for (size_t j=jz+1; j<nPoints; j++) {
+                V[j] = V[j-1] - rho[j]*U[j]*(x[j]-x[j-1]);
+            }
+
+            if (jz != 0) {
+                for (size_t j=jz; j>0; j--) {
+                    V[j-1] = V[j] + rho[j-1]*U[j-1]*(x[j]-x[j-1]);
+                }
+            }
+            rVzero = V[0];
+        }
+        calculateQdot();
+        convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
     }
     catch (Cantera::CanteraError) {
         Cantera::showErrors(std::cout);
@@ -420,8 +449,9 @@ void FlameSolver::run(void)
 
                 correctMassFractions();
 
-                // Update the mass flux at the left boundary
+                // Update the mass flux (including the left boundary value)
                 rVzero = mathUtils::interp1(x_prev, V_prev, grid.x[0]);
+                convectionSystem.utwSystem.V = mathUtils::interp1(x_prev, V_prev, grid.x);
 
                 // Allocate the solvers and arrays for auxiliary variables
                 resizeAuxiliary();
@@ -1084,6 +1114,7 @@ void FlameSolver::prepareConvectionTerms()
     }
 
     convectionSystem.setSplitConstants(splitConstU, splitConstT, splitConstY);
+    convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
 }
 
 void FlameSolver::setDiffusionSolverState(double tInitial)
@@ -1790,23 +1821,6 @@ void FlameSolver::generateProfile(void)
     if (options.fixedLeftLoc)
     {
         jm = 0;
-    }
-
-    if ((options.twinFlame || options.curvedFlame) && !options.xFlameControl) {
-        rVzero = 0;
-    } else {
-        dvector V(nPoints);
-        V[jm] = 0;
-        for (size_t j=jm+1; j<nPoints; j++) {
-            V[j] = V[j-1] - rho[j]*U[j]*(x[j]-x[j-1]);
-        }
-
-        if (jm != 0) {
-            for (size_t j=jm; j>0; j--) {
-                V[j-1] = V[j] + rho[j-1]*U[j-1]*(x[j]-x[j-1]);
-            }
-        }
-        rVzero = V[0];
     }
 }
 

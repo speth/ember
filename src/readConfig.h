@@ -9,6 +9,16 @@ namespace boost { namespace python { namespace api { class object; } } }
 // indices of the respective equations / solution components
 extern const size_t kMomentum, kEnergy, kSpecies, kWmx;
 
+namespace ContinuityBoundaryCondition {
+    enum BC {
+        Left, // V is computed from j = 0
+        Right, // V is computed from j = jj
+        Zero, // V = 0 at x = 0
+        Qdot, // V is calculated from the location of maximum heat release rate
+        Temp // V is calculated from the temperature midpoint
+    };
+}
+
 class configOptions
 {
 public:
@@ -48,6 +58,8 @@ public:
     //! [general.twinFlame] Set to true for the twin flame configuration.
     //! If specified, the leftmost grid point will not extend beyond x = 0.
     bool twinFlame;
+
+    ContinuityBoundaryCondition::BC continuityBC;
 
     //! [general.curvedFlame] Set to true for the twin flame configuration.
     //! If specified, the leftmost grid point will not extend beyond x = 0.
