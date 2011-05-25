@@ -2001,12 +2001,18 @@ dvector FlameSolver::calculateReactantMixture(void)
     dvector a(gas.thermo.nElements());
     for (size_t k=0; k<nSpec; k++) {
         gas.thermo.getAtoms(k,&a[0]);
-        Cf += a[mC]*Xf[k];
-        Co += a[mC]*Xo[k];
-        Hf += a[mH]*Xf[k];
-        Ho += a[mH]*Xo[k];
-        Of += a[mO]*Xf[k];
-        Oo += a[mO]*Xo[k];
+        if (mC != -1) {
+            Cf += a[mC]*Xf[k];
+            Co += a[mC]*Xo[k];
+        }
+        if (mH != -1) {
+            Hf += a[mH]*Xf[k];
+            Ho += a[mH]*Xo[k];
+        }
+        if (mO != -1) {
+            Of += a[mO]*Xf[k];
+            Oo += a[mO]*Xo[k];
+        }
     }
     double stoichAirFuelRatio = -(Of-2*Cf-Hf/2)/(Oo-2*Co-Ho/2);
     Xr = Xf*options.equivalenceRatio + stoichAirFuelRatio*Xo;
