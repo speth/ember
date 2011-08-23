@@ -1,0 +1,17 @@
+file /home/mwchase/src/1dflameV2/SConstruct,line 56:
+	Configure(confdir = .sconf_temp)
+scons: Configure: Checking for Cantera::MixTransport::getMixDiffCoeffsMass... 
+.sconf_temp/conftest_0.cpp <-
+  |
+  |#include <cantera/Cantera.h>
+  |#include <cantera/transport.h>
+  |int main(int argc, char** argv) {
+  |    &Cantera::MixTransport::getMixDiffCoeffsMass;
+  |    return 0;
+  |}
+  |
+g++ -o .sconf_temp/conftest_0.o -c -ftemplate-depth-128 -O3 -finline-functions -Wno-inline -fPIC -Wall -g -DNDEBUG -I/opt/cantera-gcc/include -I/opt/sundials-2.4.0-gcc/include -I/usr/include/python2.6 .sconf_temp/conftest_0.cpp
+.sconf_temp/conftest_0.cpp: In function 'int main(int, char**)':
+.sconf_temp/conftest_0.cpp:5: error: 'getMixDiffCoeffsMass' is not a member of 'Cantera::MixTransport'
+scons: Configure: no
+

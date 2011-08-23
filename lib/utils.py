@@ -52,9 +52,10 @@ class HDFStruct(Struct):
     def __init__(self, filename):
         if not os.path.exists(filename):
             raise Exception("File not found: " + filename)
-        data = h5py.File(filename)
+        data = h5py.File(filename, mode='r') # We don't need to write to the file
         for key in data:
             self[key] = data[key].value
+        data.close() # I don't know if this is necessary, but it can't hurt
 
 
 def load(filename):
