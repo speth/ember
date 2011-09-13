@@ -20,7 +20,6 @@ mode = ARGUMENTS.get('mode','release')
 cppFlags = releaseCppFlags if mode == 'release' else debugCppFlags
 fortFlags = releaseFortFlags if mode == 'release' else debugFortFlags
 
-startlibs = 'adapchem cklib'.split()
 cantera = '''thermo transport kinetics equil tpx ctnumerics
              ctmath ctf2c ctcxx ctbase clib'''.split()
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
@@ -50,7 +49,7 @@ env = Environment(CPPPATH=['/opt/cantera-gcc/include',
                   CPPFLAGS=cppFlags,
                   FORTRANFLAGS=fortFlags,
                   F90FLAGS=fortFlags,
-                  LIBS=startlibs + sundials + cantera + pythonlibs + lastlibs)
+                  LIBS=sundials + cantera + pythonlibs + lastlibs)
 
 tests = {}
 conf = Configure(env, custom_tests={'CheckMemberFunction': CheckMemberFunction})
@@ -61,13 +60,15 @@ tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
 if tests['CanteraExtendedTransport']:
     env.Append(CPPFLAGS=['-DCANTERA_EXTENDED_TRANSPORT'])
 
-env.Library('lib/libcklib.a', 'adapchem/build/cklib.f')
+cklib = env.Library('lib/libcklib.a', 'adapchem/build/cklib.f')
 
-env.Library('lib/libadapchem.a',
+adapchem = env.Library('lib/libadapchem',
             ['adapchem/build/adapchem.f',
              'adapchem/build/box.f',
              'adapchem/build/ckcompat.cpp',
              'adapchem/build/wrappers.f90'])
+
+env['LIBS'] = cklib + adapchem + env['LIBS']
 
 common = [f for f in Glob('src/build/*.cpp')
           if 'strainedFlame.cpp' not in f.name]
@@ -91,4 +92,4 @@ test_alias = testenv.Alias('test', [test_program], test_program[0].abspath)
 AlwaysBuild(test_alias)
 
 Default(['pylib'])
-env.Alias('all', ['qsstest','pylib','test'])
+env.Alias('all', ['pylib','test',adapchem,cklib])
