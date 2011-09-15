@@ -4,8 +4,6 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "../adapchem/ckcompat.h"
-
 #include "readConfig.h"
 #include "sundialsUtils.h"
 #include "chemistry0d.h"
@@ -220,9 +218,6 @@ private:
 
     //! Cantera data
     CanteraGas gas;
-
-    //! Chemkin/AdapChem state mechanism data
-    boost::shared_ptr<AdapChem> ckGas;
 
     void rollVectorVector(vector<dvector>& vv, const dvector& u, const dvector& t, const Array2D& y) const;
     void unrollVectorVector(const vector<dvector>& vv, dvector& u, dvector& t, Array2D& y, size_t i) const;

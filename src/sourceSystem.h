@@ -4,7 +4,6 @@
 #include "sundialsUtils.h"
 #include "chemistry0d.h"
 #include "strainFunction.h"
-#include "../adapchem/ckcompat.h"
 #include "perfTimer.h"
 #include "qssintegrator.h"
 
@@ -55,7 +54,6 @@ public:
 
     // Cantera data
     CanteraGas* gas;
-    boost::shared_ptr<AdapChem> ckGas;
     perfTimer* reactionRatesTimer;
     perfTimer* thermoTimer;
     perfTimer* jacobianTimer;
@@ -116,7 +114,6 @@ public:
 
     // Cantera data
     CanteraGas* gas;
-    boost::shared_ptr<AdapChem> ckGas;
     perfTimer* reactionRatesTimer;
     perfTimer* thermoTimer;
 

@@ -131,31 +131,6 @@ class Chemistry(Options):
     threshold = 1e-5
 
 
-class Adapchem(Options):
-    """ Locations of files needed when using the AdapChem module """
-
-    ## Chemkin-format mechanism. Must match the mechanism specified in
-    ## Chemistry.mechanismFile
-    mechanism = "chem.bin"
-
-    ## Tolerance settings for AdapChem
-    infile = "adapchem.in"
-
-    ## A file listing a number of reduced models. For each model, this
-    ## file contains a bit vector indicating which species and
-    ## reactions are included, and a range of temperatures and species
-    ## concentrations over which the model is valid.
-    models = "modelsV2.chem"
-
-    ## ??
-    defaultModel = "default.model"
-
-    ## ??
-    donemodels = "donemodels"
-
-    ## ??
-    restart = "full.rstrt"
-
 class TransportElimination(Options):
     """
     Options for integrating each of the species transport
@@ -579,7 +554,6 @@ class Config(object):
         self.paths = get(Paths)
         self.general = get(General)
         self.chemistry = get(Chemistry)
-        self.adapchem = opts.get('Adapchem')
         self.transportElimination = get(TransportElimination)
         self.grid = get(Grid)
         self.initialCondition = get(InitialCondition)
@@ -677,11 +651,6 @@ class Config(object):
             if not os.path.exists(restart):
                 error = True
                 print "Error: Couldn't find restart file %r.\n" % restart
-
-        # QSS Solver is incompatible with adapchem
-        if self.adapchem and general.chemistryIntegrator == 'qss':
-            error = True
-            print 'Error: QSS integrator is incompatible with Adapchem.\n'
 
         if error:
             print 'Validation failed.'

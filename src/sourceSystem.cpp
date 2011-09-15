@@ -35,12 +35,7 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     // *** Update auxiliary data ***
     reactionRatesTimer->start();
     gas->setStateMass(Y, T);
-    if (options->usingAdapChem) {
-        ckGas->setStateMass(&Y[0], T, j);
-        ckGas->getReactionRates(&wDot[0]);
-    } else {
-        gas->getReactionRates(wDot);
-    }
+    gas->getReactionRates(wDot);
     reactionRatesTimer->stop();
 
     thermoTimer->start();
@@ -105,13 +100,8 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     dvector wDot2(nSpec);
 
     reactionRatesTimer->start();
-    if (options->usingAdapChem) {
-        ckGas->setStateMass(&Y[0], TplusdT, j);
-        ckGas->getReactionRates(&wDot2[0]);
-    } else {
-        gas->setStateMass(Y, TplusdT);
-        gas->getReactionRates(wDot2);
-    }
+    gas->setStateMass(Y, TplusdT);
+    gas->getReactionRates(wDot2);
     reactionRatesTimer->stop();
 
     for (size_t k=0; k<nSpec; k++) {
@@ -130,13 +120,8 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     for (size_t k=0; k<nSpec; k++) {
         YplusdY[k] = (abs(Y[k]) > eps/2) ? Y[k]*(1+eps) : eps;
         reactionRatesTimer->start();
-        if (options->usingAdapChem) {
-            ckGas->setStateMass(&YplusdY[0], T, j);
-            ckGas->getReactionRates(&wDot2[0]);
-        } else {
-            gas->setStateMass(YplusdY, T);
-            gas->getReactionRates(wDot2);
-        }
+        gas->setStateMass(YplusdY, T);
+        gas->getReactionRates(wDot2);
         reactionRatesTimer->stop();
 
         for (size_t i=0; i<nSpec; i++) {
@@ -323,13 +308,8 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d,
     // *** Update auxiliary data ***
     reactionRatesTimer->start();
     gas->setStateMass(Y, T);
-    if (options->usingAdapChem) {
-//        ckGas->setStateMass(&Y[0], T, j);
-//        ckGas->getReactionRates(&wDot[0]);
-    } else {
-        gas->getCreationRates(wDotQ);
-        gas->getDestructionRates(wDotD);
-    }
+    gas->getCreationRates(wDotQ);
+    gas->getDestructionRates(wDotD);
     reactionRatesTimer->stop();
 
     if (!corrector) {

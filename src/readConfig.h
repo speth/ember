@@ -104,18 +104,11 @@ public:
     std::string transportModel;
     double transportThreshold;
 
-    // Adapchem configuration
-    bool usingAdapChem;
-    std::string chemkinMechanismFile;
-    std::string adapchemInputFile;
-    std::string adapchemModelsFile;
-    std::string adapchemDefaultModelFile;
-    std::string adapchemDonemodelsFile;
-    std::string adapchemRestartFile;
+    // Transport Elimination configuration
     bool transportEliminationDiffusion;
     bool transportEliminationConvection;
     int transportEliminationStepInterval;
-    double adapchem_atol;
+    double transport_atol;
 
     std::string fuel; // molar composition of the fuel
     std::string oxidizer; // molar composition of the oxidizer

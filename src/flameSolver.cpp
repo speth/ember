@@ -52,19 +52,6 @@ void FlameSolver::initialize(void)
         W.resize(nSpec);
         gas.getMolecularWeights(W);
 
-        // Chemkin & Adapchem Initialization
-        if (options.usingAdapChem) {
-            ckGas.reset(new AdapChem(
-                options.inputDir+"/"+options.chemkinMechanismFile,
-                true,
-                options.inputDir+"/"+options.adapchemInputFile,
-                options.inputDir+"/"+options.adapchemModelsFile,
-                options.inputDir+"/"+options.adapchemDefaultModelFile,
-                options.outputDir+"/"+options.adapchemDonemodelsFile,
-                options.outputDir+"/"+options.adapchemRestartFile));
-            ckGas->setPressure(options.pressure);
-        }
-
         // Initial Conditions
         if (options.haveRestartFile) {
             loadProfile();
@@ -223,15 +210,6 @@ void FlameSolver::run(void)
 
         updateChemicalProperties();
 
-        if (options.usingAdapChem) {
-            ckGas->incrementStep();
-
-            // Because AdapChem only assigns values for species in the
-            // reduced mechanisms, we need to zero the reaction rates
-            // whenever the mechansim at each point could change.
-            wDot.data().assign(wDot.data().size(), 0);
-        }
-
         updateBC();
         if (options.xFlameControl) {
             update_xStag(t, true); // calculate the value of rVzero
@@ -374,8 +352,6 @@ void FlameSolver::run(void)
                 break;
             }
         }
-
-        // call ckGas::adapBox
 
         // *** Save the current integral and profile data
         //     in files that are automatically overwritten,
@@ -601,14 +577,6 @@ void FlameSolver::writeStateFile
         outFile.writeVector("dWdx", convectionSystem.utwSystem.dWdx);
         outFile.writeVector("dTdx", convectionSystem.utwSystem.dTdx);
 
-        if (options.usingAdapChem) {
-            dvector nSpecReduced(nPoints);
-            for (size_t j=0; j<nPoints; j++) {
-                nSpecReduced[j] = ckGas->getNumSpec(j);
-            }
-            outFile.writeVector("nSpecReduced", nSpecReduced);
-        }
-
         // Number of timesteps in the chemistry solver in the last global timestep
         dvector chemSteps(nPoints, 0);
         for (size_t j=0; j<nPoints; j++) {
@@ -745,17 +713,12 @@ void FlameSolver::resizeAuxiliary()
     convectionStopIndices.assign(nSpec, jj);
     nPointsConvection.assign(nSpec, nPoints);
 
-    if (options.usingAdapChem) {
-        ckGas->setGridSize(nPoints);
-    }
-
     if (nPoints > nPointsOld) {
         for (size_t j=nPointsOld; j<nPoints; j++) {
             // Create and initialize the new SourceSystem
             SourceSystem* system = new SourceSystem();
             system->resize(nSpec);
             system->gas = &gas;
-            system->ckGas = ckGas;
             system->options = &options;
             system->thermoTimer = &thermoTimer;
             system->reactionRatesTimer = &reactionRatesTimer;
@@ -789,7 +752,6 @@ void FlameSolver::resizeAuxiliary()
             qssSolver->initialize(nSpec);
             qssSolver->setOptions(options);
             qssSolver->gas = &gas;
-            qssSolver->ckGas = ckGas;
             qssSolver->thermoTimer = &thermoTimer;
             qssSolver->reactionRatesTimer = &reactionRatesTimer;
             qssSolver->strainFunction = strainfunc;
@@ -1519,12 +1481,7 @@ void FlameSolver::calculateQdot()
         gas.setStateMass(&Y(0,j), T[j]);
         gas.getEnthalpies(&hk(0,j));
 
-        if (options.usingAdapChem) {
-            ckGas->initializeStep(&Y(0,j), T[j], j);
-            ckGas->getReactionRates(&wDot(0,j));
-        } else {
-            gas.getReactionRates(&wDot(0,j));
-        }
+        gas.getReactionRates(&wDot(0,j));
         qDot[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
             qDot[j] -= wDot(k,j)*hk(k,j);
@@ -2160,8 +2117,8 @@ void FlameSolver::updateTransportDomain()
         // Find the left boundary for species k
         int jStart = jj;
         for (size_t j=0; j<nPoints; j++) {
-            if (abs(dYdtTransport(k,j)) > options.adapchem_atol ||
-                abs(dYdtProduction(k,j)) > options.adapchem_atol) {
+            if (abs(dYdtTransport(k,j)) > options.transport_atol ||
+                abs(dYdtProduction(k,j)) > options.transport_atol) {
                 jStart = j;
                 break;
             }
@@ -2178,8 +2135,8 @@ void FlameSolver::updateTransportDomain()
         // Find the right boundary for species k
         size_t jStop = jStart;
         for (int j=jj; j>jStart; j--) {
-            if (abs(dYdtTransport(k,j)) > options.adapchem_atol ||
-                abs(dYdtProduction(k,j)) > options.adapchem_atol) {
+            if (abs(dYdtTransport(k,j)) > options.transport_atol ||
+                abs(dYdtProduction(k,j)) > options.transport_atol) {
                 jStop = j;
                 break;
             }

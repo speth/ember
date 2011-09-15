@@ -73,22 +73,9 @@ configOptions::configOptions(const boost::python::object& conf)
     readOption(chem, "transportModel", transportModel);
     readOption(chem, "threshold", transportThreshold);
 
-    // Chemkin//Adapchem
-    const object& adapchem = conf.attr("adapchem");
-    if (adapchem != None) {
-        usingAdapChem = true;
-        readOption(adapchem, "inputFile", adapchemInputFile);
-        readOption(adapchem, "models", adapchemModelsFile);
-        readOption(adapchem, "defaultModel", adapchemDefaultModelFile);
-        readOption(adapchem, "donemodels", adapchemDefaultModelFile);
-        readOption(adapchem, "restart", adapchemRestartFile);
-    } else {
-        usingAdapChem = false;
-    }
-
     // Transport species elimination
     const object& transport = conf.attr("transportElimination");
-    readOption(transport, "atol", adapchem_atol);
+    readOption(transport, "atol", transport_atol);
     readOption(transport, "diffusion", transportEliminationDiffusion);
     readOption(transport, "convection", transportEliminationConvection);
     readOption(transport, "stepInterval", transportEliminationStepInterval);

@@ -1,7 +1,6 @@
 VariantDir('src/build','src', duplicate=0)
 VariantDir('test/build','test', duplicate=0)
 VariantDir('python/build','python', duplicate=0)
-VariantDir('adapchem/build','adapchem', duplicate=0)
 
 try:
     import multiprocessing
@@ -60,16 +59,6 @@ tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
 if tests['CanteraExtendedTransport']:
     env.Append(CPPFLAGS=['-DCANTERA_EXTENDED_TRANSPORT'])
 
-cklib = env.Library('lib/libcklib.a', 'adapchem/build/cklib.f')
-
-adapchem = env.Library('lib/libadapchem',
-            ['adapchem/build/adapchem.f',
-             'adapchem/build/box.f',
-             'adapchem/build/ckcompat.cpp',
-             'adapchem/build/wrappers.f90'])
-
-env['LIBS'] = cklib + adapchem + env['LIBS']
-
 common = [f for f in Glob('src/build/*.cpp')
           if 'strainedFlame.cpp' not in f.name]
 
@@ -92,4 +81,4 @@ test_alias = testenv.Alias('test', [test_program], test_program[0].abspath)
 AlwaysBuild(test_alias)
 
 Default(['pylib'])
-env.Alias('all', ['pylib','test',adapchem,cklib])
+env.Alias('all', ['pylib','test'])
