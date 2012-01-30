@@ -123,10 +123,13 @@ void FlameSolver::initialize(void)
         Cantera::showErrors(std::cout);
         throw;
     } catch (debugException& e) {
+        cout << e.errorString << endl;
         logFile.write(e.errorString);
         throw;
     } catch (...) {
-        logFile.write("I have no idea what went wrong!");
+        std::string message = "I have no idea what went wrong!";
+        cout << message << endl;
+        logFile.write(message);
         throw;
     }
 
@@ -141,10 +144,13 @@ void FlameSolver::tryrun(void)
         Cantera::showErrors(std::cout);
         throw;
     } catch (debugException& e) {
+        cout << e.errorString << endl;
         logFile.write(e.errorString);
         throw;
     } catch (...) {
-        logFile.write("I have no idea what went wrong!");
+        std::string message = "I have no idea what went wrong!";
+        cout << message << endl;
+        logFile.write(message);
         throw;
     }
 }
