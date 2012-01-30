@@ -50,6 +50,9 @@ namespace mathUtils
         return true;
     }
 
+    template <>
+    bool notnan<dmatrix>(const dmatrix& v);
+
     int nanloc(const dvector& v); // returns index of first NaN component. Returns -1 if none
 
     dvector abs(const dvector& v);

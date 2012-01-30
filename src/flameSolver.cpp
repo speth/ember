@@ -826,9 +826,9 @@ void FlameSolver::resizeAuxiliary()
 
 void FlameSolver::updateCrossTerms()
 {
-    assert(mathUtils::notnan(Y.data()));
+    assert(mathUtils::notnan(Y));
     assert(mathUtils::notnan(T));
-    assert(mathUtils::notnan(rhoD.data()));
+    assert(mathUtils::notnan(rhoD));
 
     for (size_t j=0; j<jj; j++) {
         jCorr[j] = 0;
@@ -839,8 +839,8 @@ void FlameSolver::updateCrossTerms()
             jCorr[j] -= jFick(k,j) + jSoret(k,j);
         }
     }
-    assert(mathUtils::notnan(jFick.data()));
-    assert(mathUtils::notnan(jSoret.data()));
+    assert(mathUtils::notnan(jFick));
+    assert(mathUtils::notnan(jSoret));
     assert(mathUtils::notnan(lambda));
     assert(mathUtils::notnan(rho));
     assert(mathUtils::notnan(cp));
@@ -878,7 +878,7 @@ void FlameSolver::updateCrossTerms()
         dTdtCross[j] = - 0.5 * (sumcpj[j] + sumcpj[j-1]) * dTdx / (cp[j] * rho[j]);
     }
 
-    assert(mathUtils::notnan(dYdtCross.data()));
+    assert(mathUtils::notnan(dYdtCross));
     assert(mathUtils::notnan(sumcpj));
     assert(mathUtils::notnan(dTdtCross));
 }
@@ -1188,7 +1188,7 @@ void FlameSolver::extractConvectionState(double dt, int stage)
     }
     assert(mathUtils::notnan(T));
     assert(mathUtils::notnan(U));
-    assert(mathUtils::notnan(Y.data()));
+    assert(mathUtils::notnan(Y));
 
     for (size_t j=0; j<nPoints; j++) {
         deltaUconv[j] += U[j] - Ustart[j];
@@ -1225,7 +1225,7 @@ void FlameSolver::extractDiffusionState(double dt, int stage)
     }
     assert(mathUtils::notnan(T));
     assert(mathUtils::notnan(U));
-    assert(mathUtils::notnan(Y.data()));
+    assert(mathUtils::notnan(Y));
 
     for (size_t j=0; j<nPoints; j++) {
         deltaUdiff[j] += U[j]-Ustart[j];
@@ -1264,7 +1264,7 @@ void FlameSolver::extractProductionState(double dt)
     }
     assert(mathUtils::notnan(T));
     assert(mathUtils::notnan(U));
-    assert(mathUtils::notnan(Y.data()));
+    assert(mathUtils::notnan(Y));
 
     for (size_t j=0; j<nPoints; j++) {
         deltaUprod[j] += U[j] - Ustart[j];

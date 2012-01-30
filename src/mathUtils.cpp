@@ -151,6 +151,13 @@ double mathUtils::range(const dvector& v, int iStart, int iEnd)
     return maxval(v,iStart,iEnd) - minval(v,iStart,iEnd);
 }
 
+template <>
+bool mathUtils::notnan<dmatrix>(const dmatrix& v) {
+    double test = v.sum();
+    return (test > 0 || test <= 0);
+}
+
+
 int mathUtils::nanloc(const dvector& v) {
     for (size_t i=0; i<v.size(); i++) {
         if (!(v[i] > 0) && !(v[i] <= 0)) {
