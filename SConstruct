@@ -1,3 +1,5 @@
+from distutils.sysconfig import get_config_var
+
 VariantDir('src/build','src', duplicate=0)
 VariantDir('test/build','test', duplicate=0)
 VariantDir('python/build','python', duplicate=0)
@@ -23,7 +25,7 @@ cantera = '''thermo transport kinetics equil tpx ctnumerics
              ctmath ctf2c ctcxx ctbase clib'''.split()
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
 lastlibs = 'gfortran hdf5 blas lapack boost_filesystem'.split()
-pythonlibs = 'boost_python python2.6'.split()
+pythonlibs = ['boost_python']
 
 def CheckMemberFunction(context, function, includes=""):
     context.Message('Checking for %s... ' % function)
@@ -41,7 +43,7 @@ int main(int argc, char** argv) {
 
 env = Environment(CPPPATH=['/opt/cantera-gcc/include',
                            '/opt/sundials-2.4.0-gcc/include',
-                           '/usr/include/python2.6'],
+                           get_config_var('INCLUDEPY')],
                   LIBPATH=['/opt/cantera-gcc/lib',
                            '/opt/sundials-2.4.0-gcc/lib',
                            'lib'],
