@@ -7,11 +7,13 @@
 #include <sstream>
 #include <string>
 
+#include <Eigen/Dense>
+
 #include <cantera/Cantera.h>
-#include <cantera/kernel/Array.h>
 
 using std::abs;
-using Cantera::Array2D;
+
+typedef Eigen::MatrixXd dmatrix;
 
 using std::vector;
 typedef std::vector<double> dvector;
@@ -80,8 +82,8 @@ namespace mathUtils
     // Trapezoidal rule integration
     double trapz(const dvector& x, const dvector& y);
 
-    void vectorVectorToArray2D(const vector<dvector>& v, Array2D& a);
-    void array2DToVectorVector(const Array2D& a, vector<dvector>& v);
+    void vectorVectorToArray2D(const vector<dvector>& v, dmatrix& a);
+    void array2DToVectorVector(const dmatrix& a, vector<dvector>& v);
 
     // For converting numbers into strings
     std::string stringify(double x);

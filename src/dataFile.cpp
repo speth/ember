@@ -94,21 +94,21 @@ dvector DataFile::readVector(const std::string& name)
     return values;
 }
 
-void DataFile::writeArray2D(const std::string& name, const Cantera::Array2D& y)
+void DataFile::writeArray2D(const std::string& name, const dmatrix& y)
 {
     require_file_open();
 
     // Take the transpose because Array2D is column-major
-    Cantera::Array2D yt(y.nColumns(), y.nRows());
-    for (size_t i=0; i<y.nRows(); i++) {
-        for (size_t j=0; j<y.nColumns(); j++) {
+    dmatrix yt(y.cols(), y.rows());
+    for (size_t i=0; i<y.rows(); i++) {
+        for (size_t j=0; j<y.cols(); j++) {
             yt(j,i) = y(i,j);
         }
     }
 
     hsize_t dims[2];
-    dims[0] = yt.nColumns(); // TODO: double check the order of these
-    dims[1] = yt.nRows();
+    dims[0] = yt.cols(); // TODO: double check the order of these
+    dims[1] = yt.rows();
 
     if (dims[0] == 0 || dims[1] == 0) {
         logFile.write(format(
@@ -126,7 +126,7 @@ void DataFile::writeArray2D(const std::string& name, const Cantera::Array2D& y)
     H5Dclose(dataset);
 }
 
-Cantera::Array2D DataFile::readArray2D(const std::string& name)
+dmatrix DataFile::readArray2D(const std::string& name)
 {
     require_file_open();
 
@@ -143,16 +143,16 @@ Cantera::Array2D DataFile::readArray2D(const std::string& name)
     vector<hsize_t> dimensions(2);
     H5Sget_simple_extent_dims(dataspace, &dimensions[0], &ndim);
 
-    Cantera::Array2D y(dimensions[0], dimensions[1]);
-    Cantera::Array2D yt(dimensions[1], dimensions[0]);
+    dmatrix y(dimensions[0], dimensions[1]);
+    dmatrix yt(dimensions[1], dimensions[0]);
 
     H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL,
             H5S_ALL, H5P_DEFAULT, &yt.data()[0]);
     H5Dclose(dataset);
 
     // Take the transpose because Array2D is column-major
-    for (size_t i=0; i<yt.nRows(); i++) {
-        for (size_t j=0; j<yt.nColumns(); j++) {
+    for (size_t i=0; i<yt.rows(); i++) {
+        for (size_t j=0; j<yt.cols(); j++) {
             y(j,i) = yt(i,j);
         }
     }
@@ -220,15 +220,15 @@ void dataFileTest()
 
     f.writeVector("v", v);
 
-    Array2D A(3,7);
-    for (size_t i=0; i<A.nRows(); i++) {
-        for (size_t j=0; j<A.nColumns(); j++) {
+    dmatrix A(3,7);
+    for (size_t i=0; i<A.rows(); i++) {
+        for (size_t j=0; j<A.cols(); j++) {
             A(i,j) = 10*i + j;
         }
     }
 
-    logFile.write(format("rows: %i") % A.nRows());
-    logFile.write(format("cols: %i") % A.nColumns());
+    logFile.write(format("rows: %i") % A.rows());
+    logFile.write(format("cols: %i") % A.cols());
 
     f.writeArray2D("A", A);
     f.close();

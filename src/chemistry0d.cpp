@@ -325,7 +325,8 @@ void CanteraGas::initialize()
     transFac->deleteFactory();
 
     nSpec = thermo.nSpecies();
-    Dbin.resize(nSpec,nSpec,0);
+    Dbin.resize(nSpec,nSpec);
+    Dbin.setZero();
     X.resize(nSpec,0);
     Y.resize(nSpec,0);
 }

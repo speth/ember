@@ -112,7 +112,7 @@ public:
     void setGas(CanteraGas& gas);
     void resize(const size_t nPointsUTW, const vector<size_t>& nPointsSpec, const size_t nSpec);
     void setSpeciesDomains(vector<size_t>& startIndices, vector<size_t>& stopIndices);
-    void setState(const dvector& U, const dvector& T, Array2D& Y, double tInitial);
+    void setState(const dvector& U, const dvector& T, dmatrix& Y, double tInitial);
     void setLeftBC(const double Tleft, const dvector& Yleft);
     void set_rVzero(const double rVzero);
     void evaluate(); // evaluate time derivatives and mass flux at the current state
@@ -124,7 +124,7 @@ public:
     // Constants introduced by the splitting method
     void setSplitConstants(const dvector& splitConstU,
                            const dvector& splitConstT,
-                           const Array2D& splitConstY);
+                           const dmatrix& splitConstY);
 
     void resetSplitConstants();
 
@@ -135,14 +135,14 @@ public:
     dvector U;
     dvector T;
     dvector Wmx;
-    Array2D Y;
+    dmatrix Y;
 
     // Time derivatives and mass flux are updated by evaluate()
     dvector V;
     dvector dUdt;
     dvector dTdt;
     dvector dWdt;
-    Array2D dYdt;
+    dmatrix dYdt;
 
     ConvectionSystemUTW utwSystem;
 

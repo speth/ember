@@ -16,7 +16,6 @@
 #include "convectionSystem.h"
 #include "strainFunction.h"
 
-using Cantera::Array2D;
 using std::string;
 
 //! Class which manages the main integration loop.
@@ -144,10 +143,10 @@ private:
     // State variables:
     dvector U; //!< normalized tangential velocity (u*a/u_inf) [1/s]
     dvector T; //!< temperature [K]
-    Array2D Y; //!< species mass fractions, Y(k,j) [-]
+    dmatrix Y; //!< species mass fractions, Y(k,j) [-]
 
     // components of the time derivatives
-    Array2D dYdtDiff, dYdtProd, dYdtConv;
+    dmatrix dYdtDiff, dYdtProd, dYdtConv;
     dvector dTdtDiff, dTdtProd, dTdtConv;
     dvector dUdtDiff, dUdtProd, dUdtConv;
     dvector drhodt;
@@ -155,7 +154,7 @@ private:
     // State variables at the beginning of the current integrator stage
     dvector Ustart;
     dvector Tstart;
-    Array2D Ystart;
+    dmatrix Ystart;
 
     // Changes in each state variable for each terms of the governing equations
     dvector deltaUconv;
@@ -164,29 +163,29 @@ private:
     dvector deltaTconv;
     dvector deltaTdiff;
     dvector deltaTprod;
-    Array2D deltaYconv;
-    Array2D deltaYdiff;
-    Array2D deltaYprod;
+    dmatrix deltaYconv;
+    dmatrix deltaYdiff;
+    dmatrix deltaYprod;
 
     // Auxiliary variables:
     dvector rho; //!< density [kg/m^3]
     dvector jCorr; //!< Correction to ensure sum of mass fractions = 1
     dvector sumcpj; //!< part of the enthalpy flux term
     dvector qDot; //!< Heat release rate [W/m^3]
-    Array2D wDot; //!< species production rates [kmol/m^3*s]
+    dmatrix wDot; //!< species production rates [kmol/m^3*s]
     dvector Wmx; //!< mixture molecular weight [kg/kmol]
     dvector W; //!< species molecular weights [kg/kmol]
     dvector mu; //!< dynamic viscosity [Pa*s]
     dvector lambda; //!< thermal conductivity [W/m*K]
     dvector cp; //!< mixture heat capacity [J/kg*K]
-    Array2D cpSpec; //!< species molar heat capacities [J/kmol*K]
-    Array2D rhoD; //!< density * diffusivity [kg/m*s]
-    Array2D Dkt; //!< thermal diffusivity
-    Array2D hk; //!< species molar enthalpies [J/kmol]
-    Array2D jFick; //!< Fickian mass flux [kg/m^2*s]
-    Array2D jSoret; //!< Soret mass flux [kg/m^2*s]
+    dmatrix cpSpec; //!< species molar heat capacities [J/kmol*K]
+    dmatrix rhoD; //!< density * diffusivity [kg/m*s]
+    dmatrix Dkt; //!< thermal diffusivity
+    dmatrix hk; //!< species molar enthalpies [J/kmol]
+    dmatrix jFick; //!< Fickian mass flux [kg/m^2*s]
+    dmatrix jSoret; //!< Soret mass flux [kg/m^2*s]
 
-    Array2D dYdtCross; //!< dYdt due to gradients in other species and temperature
+    dmatrix dYdtCross; //!< dYdt due to gradients in other species and temperature
     dvector dTdtCross; //!< dTdt due to gradients in gas composition
 
     // jCorr is a correction to force the net diffusion mass flux to be zero
@@ -219,8 +218,8 @@ private:
     //! Cantera data
     CanteraGas gas;
 
-    void rollVectorVector(vector<dvector>& vv, const dvector& u, const dvector& t, const Array2D& y) const;
-    void unrollVectorVector(const vector<dvector>& vv, dvector& u, dvector& t, Array2D& y, size_t i) const;
+    void rollVectorVector(vector<dvector>& vv, const dvector& u, const dvector& t, const dmatrix& y) const;
+    void unrollVectorVector(const vector<dvector>& vv, dvector& u, dvector& t, dmatrix& y, size_t i) const;
 
     void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); //!< [m]

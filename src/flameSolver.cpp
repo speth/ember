@@ -84,9 +84,12 @@ void FlameSolver::initialize(void)
         dTdtDiff.assign(nPoints, 0);
         dTdtProd.assign(nPoints, 0);
 
-        dYdtConv.data().assign(nSpec*nPoints, 0);
-        dYdtDiff.data().assign(nSpec*nPoints, 0);
-        dYdtProd.data().assign(nSpec*nPoints, 0);
+        dYdtConv.resize(nSpec, nPoints);
+        dYdtConv.setZero();
+        dYdtDiff.resize(nSpec, nPoints);
+        dYdtDiff.setZero();
+        dYdtProd.resize(nSpec, nPoints);
+        dYdtProd.setZero();
 
         resizeAuxiliary();
         updateChemicalProperties();
@@ -680,14 +683,14 @@ void FlameSolver::resizeAuxiliary()
     nVars = 2+nSpec;
     N = nVars*nPoints;
 
-    dYdtCross.resize(nSpec, nPoints, 0);
-    dYdtDiff.resize(nSpec, nPoints, 0);
-    dYdtProd.resize(nSpec, nPoints, 0);
-    dYdtConv.resize(nSpec, nPoints, 0);
+    dYdtCross = dmatrix::Zero(nSpec, nPoints);
+    dYdtDiff = dmatrix::Zero(nSpec, nPoints);
+    dYdtProd = dmatrix::Zero(nSpec, nPoints);
+    dYdtConv = dmatrix::Zero(nSpec, nPoints);
 
-    deltaYconv.resize(nSpec, nPoints, 0);
-    deltaYdiff.resize(nSpec, nPoints, 0);
-    deltaYprod.resize(nSpec, nPoints, 0);
+    deltaYconv = dmatrix::Zero(nSpec, nPoints);
+    deltaYdiff = dmatrix::Zero(nSpec, nPoints);
+    deltaYprod = dmatrix::Zero(nSpec, nPoints);
 
     dTdtCross.resize(nPoints, 0);
     dTdtDiff.resize(nPoints, 0);
@@ -952,7 +955,7 @@ void FlameSolver::prepareDiffusionTerms()
 
     deltaUdiff.assign(nPoints, 0);
     deltaTdiff.assign(nPoints, 0);
-    deltaYdiff.data().assign(nSpec*nPoints, 0);
+    deltaYdiff = dmatrix::Zero(nSpec, nPoints);
 
     setDiffusionSolverState(tNow);
 
@@ -1001,7 +1004,7 @@ void FlameSolver::prepareProductionTerms()
 {
     deltaUprod.assign(nPoints, 0);
     deltaTprod.assign(nPoints, 0);
-    deltaYprod.data().assign(nSpec*nPoints, 0);
+    deltaYprod = dmatrix::Zero(nSpec, nPoints);
 
     setProductionSolverState(tNow);
     if (options.splittingMethod == "strang") {
@@ -1041,7 +1044,7 @@ void FlameSolver::prepareConvectionTerms()
 {
     deltaUconv.assign(nPoints, 0);
     deltaTconv.assign(nPoints, 0);
-    deltaYconv.data().assign(nSpec*nPoints, 0);
+    deltaYconv = dmatrix::Zero(nSpec, nPoints);
 
     setConvectionSolverState(tNow, 0);
 
@@ -1072,7 +1075,7 @@ void FlameSolver::prepareConvectionTerms()
 
     dvector splitConstT(nPoints, 0);
     dvector splitConstU(nPoints, 0);
-    Array2D splitConstY(nSpec, nPoints, 0);
+    dmatrix splitConstY = dmatrix::Zero(nSpec, nPoints);
 
     if (options.splittingMethod == "balanced") {
         for (size_t j=0; j<nPoints; j++) {
@@ -1407,7 +1410,7 @@ void FlameSolver::integrateDiffusionTerms(double t, int stage)
 
 
 void FlameSolver::rollVectorVector
-(vector<dvector>& vv, const dvector& u, const dvector& t, const Array2D& y) const
+(vector<dvector>& vv, const dvector& u, const dvector& t, const dmatrix& y) const
 {
     vv.push_back(u);
     vv.push_back(t);
@@ -1422,7 +1425,7 @@ void FlameSolver::rollVectorVector
 
 
 void FlameSolver::unrollVectorVector
-(const vector<dvector>& vv, dvector& u, dvector& t, Array2D& y, size_t i) const
+(const vector<dvector>& vv, dvector& u, dvector& t, dmatrix& y, size_t i) const
 {
     u.resize(nPoints);
     t.resize(nPoints);
@@ -2045,9 +2048,9 @@ void FlameSolver::updateTransportDomain()
     }
 
     adaptiveTransportTimer.start();
-    Array2D dYdtTransport(nSpec, nPoints);
-    Array2D dYdtProduction(nSpec, nPoints);
-    Array2D dYdtTotal(nSpec, nPoints);
+    dmatrix dYdtTransport(nSpec, nPoints);
+    dmatrix dYdtProduction(nSpec, nPoints);
+    dmatrix dYdtTotal(nSpec, nPoints);
 
     // Evaluate the full diffusion term for each species
     diffusionTestSolver.initialize(0, options.globalTimestep); // dt here is arbitrary
@@ -2058,8 +2061,9 @@ void FlameSolver::updateTransportDomain()
             diffusionTestTerm.D[j] = rhoD(k,j);
         }
         const dvector& dYkdt_diff = diffusionTestSolver.get_ydot();
-        dYdtTotal.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
-        dYdtTransport.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
+        //dYdtTotal.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
+        dYdtTotal.row(k) = Eigen::Map<Eigen::RowVectorXd>(const_cast<double*>(&dYkdt_diff[0]), nPoints);
+        dYdtTransport.row(k) = Eigen::Map<Eigen::RowVectorXd>(const_cast<double*>(&dYkdt_diff[0]), nPoints);
     }
 
     // Evaluate the reaction term (using the current reduced mechanism, if any)

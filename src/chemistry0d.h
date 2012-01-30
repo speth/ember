@@ -116,7 +116,7 @@ private:
     Cantera::GasKinetics* kinetics;
     Cantera::Transport* transport;
 
-    Array2D Dbin; // binary diffusion coefficients for species k
+    dmatrix Dbin; // binary diffusion coefficients for species k
     dvector X; // mole fractions
     dvector Y; // mass fractions
     vector<size_t> kMajor; // indices of species with mole fractions above some threshold

@@ -112,7 +112,7 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     double drhodT = -rho/T;
 
     // *** Derivatives with respect to species concentration
-    Array2D dwdY(nSpec, nSpec);
+    dmatrix dwdY(nSpec, nSpec);
     dvector hdwdY(nSpec, 0);
     dvector YplusdY(nSpec);
     dvector drhodY(nSpec);

@@ -491,7 +491,7 @@ void ConvectionSystemSplit::setSpeciesDomains
 }
 
 void ConvectionSystemSplit::setState
-(const dvector& U_, const dvector& T_, Array2D& Y_, double tInitial)
+(const dvector& U_, const dvector& T_, dmatrix& Y_, double tInitial)
 {
     U = U_;
     T = T_;
@@ -561,8 +561,8 @@ void ConvectionSystemSplit::evaluate()
     dTdt = utwSystem.dTdt;
     dWdt = utwSystem.dWdt;
 
-    dYdt.data().clear();
-    dYdt.resize(nSpec, nPoints, 0);
+    dYdt.resize(nSpec, nPoints);
+    dYdt.setZero();
     sdVector ydotk(nPoints);
     for (size_t k=0; k<nSpec; k++) {
         speciesSystems[k].vInterp = vInterp;
@@ -590,7 +590,7 @@ void ConvectionSystemSplit::resetSplitConstants()
 
 void ConvectionSystemSplit::setSplitConstants(const dvector& splitConstU,
                                               const dvector& splitConstT,
-                                              const Array2D& splitConstY)
+                                              const dmatrix& splitConstY)
 {
     utwSystem.splitConstT = splitConstT;
     utwSystem.splitConstU = splitConstU;

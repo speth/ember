@@ -396,7 +396,7 @@ double mathUtils::trapz(const dvector& x, const dvector& y)
     return I;
 }
 
-void mathUtils::vectorVectorToArray2D(const vector<dvector>& v, Array2D& a)
+void mathUtils::vectorVectorToArray2D(const vector<dvector>& v, dmatrix& a)
 {
     int m = v.size();
     int n = v.begin()->size();
@@ -408,10 +408,10 @@ void mathUtils::vectorVectorToArray2D(const vector<dvector>& v, Array2D& a)
     }
 }
 
-void mathUtils::array2DToVectorVector(const Array2D& a, vector<dvector>& v)
+void mathUtils::array2DToVectorVector(const dmatrix& a, vector<dvector>& v)
 {
-    int n = a.nRows();
-    int m = a.nColumns();
+    int n = a.rows();
+    int m = a.cols();
     v.resize(n);
     for (int i=0; i<n; i++) {
         v[i].resize(m);
