@@ -112,6 +112,7 @@ void sundialsCVODE::setBandwidth(int upper, int lower)
 
 int sundialsCVODE::integrateToTime(realtype t)
 {
+    assert(mathUtils::notnan(y));
     int flag = CVode(sundialsMem, t, y.forSundials(), &tInt, CV_NORMAL);
     if (flag != CV_SUCCESS) {
         errorCount += 1;
@@ -124,6 +125,7 @@ int sundialsCVODE::integrateToTime(realtype t)
 
 int sundialsCVODE::integrateOneStep(realtype tf)
 {
+    assert(mathUtils::notnan(y));
     CVodeSetStopTime(sundialsMem, tf);
     int flag = CVode(sundialsMem, tf, y.forSundials(), &tInt, CV_ONE_STEP);
     if (flag != CV_SUCCESS && flag != CV_TSTOP_RETURN) {

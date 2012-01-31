@@ -76,6 +76,8 @@ void FlameSolver::initialize(void)
             diffusionTerms[kEnergy].wallConst = options.Kwall;
         }
 
+        resizeAuxiliary();
+
         dUdtConv.assign(nPoints, 0);
         dUdtDiff.assign(nPoints, 0);
         dUdtProd.assign(nPoints, 0);
@@ -84,14 +86,10 @@ void FlameSolver::initialize(void)
         dTdtDiff.assign(nPoints, 0);
         dTdtProd.assign(nPoints, 0);
 
-        dYdtConv.resize(nSpec, nPoints);
-        dYdtConv.setZero();
-        dYdtDiff.resize(nSpec, nPoints);
-        dYdtDiff.setZero();
-        dYdtProd.resize(nSpec, nPoints);
-        dYdtProd.setZero();
+        dYdtConv.setZero(nSpec, nPoints);
+        dYdtDiff.setZero(nSpec, nPoints);
+        dYdtProd.setZero(nSpec, nPoints);
 
-        resizeAuxiliary();
         updateChemicalProperties();
         // Determine initial condition for V
         dvector& V(convectionSystem.utwSystem.V);
@@ -683,14 +681,17 @@ void FlameSolver::resizeAuxiliary()
     nVars = 2+nSpec;
     N = nVars*nPoints;
 
-    dYdtCross = dmatrix::Zero(nSpec, nPoints);
-    dYdtDiff = dmatrix::Zero(nSpec, nPoints);
-    dYdtProd = dmatrix::Zero(nSpec, nPoints);
-    dYdtConv = dmatrix::Zero(nSpec, nPoints);
+    dYdtCross.resize(nSpec, nPoints);
 
-    deltaYconv = dmatrix::Zero(nSpec, nPoints);
-    deltaYdiff = dmatrix::Zero(nSpec, nPoints);
-    deltaYprod = dmatrix::Zero(nSpec, nPoints);
+    deltaYconv.resize(nSpec, nPoints);
+    deltaYdiff.resize(nSpec, nPoints);
+    deltaYprod.resize(nSpec, nPoints);
+
+    dYdtCross *= NaN;
+
+    deltaYconv *= NaN;
+    deltaYdiff *= NaN;
+    deltaYprod *= NaN;
 
     dTdtCross.resize(nPoints, 0);
     dTdtDiff.resize(nPoints, 0);
@@ -863,6 +864,8 @@ void FlameSolver::updateCrossTerms()
 
     jCorr = jCorrSolver.y;
 
+    dYdtCross.col(0) = Eigen::RowVectorXd::Zero(nSpec);
+    dYdtCross.col(jj) = Eigen::RowVectorXd::Zero(nSpec);
     for (size_t j=1; j<jj; j++) {
         sumcpj[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
@@ -1071,6 +1074,7 @@ void FlameSolver::prepareConvectionTerms()
         }
     }
 
+    assert(mathUtils::notnan(drhodt));
     convectionSystem.setDensityDerivative(drhodt);
 
     dvector splitConstT(nPoints, 0);

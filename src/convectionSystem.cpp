@@ -112,6 +112,10 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
         dTdt[jj] = splitConstT[jj] - V[jj] * (T[jj]-T[jj-1])/hh[jj-1]/rho[jj];
        dWdt[jj] = splitConstW[jj] - V[jj] * (Wmx[jj]-Wmx[jj-1])/hh[jj-1]/rho[jj];
     }
+    assert(mathUtils::notnan(dUdt));
+    assert(mathUtils::notnan(dTdt));
+    assert(mathUtils::notnan(dWdt));
+
 
     roll_ydot(ydot);
     assert(mathUtils::notnan(ydot));
