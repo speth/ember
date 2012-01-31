@@ -390,6 +390,17 @@ void FlameSolver::run(void)
             convectionSystem.evaluate();
             dvector& V_prev = convectionSystem.V;
 
+            // dampVal sets a limit on the maximum grid size
+            grid.dampVal.resize(grid.x.size());
+            for (size_t j=0; j<nPoints; j++) {
+                double num = min(mu[j],lambda[j]/cp[j]);
+                for (size_t k=0; k<nSpec; k++) {
+                    num = min(num, rhoD(k,j));
+                }
+                grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
+            }
+            dvector dampVal_prev = grid.dampVal;
+
             // "rollVectorVector"
             vector<dvector> currentSolution;
             rollVectorVector(currentSolution, U, T, Y);
@@ -405,15 +416,8 @@ void FlameSolver::run(void)
                 grid.regrid(currentSolution);
             }
 
-            // dampVal sets a limit on the maximum grid size
-            grid.dampVal.resize(grid.x.size());
-            for (size_t j=0; j<nPoints; j++) {
-                double num = min(mu[j],lambda[j]/cp[j]);
-                for (size_t k=0; k<nSpec; k++) {
-                    num = min(num, rhoD(k,j));
-                }
-                grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
-            }
+            // Interpolate dampVal onto the modified grid
+            grid.dampVal = mathUtils::interp1(x_prev, dampVal_prev, grid.x);
 
             grid.adapt(currentSolution);
 
