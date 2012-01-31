@@ -443,7 +443,7 @@ void FlameSolver::run(void)
                 resizeAuxiliary();
 
                 if (debugParameters::debugAdapt || debugParameters::debugRegrid) {
-                    //writeStateFile("postAdapt", false, false);
+                    writeStateFile("postAdapt", false, false);
                 }
                 grid.updated = false;
             }
@@ -540,7 +540,9 @@ void FlameSolver::writeStateFile
     DataFile outFile(filename);
 
     updateChemicalProperties();
-    convectionSystem.evaluate();
+    if (updateDerivatives) {
+        convectionSystem.evaluate();
+    }
 
     // Write the state data to the output file:
     outFile.writeScalar("t", tNow);
