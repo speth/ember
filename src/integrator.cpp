@@ -186,7 +186,7 @@ void BDFIntegrator::integrateToTime(double tEnd)
 {
     // Make sure we hit tEnd after an integral number of timesteps,
     // Taking timesteps that are no longer than the given h
-    int nSteps = (int) (tEnd-t)/h;
+    int nSteps = static_cast<int>((tEnd-t)/h);
     if (t + h*nSteps != tEnd) {
         h = (tEnd - t) / (nSteps + 1);
     }
