@@ -286,7 +286,16 @@ void CanteraGas::initialize()
     }
 
     rootXmlNode = Cantera::get_XML_File(mechanismFile);
+    if (rootXmlNode == NULL) {
+        throw debugException((format(
+            "Error parsing Cantera XML file '%s'.") % mechanismFile).str());
+    }
+
     phaseXmlNode = rootXmlNode->findNameID("phase", phaseID);
+    if (phaseXmlNode == NULL) {
+        throw debugException((format(
+            "Error finding phase '%s' in '%s'.") % phaseID % mechanismFile).str());
+    }
 
     // Initialize the default thermodynamic properties object
     Cantera::importPhase(*phaseXmlNode, &thermo);
