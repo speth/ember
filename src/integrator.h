@@ -25,6 +25,20 @@ public:
 };
 
 
+class TridiagonalODE
+{
+public:
+    TridiagonalODE() {}
+    virtual ~TridiagonalODE() {}
+
+    // ODE defined as ydot = f(t,y) = J*y + k
+    virtual void get_A(dvec& a, dvec& b, dvec& c) = 0;
+    virtual void get_k(dvec& y) = 0;
+    virtual void resize(int N) {}
+    virtual void initialize() {}
+};
+
+
 class Integrator
 {
 public:
@@ -53,6 +67,7 @@ protected:
     double h; // timestep
     size_t N; // Dimension of y
 };
+
 
 class ExplicitIntegrator : public Integrator
 {
@@ -101,4 +116,35 @@ private:
     dvector yprev; // previous solution
     dvector c;
     dvector Adiag; // diagonal components of A
+};
+
+
+class TridiagonalIntegrator : public Integrator
+{
+public:
+    TridiagonalIntegrator(TridiagonalODE& ode);
+    virtual ~TridiagonalIntegrator() {};
+
+    // Setup
+    void set_y0(const dvector& y0);
+    void resize(int N_in);
+    void initialize(const double t0, const double h);
+
+    const dvector& get_ydot();
+
+    // Actually do the integration
+    void step(); // take a single step
+    void integrateToTime(double tEnd);
+
+private:
+    TridiagonalODE& myODE;
+    dvec a, b, c, d; // subdiagonal, diagonal, superdiagonal, right-hand-side
+    dvec k; // constant contribution to y'
+    dvec lu_b, lu_c, lu_d; // matrix elements after factorization
+    dvec y_, yp_; // internal
+    unsigned int stepCount; // the number of steps taken since last initialization
+
+    int N; // The system size
+    dvec yprev; // previous solution
+    dvector y_in; // value stored for external interface via std::vector
 };

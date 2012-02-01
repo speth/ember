@@ -1,5 +1,6 @@
 #include "integrator.h"
-#include <assert.h>
+
+#include "debugUtils.h"
 
 Integrator::Integrator()
     : t(0)
@@ -183,6 +184,152 @@ void BDFIntegrator::step()
 }
 
 void BDFIntegrator::integrateToTime(double tEnd)
+{
+    // Make sure we hit tEnd after an integral number of timesteps,
+    // Taking timesteps that are no longer than the given h
+    int nSteps = static_cast<int>((tEnd-t)/h);
+    if (t + h*nSteps != tEnd) {
+        h = (tEnd - t) / (nSteps + 1);
+    }
+    while (t < tEnd) {
+        step();
+    }
+}
+
+
+// *******************************
+// * class TridiagonalIntegrator *
+// *******************************
+
+TridiagonalIntegrator::TridiagonalIntegrator(TridiagonalODE& ode)
+    : myODE(ode)
+    , stepCount(0)
+{
+}
+
+
+void TridiagonalIntegrator::resize(int N_in)
+{
+    N = N_in;
+
+    y.resize(N);
+    y_in.resize(N);
+    yprev.resize(N);
+
+    myODE.resize(N);
+
+    a.resize(N);
+    b.resize(N);
+    c.resize(N);
+    d.resize(N);
+
+    lu_b.resize(N);
+    lu_c.resize(N);
+    lu_d.resize(N);
+}
+
+
+void TridiagonalIntegrator::set_y0(const dvector& y0)
+{
+    Integrator::set_y0(y0);
+    stepCount = 0;
+    y_ = Eigen::Map<dvec>(&y[0], y.size());
+}
+
+void TridiagonalIntegrator::initialize(const double t0, const double h_)
+{
+    Integrator::initialize(t0, h_);
+    stepCount = 0;
+    myODE.initialize();
+}
+
+const dvector& TridiagonalIntegrator::get_ydot()
+{
+    myODE.get_A(a, b, c);
+    myODE.get_k(k);
+
+    ydot.resize(N);
+    yp_ = Eigen::Map<dvec>(&ydot[0], N);
+
+    yp_[0] = b[0]*y[0] + c[0]*y[1] + k[0];
+    for (int i=1; i<N-1; i++) {
+        yp_[i] = a[i]*y[i-1] + b[i]*y[i] + c[i]*y[i+1] + k[i];
+    }
+    yp_[N-1] = a[N-1]*y[N-2] + b[N-1]*y[N-1] + k[N-1];
+
+    return ydot;
+}
+
+void TridiagonalIntegrator::step()
+{
+    if (stepCount == 0) {
+        yprev = y_;
+
+        // Take 8 substeps using first-order BDF
+        myODE.get_A(a, b, c);
+        myODE.get_k(k);
+        for (int i=0; i<N; i++) {
+            lu_b[i] = b[i] - 1.0/(h/8.0);
+        }
+
+        // Compute Thomas coefficients
+        lu_c[0] = c[0] / lu_b[0];
+        for (int i=1; i<N; i++) {
+            lu_c[i] = c[i] / (lu_b[i] - lu_c[i-1] * a[i]);
+        }
+
+        for (int j=0; j<8; j++) {
+            // y_n -> y_n+1
+            for (int i=0; i<N; i++) {
+                y_[i] = -y_[i]/(h/8.0) - k[i];
+            }
+
+            // Thomas coefficient depending on y
+            lu_d[0] = y_[0] / lu_b[0];
+            for (int i=1; i<N; i++) {
+                lu_d[i] = (y[i] - lu_d[i-1]*a[i]) / (lu_b[i] - lu_c[i-1]*a[i]);
+            }
+
+            // Back substitution
+            y_[N-1] = lu_d[N-1];
+            for (int i=N-2; i>=0; i--) {
+                y_[i] = lu_d[i] - lu_c[i] * y_[i+1];
+            }
+
+            assert(mathUtils::notnan(y_));
+        }
+
+    } else {
+        if (stepCount == 1) {
+            for (int i=0; i<N; i++) {
+                lu_b[i] = b[i] - 3.0/(2.0*h);
+            }
+
+            // Compute Thomas coefficients
+            lu_c[0] = c[0] / lu_b[0];
+            for (int i=1; i<N; i++) {
+                lu_c[i] = c[i] / (lu_b[i] - lu_c[i-1] * a[i]);
+            }
+        }
+        dvec tmp = y_;
+        for (int i=0; i<N; i++) {
+            y_[i] = -2*y_[i]/h + yprev[i]/(2*h) - k[i];
+        }
+        yprev = tmp;
+        // Compute Thomas coefficients
+        lu_d[0] = y_[0] / lu_b[0];
+        for (int i=1; i<N; i++) {
+            lu_d[i] = (y_[i] - lu_d[i-1]*a[i]) / (lu_b[i] - lu_c[i-1]*a[i]);
+        }
+
+        assert(mathUtils::notnan(y_));
+    }
+
+    stepCount++;
+    t += h;
+}
+
+void TridiagonalIntegrator::integrateToTime(double tEnd)
 {
     // Make sure we hit tEnd after an integral number of timesteps,
     // Taking timesteps that are no longer than the given h

@@ -14,6 +14,7 @@
 using std::abs;
 
 typedef Eigen::MatrixXd dmatrix;
+typedef Eigen::RowVectorXd dvec;
 
 using std::vector;
 typedef std::vector<double> dvector;
