@@ -1,11 +1,10 @@
-#include <UnitTest++.h>
 #include "../src/mathUtils.h"
 
-SUITE(MathUtils)
-{
+#include "gtest/gtest.h"
 
-struct TestVectorOps
+class TestVectorOps : public testing::Test
 {
+public:
     TestVectorOps()
     {
         size_t len = 20;
@@ -19,27 +18,26 @@ struct TestVectorOps
     dvector baddata;
 };
 
-TEST_FIXTURE(TestVectorOps, maxval)
+TEST_F(TestVectorOps, maxval)
 {
-    CHECK_EQUAL(19, mathUtils::maxval(data));
-    CHECK_EQUAL(19, mathUtils::maxval(data, 0, 19));
-    CHECK_EQUAL(10, mathUtils::maxval(data, 5, 10));
+    EXPECT_EQ(19, mathUtils::maxval(data));
+    EXPECT_EQ(19, mathUtils::maxval(data, 0, 19));
+    EXPECT_EQ(10, mathUtils::maxval(data, 5, 10));
 
     data[3] = 100;
-    CHECK_EQUAL(100, mathUtils::maxval(data));
-    CHECK_EQUAL(100, mathUtils::maxval(data, 0, 10));
-    CHECK_EQUAL(19, mathUtils::maxval(data, 5, 19));
+    EXPECT_EQ(100, mathUtils::maxval(data));
+    EXPECT_EQ(100, mathUtils::maxval(data, 0, 10));
+    EXPECT_EQ(19, mathUtils::maxval(data, 5, 19));
 }
 
-TEST_FIXTURE(TestVectorOps, minval) {
-    CHECK_EQUAL(0, mathUtils::minval(data));
-    CHECK_EQUAL(0, mathUtils::minval(data, 0, 19));
-    CHECK_EQUAL(5, mathUtils::minval(data, 5, 10));
+TEST_F(TestVectorOps, minval)
+{
+    EXPECT_EQ(0, mathUtils::minval(data));
+    EXPECT_EQ(0, mathUtils::minval(data, 0, 19));
+    EXPECT_EQ(5, mathUtils::minval(data, 5, 10));
 
     data[3] = -100;
-    CHECK_EQUAL(-100, mathUtils::minval(data));
-    CHECK_EQUAL(-100, mathUtils::minval(data, 0, 10));
-    CHECK_EQUAL(5, mathUtils::minval(data, 5, 19));
-}
-
+    EXPECT_EQ(-100, mathUtils::minval(data));
+    EXPECT_EQ(-100, mathUtils::minval(data, 0, 10));
+    EXPECT_EQ(5, mathUtils::minval(data, 5, 19));
 }

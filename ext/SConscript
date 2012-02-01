@@ -1,0 +1,20 @@
+from buildutils import *
+
+Import('env', 'buildTargets')
+localenv = env.Clone()
+
+def prep_gtest(env):
+    localenv = env.Clone()
+    localenv.Append(CPPPATH=[Dir('#ext/gtest'),
+                             Dir('#ext/gtest/include')],
+                    CPPDEFINES={'GTEST_HAS_PTHREAD': 0})
+    return localenv
+
+# (subdir, library name, (file extensions), prepfunction)
+libs = [('gtest/src','gtest',['^gtest-all.cc'], prep_gtest)]
+
+for subdir, libname, extensions, prepFunction in libs:
+    localenv = prepFunction(env)
+    lib = localenv.Library(pjoin('../../lib', libname),
+                           source=mglob(localenv, subdir, *extensions))
+    buildTargets.extend(lib)
