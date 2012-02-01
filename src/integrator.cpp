@@ -285,9 +285,10 @@ void TridiagonalIntegrator::step()
             }
 
             // Thomas coefficient depending on y
+            lu_d = d;
             lu_d[0] = y_[0] / lu_b[0];
             for (int i=1; i<N; i++) {
-                lu_d[i] = (y[i] - lu_d[i-1]*a[i]) / (lu_b[i] - lu_c[i-1]*a[i]);
+                lu_d[i] = (y_[i] - lu_d[i-1]*a[i]) / (lu_b[i] - lu_c[i-1]*a[i]);
             }
 
             // Back substitution
@@ -313,15 +314,21 @@ void TridiagonalIntegrator::step()
         }
         dvec tmp = y_;
         for (int i=0; i<N; i++) {
-            y_[i] = -2*y_[i]/h + yprev[i]/(2*h) - k[i];
+            y_[i] = -2*tmp[i]/h + yprev[i]/(2*h) - k[i];
         }
         yprev = tmp;
         // Compute Thomas coefficients
+        lu_d = d;
         lu_d[0] = y_[0] / lu_b[0];
         for (int i=1; i<N; i++) {
             lu_d[i] = (y_[i] - lu_d[i-1]*a[i]) / (lu_b[i] - lu_c[i-1]*a[i]);
         }
 
+        // Back substitution
+        y_[N-1] = lu_d[N-1];
+        for (int i=N-2; i>=0; i--) {
+            y_[i] = lu_d[i] - lu_c[i] * y_[i+1];
+        }
         assert(mathUtils::notnan(y_));
     }
 

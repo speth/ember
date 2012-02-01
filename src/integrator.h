@@ -33,7 +33,7 @@ public:
 
     // ODE defined as ydot = f(t,y) = J*y + k
     virtual void get_A(dvec& a, dvec& b, dvec& c) = 0;
-    virtual void get_k(dvec& y) = 0;
+    virtual void get_k(dvec& k) = 0;
     virtual void resize(int N) {}
     virtual void initialize() {}
 };
@@ -131,6 +131,7 @@ public:
     void initialize(const double t0, const double h);
 
     const dvector& get_ydot();
+    const dvec& get_y_new() { return y_; };
 
     // Actually do the integration
     void step(); // take a single step
