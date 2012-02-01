@@ -8,3 +8,7 @@ bin
 *.pyc
 .sconsign.dblite
 build
+.settings
+.sconf_temp
+.pydevproject
+config.log
