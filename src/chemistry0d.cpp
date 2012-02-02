@@ -339,7 +339,7 @@ void CanteraGas::setStateMass(const dvector& Y_in, const double T)
 void CanteraGas::setStateMass(const double* Y_in, const double T)
 {
     for (size_t k=0; k<nSpec; k++) {
-        Y[k] = max(Y_in[k], 0.0);
+        Y[k] = std::max(Y_in[k], 0.0);
     }
     thermo.setState_TPY(T, pressure, &Y[0]);
 }
@@ -352,7 +352,7 @@ void CanteraGas::setStateMole(const dvector& X_in, const double T)
 void CanteraGas::setStateMole(const double* X_in, const double T)
 {
     for (size_t k=0; k<nSpec; k++) {
-        X[k] = max(X_in[k], 0.0);
+        X[k] = std::max(X_in[k], 0.0);
     }
     thermo.setState_TPX(T, pressure, &X[0]);
 }

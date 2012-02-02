@@ -32,8 +32,8 @@ public:
     void resize(size_t nSpec);
     void resetSplitConstants();
 
-    void writeJacobian(sundialsCVODE& solver, ostream& out);
-    void writeState(sundialsCVODE& solver, ostream& out, bool init);
+    void writeJacobian(sundialsCVODE& solver, std::ostream& out);
+    void writeState(sundialsCVODE& solver, std::ostream& out, bool init);
 
     // A class that provides the strain rate and its time derivative
     StrainFunction strainFunction;
@@ -100,7 +100,7 @@ public:
 
     void resetSplitConstants();
 
-    void writeState(ostream& out, bool init);
+    void writeState(std::ostream& out, bool init);
 
     // A class that provides the strain rate and its time derivative
     StrainFunction strainFunction;

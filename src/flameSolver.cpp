@@ -124,12 +124,12 @@ void FlameSolver::initialize(void)
         Cantera::showErrors(std::cout);
         throw;
     } catch (debugException& e) {
-        cout << e.errorString << endl;
+        std::cout << e.errorString << std::endl;
         logFile.write(e.errorString);
         throw;
     } catch (...) {
         std::string message = "I have no idea what went wrong!";
-        cout << message << endl;
+        std::cout << message << std::endl;
         logFile.write(message);
         throw;
     }
@@ -145,12 +145,12 @@ void FlameSolver::tryrun(void)
         Cantera::showErrors(std::cout);
         throw;
     } catch (debugException& e) {
-        cout << e.errorString << endl;
+        std::cout << e.errorString << std::endl;
         logFile.write(e.errorString);
         throw;
     } catch (...) {
         std::string message = "I have no idea what went wrong!";
-        cout << message << endl;
+        std::cout << message << std::endl;
         logFile.write(message);
         throw;
     }
@@ -394,9 +394,9 @@ void FlameSolver::run(void)
             // dampVal sets a limit on the maximum grid size
             grid.dampVal.resize(grid.x.size());
             for (size_t j=0; j<nPoints; j++) {
-                double num = min(mu[j],lambda[j]/cp[j]);
+                double num = std::min(mu[j],lambda[j]/cp[j]);
                 for (size_t k=0; k<nSpec; k++) {
-                    num = min(num, rhoD(k,j));
+                    num = std::min(num, rhoD(k,j));
                 }
                 grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
             }
@@ -1319,7 +1319,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
         }
         if (useCVODE[j]) {
             if (int(j) == options.debugSourcePoint && t >= options.debugSourceTime) {
-                ofstream steps;
+                std::ofstream steps;
                 steps.open("cvodeSteps.py");
                 sourceTerms[j].writeState(sourceSolvers[j], steps, true);
 
@@ -1359,7 +1359,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
                 t >= options.debugSourceTime)
             {
                 sourceTermsQSS[j].debug = true;
-                ofstream steps;
+                std::ofstream steps;
                 steps.open("cvodeSteps.py");
                 sourceTermsQSS[j].writeState(steps, true);
 
@@ -1628,8 +1628,8 @@ void FlameSolver::generateProfile(void)
     }
 
     // Determine the grid indices that define each segment of the initial profile
-    int centerPointCount = round(0.5 * options.initialCenterWidth / dx);
-    int slopePointCount = round(options.initialSlopeWidth / dx);
+    int centerPointCount = floor(0.5 + 0.5 * options.initialCenterWidth / dx);
+    int slopePointCount = floor(0.5 + options.initialSlopeWidth / dx);
     int jl2 = jm - centerPointCount;
     int jl1 = jl2 - slopePointCount;
     int jr1 = jm + centerPointCount;
@@ -2017,7 +2017,7 @@ void FlameSolver::printPerformanceStats(void)
     if (boost::filesystem::exists(filename)) {
         boost::filesystem::remove(filename);
     }
-    statsFile.open(filename.c_str(), ios::trunc | ios::out);
+    statsFile.open(filename.c_str(), std::ios::trunc | std::ios::out);
     statsFile << "\n   *** Performance Stats ***       time   ( call count )\n";
     printPerfString("                General Setup: ", setupTimer);
     printPerfString("             Split Term Setup: ", splitTimer);
@@ -2137,14 +2137,14 @@ void FlameSolver::updateTransportDomain()
         // Find the left boundary for species k
         int jStart = jj;
         for (size_t j=0; j<nPoints; j++) {
-            if (abs(dYdtTransport(k,j)) > options.transport_atol ||
-                abs(dYdtProduction(k,j)) > options.transport_atol) {
+            if (std::abs(dYdtTransport(k,j)) > options.transport_atol ||
+                std::abs(dYdtProduction(k,j)) > options.transport_atol) {
                 jStart = j;
                 break;
             }
         }
 
-        jStart = max(0, jStart-2);
+        jStart = std::max(0, jStart-2);
         if (options.transportEliminationDiffusion) {
             diffusionStartIndices[k] = jStart;
         }
@@ -2155,14 +2155,14 @@ void FlameSolver::updateTransportDomain()
         // Find the right boundary for species k
         size_t jStop = jStart;
         for (int j=jj; j>jStart; j--) {
-            if (abs(dYdtTransport(k,j)) > options.transport_atol ||
-                abs(dYdtProduction(k,j)) > options.transport_atol) {
+            if (std::abs(dYdtTransport(k,j)) > options.transport_atol ||
+                std::abs(dYdtProduction(k,j)) > options.transport_atol) {
                 jStop = j;
                 break;
             }
         }
 
-        jStop = min(jj, jStop+2);
+        jStop = std::min(jj, jStop+2);
         if (options.transportEliminationDiffusion) {
             diffusionStopIndices[k] = jStop;
             nPointsDiffusion[k] = jStop - jStart + 1;

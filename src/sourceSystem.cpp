@@ -218,7 +218,7 @@ void SourceSystem::roll_ydot(sdVector& ydot) const
     }
 }
 
-void SourceSystem::writeJacobian(sundialsCVODE& solver, ostream& out)
+void SourceSystem::writeJacobian(sundialsCVODE& solver, std::ostream& out)
 {
     size_t N = solver.y.length();
     double t = solver.tInt;
@@ -227,29 +227,29 @@ void SourceSystem::writeJacobian(sundialsCVODE& solver, ostream& out)
     f(t, solver.y, ydot);
     denseJacobian(t, solver.y, ydot, J);
 
-    out << "J = []" << endl;
+    out << "J = []" << std::endl;
     for (size_t i=0; i<N; i++) {
         out << "J.append([";
         for (size_t k=0; k<N; k++) {
             out << boost::format("%.5e, ") % J(i,k);
         }
-        out << "])" << endl;
+        out << "])" << std::endl;
     }
 }
 
-void SourceSystem::writeState(sundialsCVODE& solver, ostream& out, bool init)
+void SourceSystem::writeState(sundialsCVODE& solver, std::ostream& out, bool init)
 {
     if (init) {
-        out << "T = []" << endl;
-        out << "Y = []" << endl;
-        out << "t = []" << endl;
-        out << "wDot = []" << endl;
+        out << "T = []" << std::endl;
+        out << "Y = []" << std::endl;
+        out << "t = []" << std::endl;
+        out << "wDot = []" << std::endl;
     }
 
-    out << "T.append(" << T << ")" << endl;
-    out << "Y.append(" << Y << ")" << endl;
-    out << "t.append(" << solver.tInt << ")" << endl;
-    out << "wDot.append(" << wDot << ")" << endl;
+    out << "T.append(" << T << ")" << std::endl;
+    out << "Y.append(" << Y << ")" << std::endl;
+    out << "t.append(" << solver.tInt << ")" << std::endl;
+    out << "wDot.append(" << wDot << ")" << std::endl;
 }
 
 // ********************
@@ -388,17 +388,17 @@ void SourceSystemQSS::roll_ydot(dvector& q, dvector& d) const
     }
 }
 
-void SourceSystemQSS::writeState(ostream& out, bool init)
+void SourceSystemQSS::writeState(std::ostream& out, bool init)
 {
     if (init) {
-        out << "T = []" << endl;
-        out << "Y = []" << endl;
-        out << "t = []" << endl;
+        out << "T = []" << std::endl;
+        out << "Y = []" << std::endl;
+        out << "t = []" << std::endl;
     }
 
-    out << "T.append(" << T << ")" << endl;
-    out << "Y.append(" << Y << ")" << endl;
-    out << "t.append(" << tn << ")" << endl;
+    out << "T.append(" << T << ")" << std::endl;
+    out << "Y.append(" << Y << ")" << std::endl;
+    out << "t.append(" << tn << ")" << std::endl;
 }
 
 

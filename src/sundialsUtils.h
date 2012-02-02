@@ -15,6 +15,7 @@
 
 #include <iostream>
 #include <vector>
+#include <time.h>
 
 typedef DlsMat DenseMat;
 typedef DlsMat BandMat;
