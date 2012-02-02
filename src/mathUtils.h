@@ -13,8 +13,8 @@
 
 using std::abs;
 
-typedef Eigen::MatrixXd dmatrix;
-typedef Eigen::RowVectorXd dvec;
+typedef Eigen::ArrayXd dmatrix;
+typedef Eigen::Array<double,1,Eigen::Dynamic> dvec;
 
 using std::vector;
 typedef std::vector<double> dvector;

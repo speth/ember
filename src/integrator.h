@@ -118,7 +118,8 @@ private:
     dvector Adiag; // diagonal components of A
 };
 
-
+// Integrator using 1st and 2nd order BDF for tridiagonal systems,
+// with matrix inversions done using the Thomas algorithm.
 class TridiagonalIntegrator : public Integrator
 {
 public:
@@ -139,10 +140,10 @@ public:
 
 private:
     TridiagonalODE& myODE;
-    dvec a, b, c, d; // subdiagonal, diagonal, superdiagonal, right-hand-side
+    dvec a, b, c; // subdiagonal, diagonal, superdiagonal, right-hand-side
     dvec k; // constant contribution to y'
     dvec lu_b, lu_c, lu_d; // matrix elements after factorization
-    dvec y_, yp_; // internal
+    dvec y_, yp_, invDenom_; // internal
     unsigned int stepCount; // the number of steps taken since last initialization
 
     int N; // The system size

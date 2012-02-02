@@ -221,11 +221,11 @@ void TridiagonalIntegrator::resize(int N_in)
     a.resize(N);
     b.resize(N);
     c.resize(N);
-    d.resize(N);
 
     lu_b.resize(N);
     lu_c.resize(N);
     lu_d.resize(N);
+    invDenom_.resize(N);
 }
 
 
@@ -263,32 +263,31 @@ const dvector& TridiagonalIntegrator::get_ydot()
 void TridiagonalIntegrator::step()
 {
     if (stepCount == 0) {
-        yprev = y_;
+        yprev = y_; // current value of y becomes y_(n-1)
 
-        // Take 8 substeps using first-order BDF
+        // Get ODE coefficients
         myODE.get_A(a, b, c);
         myODE.get_k(k);
-        for (int i=0; i<N; i++) {
-            lu_b[i] = b[i] - 1.0/(h/8.0);
-        }
+
+        // Modify diagonal elements according to 1st order BDF
+        lu_b = b - 1.0/(h/8.0);
 
         // Compute Thomas coefficients
         lu_c[0] = c[0] / lu_b[0];
         for (int i=1; i<N; i++) {
-            lu_c[i] = c[i] / (lu_b[i] - lu_c[i-1] * a[i]);
+            invDenom_[i] = 1.0 / (lu_b[i] - lu_c[i-1] * a[i]);
+            lu_c[i] = c[i] * invDenom_[i];
         }
 
+        // Take 8 substeps using first-order BDF
         for (int j=0; j<8; j++) {
-            // y_n -> y_n+1
-            for (int i=0; i<N; i++) {
-                y_[i] = -y_[i]/(h/8.0) - k[i];
-            }
+            // RHS for 1st order BDF
+            y_ = -y_/(h/8.0) - k;
 
             // Thomas coefficient depending on y
-            lu_d = d;
             lu_d[0] = y_[0] / lu_b[0];
             for (int i=1; i<N; i++) {
-                lu_d[i] = (y_[i] - lu_d[i-1]*a[i]) / (lu_b[i] - lu_c[i-1]*a[i]);
+                lu_d[i] = (y_[i] - lu_d[i-1]*a[i]) * invDenom_[i];
             }
 
             // Back substitution
@@ -302,26 +301,24 @@ void TridiagonalIntegrator::step()
 
     } else {
         if (stepCount == 1) {
-            for (int i=0; i<N; i++) {
-                lu_b[i] = b[i] - 3.0/(2.0*h);
-            }
+            // Modify diagonal elements according to 2nd order BDF
+            lu_b = b - 3.0/(2.0*h);
 
             // Compute Thomas coefficients
             lu_c[0] = c[0] / lu_b[0];
             for (int i=1; i<N; i++) {
-                lu_c[i] = c[i] / (lu_b[i] - lu_c[i-1] * a[i]);
+                invDenom_[i] = 1.0 / (lu_b[i] - lu_c[i-1] * a[i]);
+                lu_c[i] = c[i] * invDenom_[i];
             }
         }
-        dvec tmp = y_;
-        for (int i=0; i<N; i++) {
-            y_[i] = -2*tmp[i]/h + yprev[i]/(2*h) - k[i];
-        }
-        yprev = tmp;
+        dvec ynm1 = y_; // Current value of y becomes y_(n-1)
+        y_ = -2 * ynm1 / h + yprev / (2*h) - k; // RHS for 2nd order BDF
+        yprev = ynm1; // y_(n-1) will be y_(n-2) next time
+
         // Compute Thomas coefficients
-        lu_d = d;
         lu_d[0] = y_[0] / lu_b[0];
         for (int i=1; i<N; i++) {
-            lu_d[i] = (y_[i] - lu_d[i-1]*a[i]) / (lu_b[i] - lu_c[i-1]*a[i]);
+            lu_d[i] = (y_[i] - lu_d[i-1]*a[i]) * invDenom_[i];
         }
 
         // Back substitution
