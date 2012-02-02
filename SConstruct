@@ -1,31 +1,117 @@
+import os
+import platform
 from distutils.sysconfig import get_config_var
 
 VariantDir('src/build','src', duplicate=0)
 VariantDir('test/build','test', duplicate=0)
 VariantDir('python/build','python', duplicate=0)
 
-try:
-    import multiprocessing
-    SetOption('num_jobs', multiprocessing.cpu_count())
-except:
-    pass
-
-debugCppFlags = ['-O0','-ftemplate-depth-128','-fno-inline','-Wall','-g','-fPIC']
-releaseCppFlags = ['-ftemplate-depth-128', '-O3', '-finline-functions', '-Wno-inline',
-                   '-fPIC', '-Wall', '-g', '-DNDEBUG']
-
-debugFortFlags = ['-O0', '-g','-fPIC']
-releaseFortFlags = ['-O3','-fPIC','-g']
-
 mode = ARGUMENTS.get('mode','release')
-cppFlags = releaseCppFlags if mode == 'release' else debugCppFlags
-fortFlags = releaseFortFlags if mode == 'release' else debugFortFlags
+assert mode in ('release', 'debug'), mode
+
+#try:
+#    import multiprocessing
+#    SetOption('num_jobs', multiprocessing.cpu_count())
+#except:
+#    pass
+
+extraEnvArgs = {}
+
+if os.name == 'nt':
+    # On Windows, use the same version of Visual Studio that was used
+    # to compile Python, and target the same architecture.
+    pycomp = platform.python_compiler()
+    if pycomp.startswith('MSC v.1400'):
+        extraEnvArgs['MSVC_VERSION'] = '8.0' # Visual Studio 2005
+    elif pycomp.startswith('MSC v.1500'):
+        extraEnvArgs['MSVC_VERSION'] = '9.0' # Visual Studio 2008
+    elif pycomp.startswith('MSC v.1600'):
+        extraEnvArgs['MSVC_VERSION'] = '10.0' # Visual Studio 2010
+
+env = Environment(**extraEnvArgs)
+
+opts = Variables('pyro.conf')
+opts.AddVariables(
+    PathVariable(
+        'cantera_include',
+        'Location of the Cantera header files.',
+        '/usr/local/include', PathVariable.PathIsDir),
+    PathVariable(
+        'cantera_libs',
+        'Location of the Cantera library files.',
+        '/usr/local/lib', PathVariable.PathIsDir),
+    PathVariable(
+        'sundials_include',
+        'Location of the Sundials header files.',
+        '/usr/local/include', PathVariable.PathIsDir),
+    PathVariable(
+        'sundials_libs',
+        'Location of the Sundials library files',
+        '/usr/local/lib', PathVariable.PathIsDir),
+    PathVariable(
+        'eigen_include',
+        'Location of the Eigen header files',
+        '/usr/local/include', PathVariable.PathIsDir),
+    PathVariable(
+        'boost_include',
+        'Location of the Boost header files.',
+        '/usr/include', PathVariable.PathIsDir),
+    PathVariable(
+        'boost_libs',
+        'Location of the Boost library files',
+        '/usr/lib', PathVariable.PathIsDir),
+    PathVariable(
+        'hdf5_include',
+        'Location of the HDF5 header files.',
+        '/usr/include', PathVariable.PathIsDir),
+    PathVariable(
+        'hdf5_libs',
+        'Location of the HDF5 library files',
+        '/usr/lib', PathVariable.PathIsDir),
+    )
+
+
+opts.Update(env)
+opts.Save('pyro.conf', env)
 
 cantera = '''thermo transport kinetics equil tpx ctnumerics
-             ctmath ctf2c ctcxx ctbase clib'''.split()
+             ctmath ctf2c ctbase clib'''.split()
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
-lastlibs = 'gfortran hdf5 blas lapack boost_filesystem'.split()
-pythonlibs = ['boost_python']
+lastlibs = 'hdf5 blas lapack boost_filesystem'.split()
+
+env.Append(CPPPATH=[env['cantera_include'],
+                    env['sundials_include'],
+                    env['eigen_include'],
+                    env['boost_include'],
+                    env['hdf5_include'],
+                    get_config_var('INCLUDEPY')],
+           LIBPATH=[env['cantera_libs'],
+                    env['sundials_libs'],
+                    env['boost_libs'],
+                    env['hdf5_libs'],
+                    'lib'],
+           LIBS=sundials + cantera + lastlibs)
+
+
+if env['CC'] == 'gcc':
+    common = ['-ftemplate-depth-128', '-fPIC', '-g', '-Wall']
+    if mode == 'debug':
+        env.Append(CXXFLAGS=common + ['-O0','-fno-inline'])
+    else:
+        env.Append(CXXFLAGS=common + ['-O3', '-finline-functions', '-Wno-inline'],
+                   CPPDEFINES=['NDEBUG'])
+elif env['CC'] == 'cl':
+    common_flags = ['/nologo', '/Zi', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc']
+    common_defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS']
+    if mode == 'debug':
+        env.Append(CXXFLAGS=common_flags + ['/Od', '/Ob0', '/MD'],
+                   CPPDEFINES=common_defines)
+    else:
+        env.Append(CXXFLAGS=common_flags + ['/O2', '/MD'],
+                   CPPDEFINES=['NDEBUG'] + common_defines)
+else:
+    print 'error: unknown c++ compiler: "%s"' % env['CC']
+    sys.exit(0)
 
 def CheckMemberFunction(context, function, includes=""):
     context.Message('Checking for %s... ' % function)
@@ -41,17 +127,6 @@ int main(int argc, char** argv) {
     context.Result(result)
     return result
 
-env = Environment(CPPPATH=['/opt/cantera-gcc/include',
-                           '/opt/sundials-2.4.0-gcc/include',
-                           get_config_var('INCLUDEPY')],
-                  LIBPATH=['/opt/cantera-gcc/lib',
-                           '/opt/sundials-2.4.0-gcc/lib',
-                           'lib'],
-                  CPPFLAGS=cppFlags,
-                  FORTRANFLAGS=fortFlags,
-                  F90FLAGS=fortFlags,
-                  LIBS=sundials + cantera + pythonlibs + lastlibs)
-
 tests = {}
 conf = Configure(env, custom_tests={'CheckMemberFunction': CheckMemberFunction})
 tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
@@ -59,28 +134,42 @@ tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
     includes="#include <cantera/Cantera.h>\n#include <cantera/transport.h>")
 
 if tests['CanteraExtendedTransport']:
-    env.Append(CPPFLAGS=['-DCANTERA_EXTENDED_TRANSPORT'])
+    env.Append(CPPDEFINES=['CANTERA_EXTENDED_TRANSPORT'])
 
 common = [f for f in Glob('src/build/*.cpp')
           if 'strainedFlame.cpp' not in f.name]
 
 # The Python module
 pyenv = env.Clone()
-pyenv.Append(LIBS=pythonlibs)
-env.Alias('pylib',
-          pyenv.SharedLibrary('lib/_pyro.so',
-                              common + Glob('python/build/*.cpp'),
-                              SHLIBPREFIX=''))
+pyenv.Append(LIBS=['boost_python'])
 
-# UnitTest++ tests
+env.Alias('pylib',
+          pyenv.SharedLibrary('lib/_pyro',
+                              common + Glob('python/build/*.cpp'),
+                              SHLIBPREFIX='',
+                              SHLIBSUFFIX=get_config_var('SO')))
+
+# GoogleTest tests
+python_lib = 'python%s' % get_config_var('VERSION')
 testenv = env.Clone()
-testenv.Append(LIBS=['UnitTest++'],
-               CPPPATH=['../UnitTest++/src/'],
-               LIBPATH=['../UnitTest++'])
+testenv.Append(LIBS=['gtest', 'boost_python', 'boost_system', python_lib],
+               CPPPATH=['ext/gtest/include'],
+               LIBPATH=['lib'])
+
+if os.name == 'nt':
+    testenv.Append(LIBPATH=get_config_var('LIBDEST'))
+
 test_program = testenv.Program('bin/unittest',
                                common + Glob('test/build/*.cpp'))
 test_alias = testenv.Alias('test', [test_program], test_program[0].abspath)
-AlwaysBuild(test_alias)
+# AlwaysBuild(test_alias)
+
+# Google Test
+buildTargets = ['pylib', test_alias]
+
+Export('env', 'buildTargets')
+VariantDir('ext/build', 'ext', duplicate=0)
+SConscript('ext/build/SConscript')
 
 Default(['pylib'])
-env.Alias('all', ['pylib','test'])
+env.Alias('all', buildTargets)
