@@ -6,9 +6,12 @@ bin
 *.o
 *.d
 *.pyc
+*.pdb
 .sconsign.dblite
 build
 .settings
 .sconf_temp
 .pydevproject
+.cproject
+.project
 config.log
