@@ -14,7 +14,7 @@
 #include "mathUtils.h"
 #include "readConfig.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #define Cantera_CXX Cantera
 #endif
 
