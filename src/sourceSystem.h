@@ -54,9 +54,9 @@ public:
 
     // Cantera data
     CanteraGas* gas;
-    perfTimer* reactionRatesTimer;
-    perfTimer* thermoTimer;
-    perfTimer* jacobianTimer;
+    PerfTimer* reactionRatesTimer;
+    PerfTimer* thermoTimer;
+    PerfTimer* jacobianTimer;
 
     // other parameters
     size_t nSpec;
@@ -114,8 +114,8 @@ public:
 
     // Cantera data
     CanteraGas* gas;
-    perfTimer* reactionRatesTimer;
-    perfTimer* thermoTimer;
+    PerfTimer* reactionRatesTimer;
+    PerfTimer* thermoTimer;
 
     // other parameters
     size_t nSpec;

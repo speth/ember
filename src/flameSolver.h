@@ -226,7 +226,7 @@ private:
     double targetFlamePosition(double t); //!< [m]
 
     void printPerformanceStats(void);
-    void printPerfString(const std::string& label, const perfTimer& T);
+    void printPerfString(const std::string& label, const PerfTimer& T);
 
     void updateTransportDomain();
 
@@ -234,14 +234,14 @@ private:
 
     // Performance Timers
     // Just the total time:
-    perfTimer totalTimer;
+    PerfTimer totalTimer;
 
     // These add up to the total run time:
-    perfTimer setupTimer, splitTimer, reactionTimer, diffusionTimer,
+    PerfTimer setupTimer, splitTimer, reactionTimer, diffusionTimer,
               convectionTimer, regridTimer;
 
     // These account for special parts of the code
-    perfTimer reactionRatesTimer, transportTimer, thermoTimer;
-    perfTimer jacobianTimer, adaptiveTransportTimer;
-    perfTimer conductivityTimer, viscosityTimer, diffusivityTimer;
+    PerfTimer reactionRatesTimer, transportTimer, thermoTimer;
+    PerfTimer jacobianTimer, adaptiveTransportTimer;
+    PerfTimer conductivityTimer, viscosityTimer, diffusivityTimer;
 };

@@ -148,7 +148,7 @@ public:
 
     boost::shared_ptr<vecInterpolator> vInterp;
 
-    perfTimer utwTimer, speciesTimer;
+    PerfTimer utwTimer, speciesTimer;
 
 private:
     // set parameters of a new species solver

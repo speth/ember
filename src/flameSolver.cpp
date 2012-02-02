@@ -2031,7 +2031,7 @@ void FlameSolver::printPerformanceStats(void)
     statsFile.close();
 }
 
-void FlameSolver::printPerfString(const std::string& label, const perfTimer& T)
+void FlameSolver::printPerfString(const std::string& label, const PerfTimer& T)
 {
     statsFile << format("%s %9.3f (%12i)\n") % label % T.getTime() % T.getCallCount();
 }
