@@ -42,34 +42,62 @@ class TridiagonalIntegratorTest : public ::testing::Test
 public:
     TridiagonalIntegratorTest()
         : integrator(ode)
+        , y0(5)
+        , y0_in(5)
     {
         integrator.resize(5);
         ode.a_ << 0, 1, 1, 1, 1;
         ode.b_ << -2, -2, -2, -2, -2;
         ode.c_ << 1, 1, 1, 1, 0;
         ode.k_ << 0, 0, 0, 0.2, 0.4;
+
+        y0 << 0, 0.5, 2.0, 1.0, 0;
+        dvec::Map(&y0_in[0], 5) = y0;
+
+        integrator.set_y0(y0_in);
     }
 protected:
     ConstantTridiagonalODE ode;
     TridiagonalIntegrator integrator;
+
+    dvec y0;
+    dvector y0_in;
 };
 
 
 TEST_F(TridiagonalIntegratorTest, Stepwise)
 {
-    dvec y0(5);
-    y0 << 0, 0.5, 2.0, 1.0, 0;
-    dvector y0_in(5);
-    dvec::Map(&y0_in[0], 5) = y0;
-
-    integrator.set_y0(y0_in);
+    // Check output after each timestep
     integrator.initialize(0, 0.2);
     dvec y = integrator.get_y_new();
-    for (int j=0; j<5; j++) {
+    for (int j=0; j<6; j++) {
         for (int i=0; i<5; i++) {
             EXPECT_NEAR(soln[j][i], y[i], 1e-10);
         }
         integrator.step();
         y = integrator.get_y_new();
+    }
+}
+
+
+TEST_F(TridiagonalIntegratorTest, FullIntegration)
+{
+    // Check output at final time using integrateToTime
+    integrator.initialize(0, 0.2);
+    integrator.integrateToTime(1.0);
+    dvec y = integrator.get_y_new();
+    for (int i=0; i<5; i++) {
+        EXPECT_NEAR(soln[5][i], y[i], 1e-10);
+    }
+}
+
+
+TEST_F(TridiagonalIntegratorTest, ShortIntegration) {
+    // Check for step size reduction to reach specified output time
+    integrator.initialize(0, 1.3);
+    integrator.integrateToTime(0.2);
+    dvec y = integrator.get_y_new();
+    for (int i=0; i<5; i++) {
+        EXPECT_NEAR(soln[1][i], y[i], 1e-10);
     }
 }
