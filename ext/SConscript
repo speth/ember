@@ -7,7 +7,7 @@ def prep_gtest(env):
     localenv = env.Clone()
     localenv.Append(CPPPATH=[Dir('#ext/gtest'),
                              Dir('#ext/gtest/include')],
-                    CPPDEFINES={'GTEST_HAS_PTHREAD': 0})
+                    CPPDEFINES=('GTEST_HAS_PTHREAD=0'))
     return localenv
 
 # (subdir, library name, (file extensions), prepfunction)
