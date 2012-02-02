@@ -113,6 +113,7 @@ else:
     print 'error: unknown c++ compiler: "%s"' % env['CC']
     sys.exit(0)
 
+
 def CheckMemberFunction(context, function, includes=""):
     context.Message('Checking for %s... ' % function)
     src = """
