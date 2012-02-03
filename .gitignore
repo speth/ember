@@ -11,7 +11,12 @@ bin
 build
 .settings
 .sconf_temp
+pyro.conf
 .pydevproject
 .cproject
 .project
 config.log
+*.dll
+*.lib
+*.exp
+*.manifest

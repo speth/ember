@@ -77,7 +77,7 @@ opts.Save('pyro.conf', env)
 cantera = '''thermo transport kinetics equil tpx ctnumerics
              ctmath ctf2c ctbase clib'''.split()
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
-lastlibs = 'hdf5 blas lapack boost_filesystem'.split()
+lastlibs = 'hdf5 blas lapack'.split()
 
 env.Append(CPPPATH=[env['cantera_include'],
                     env['sundials_include'],
@@ -92,7 +92,6 @@ env.Append(CPPPATH=[env['cantera_include'],
                     'lib'],
            LIBS=sundials + cantera + lastlibs)
 
-
 if env['CC'] == 'gcc':
     common = ['-ftemplate-depth-128', '-fPIC', '-g', '-Wall']
     if mode == 'debug':
@@ -100,6 +99,9 @@ if env['CC'] == 'gcc':
     else:
         env.Append(CXXFLAGS=common + ['-O3', '-finline-functions', '-Wno-inline'],
                    CPPDEFINES=['NDEBUG'])
+    boost_libs = ['boost_%s' % lib
+                  for lib in ('python', 'filesystem', 'system')]
+
 elif env['CC'] == 'cl':
     common_flags = ['/nologo', '/Zi', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc']
     common_defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS']
@@ -109,10 +111,14 @@ elif env['CC'] == 'cl':
     else:
         env.Append(CXXFLAGS=common_flags + ['/O2', '/MD'],
                    CPPDEFINES=['NDEBUG'] + common_defines)
+    boost_libs = []
+    env.Append(LIBPATH=get_config_var('prefix') + '/libs')
+
 else:
     print 'error: unknown c++ compiler: "%s"' % env['CC']
     sys.exit(0)
 
+env.Append(LIBS=boost_libs)
 
 def CheckMemberFunction(context, function, includes=""):
     context.Message('Checking for %s... ' % function)
@@ -142,7 +148,6 @@ common = [f for f in Glob('src/build/*.cpp')
 
 # The Python module
 pyenv = env.Clone()
-pyenv.Append(LIBS=['boost_python'])
 
 env.Alias('pylib',
           pyenv.SharedLibrary('lib/_pyro',
@@ -153,7 +158,7 @@ env.Alias('pylib',
 # GoogleTest tests
 python_lib = 'python%s' % get_config_var('VERSION')
 testenv = env.Clone()
-testenv.Append(LIBS=['gtest', 'boost_python', 'boost_system', python_lib],
+testenv.Append(LIBS=['pylib', 'gtest', python_lib],
                CPPPATH=['ext/gtest/include'],
                LIBPATH=['lib'])
 
@@ -161,7 +166,7 @@ if os.name == 'nt':
     testenv.Append(LIBPATH=get_config_var('LIBDEST'))
 
 test_program = testenv.Program('bin/unittest',
-                               common + Glob('test/build/*.cpp'))
+                               Glob('test/build/*.cpp'))
 test_alias = testenv.Alias('test', [test_program], test_program[0].abspath)
 # AlwaysBuild(test_alias)
 
