@@ -550,7 +550,7 @@ void FlameSolver::writeStateFile
     outFile.writeVector("x", x);
     outFile.writeVector("T", T);
     outFile.writeVector("U", U);
-    outFile.writeArray2D("Y", Y);
+    outFile.writeArray2D("Y", Y, true);
     outFile.writeVector("V", convectionSystem.V);
     outFile.writeScalar("P", options.pressure);
     outFile.writeScalar("gridAlpha", grid.alpha);
@@ -573,10 +573,10 @@ void FlameSolver::writeStateFile
         outFile.writeVector("dTdtProd", dTdtProd);
         outFile.writeVector("dTdtCross", dTdtCross);
 
-        outFile.writeArray2D("dYdtConv", dYdtConv);
-        outFile.writeArray2D("dYdtDiff", dYdtDiff);
-        outFile.writeArray2D("dYdtProd", dYdtProd);
-        outFile.writeArray2D("dYdtCross", dYdtCross);
+        outFile.writeArray2D("dYdtConv", dYdtConv, true);
+        outFile.writeArray2D("dYdtDiff", dYdtDiff, true);
+        outFile.writeArray2D("dYdtProd", dYdtProd, true);
+        outFile.writeArray2D("dYdtCross", dYdtCross, true);
 
         outFile.writeVector("dWdt", convectionSystem.dWdt);
         outFile.writeVector("drhodt", drhodt);
@@ -622,8 +622,8 @@ void FlameSolver::writeStateFile
 
     if (options.outputExtraVariables || errorFile) {
         // These variables can be recomputed from the state variables
-        outFile.writeArray2D("wdot", wDot);
-        outFile.writeArray2D("rhoD", rhoD);
+        outFile.writeArray2D("wdot", wDot, true);
+        outFile.writeArray2D("rhoD", rhoD, true);
         outFile.writeVector("lambda", lambda);
         outFile.writeVector("cp", cp);
         outFile.writeVector("mu", mu);
@@ -634,8 +634,8 @@ void FlameSolver::writeStateFile
         outFile.writeVector("cfm", grid.cfm);
         outFile.writeVector("hh", hh);
         outFile.writeVector("rphalf", grid.rphalf);
-        outFile.writeArray2D("jFick", jFick);
-        outFile.writeArray2D("jSoret", jSoret);
+        outFile.writeArray2D("jFick", jFick, true);
+        outFile.writeArray2D("jSoret", jSoret, true);
         outFile.writeVector("jCorr", jCorr);
     }
 
@@ -1821,7 +1821,7 @@ void FlameSolver::loadProfile(void)
 
     U = infile.readVector("U");
     T = infile.readVector("T");
-    Y = infile.readArray2D("Y");
+    Y = infile.readArray2D("Y", true);
     tNow = infile.readScalar("t");
     if (!options.haveTStart) {
         // If tStart is not in the input file, use the time from the restart file.

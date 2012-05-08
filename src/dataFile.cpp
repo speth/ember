@@ -94,16 +94,15 @@ dvector DataFile::readVector(const std::string& name)
     return values;
 }
 
-void DataFile::writeArray2D(const std::string& name, const dmatrix& y)
+void DataFile::writeArray2D(const std::string& name, const dmatrix& y, bool transpose)
 {
     require_file_open();
 
-    // Take the transpose because Array2D is column-major
-    dmatrix yt(y.cols(), y.rows());
-    for (size_t i=0; i<y.rows(); i++) {
-        for (size_t j=0; j<y.cols(); j++) {
-            yt(j,i) = y(i,j);
-        }
+    dmatrix yt;
+    if (transpose) {
+        yt = y.transpose();
+    } else {
+        yt = y;
     }
 
     hsize_t dims[2];
@@ -122,11 +121,11 @@ void DataFile::writeArray2D(const std::string& name, const dmatrix& y)
     H5Tset_order(datatype, H5T_ORDER_LE);
 
     dataset = get_dataset(name, datatype, dataspace);
-    H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, &yt.data()[0]);
+    H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, yt.data());
     H5Dclose(dataset);
 }
 
-dmatrix DataFile::readArray2D(const std::string& name)
+dmatrix DataFile::readArray2D(const std::string& name, bool transpose)
 {
     require_file_open();
 
@@ -144,17 +143,13 @@ dmatrix DataFile::readArray2D(const std::string& name)
     H5Sget_simple_extent_dims(dataspace, &dimensions[0], &ndim);
 
     dmatrix y(dimensions[0], dimensions[1]);
-    dmatrix yt(dimensions[1], dimensions[0]);
 
     H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL,
-            H5S_ALL, H5P_DEFAULT, &yt.data()[0]);
+            H5S_ALL, H5P_DEFAULT, y.data());
     H5Dclose(dataset);
 
-    // Take the transpose because Array2D is column-major
-    for (size_t i=0; i<yt.rows(); i++) {
-        for (size_t j=0; j<yt.cols(); j++) {
-            y(j,i) = yt(i,j);
-        }
+    if (transpose) {
+        y = y.transpose().eval();
     }
 
     return y;
@@ -221,8 +216,8 @@ void dataFileTest()
     f.writeVector("v", v);
 
     dmatrix A(3,7);
-    for (size_t i=0; i<A.rows(); i++) {
-        for (size_t j=0; j<A.cols(); j++) {
+    for (dmatrix::Index i=0; i<A.rows(); i++) {
+        for (dmatrix::Index j=0; j<A.cols(); j++) {
             A(i,j) = 10*i + j;
         }
     }
