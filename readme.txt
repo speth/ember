@@ -5,7 +5,7 @@ with the following installed:
    * Python (>=2.6)
    * Boost
    * SCons
-   * Cantera (>= 1.8)
+   * Cantera (>= 2.0)
    * Sundials (2.4)
    * HDF5 (>= 1.8.0)
    * Doxygen (optional)

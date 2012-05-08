@@ -120,8 +120,8 @@ void FlameSolver::initialize(void)
         calculateQdot();
         convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
     }
-    catch (Cantera::CanteraError) {
-        Cantera::showErrors(std::cout);
+    catch (Cantera::CanteraError& err) {
+        std::cout << err.what() << std::endl;
         throw;
     } catch (debugException& e) {
         std::cout << e.errorString << std::endl;
@@ -141,8 +141,8 @@ void FlameSolver::tryrun(void)
     try {
         run();
     }
-    catch (Cantera::CanteraError) {
-        Cantera::showErrors(std::cout);
+    catch (Cantera::CanteraError& err) {
+        std::cout << err.what() << std::endl;
         throw;
     } catch (debugException& e) {
         std::cout << e.errorString << std::endl;
@@ -1334,7 +1334,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
                 sourceTerms[j].writeJacobian(sourceSolvers[j], steps);
 
                 steps.close();
-                terminate();
+                std::terminate();
 
             } else {
                 err = sourceSolvers[j].integrateToTime(t);
@@ -1372,7 +1372,7 @@ void FlameSolver::integrateProductionTerms(double t, int stage)
                 }
 
                 steps.close();
-                terminate();
+                std::terminate();
 
             } else {
                 err = sourceTermsQSS[j].integrateToTime(t-tNow);

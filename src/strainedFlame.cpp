@@ -34,10 +34,10 @@ int main(int argc, char** argv)
         //chemistryTest();
         //miscTest();
     }
-    catch (Cantera::CanteraError) {
-        Cantera::showErrors(std::cout);
+    catch (Cantera::CanteraError& err) {
+        logFile.write(err.what());
         throw;
-    } catch (libconfig::ParseException err) {
+    } catch (libconfig::ParseException& err) {
         logFile.write(format("Error in config file '%s': %s on line %i") %
                 inputFile % err.getError() % err.getLine());
         throw;
@@ -186,9 +186,7 @@ void strainedFlame(const std::string& inputFile)
 
 void chemistryTest(void)
 {
-    using namespace Cantera;
-
-    Cantera_CXX::IdealGasMix gas("methane_singlestep.cti");
+    Cantera::IdealGasMix gas("methane_singlestep.cti");
 
     gas.setState_TPX(300,101325,"N2:3.76, O2:1.0, CH4:0.5");
     vector<double> wnet(53);

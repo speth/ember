@@ -6,10 +6,9 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <map>
 
 #include <Eigen/Dense>
-
-#include <cantera/Cantera.h>
 
 using std::abs;
 

@@ -74,8 +74,7 @@ opts.AddVariables(
 opts.Update(env)
 opts.Save('pyro.conf', env)
 
-cantera = '''thermo transport kinetics equil tpx ctnumerics
-             ctmath ctf2c ctbase clib'''.split()
+cantera = ['cantera']
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
 lastlibs = 'hdf5 blas lapack'.split()
 
@@ -138,7 +137,7 @@ tests = {}
 conf = Configure(env, custom_tests={'CheckMemberFunction': CheckMemberFunction})
 tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
     "Cantera::MixTransport::getMixDiffCoeffsMass",
-    includes="#include <cantera/Cantera.h>\n#include <cantera/transport.h>")
+    includes='#include "cantera/transport.h"')
 
 if tests['CanteraExtendedTransport']:
     env.Append(CPPDEFINES=['CANTERA_EXTENDED_TRANSPORT'])

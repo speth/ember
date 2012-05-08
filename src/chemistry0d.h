@@ -1,22 +1,18 @@
 #pragma once
 
-#include <cantera/Cantera.h>
-#include <cantera/IdealGasMix.h>    // defines class IdealGasMix
-#include <cantera/equilibrium.h>    // chemical equilibrium
-#include <cantera/thermo.h>
-#include <cantera/transport.h>      // transport properties
-#include <cantera/kinetics.h>
+#include "cantera/IdealGasMix.h"    // defines class IdealGasMix
 
-#include <cantera/kernel/IdealGasPhase.h>
-#include <cantera/kernel/GasKinetics.h>
-#include <cantera/kernel/ctml.h>
+#include "cantera/equilibrium.h"    // chemical equilibrium
+#include "cantera/thermo.h"
+#include "cantera/transport.h"      // transport properties
+#include "cantera/kinetics.h"
+
+#include "cantera/thermo/IdealGasPhase.h"
+#include "cantera/kinetics/GasKinetics.h"
+#include "cantera/base/ctml.h"
 
 #include "mathUtils.h"
 #include "readConfig.h"
-
-#ifdef _WIN32
-#define Cantera_CXX Cantera
-#endif
 
 #ifdef CANTERA_EXTENDED_TRANSPORT
 class ApproxMixTransport : public Cantera::MixTransport
