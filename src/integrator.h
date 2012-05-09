@@ -6,6 +6,7 @@
 class ODE
 {
 public:
+    virtual ~ODE() {}
     // ODE function defined as ydot = f(t,y)
     virtual void f(const double t, const dvector& y, dvector& ydot) = 0;
 };
@@ -15,7 +16,7 @@ class LinearODE
 {
 public:
     LinearODE() {}
-    ~LinearODE() {}
+    virtual ~LinearODE() {}
 
     // ODE defined as ydot = f(t,y) = J*y + c
     virtual void get_A(sdBandMatrix& J) = 0;
@@ -43,7 +44,7 @@ class Integrator
 {
 public:
     Integrator();
-    ~Integrator() {}
+    virtual ~Integrator() {}
 
     // Initialization - Each of these must be called before starting integration
     virtual void set_y0(const dvector& y0);
@@ -74,7 +75,7 @@ class ExplicitIntegrator : public Integrator
     // Integrates an ODE defined as ydot = f(t,y) using Euler's method
 public:
     ExplicitIntegrator(ODE& ode);
-    ~ExplicitIntegrator();
+    ~ExplicitIntegrator() {}
 
     void set_y0(const dvector& y0);
     const dvector& get_ydot();
@@ -124,7 +125,7 @@ class TridiagonalIntegrator : public Integrator
 {
 public:
     TridiagonalIntegrator(TridiagonalODE& ode);
-    virtual ~TridiagonalIntegrator() {};
+    virtual ~TridiagonalIntegrator() {}
 
     // Setup
     void set_y0(const dvector& y0);

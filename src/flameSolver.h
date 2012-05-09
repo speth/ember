@@ -25,7 +25,7 @@ class FlameSolver : public GridBased
 public:
     FlameSolver();
     FlameSolver(const boost::python::api::object& config);
-    ~FlameSolver() {}
+    virtual ~FlameSolver() {}
 
     void setOptions(const configOptions& options); //!< Set options read from the configuration file
     void initialize(void); //!< call to generate profiles and perform one-time setup

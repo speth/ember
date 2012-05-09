@@ -7,6 +7,7 @@ class QSSIntegrator
 {
 public:
     QSSIntegrator();
+    virtual ~QSSIntegrator() {}
 
     //! Initialize integrator arrays (problem size of N)
     virtual void initialize(size_t N);

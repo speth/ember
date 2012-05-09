@@ -94,6 +94,7 @@ class GridBased
 {
 public:
     GridBased();
+    virtual ~GridBased() {}
 
     virtual void setGrid(const oneDimGrid& grid);
 
