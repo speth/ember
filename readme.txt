@@ -5,12 +5,12 @@ with the following installed:
    * Python (>=2.6)
    * Boost
    * SCons
+   * Eigen (>=3.0)
    * Cantera (>= 2.0)
    * Sundials (2.4)
    * HDF5 (>= 1.8.0)
    * Doxygen (optional)
    * doxypy (optional, see step 0a)
-   * UnitTest++ (optional, see step 0b)
 
 0a. Installing Doxypy:
 
@@ -18,13 +18,6 @@ with the following installed:
     $ git clone https://github.com/0xCAFEBABE/doxypy.git
     $ cd doxypy/src
     $ python setup.py install --user
-
-0b. Installing UnitTest++
-
-    $ cd ~/src
-    $ svn co https://unittest-cpp.svn.sourceforge.net/svnroot/unittest-cpp/UnitTest++ UnitTest++
-    $ cd UnitTest++
-    $ make all
 
 1. The 1dflameV2 code is stored in a Git repository on Pharos. To
 check out a copy of the code, run:
