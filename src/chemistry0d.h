@@ -14,7 +14,6 @@
 #include "mathUtils.h"
 #include "readConfig.h"
 
-#ifdef CANTERA_EXTENDED_TRANSPORT
 class ApproxMixTransport : public Cantera::MixTransport
 {
 public:
@@ -35,7 +34,6 @@ private:
     double _threshold;
     vector<size_t> _kMajor; // indices of the species where X[k] >= threshold
 };
-#endif
 
 class CanteraGas
 {
@@ -110,7 +108,7 @@ private:
     Cantera::XML_Node* phaseXmlNode;
 
     Cantera::GasKinetics* kinetics;
-    Cantera::Transport* transport;
+    Cantera::GasTransport* transport;
 
     dmatrix Dbin; // binary diffusion coefficients for species k
     dvector X; // mole fractions

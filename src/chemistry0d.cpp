@@ -5,7 +5,6 @@
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
 
-#ifdef CANTERA_EXTENDED_TRANSPORT
 ApproxMixTransport::ApproxMixTransport(Cantera::ThermoPhase& thermo,
                                        Cantera::TransportFactory& factory)
     : _threshold(0.0)
@@ -26,7 +25,7 @@ double ApproxMixTransport::viscosity()
     update_T();
     update_C();
 
-    if (m_viscmix_ok) {
+    if (m_visc_ok) {
         return m_viscmix;
     }
 
@@ -47,6 +46,7 @@ double ApproxMixTransport::viscosity()
         vismix += m_molefracs[k]*m_visc[k] / sum;
     }
 
+    m_visc_ok = true;
     m_viscmix = vismix;
     return vismix;
 }
@@ -61,26 +61,25 @@ void ApproxMixTransport::getMixDiffCoeffs(double* const d)
         updateDiff_T();
     }
 
-    int k, j;
     double mmw = m_thermo->meanMolecularWeight();
     double sumxw = 0.0, sum2;
-    double p = pressure_ig();
+    double p = m_thermo->pressure();
     if (m_nsp == 1) {
         d[0] = m_bdiff(0,0) / p;
     } else {
-        for (k = 0; k < m_nsp; k++) {
+        for (size_t k = 0; k < m_nsp; k++) {
             sumxw += m_molefracs[k] * m_mw[k];
         }
-        for (k = 0; k < m_nsp; k++) {
+        for (size_t k = 0; k < m_nsp; k++) {
             sum2 = 0.0;
             if (m_molefracs[k] >= _threshold) {
-                for (j = 0; j < m_nsp; j++) {
+                for (size_t j = 0; j < m_nsp; j++) {
                     if (j != k) {
                         sum2 += m_molefracs[j] / m_bdiff(j,k);
                     }
                 }
             } else {
-                foreach (j, _kMajor) {
+                foreach (size_t j, _kMajor) {
                     if (j != k) {
                         sum2 += m_molefracs[j] / m_bdiff(j,k);
                     }
@@ -107,16 +106,16 @@ void ApproxMixTransport::getMixDiffCoeffsMass(double* const d)
     }
 
     double mmw = m_thermo->meanMolecularWeight();
-    double p = pressure_ig();
+    double p = m_thermo->pressure();
 
     if (m_nsp == 1) {
         d[0] = m_bdiff(0,0) / p;
     } else {
-        for (int k=0; k<m_nsp; k++) {
+        for (size_t k=0; k<m_nsp; k++) {
             double sum1 = 0;
             double sum2 = 0;
             if (m_molefracs[k] >= _threshold) {
-                for (int i=0; i<m_nsp; i++) {
+                for (size_t i=0; i<m_nsp; i++) {
                     if (i==k) {
                         continue;
                     }
@@ -124,7 +123,7 @@ void ApproxMixTransport::getMixDiffCoeffsMass(double* const d)
                     sum2 += m_molefracs[i] * m_mw[i] / m_bdiff(k,i);
                 }
             } else {
-                foreach (int i, _kMajor) {
+                foreach (size_t i, _kMajor) {
                     if (i==k) {
                         continue;
                     }
@@ -150,20 +149,20 @@ void ApproxMixTransport::getMixDiffCoeffsMole(double* const d)
     }
 
     doublereal sum2;
-    doublereal p = pressure_ig();
+    doublereal p = m_thermo->pressure();
     if (m_nsp == 1) {
         d[0] = m_bdiff(0,0) / p;
     } else {
-        for (int k = 0; k < m_nsp; k++) {
+        for (size_t k = 0; k < m_nsp; k++) {
             sum2 = 0.0;
             if (m_molefracs[k] > _threshold) {
-                for (int j = 0; j < m_nsp; j++) {
+                for (size_t j = 0; j < m_nsp; j++) {
                     if (j != k) {
                         sum2 += m_molefracs[j] / m_bdiff(j,k);
                     }
                 }
             } else {
-                foreach (int j, _kMajor) {
+                foreach (size_t j, _kMajor) {
                     if (j != k) {
                         sum2 += m_molefracs[j] / m_bdiff(j,k);
                     }
@@ -212,20 +211,20 @@ void ApproxMixTransport::updateDiff_T()
     // the specified threshold.
     if (m_mode == Cantera::CK_Mode) {
         for (size_t ij=0; ij<_kMajor.size(); ij++) {
-            int j = _kMajor[ij];
-            for (int k=0; k<m_nsp; k++) {
-                int ic = (k > j) ? m_nsp*j - (j-1)*j/2 + k - j
-                                 : m_nsp*k - (k-1)*k/2 + j - k;
+            size_t j = _kMajor[ij];
+            for (size_t k=0; k<m_nsp; k++) {
+                size_t ic = (k > j) ? m_nsp*j - (j-1)*j/2 + k - j
+                                    : m_nsp*k - (k-1)*k/2 + j - k;
                 m_bdiff(j,k) = exp(Cantera::dot4(m_polytempvec, m_diffcoeffs[ic]));
                 m_bdiff(k,j) = m_bdiff(j,k);
             }
         }
     } else {
         for (size_t ij=0; ij<_kMajor.size(); ij++) {
-            int j = _kMajor[ij];
-            for (int k=0; k<m_nsp; k++) {
-                int ic = (k > j) ? m_nsp*j - (j-1)*j/2 + k - j
-                                 : m_nsp*k - (k-1)*k/2 + j - k;
+            size_t j = _kMajor[ij];
+            for (size_t k=0; k<m_nsp; k++) {
+                size_t ic = (k > j) ? m_nsp*j - (j-1)*j/2 + k - j
+                                    : m_nsp*k - (k-1)*k/2 + j - k;
                 m_bdiff(j,k) = m_temp * m_sqrt_t*Cantera::dot5(m_polytempvec, m_diffcoeffs[ic]);
                 m_bdiff(k,j) = m_bdiff(j,k);
             }
@@ -233,7 +232,6 @@ void ApproxMixTransport::updateDiff_T()
     }
 
     m_bindiff_ok = true;
-    m_diffmix_ok = false;
 }
 
 void ApproxMixTransport::update_C()
@@ -241,13 +239,12 @@ void ApproxMixTransport::update_C()
     MixTransport::update_C();
 
     _kMajor.clear();
-    for (int k=0; k<m_nsp; k++) {
+    for (size_t k=0; k<m_nsp; k++) {
         if (m_molefracs[k] >= _threshold) {
             _kMajor.push_back(k);
         }
     }
 }
-#endif
 
 CanteraGas::CanteraGas()
     : rootXmlNode(NULL)
@@ -309,15 +306,15 @@ void CanteraGas::initialize()
     // Initialize the default transport properties object
     Cantera::TransportFactory* transFac = Cantera::TransportFactory::factory();
     if (transportModel == "Multi") {
-        transport = transFac->newTransport("Multi",&thermo);
+        transport = dynamic_cast<Cantera::GasTransport*>(
+            transFac->newTransport("Multi",&thermo));
     } else if (transportModel == "Mix") {
-        transport = transFac->newTransport("Mix",&thermo);
-#ifdef CANTERA_EXTENDED_TRANSPORT
+        transport = dynamic_cast<Cantera::GasTransport*>(
+            transFac->newTransport("Mix",&thermo));
     } else if (transportModel == "Approx") {
         ApproxMixTransport* atran = new ApproxMixTransport(thermo, *transFac);
         atran->setThreshold(transportThreshold);
         transport = atran;
-#endif
     } else {
         throw debugException("Error: Invalid transport model specified.");
     }
@@ -325,8 +322,7 @@ void CanteraGas::initialize()
     transFac->deleteFactory();
 
     nSpec = thermo.nSpecies();
-    Dbin.resize(nSpec,nSpec);
-    Dbin.setZero();
+    Dbin.setZero(nSpec,nSpec);
     X.resize(nSpec,0);
     Y.resize(nSpec,0);
 }
@@ -439,33 +435,10 @@ void CanteraGas::getWeightedDiffusionCoefficientsMass(double* rhoD)
 {
     double rho = thermo.density();
 
-#ifdef CANTERA_EXTENDED_TRANSPORT
     transport->getMixDiffCoeffsMass(rhoD);
     for (size_t k=0; k<nSpec; k++) {
         rhoD[k] *= rho;
     }
-#else
-    thermo.getMassFractions(&Y[0]);
-    thermo.getMoleFractions(&X[0]);
-    transport->getBinaryDiffCoeffs(nSpec, &Dbin(0,0));
-    double Keps = 1e-14;
-    double eps = Keps/Y.size(); // Avoid 0/0 as Y[k] -> 1
-
-    // See Kee, p. 528, Eq. 12.178
-    for (size_t k=0; k<nSpec; k++) {
-        double sum1 = 0;
-        double sum2 = 0;
-
-        for (size_t i=0; i<nSpec; i++) {
-            if (i==k) {
-                continue;
-            }
-            sum1 += X[i]/Dbin(k,i);
-            sum2 += (Y[i]+eps)/Dbin(k,i);
-        }
-        rhoD[k] = rho/(sum1 + X[k]/(1+Keps-Y[k])*sum2);
-    }
-#endif
 }
 
 void CanteraGas::getWeightedDiffusionCoefficientsMass(dvector& rhoD)
