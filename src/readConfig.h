@@ -121,6 +121,12 @@ public:
     double strainRateInitial, strainRateFinal;
     double strainRateDt, strainRateT0;
 
+    //! If false, energy, continuity, and momentum equations are integrated
+    //! normally. If true, then time is actually a surrogate for a spatial
+    //! variable and temperature velocity fields are interpolated from a
+    //! supplied data file.
+    bool quasi2d;
+
     // Wall Flux properties
     bool wallFlux; //<! True if wall flux is applied when x[0] == 0
     double Tinf; //<! Temperature used for computing wall heat flux

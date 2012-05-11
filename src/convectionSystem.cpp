@@ -329,7 +329,11 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
         } else {
             dYdx = (y[i] - y[i-1]) / hh[j-1];
         }
-        ydot[i] = -v[i] * dYdx  + splitConst[i];
+        if (quasi2d) {
+            ydot[i] = -vrInterp->get(x[j], t) * dYdx / vzInterp->get(x[j], t) + splitConst[i];
+        } else {
+            ydot[i] = -v[i] * dYdx  + splitConst[i];
+        }
         i++;
     }
 
@@ -340,7 +344,11 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
         ydot[i] = splitConst[i];
     } else {
         // outflow boundary condition
-        ydot[i] = splitConst[i] - v[i] * (y[i]-y[i-1])/hh[i-1];
+        if (quasi2d) {
+            ydot[i] = splitConst[i] - vrInterp->get(x[stopIndex], t) * (y[i]-y[i-1])/hh[i-1] / vzInterp->get(x[stopIndex], t);
+        } else {
+            ydot[i] = splitConst[i] - v[i] * (y[i]-y[i-1])/hh[i-1]; //! @todo check index on hh term
+        }
     }
 
     return 0;
@@ -404,6 +412,7 @@ ConvectionSystemSplit::ConvectionSystemSplit()
     , startIndices(NULL)
     , stopIndices(NULL)
     , gas(NULL)
+    , quasi2d(false)
 {
 }
 
@@ -619,29 +628,31 @@ void ConvectionSystemSplit::setSplitConstants(const dvector& splitConstU,
 
 void ConvectionSystemSplit::integrateToTime(const double tf)
 {
-    // Integrate the UTW system while storing the value of v after each timestep
-    utwTimer.start();
-    vInterp->clear();
+    if (!quasi2d) {
+        // Integrate the UTW system while storing the value of v after each timestep
+        utwTimer.start();
+        vInterp->clear();
 
-    sdVector ydotUTW(nVars*nPoints);
-    utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
-    vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
-
-    int cvode_flag = CV_SUCCESS;
-    int i = 0;
-
-    if (debugParameters::veryVerbose) {
-        logFile.write("UTW...", false);
-    }
-
-    // CVODE returns CV_TSTOP_RETURN when the solver has reached tf
-    while (cvode_flag != CV_TSTOP_RETURN) {
-        cvode_flag = utwSolver->integrateOneStep(tf);
-        i++;
+        sdVector ydotUTW(nVars*nPoints);
+        utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
         vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
-    }
 
-    utwTimer.stop();
+        int cvode_flag = CV_SUCCESS;
+        int i = 0;
+
+        if (debugParameters::veryVerbose) {
+            logFile.write("UTW...", false);
+        }
+
+        // CVODE returns CV_TSTOP_RETURN when the solver has reached tf
+        while (cvode_flag != CV_TSTOP_RETURN) {
+            cvode_flag = utwSolver->integrateOneStep(tf);
+            i++;
+            vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
+        }
+
+        utwTimer.stop();
+    }
 
     speciesTimer.start();
     if (debugParameters::veryVerbose) {
@@ -678,6 +689,18 @@ void ConvectionSystemSplit::unroll_y()
             Y(k,j) = speciesSolvers[k].y[i];
             i++;
         }
+    }
+}
+
+void ConvectionSystemSplit::setupQuasi2D
+(boost::shared_ptr<BilinearInterpolator>& vzInterp,
+ boost::shared_ptr<BilinearInterpolator>& vrInterp)
+{
+    quasi2d = true;
+    for (size_t k=0; k<nSpec; k++) {
+        speciesSystems[k].vzInterp = vzInterp;
+        speciesSystems[k].vrInterp = vrInterp;
+        speciesSystems[k].quasi2d = true;
     }
 }
 

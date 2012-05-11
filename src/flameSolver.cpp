@@ -231,30 +231,58 @@ void FlameSolver::run(void)
         }
         setupTimer.stop();
 
-        // Diffusion solvers: Energy and momentum
         splitTimer.start();
-        for (size_t j=0; j<nPoints; j++) {
-            diffusionTerms[kMomentum].B[j] = 1 / rho[j];
-            diffusionTerms[kEnergy].B[j] = 1 / (rho[j] * cp[j]);
+        if (!options.quasi2d) {
+            // Diffusion solvers: Energy and momentum
+            for (size_t j=0; j<nPoints; j++) {
+                diffusionTerms[kMomentum].B[j] = 1 / rho[j];
+                diffusionTerms[kEnergy].B[j] = 1 / (rho[j] * cp[j]);
 
-            diffusionTerms[kMomentum].D[j] = mu[j];
-            diffusionTerms[kEnergy].D[j] = lambda[j];
-        }
+                diffusionTerms[kMomentum].D[j] = mu[j];
+                diffusionTerms[kEnergy].D[j] = lambda[j];
+            }
 
-        // Diffusion solvers: Species
-        for (size_t k=0; k<nSpec; k++) {
-            DiffusionSystem& sys = diffusionTerms[kSpecies+k];
-            size_t i = 0;
-            sys.jLeft = diffusionStartIndices[k];
-            sys.jRight = diffusionStopIndices[k];
+            // Diffusion solvers: Species
+            for (size_t k=0; k<nSpec; k++) {
+                DiffusionSystem& sys = diffusionTerms[kSpecies+k];
+                size_t i = 0;
+                sys.jLeft = diffusionStartIndices[k];
+                sys.jRight = diffusionStopIndices[k];
 
-            for (size_t j = diffusionStartIndices[k];
-                 j <= diffusionStopIndices[k];
-                 j++)
-            {
-                sys.B[i] = 1 / rho[j];
-                sys.D[i] = rhoD(k,j);
-                i++;
+                for (size_t j = diffusionStartIndices[k];
+                     j <= diffusionStopIndices[k];
+                     j++)
+                {
+                    sys.B[i] = 1 / rho[j];
+                    sys.D[i] = rhoD(k,j);
+                    i++;
+                }
+            }
+        } else {
+            // Diffusion solvers: Energy and momentum
+            for (size_t j=0; j<nPoints; j++) {
+                diffusionTerms[kMomentum].B[j] = 0;
+                diffusionTerms[kEnergy].B[j] = 0;
+
+                diffusionTerms[kMomentum].D[j] = 0;
+                diffusionTerms[kEnergy].D[j] = 0;
+            }
+
+            // Diffusion solvers: Species
+            for (size_t k=0; k<nSpec; k++) {
+                DiffusionSystem& sys = diffusionTerms[kSpecies+k];
+                size_t i = 0;
+                sys.jLeft = diffusionStartIndices[k];
+                sys.jRight = diffusionStopIndices[k];
+
+                for (size_t j = diffusionStartIndices[k];
+                     j <= diffusionStopIndices[k];
+                     j++)
+                {
+                    sys.B[i] = 1 / (rho[j] * vzInterp->get(x[j], tNow));
+                    sys.D[i] = rhoD(k,j);
+                    i++;
+                }
             }
         }
         splitTimer.stop();
@@ -744,6 +772,9 @@ void FlameSolver::resizeAuxiliary()
             system->W = W;
             system->j = j;
             system->x = x[j];
+            if (options.quasi2d) {
+                system->setupQuasi2d(vzInterp, TInterp);
+            }
 
             // Create and initialize the new Sundials solver
             sundialsCVODE* solver = new sundialsCVODE(nVars);
@@ -813,6 +844,9 @@ void FlameSolver::resizeAuxiliary()
     convectionSystem.resize(nPoints, nPointsConvection, nSpec);
     convectionSystem.setLeftBC(Tleft, Yleft);
     convectionSystem.setGrid(grid);
+    if (options.quasi2d) {
+        convectionSystem.setupQuasi2D(vzInterp, vrInterp);
+    }
 
     // Resize the jCorr stabilizer
     jCorrSolver.resize(nPoints, 1, 1);
@@ -878,7 +912,9 @@ void FlameSolver::updateCrossTerms()
                 (jFick(k,j) + jSoret(k,j) + 0.5 * (Y(k,j) + Y(k,j+1)) * jCorr[j]);
         }
         double dTdx = cfm[j] * T[j-1] + cf[j] * T[j] + cfp[j] * T[j+1];
-        dTdtCross[j] = - 0.5 * (sumcpj[j] + sumcpj[j-1]) * dTdx / (cp[j] * rho[j]);
+        if (!options.quasi2d) {
+            dTdtCross[j] = - 0.5 * (sumcpj[j] + sumcpj[j-1]) * dTdx / (cp[j] * rho[j]);
+        }
     }
 
     assert(mathUtils::notnan(dYdtCross));
@@ -1251,7 +1287,7 @@ void FlameSolver::extractProductionState(double dt)
     splitTimer.resume();
     for (size_t j=0; j<nPoints; j++) {
         if (useCVODE[j]) {
-            sourceTerms[j].unroll_y(sourceSolvers[j].y);
+            sourceTerms[j].unroll_y(sourceSolvers[j].y, tNow);
             U[j] = sourceTerms[j].U;
             T[j] = sourceTerms[j].T;
             for (size_t k=0; k<nSpec; k++) {

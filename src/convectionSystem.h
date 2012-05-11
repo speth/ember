@@ -6,6 +6,7 @@
 #include "grid.h"
 #include "chemistry0d.h"
 #include "perfTimer.h"
+#include "quasi2d.h"
 
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -76,7 +77,7 @@ class ConvectionSystemY : public sdODE, public GridBased
     // System representing the convection equation for a single species
     // with a prescribed velocity field V
 public:
-    ConvectionSystemY() {}
+    ConvectionSystemY() : quasi2d(false) {}
 
     // The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
@@ -92,6 +93,11 @@ public:
     size_t stopIndex;
 
     boost::shared_ptr<vecInterpolator> vInterp; // axial (normal) velocity [m/s] at various times
+
+    //! Interpolators for the quasi-2d problem
+    boost::shared_ptr<BilinearInterpolator> vzInterp;
+    boost::shared_ptr<BilinearInterpolator> vrInterp;
+    bool quasi2d;
 
 private:
     void update_v(const double t);
@@ -131,6 +137,8 @@ public:
     void integrateToTime(const double tf);
     void unroll_y(); // convert the solver's solution vectors to the full U, Y, and T
     int getNumSteps();
+    void setupQuasi2D(boost::shared_ptr<BilinearInterpolator>& vzInterp,
+                      boost::shared_ptr<BilinearInterpolator>& vrInterp);
 
     dvector U;
     dvector T;
@@ -177,4 +185,6 @@ private:
     vector<size_t>* stopIndices; // index of rightmost grid point for each component (U,T,Yk)
 
     CanteraGas* gas;
+
+    bool quasi2d;
 };

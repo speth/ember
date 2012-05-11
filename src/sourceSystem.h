@@ -6,6 +6,7 @@
 #include "strainFunction.h"
 #include "perfTimer.h"
 #include "qssintegrator.h"
+#include "quasi2d.h"
 
 #include <boost/shared_ptr.hpp>
 
@@ -24,13 +25,15 @@ public:
     // A simpler finite difference based Jacobian
     int fdJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J);
 
-    void unroll_y(const sdVector& y); // fill in current state variables from sdvector
+    void unroll_y(const sdVector& y, double t); // fill in current state variables from sdvector
     void roll_y(sdVector& y) const; // fill in sdvector with current state variables
     void roll_ydot(sdVector& ydot) const; // fill in sdvector with current time derivatives
 
     // Setup functions
     void resize(size_t nSpec);
     void resetSplitConstants();
+    void setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
+                      boost::shared_ptr<BilinearInterpolator> TInterp);
 
     void writeJacobian(sundialsCVODE& solver, std::ostream& out);
     void writeState(sundialsCVODE& solver, std::ostream& out, bool init);
@@ -76,7 +79,9 @@ private:
     dvector cpSpec; // species specific heat capacity [J/mol*K]
     double Wmx; // mixture molecular weight [kg/mol]
     dvector hk; // species enthalpies [J/kmol]
-
+    bool quasi2d;
+    boost::shared_ptr<BilinearInterpolator> vzInterp_;
+    boost::shared_ptr<BilinearInterpolator> TInterp_;
 };
 
 
@@ -99,6 +104,7 @@ public:
     void setOptions(configOptions& options);
 
     void resetSplitConstants();
+
 
     void writeState(std::ostream& out, bool init);
 

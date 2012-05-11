@@ -8,6 +8,7 @@ SourceSystem::SourceSystem()
     , T(NaN)
     , updateDiagonalJac(false)
     , gas(NULL)
+    , quasi2d(false)
 {
 }
 
@@ -28,9 +29,17 @@ void SourceSystem::resetSplitConstants()
     splitConst.assign(splitConst.size(), 0);
 }
 
+void SourceSystem::setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
+                                boost::shared_ptr<BilinearInterpolator> TInterp)
+{
+    quasi2d = true;
+    vzInterp_ = vzInterp;
+    TInterp_ = TInterp;
+}
+
 int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
 {
-    unroll_y(y);
+    unroll_y(y, t);
 
     // *** Update auxiliary data ***
     reactionRatesTimer->start();
@@ -59,10 +68,16 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     double dadt = strainFunction.dadt(t);
 
     // *** Calculate the time derivatives
-    dUdt = - U*U + rhou/rho*(dadt + a*a) + splitConst[kMomentum];
-    dTdt = qDot/(rho*cp) + splitConst[kEnergy];
+    if (!quasi2d) {
+        dUdt = - U*U + rhou/rho*(dadt + a*a) + splitConst[kMomentum];
+        dTdt = qDot/(rho*cp) + splitConst[kEnergy];
+    } else {
+        dUdt = splitConst[kMomentum];
+        dTdt = splitConst[kEnergy];
+    }
+    double scale = (quasi2d) ? 1.0/vzInterp_->get(x, t) : 1.0;
     for (size_t k=0; k<nSpec; k++) {
-        dYdt[k] = wDot[k]*W[k]/rho + splitConst[kSpecies+k];
+        dYdt[k] = scale*wDot[k]*W[k]/rho + splitConst[kSpecies+k];
     }
 
     roll_ydot(ydot);
@@ -117,6 +132,8 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     dvector YplusdY(nSpec);
     dvector drhodY(nSpec);
 
+    double scale = (quasi2d) ? 1.0/vzInterp_->get(x, t) : 1.0;
+
     for (size_t k=0; k<nSpec; k++) {
         YplusdY[k] = (abs(Y[k]) > eps/2) ? Y[k]*(1+eps) : eps;
         reactionRatesTimer->start();
@@ -135,26 +152,30 @@ int SourceSystem::denseJacobian(const realtype t, const sdVector& y, const sdVec
     for (size_t k=0; k<nSpec; k++) {
         for (size_t i=0; i<nSpec; i++) {
             // dSpecies/dY
-            J(kSpecies+k, kSpecies+i) = dwdY(k,i)*W[k]/rho - wDot[k]*W[k]*drhodY[i]/(rho*rho);
+            J(kSpecies+k, kSpecies+i) = scale * (dwdY(k,i)*W[k]/rho - wDot[k]*W[k]*drhodY[i]/(rho*rho));
         }
-        // dSpecies/dT
-        J(kSpecies+k, kEnergy) = dwdT[k]*W[k]/rho - wDot[k]*W[k]*drhodT/(rho*rho);
+        if (!quasi2d) {
+            // dSpecies/dT
+            J(kSpecies+k, kEnergy) = dwdT[k]*W[k]/rho - wDot[k]*W[k]*drhodT/(rho*rho);
 
-        // dEnergy/dY
-        J(kEnergy, kSpecies+k) = -hdwdY[k]/(rho*cp) - qDot*drhodY[k]/(rho*rho*cp);
+            // dEnergy/dY
+            J(kEnergy, kSpecies+k) = -hdwdY[k]/(rho*cp) - qDot*drhodY[k]/(rho*rho*cp);
 
-        // dMomentum/dY
-        J(kMomentum, kSpecies+k) = -A*drhodY[k]/(rho*rho);
+            // dMomentum/dY
+            J(kMomentum, kSpecies+k) = -A*drhodY[k]/(rho*rho);
+        }
     }
 
-    // dEnergy/dT
-    J(kEnergy, kEnergy) = -dwhdT/(rho*cp) - qDot*drhodT/(rho*rho*cp);
+    if (!quasi2d) {
+        // dEnergy/dT
+        J(kEnergy, kEnergy) = -dwhdT/(rho*cp) - qDot*drhodT/(rho*rho*cp);
 
-    // dMomentum/dU
-    J(kMomentum, kMomentum) = -2*U;
+        // dMomentum/dU
+        J(kMomentum, kMomentum) = -2*U;
 
-    // dMomentum/dT
-    J(kMomentum, kEnergy) = -A*drhodT/(rho*rho);
+        // dMomentum/dT
+        J(kMomentum, kEnergy) = -A*drhodT/(rho*rho);
+    }
 
     return 0;
 }
@@ -191,10 +212,15 @@ int SourceSystem::fdJacobian(const realtype t, const sdVector& y, const sdVector
     return 0;
 }
 
-void SourceSystem::unroll_y(const sdVector& y)
+void SourceSystem::unroll_y(const sdVector& y, double t)
 {
-    T = y[kEnergy];
-    U = y[kMomentum];
+    if (!quasi2d) {
+        T = y[kEnergy];
+        U = y[kMomentum];
+    } else {
+        T = TInterp_->get(x, t);
+        U = 0;
+    }
     for (size_t k=0; k<nSpec; k++) {
         Y[k] = y[kSpecies+k];
     }

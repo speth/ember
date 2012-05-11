@@ -111,6 +111,9 @@ configOptions::configOptions(const boost::python::object& conf)
         Kwall = 0;
     }
 
+    // Quasi-2D problem
+    quasi2d = false;
+
     overrideTu = readOption(ic, "Tu", Tu);
     overrideReactants = readOption(ic, "fuel", fuel);
     readOption(ic, "flameType", flameType);

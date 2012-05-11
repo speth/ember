@@ -15,6 +15,7 @@
 #include "diffusionSystem.h"
 #include "convectionSystem.h"
 #include "strainFunction.h"
+#include "quasi2d.h"
 
 using std::string;
 
@@ -228,6 +229,9 @@ private:
     void printPerfString(const std::string& label, const PerfTimer& T);
 
     void updateTransportDomain();
+
+    //! Data for solving quasi-2D method-of-lines problems
+    boost::shared_ptr<BilinearInterpolator> vzInterp, vrInterp, TInterp;
 
     std::ofstream statsFile;
 
