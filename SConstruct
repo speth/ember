@@ -2,9 +2,9 @@ import os
 import platform
 from distutils.sysconfig import get_config_var
 
-VariantDir('src/build','src', duplicate=0)
-VariantDir('test/build','test', duplicate=0)
-VariantDir('python/build','python', duplicate=0)
+VariantDir('build/core','src', duplicate=0)
+VariantDir('build/test','test', duplicate=0)
+VariantDir('build/python','src/python', duplicate=0)
 
 mode = ARGUMENTS.get('mode','release')
 assert mode in ('release', 'debug'), mode
@@ -157,15 +157,15 @@ tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
 if tests['CanteraExtendedTransport']:
     env.Append(CPPDEFINES=['CANTERA_EXTENDED_TRANSPORT'])
 
-common = [f for f in Glob('src/build/*.cpp')
+common = [f for f in Glob('build/core/*.cpp')
           if 'strainedFlame.cpp' not in f.name]
 
 # The Python module
 pyenv = env.Clone()
 
 env.Alias('pylib',
-          pyenv.SharedLibrary('lib/_pyro',
-                              common + Glob('python/build/*.cpp'),
+          pyenv.SharedLibrary('python/pyro/_pyro',
+                              common + Glob('build/python/*.cpp'),
                               SHLIBPREFIX='',
                               SHLIBSUFFIX=get_config_var('SO')))
 
@@ -180,7 +180,7 @@ if os.name == 'nt':
     testenv.Append(LIBPATH=get_config_var('LIBDEST'))
 
 test_program = testenv.Program('bin/unittest',
-                               Glob('test/build/*.cpp'))
+                               Glob('build/test/*.cpp'))
 test_alias = testenv.Alias('test', [test_program], test_program[0].abspath)
 # AlwaysBuild(test_alias)
 

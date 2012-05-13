@@ -1,6 +1,6 @@
 #include <boost/python.hpp>
 
-#include "../src/flameSolver.h"
+#include "../flameSolver.h"
 
 using namespace boost::python;
 

@@ -20,3 +20,4 @@ config.log
 *.lib
 *.exp
 *.manifest
+*.pyd

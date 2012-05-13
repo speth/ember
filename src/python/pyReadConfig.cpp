@@ -1,6 +1,6 @@
 #include <boost/python.hpp>
 
-#include "../src/readConfig.h"
+#include "../readConfig.h"
 
 using namespace boost::python;
 
