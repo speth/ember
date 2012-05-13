@@ -28,6 +28,11 @@ if os.name == 'nt':
     elif pycomp.startswith('MSC v.1600'):
         extraEnvArgs['MSVC_VERSION'] = '10.0' # Visual Studio 2010
 
+    if '64 bit' in pycomp:
+        extraEnvArgs['TARGET_ARCH'] = 'amd64'
+    else:
+        extraEnvArgs['TARGET_ARCH'] = 'x86'
+
 env = Environment(**extraEnvArgs)
 
 opts = Variables('pyro.conf')
@@ -68,6 +73,9 @@ opts.AddVariables(
         'hdf5_libs',
         'Location of the HDF5 library files',
         '/usr/lib', PathVariable.PathIsDir),
+    ('blas_lapack',
+     'Comma-separated list of libraries to include for BLAS/LAPACK support',
+     'blas,lapack')
     )
 
 
@@ -76,7 +84,12 @@ opts.Save('pyro.conf', env)
 
 cantera = ['cantera']
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
-lastlibs = 'hdf5 blas lapack'.split()
+if os.name == 'nt':
+    hdf5 = ['hdf5','libzlib', 'libszip']
+else:
+    hdf5 = ['hdf5']
+
+lastlibs = hdf5 + env['blas_lapack'].split(',')
 
 env.Append(CPPPATH=[env['cantera_include'],
                     env['sundials_include'],
@@ -103,10 +116,12 @@ if env['CC'] == 'gcc':
 
 elif env['CC'] == 'cl':
     common_flags = ['/nologo', '/Zi', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc']
-    common_defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS']
+    common_defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS',
+                      'BOOST_ALL_DYN_LINK']
     if mode == 'debug':
         env.Append(CXXFLAGS=common_flags + ['/Od', '/Ob0', '/MD'],
-                   CPPDEFINES=common_defines)
+                   CPPDEFINES=common_defines,
+                   LINKFLAGS='/DEBUG')
     else:
         env.Append(CXXFLAGS=common_flags + ['/O2', '/MD'],
                    CPPDEFINES=['NDEBUG'] + common_defines)

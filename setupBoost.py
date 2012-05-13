@@ -20,7 +20,7 @@ def main(boost_dir):
     print 'This is Python %s' % platform.python_version()
     print 'Compiled with %s' % platform.python_compiler()
     print 'Architecture: %s' % platform.architecture()[0]
-    buildlibs = ['python', 'filesystem'] # 'thread', 'date_time'
+    buildlibs = ['python', 'filesystem', 'system'] # 'thread', 'date_time'
 
     pycomp = platform.python_compiler()
     if pycomp.startswith('MSC v.1400'):
