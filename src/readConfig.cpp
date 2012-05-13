@@ -9,22 +9,66 @@ const size_t kEnergy = 1;
 const size_t kSpecies = 2;
 const size_t kWmx = 2; // never used in the same systems as kSpecies
 
+namespace bp = boost::python;
+
 template <class T1>
-bool configOptions::readOption(const boost::python::object& conf, const char* name, T1& value)
+bool configOptions::readOption(const bp::object& conf, const char* name, T1& value)
 {
-    const boost::python::object& obj = conf.attr(name);
+    const bp::object& obj = conf.attr(name);
     if (obj.ptr() != Py_None) {
-        value = boost::python::extract<T1>(obj);
+        value = bp::extract<T1>(obj);
         return true;
     } else {
         return false;
     }
 }
 
-configOptions::configOptions(const boost::python::object& conf)
+// Read 1D array (list, numpy array, etc.) into a vector
+template <>
+bool configOptions::readOption(const bp::object& conf,
+                               const char* name, dvector& value)
 {
-    using boost::python::extract;
-    using boost::python::object;
+    const bp::object& obj = conf.attr(name);
+    if (obj.ptr() != Py_None) {
+        int N = bp::len(obj);
+        value.resize(N);
+        for (int i=0; i<N; i++) {
+            value[i] = bp::extract<double>(obj[i]);
+        }
+        std::cout << value << std::endl;
+        std::terminate();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+// Read 2D Numpy array into an Eigen matrix
+template <>
+bool configOptions::readOption(const bp::object& conf,
+                               const char* name, dmatrix& value)
+{
+    const bp::object& obj = conf.attr(name);
+    if (obj.ptr() != Py_None) {
+        int N = bp::extract<int>(obj.attr("shape")[0]);
+        int M = bp::extract<int>(obj.attr("shape")[1]);
+        value.resize(N,M);
+        for (int i=0; i<N; i++) {
+            for (int j=0; j<M; j++) {
+                value(i,j) = bp::extract<double>(obj[bp::make_tuple(i,j)]);
+            }
+        }
+        std::cout << value << std::endl;
+        std::terminate();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+configOptions::configOptions(const bp::object& conf)
+{
+    using bp::object;
     using std::string;
 
     object None;
