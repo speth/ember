@@ -289,7 +289,7 @@ dvector mathUtils::interp1(const dvector& xIn, const dvector& yIn, const dvector
         if (j == -1) {
             j = 0;
         } else if (j == -2) {
-            j = nIn-1;
+            j = nIn-2;
         }
         yOut[i] = yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut[i]-xIn[j]);
     }
@@ -309,7 +309,7 @@ double mathUtils::interp1(const dvector& xIn, const dvector& yIn, const double x
     if (j == -1) {
         j = 0;
     } else if (j == -2) {
-        j = nIn-1;
+        j = nIn-2;
     }
     return yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut-xIn[j]);
 }
