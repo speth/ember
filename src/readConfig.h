@@ -121,11 +121,20 @@ public:
     double strainRateInitial, strainRateFinal;
     double strainRateDt, strainRateT0;
 
+    // Initial profiles specified in configuration file
+    bool haveInitialProfiles;
+    dvector x_initial;
+    dvector T_initial;
+    dvector U_initial;
+    dmatrix Y_initial;
+    double rVzero_initial;
+
     //! If false, energy, continuity, and momentum equations are integrated
     //! normally. If true, then time is actually a surrogate for a spatial
     //! variable and temperature velocity fields are interpolated from a
     //! supplied data file.
     bool quasi2d;
+    std::string interpFile; //!< data file containing 2D interpolation data
 
     // Wall Flux properties
     bool wallFlux; //<! True if wall flux is applied when x[0] == 0

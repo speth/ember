@@ -35,8 +35,24 @@ bool configOptions::readOption(const bp::object& conf,
         for (int i=0; i<N; i++) {
             value[i] = bp::extract<double>(obj[i]);
         }
-        std::cout << value << std::endl;
-        std::terminate();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+// Read 1D array (list, numpy array, etc.) into an  Eigen vector
+template <>
+bool configOptions::readOption(const bp::object& conf,
+                               const char* name, dvec& value)
+{
+    const bp::object& obj = conf.attr(name);
+    if (obj.ptr() != Py_None) {
+        int N = bp::len(obj);
+        value.resize(N);
+        for (int i=0; i<N; i++) {
+            value[i] = bp::extract<double>(obj[i]);
+        }
         return true;
     } else {
         return false;
@@ -58,8 +74,6 @@ bool configOptions::readOption(const bp::object& conf,
                 value(i,j) = bp::extract<double>(obj[bp::make_tuple(i,j)]);
             }
         }
-        std::cout << value << std::endl;
-        std::terminate();
         return true;
     } else {
         return false;
@@ -92,6 +106,12 @@ configOptions::configOptions(const bp::object& conf)
 
     readOption(general, "curvedFlame", curvedFlame);
     readOption(general, "twinFlame", twinFlame);
+
+    readOption(general, "quasi2d", quasi2d);
+    if (quasi2d) {
+        readOption(general, "interpFile", interpFile);
+    }
+
     stopIfError = readOption(general, "errorStopCount", errorStopCount);
     readOption(general, "chemistryIntegrator", chemistryIntegrator);
     readOption(general, "splittingMethod", splittingMethod);
@@ -143,6 +163,17 @@ configOptions::configOptions(const bp::object& conf)
         }
     }
 
+    // Initial Condition: full profiles
+    bool test = readOption(ic, "haveProfiles", haveInitialProfiles);
+    haveInitialProfiles = haveInitialProfiles && test;
+    if (haveInitialProfiles) {
+        readOption(ic, "x", x_initial);
+        readOption(ic, "T", T_initial);
+        readOption(ic, "U", U_initial);
+        readOption(ic, "Y", Y_initial);
+        readOption(ic, "rVzero", rVzero_initial);
+    }
+
     // Wall flux boundary condition
     const object& wall = conf.attr("wallFlux");
     if (wall != None) {
@@ -154,9 +185,6 @@ configOptions::configOptions(const bp::object& conf)
         Tinf = Tu;
         Kwall = 0;
     }
-
-    // Quasi-2D problem
-    quasi2d = false;
 
     overrideTu = readOption(ic, "Tu", Tu);
     overrideReactants = readOption(ic, "fuel", fuel);

@@ -53,10 +53,21 @@ void FlameSolver::initialize(void)
         gas.getMolecularWeights(W);
 
         // Initial Conditions
-        if (options.haveRestartFile) {
+        if (options.haveRestartFile || options.haveInitialProfiles) {
             loadProfile();
         } else {
             generateProfile();
+        }
+
+        // Interpolation data for quasi-2d problem
+        if (options.quasi2d) {
+            TInterp.reset(new BilinearInterpolator);
+            vrInterp.reset(new BilinearInterpolator);
+            vzInterp.reset(new BilinearInterpolator);
+            TInterp->open(options.interpFile, "T", "r", "z");
+            vrInterp->open(options.interpFile, "vr", "r", "z");
+            vzInterp->open(options.interpFile, "vz", "r", "z");
+            TInterp->get(0.05, 0.0);
         }
 
         grid.setSize(x.size());
@@ -1838,40 +1849,62 @@ void FlameSolver::generateProfile(void)
 
 void FlameSolver::loadProfile(void)
 {
-    std::string inputFilename;
-    if (options.useRelativeRestartPath) {
-        inputFilename = options.inputDir + "/" + options.restartFile;
-    } else {
-        inputFilename = options.restartFile;
-    }
-
-    logFile.write(format("Reading initial condition from %s") % inputFilename);
-    DataFile infile(inputFilename);
-    x = infile.readVector("x");
-
-    grid.setSize(x.size());
     grid.alpha = (options.curvedFlame) ? 1 : 0;
     grid.unburnedLeft = options.unburnedLeft;
-    grid.updateValues();
-    grid.updateBoundaryIndices();
 
-    U = infile.readVector("U");
-    T = infile.readVector("T");
-    Y = infile.readArray2D("Y", true);
-    tNow = infile.readScalar("t");
-    if (!options.haveTStart) {
-        // If tStart is not in the input file, use the time from the restart file.
-        tStart = tNow;
+    if (options.haveRestartFile) {
+        std::string inputFilename;
+        if (options.useRelativeRestartPath) {
+            inputFilename = options.inputDir + "/" + options.restartFile;
+        } else {
+            inputFilename = options.restartFile;
+        }
+
+        logFile.write(format("Reading initial condition from %s") % inputFilename);
+        DataFile infile(inputFilename);
+        x = infile.readVector("x");
+
+        grid.setSize(x.size());
+        grid.updateValues();
+        grid.updateBoundaryIndices();
+
+        U = infile.readVector("U");
+        T = infile.readVector("T");
+        Y = infile.readArray2D("Y", true);
+        tNow = infile.readScalar("t");
+        if (!options.haveTStart) {
+            // If tStart is not in the input file, use the time from the restart file.
+            tStart = tNow;
+        }
+
+        dvector V = infile.readVector("V");
+        rVzero = V[0];
+
+        if (!options.fileNumberOverride) {
+            options.outputFileNumber = (int) infile.readScalar("fileNumber");
+        }
+
+        infile.close();
+    } else if (options.haveInitialProfiles) {
+        // Read initial condition specified in the configuration file
+        logFile.write("Reading initial condition from configuration file.");
+        x = options.x_initial;
+        U = options.U_initial;
+        T = options.T_initial;
+        Y = options.Y_initial;
+        if (Y.rows() == x.size()) {
+            Y = Y.transpose().eval();
+        }
+        rVzero = options.rVzero_initial;
+
+        grid.setSize(x.size());
+        grid.updateValues();
+        grid.updateBoundaryIndices();
+
+        tNow = (options.haveTStart) ? options.tStart : 0.0;
+    } else {
+        throw debugException("Initial profile data required but not provided.");
     }
-
-    dvector V = infile.readVector("V");
-    rVzero = V[0];
-
-    if (!options.fileNumberOverride) {
-        options.outputFileNumber = (int) infile.readScalar("fileNumber");
-    }
-
-    infile.close();
 
     Tu = (options.overrideTu) ? options.Tu : T[grid.ju];
 

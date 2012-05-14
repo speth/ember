@@ -84,6 +84,18 @@ class General(Options):
     ## True if solving a planar flame that is symmetric about the x = 0 plane.
     twinFlame = False
 
+    ## True if solving a Quasi-2D problem via the method of lines
+    quasi2d = False
+
+    ## Input file (HDF5 format) containing the interpolation data needed for
+    ## the quasi2d mode. Contains:
+    ##     vector r (length N);
+    ##     vector z (length M);
+    ##     Temperature array T (size NxM);
+    ##     radial velocity array vr (size NxM);
+    ##     axial velocity array vz (size NxM);
+    interpFile = None
+
     ## True if the unburned fuel/air mixture should be used as the
     ## left boundary condition. Applicable only to premixed flames.
     unburnedLeft = True # applies to premixed flames
@@ -281,6 +293,14 @@ class InitialCondition(Options):
     # Number of times to run the generated profile through a low pass
     # filter before starting the simulation.
     smoothCount = 4
+
+    # True if initial profiles for x,T,U and Y (as well as rVzero) are given
+    haveProfiles = False
+    x = None
+    T = None
+    U = None
+    Y = None
+    rVzero = None
 
 
 class WallFlux(Options):

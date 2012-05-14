@@ -303,7 +303,9 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
     assert (stopIndex-startIndex+1 == y.length());
 
     // *** Calculate v (= V/rho) ***
-    update_v(t);
+    if (!quasi2d) {
+        update_v(t);
+    }
 
     // *** Calculate dY/dt
 

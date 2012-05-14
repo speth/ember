@@ -163,16 +163,18 @@ common = [f for f in Glob('build/core/*.cpp')
 # The Python module
 pyenv = env.Clone()
 
-env.Alias('pylib',
-          pyenv.SharedLibrary('python/pyro/_pyro',
-                              common + Glob('build/python/*.cpp'),
-                              SHLIBPREFIX='',
-                              SHLIBSUFFIX=get_config_var('SO')))
+pylib = pyenv.SharedLibrary('python/pyro/_pyro',
+                            common + Glob('build/python/*.cpp'),
+                            SHLIBPREFIX='',
+                            SHLIBSUFFIX=get_config_var('SO'))
+
+env.Alias('pylib', pylib)
+
 
 # GoogleTest tests
 python_lib = 'python%s' % get_config_var('VERSION')
 testenv = env.Clone()
-testenv.Append(LIBS=['pylib', 'gtest', python_lib],
+testenv.Append(LIBS=[pylib, 'gtest', python_lib],
                CPPPATH=['ext/gtest/include'],
                LIBPATH=['lib'])
 
