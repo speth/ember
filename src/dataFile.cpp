@@ -135,14 +135,16 @@ dmatrix DataFile::readArray2D(const std::string& name, bool transpose)
 
     if (H5Sget_simple_extent_ndims(dataspace) != 2) {
         throw debugException((format(
-            "DataFile::readVector: '%s' is not a 1D array.") % name).str());
+            "DataFile::readVector: '%s' is not a 2D array.\n"
+            "(file: '%s'; ndims: %i") % name % filename %
+            H5Sget_simple_extent_ndims(dataspace)).str());
     }
 
     hsize_t ndim = 2;
     vector<hsize_t> dimensions(2);
     H5Sget_simple_extent_dims(dataspace, &dimensions[0], &ndim);
 
-    dmatrix y(dimensions[0], dimensions[1]);
+    dmatrix y(dimensions[1], dimensions[0]);
 
     H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL,
             H5S_ALL, H5P_DEFAULT, y.data());
