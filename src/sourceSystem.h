@@ -104,7 +104,8 @@ public:
     void setOptions(configOptions& options);
 
     void resetSplitConstants();
-
+    void setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
+                      boost::shared_ptr<BilinearInterpolator> TInterp);
 
     void writeState(std::ostream& out, bool init);
 
@@ -127,6 +128,7 @@ public:
     size_t nSpec;
     int j; // grid index for this system
     double x; // grid position for this system
+    double tCall; // the last time at which odefun was called
     dvector W; // species molecular weights [kg/kmol]
     double rhou; // density of the unburned mixture
 
@@ -145,4 +147,8 @@ private:
     dvector cpSpec; // species specific heat capacity [J/mol*K]
     double Wmx; // mixture molecular weight [kg/mol]
     dvector hk; // species enthalpies [J/kmol]
+    bool quasi2d;
+    boost::shared_ptr<BilinearInterpolator> vzInterp_;
+    boost::shared_ptr<BilinearInterpolator> TInterp_;
+
 };

@@ -285,6 +285,7 @@ SourceSystemQSS::SourceSystemQSS()
     : U(NaN)
     , T(NaN)
     , gas(NULL)
+    , quasi2d(false)
 {
     dUdtQ = 0;
     dUdtD = 0;
@@ -327,8 +328,17 @@ void SourceSystemQSS::resetSplitConstants()
     splitConstU = 0;
 }
 
+void SourceSystemQSS::setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
+                                   boost::shared_ptr<BilinearInterpolator> TInterp)
+{
+    quasi2d = true;
+    vzInterp_ = vzInterp;
+    TInterp_ = TInterp;
+}
+
 void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d, bool corrector)
 {
+    tCall = t;
     unroll_y(y, corrector);
 
     // *** Update auxiliary data ***
@@ -361,12 +371,20 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d,
     double dadt = strainFunction.dadt(t);
 
     // *** Calculate the time derivatives
-    dUdtQ = rhou/rho*(dadt + a*a) - U*U + splitConstU;
-    dUdtD = 0;
-    dTdtQ = qDot/(rho*cp) + splitConstT;
+    if (!quasi2d) {
+        dUdtQ = rhou/rho*(dadt + a*a) - U*U + splitConstU;
+        dUdtD = 0;
+        dTdtQ = qDot/(rho*cp) + splitConstT;
+    } else {
+        dUdtQ = 0;
+        dUdtD = 0;
+        dTdtQ = 0;
+    }
+
+    double scale = (quasi2d) ? 1.0/vzInterp_->get(x, t) : 1.0;
     for (size_t k=0; k<nSpec; k++) {
-        dYdtQ[k] = wDotQ[k] * W[k] / rho + splitConstY[k];
-        dYdtD[k] = wDotD[k] * W[k] / rho;
+        dYdtQ[k] = scale * wDotQ[k] * W[k] / rho + splitConstY[k];
+        dYdtD[k] = scale * wDotD[k] * W[k] / rho;
     }
 
     assert(rhou > 0);
@@ -384,10 +402,17 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d,
 
 void SourceSystemQSS::unroll_y(const dvector& y, bool corrector)
 {
-    if (!corrector) {
-        T = y[kEnergy];
+    if (!quasi2d) {
+        if (!corrector) {
+            T = y[kEnergy];
+        }
+        U = y[kMomentum];
+    } else {
+        if (!corrector) {
+            T = TInterp_->get(x, tCall);
+        }
+        U = 0;
     }
-    U = y[kMomentum];
     for (size_t k=0; k<nSpec; k++) {
         Y[k] = y[kSpecies+k];
     }

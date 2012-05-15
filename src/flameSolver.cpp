@@ -818,8 +818,12 @@ void FlameSolver::resizeAuxiliary()
             qssSolver->rhou = rhou;
             qssSolver->W = W;
             qssSolver->j = j;
+            qssSolver->x = x[j];
             qssSolver->ymin.assign(nVars, options.qss_minval);
             qssSolver->ymin[kMomentum] = -1e4;
+            if (options.quasi2d) {
+                qssSolver->setupQuasi2d(vzInterp, TInterp);
+            }
 
             sourceTermsQSS.push_back(qssSolver);
             useCVODE.push_back(options.chemistryIntegrator == "cvode");
