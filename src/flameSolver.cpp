@@ -449,7 +449,9 @@ void FlameSolver::run(void)
             rollVectorVector(currentSolution, dUdtProd, dTdtProd, dYdtProd);
 
             grid.nAdapt = nVars;
-            if (strainfunc.a(tNow) == 0) {
+            if (options.quasi2d) {
+                // do not change grid extents in this case
+            } else if (strainfunc.a(tNow) == 0) {
                 calculateQdot();
                 grid.regridUnstrained(currentSolution, qDot);
             } else {
@@ -2016,6 +2018,19 @@ void FlameSolver::loadProfile(void)
         }
 
         rhou = rhoLeft;
+    } else if (options.flameType == "quasi2d") {
+        gas.thermo.setState_TPY(T[0], options.pressure, &Y(0,0));
+        rhoLeft = gas.thermo.density();
+        Tleft = T[0];
+        Yleft.resize(nSpec);
+        gas.getMassFractions(Yleft);
+        gas.thermo.setState_TPY(T[jj], options.pressure, &Y(0,jj));
+        rhoRight = gas.thermo.density();
+        Tright = T[jj];
+        Yright.resize(nSpec);
+        gas.getMassFractions(Yright);
+
+        rhou = rhoRight;
 
     } else {
         throw debugException("Invalid flameType: " + options.flameType);

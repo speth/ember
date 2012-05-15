@@ -84,9 +84,6 @@ class General(Options):
     ## True if solving a planar flame that is symmetric about the x = 0 plane.
     twinFlame = False
 
-    ## True if solving a Quasi-2D problem via the method of lines
-    quasi2d = False
-
     ## Input file (HDF5 format) containing the interpolation data needed for
     ## the quasi2d mode. Contains:
     ##     vector r (length N);
@@ -603,7 +600,7 @@ class Config(object):
         error = self.checkString(self.terminationCondition,
                                  'measurement', ('Q', None)) or error
         error = self.checkString(self.initialCondition,
-                                 'flameType', ('premixed', 'diffusion')) or error
+                                 'flameType', ('premixed', 'diffusion', 'quasi2d')) or error
         error = self.checkString(self.general,
                                  'chemistryIntegrator', ('cvode', 'qss')) or error
         error = self.checkString(self.chemistry,

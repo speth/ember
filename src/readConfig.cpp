@@ -107,10 +107,7 @@ configOptions::configOptions(const bp::object& conf)
     readOption(general, "curvedFlame", curvedFlame);
     readOption(general, "twinFlame", twinFlame);
 
-    readOption(general, "quasi2d", quasi2d);
-    if (quasi2d) {
-        readOption(general, "interpFile", interpFile);
-    }
+    readOption(general, "interpFile", interpFile);
 
     stopIfError = readOption(general, "errorStopCount", errorStopCount);
     readOption(general, "chemistryIntegrator", chemistryIntegrator);
@@ -194,6 +191,7 @@ configOptions::configOptions(const bp::object& conf)
     readOption(ic, "Toxidizer", Toxidizer);
     readOption(ic, "equivalenceRatio", equivalenceRatio);
     readOption(ic, "pressure", pressure);
+    quasi2d = (flameType == "quasi2d");
 
     // Ignition parameters
     const object& ignition = conf.attr("ignition");
