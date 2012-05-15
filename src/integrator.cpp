@@ -149,7 +149,10 @@ void BDFIntegrator::step()
         for (int i=0; i<N; i++) {
             M(i,i) -= 1.0/(h/8.0);
         }
-        BandGBTRF(LU->forSundials(), &p[0]);
+
+        int ierr = BandGBTRF(LU->forSundials(), &p[0]);
+        assert(ierr == 0);
+        assert(mathUtils::notnan(y));
 
         for (int j=0; j<8; j++) {
             // y_n -> y_n+1
@@ -167,7 +170,8 @@ void BDFIntegrator::step()
             for (int i=0; i<N; i++) {
                 M(i,i) -= 3.0/(2.0*h);
             }
-            BandGBTRF(LU->forSundials(), &p[0]);
+            int ierr = BandGBTRF(LU->forSundials(), &p[0]);
+            assert(ierr == 0);
         }
         dvector tmp(y);
 

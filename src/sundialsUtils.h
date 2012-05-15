@@ -71,6 +71,8 @@ public:
     realtype& operator()(long int i, long int j) const;
     BandMat& forSundials() { return M; }
 
+    void print(const std::string& name="M") const;
+
 private:
     BandMat M;
     bool alloc;

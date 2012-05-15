@@ -392,6 +392,22 @@ realtype& sdBandMatrix::operator() (long int i, long int j) const
     return BAND_ELEM(M,i,j);
 }
 
+void sdBandMatrix::print(const std::string& name) const
+{
+    std::cout << M->M << std::endl;
+    std::cout << M->ml << std::endl;
+    std::cout << M->mu << std::endl;
+    for (int i = 0; i < M->M; i++) {
+        for (int j = i - M->ml; j <= i + M->mu; j++) {
+            if (j < 0 || j >= M->M) {
+                continue;
+            }
+            std::cout << boost::format("%s[%i,%i] = %e") % name % i % j % BAND_ELEM(M,i,j) << std::endl;
+        }
+    }
+    std::cout.flush();
+}
+
 // Sundials IDA Solver
 
 sundialsIDA::sundialsIDA(unsigned int n)
