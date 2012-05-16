@@ -50,6 +50,12 @@ public:
     void setOptions(const configOptions& options);
     void initialize();
 
+    //! Calculate the mole fractions of the reactant mixture from the
+    //! compositions of the fuel and oxidizer mixtures and the equivalence ratio.
+    dvector calculateReactantMixture(const std::string& fuel,
+                                     const std::string& oxidizer,
+                                     double equivalenceRatio);
+
     void setStateMass(const dvector& Y, const double T);
     void setStateMass(const double* Y, const double T);
 

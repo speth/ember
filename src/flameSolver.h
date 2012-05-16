@@ -37,10 +37,6 @@ public:
     virtual void generateProfile(); //!< Generate initial conditions based on boundary conditions
     virtual void loadProfile(); //!< Load initial conditions from a file
 
-    //! Calculate the mole fraction vector of the reactants based on the
-    //! equivalence ratio and the fuel and oxidizer compositions.
-    dvector calculateReactantMixture(void);
-
     //! Determine whether to terminate integration based on reaching steady-state solution.
     bool checkTerminationCondition(void);
 

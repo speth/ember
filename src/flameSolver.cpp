@@ -1691,7 +1691,8 @@ void FlameSolver::generateProfile(void)
 
     if (options.flameType == "premixed") {
         // Reactants
-        dvector reactants = calculateReactantMixture();
+        dvector reactants = gas.calculateReactantMixture(
+            options.fuel, options.oxidizer, options.equivalenceRatio);
         gas.setStateMole(reactants, Tu);
         rhou = gas.getDensity();
         gas.getMassFractions(Yu);
@@ -1729,7 +1730,8 @@ void FlameSolver::generateProfile(void)
     } else if (options.flameType == "diffusion") {
         // Stoichiometric mixture at the center
         options.equivalenceRatio = 1.0;
-        dvector products = calculateReactantMixture();
+        dvector products = gas.calculateReactantMixture(
+            options.fuel, options.oxidizer, options.equivalenceRatio);
         gas.setStateMole(products, 0.5*(options.Tfuel+options.Toxidizer));
         Cantera::equilibrate(gas.thermo,"HP");
 
@@ -1929,7 +1931,8 @@ void FlameSolver::loadProfile(void)
         }
 
         if (options.overrideReactants) {
-            dvector reactants = calculateReactantMixture();
+            dvector reactants = gas.calculateReactantMixture(
+                options.fuel, options.oxidizer, options.equivalenceRatio);
             gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
             gas.thermo.getMassFractions(&Y(0,grid.ju));
             gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
@@ -2055,48 +2058,6 @@ void FlameSolver::loadProfile(void)
         flamePosIntegralError = controlSignal /
             (options.xFlameProportionalGain * options.xFlameIntegralGain);
     }
-}
-
-dvector FlameSolver::calculateReactantMixture(void)
-{
-    // Calculate the composition of the reactant mixture from compositions of
-    // the fuel and oxidizer mixtures and the equivalence ratio.
-
-    int mC = gas.thermo.elementIndex("C");
-    int mO = gas.thermo.elementIndex("O");
-    int mH = gas.thermo.elementIndex("H");
-
-    double Cf(0), Hf(0), Of(0); // moles of C/H/O in fuel
-    double Co(0), Ho(0), Oo(0); // moles of C/H/O in oxidizer
-
-    dvector Xf(nSpec), Xo(nSpec), Xr(nSpec);
-
-    gas.thermo.setState_TPX(options.Tu, options.pressure, options.fuel);
-    gas.getMoleFractions(Xf);
-    gas.thermo.setState_TPX(options.Tu, options.pressure, options.oxidizer);
-    gas.getMoleFractions(Xo);
-
-    dvector a(gas.thermo.nElements());
-    for (size_t k=0; k<nSpec; k++) {
-        gas.thermo.getAtoms(k,&a[0]);
-        if (mC != -1) {
-            Cf += a[mC]*Xf[k];
-            Co += a[mC]*Xo[k];
-        }
-        if (mH != -1) {
-            Hf += a[mH]*Xf[k];
-            Ho += a[mH]*Xo[k];
-        }
-        if (mO != -1) {
-            Of += a[mO]*Xf[k];
-            Oo += a[mO]*Xo[k];
-        }
-    }
-    double stoichAirFuelRatio = -(Of-2*Cf-Hf/2)/(Oo-2*Co-Ho/2);
-    Xr = Xf*options.equivalenceRatio + stoichAirFuelRatio*Xo;
-    Xr /= mathUtils::sum(Xr);
-
-    return Xr;
 }
 
 void FlameSolver::printPerformanceStats(void)
