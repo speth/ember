@@ -119,6 +119,9 @@ class General(Options):
     ## integrator before aborting.
     errorStopCount = 100
 
+    ## Number of threads to use for evaluating terms in parallel
+    nThreads = 1
+
 
 class Chemistry(Options):
     """ Settings pertaining to the Cantera mechanism file """

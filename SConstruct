@@ -89,7 +89,7 @@ if os.name == 'nt':
 else:
     hdf5 = ['hdf5']
 
-lastlibs = hdf5 + env['blas_lapack'].split(',')
+lastlibs = ['tbb'] + hdf5 + env['blas_lapack'].split(',')
 
 env.Append(CPPPATH=[env['cantera_include'],
                     env['sundials_include'],

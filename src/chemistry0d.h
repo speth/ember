@@ -49,6 +49,7 @@ public:
 
     void setOptions(const configOptions& options);
     void initialize();
+    bool initialized() const { return isInitialized; }
 
     //! Calculate the mole fractions of the reactant mixture from the
     //! compositions of the fuel and oxidizer mixtures and the equivalence ratio.
@@ -109,6 +110,7 @@ private:
     std::string phaseID;
     std::string transportModel;
     double transportThreshold;
+    bool isInitialized;
 
     Cantera::XML_Node* rootXmlNode;
     Cantera::XML_Node* phaseXmlNode;

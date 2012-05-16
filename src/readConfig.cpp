@@ -103,6 +103,7 @@ configOptions::configOptions(const bp::object& conf)
     readOption(general, "fixedLeftLocation", fixedLeftLoc);
     readOption(general, "unburnedLeft", unburnedLeft);
     readOption(general, "fuelLeft", fuelLeft);
+    readOption(general, "nThreads", nThreads);
 
     readOption(general, "curvedFlame", curvedFlame);
     readOption(general, "twinFlame", twinFlame);

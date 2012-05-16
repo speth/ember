@@ -4,6 +4,8 @@
 #include "dataFile.h"
 #include "mathUtils.h"
 
+#include "tbb/task_scheduler_init.h"
+
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/python.hpp>
@@ -33,6 +35,19 @@ void FlameSolver::setOptions(const configOptions& _options)
 
     tStart = options.tStart;
     tEnd = options.tEnd;
+
+    gases.resize(options.nThreads);
+
+    // Initialize serially until Cantera's thread safety is fixed
+    std::vector<CanteraGas**> ptrs(options.nThreads);
+    for (int i=0; i<options.nThreads; i++) {
+        ptrs[i] = gases.acquire();
+        (**ptrs[i]).setOptions(options);
+        (**ptrs[i]).initialize();
+    }
+    for (int i=0; i<options.nThreads; i++) {
+        gases.release(ptrs[i]);
+    }
 
     gas.setOptions(_options);
     grid.setOptions(_options);
@@ -170,6 +185,7 @@ void FlameSolver::tryrun(void)
 void FlameSolver::run(void)
 {
     totalTimer.start();
+    tbb::task_scheduler_init tbbTaskSched(options.nThreads);
 
     double t = tStart;
 
@@ -1356,99 +1372,8 @@ void FlameSolver::integrateConvectionTerms(double t, int stage)
 
 void FlameSolver::integrateProductionTerms(double t, int stage)
 {
-    if (debugParameters::veryVerbose) {
-        if (stage) {
-            logFile.write(format("Source term %i/2...") % stage, false);
-        } else {
-            logFile.write("Source term...", false);
-        }
-    }
-
-    reactionTimer.start();
-    int err = 0;
-    for (size_t j=0; j<nPoints; j++) {
-        if (debugParameters::veryVerbose) {
-            logFile.write(format("%i") % j, false);
-        }
-        if (useCVODE[j]) {
-            if (int(j) == options.debugSourcePoint && t >= options.debugSourceTime) {
-                std::ofstream steps;
-                steps.open("cvodeSteps.py");
-                sourceTerms[j].writeState(sourceSolvers[j], steps, true);
-
-                while (sourceSolvers[j].tInt < t) {
-                    err = sourceSolvers[j].integrateOneStep(t);
-                    sourceTerms[j].writeState(sourceSolvers[j], steps, false);
-                    if (err != CV_SUCCESS) {
-                        break;
-                    }
-                }
-
-                sourceTerms[j].writeJacobian(sourceSolvers[j], steps);
-
-                steps.close();
-                std::terminate();
-
-            } else {
-                err = sourceSolvers[j].integrateToTime(t);
-            }
-            if (err && err != CV_TSTOP_RETURN) {
-                logFile.write(format("Error at j = %i") % j);
-                logFile.write(format("T = %s") % sourceTerms[j].T);
-                logFile.write(format("U = %s") % sourceTerms[j].U);
-                logFile.write("Y = ", false);
-                logFile.write(sourceTerms[j].Y);
-                writeStateFile((format("prod%i_error_t%.6f_j%03i") %
-                        stage % t % j).str(), true, false);
-            }
-
-            if (debugParameters::veryVerbose) {
-                logFile.write(format(
-                    " [%i]...") % sourceSolvers[j].getNumSteps(), false);
-            }
-
-        } else {
-            if (int(j) == options.debugSourcePoint &&
-                t >= options.debugSourceTime)
-            {
-                sourceTermsQSS[j].debug = true;
-                std::ofstream steps;
-                steps.open("cvodeSteps.py");
-                sourceTermsQSS[j].writeState(steps, true);
-
-                while (sourceTermsQSS[j].tn < (t-tNow)) {
-                    err = sourceTermsQSS[j].integrateOneStep(t-tNow);
-                    sourceTermsQSS[j].writeState(steps, false);
-                    if (err) {
-                        break;
-                    }
-                }
-
-                steps.close();
-                std::terminate();
-
-            } else {
-                err = sourceTermsQSS[j].integrateToTime(t-tNow);
-            }
-            if (err) {
-                logFile.write(format("Error at j = %i") % j);
-                logFile.write(format("T = %s") % sourceTermsQSS[j].T);
-                logFile.write(format("U = %s") % sourceTermsQSS[j].U);
-                logFile.write("Y = ", false);
-                logFile.write(sourceTermsQSS[j].Y);
-                writeStateFile((format("prod%i_error_t%.6f_j%03i") %
-                        stage % t % j).str(), true, false);
-            }
-
-            if (debugParameters::veryVerbose) {
-                logFile.write(format(" [%i/%i]...") % sourceTermsQSS[j].gcount
-                        % sourceTermsQSS[j].rcount, false);
-            }
-
-        }
-    }
-
-    reactionTimer.stop();
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, nPoints,4),
+                      SourceTermWrapper(this, t, stage));
 }
 
 
@@ -2241,4 +2166,116 @@ void FlameSolver::updateTransportDomain()
                                             convectionStopIndices[k] == jj);
     }
     adaptiveTransportTimer.stop();
+}
+
+void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
+{
+    if (debugParameters::veryVerbose) {
+        if (stage_) {
+            logFile.write(format("Source term %i/2...") % stage_, false);
+        } else {
+            logFile.write("Source term...", false);
+        }
+    }
+    configOptions& options = parent_->options;
+    boost::ptr_vector<SourceSystem>& sourceTerms = parent_->sourceTerms;
+    boost::ptr_vector<sundialsCVODE>& sourceSolvers = parent_->sourceSolvers;
+    boost::ptr_vector<SourceSystemQSS>& sourceTermsQSS = parent_->sourceTermsQSS;
+
+    CanteraGas** gasHandle = parent_->gases.acquire();
+    CanteraGas* gas = *gasHandle;
+    if (!gas->initialized()) {
+        gas->setOptions(options);
+        gas->initialize();
+    }
+
+    parent_->reactionTimer.start();
+    int err = 0;
+    //std::cout << "pointRange: " << r.begin() << ", " << r.end() << std::endl;
+    for (size_t j=r.begin(); j<r.end(); j++) {
+        if (debugParameters::veryVerbose) {
+            logFile.write(format("%i") % j, false);
+        }
+        if (parent_->useCVODE[j]) {
+            sourceTerms[j].gas = gas;
+            if (int(j) == options.debugSourcePoint && t_ >= options.debugSourceTime) {
+                std::ofstream steps;
+                steps.open("cvodeSteps.py");
+                sourceTerms[j].writeState(sourceSolvers[j], steps, true);
+
+                while (sourceSolvers[j].tInt < t_) {
+                    err = sourceSolvers[j].integrateOneStep(t_);
+                    sourceTerms[j].writeState(sourceSolvers[j], steps, false);
+                    if (err != CV_SUCCESS) {
+                        break;
+                    }
+                }
+
+                sourceTerms[j].writeJacobian(sourceSolvers[j], steps);
+
+                steps.close();
+                std::terminate();
+
+            } else {
+                err = sourceSolvers[j].integrateToTime(t_);
+            }
+            if (err && err != CV_TSTOP_RETURN) {
+                logFile.write(format("Error at j = %i") % j);
+                logFile.write(format("T = %s") % sourceTerms[j].T);
+                logFile.write(format("U = %s") % sourceTerms[j].U);
+                logFile.write("Y = ", false);
+                logFile.write(sourceTerms[j].Y);
+                parent_->writeStateFile((format("prod%i_error_t%.6f_j%03i") %
+                        stage_ % t_ % j).str(), true, false);
+            }
+
+            if (debugParameters::veryVerbose) {
+                logFile.write(format(
+                    " [%i]...") % sourceSolvers[j].getNumSteps(), false);
+            }
+
+        } else {
+            sourceTermsQSS[j].gas = gas;
+            if (int(j) == options.debugSourcePoint &&
+                t_ >= options.debugSourceTime)
+            {
+                sourceTermsQSS[j].debug = true;
+                std::ofstream steps;
+                steps.open("cvodeSteps.py");
+                sourceTermsQSS[j].writeState(steps, true);
+
+                while (sourceTermsQSS[j].tn < (t_-parent_->tNow)) {
+                    err = sourceTermsQSS[j].integrateOneStep(t_-parent_->tNow);
+                    sourceTermsQSS[j].writeState(steps, false);
+                    if (err) {
+                        break;
+                    }
+                }
+
+                steps.close();
+                std::terminate();
+
+            } else {
+                err = sourceTermsQSS[j].integrateToTime(t_-parent_->tNow);
+            }
+            if (err) {
+                logFile.write(format("Error at j = %i") % j);
+                logFile.write(format("T = %s") % sourceTermsQSS[j].T);
+                logFile.write(format("U = %s") % sourceTermsQSS[j].U);
+                logFile.write("Y = ", false);
+                logFile.write(sourceTermsQSS[j].Y);
+                parent_->writeStateFile((format("prod%i_error_t%.6f_j%03i") %
+                        stage_ % t_ % j).str(), true, false);
+            }
+
+            if (debugParameters::veryVerbose) {
+                logFile.write(format(" [%i/%i]...") % sourceTermsQSS[j].gcount
+                        % sourceTermsQSS[j].rcount, false);
+            }
+
+        }
+    }
+
+    parent_->gases.release(gasHandle);
+    parent_->reactionTimer.stop();
 }

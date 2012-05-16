@@ -187,6 +187,7 @@ public:
 
     int errorStopCount;
     bool stopIfError;
+    int nThreads;
 
     int outputFileNumber; // number of output files written
     bool fileNumberOverride; // true if outputFileNumbe was given in the input file

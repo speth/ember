@@ -4,6 +4,9 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+
 #include "readConfig.h"
 #include "sundialsUtils.h"
 #include "chemistry0d.h"
@@ -16,8 +19,10 @@
 #include "convectionSystem.h"
 #include "strainFunction.h"
 #include "quasi2d.h"
+#include "threadUtils.h"
 
 using std::string;
+class SourceTermWrapper;
 
 //! Class which manages the main integration loop.
 //! Contains the split solvers and is responsible for the large-scale time integration.
@@ -214,6 +219,7 @@ private:
 
     //! Cantera data
     CanteraGas gas;
+    ObjectPool<CanteraGas> gases;
 
     void rollVectorVector(vector<dvector>& vv, const dvector& u, const dvector& t, const dmatrix& y) const;
     void unrollVectorVector(const vector<dvector>& vv, dvector& u, dvector& t, dmatrix& y, size_t i) const;
@@ -243,4 +249,20 @@ private:
     PerfTimer reactionRatesTimer, transportTimer, thermoTimer;
     PerfTimer jacobianTimer, adaptiveTransportTimer;
     PerfTimer conductivityTimer, viscosityTimer, diffusivityTimer;
+
+    friend class SourceTermWrapper;
+};
+
+class SourceTermWrapper {
+public:
+    SourceTermWrapper(FlameSolver* parent, double t, int stage) {
+        parent_ = parent;
+        stage_ = stage;
+        t_ = t;
+    }
+    void operator()(const tbb::blocked_range<size_t>& r) const;
+private:
+    FlameSolver* parent_;
+    int stage_;
+    double t_;
 };

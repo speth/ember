@@ -247,7 +247,8 @@ void ApproxMixTransport::update_C()
 }
 
 CanteraGas::CanteraGas()
-    : rootXmlNode(NULL)
+    : isInitialized(false)
+    , rootXmlNode(NULL)
     , phaseXmlNode(NULL)
     , kinetics(NULL)
     , transport(NULL)
@@ -325,6 +326,7 @@ void CanteraGas::initialize()
     Dbin.setZero(nSpec,nSpec);
     X.resize(nSpec,0);
     Y.resize(nSpec,0);
+    isInitialized = true;
 }
 
 dvector CanteraGas::calculateReactantMixture(const std::string& fuel,
