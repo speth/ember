@@ -1011,7 +1011,7 @@ void FlameSolver::prepareDiffusionTerms()
 
     deltaUdiff.assign(nPoints, 0);
     deltaTdiff.assign(nPoints, 0);
-    deltaYdiff = dmatrix::Zero(nSpec, nPoints);
+    deltaYdiff.setZero(nSpec, nPoints);
 
     setDiffusionSolverState(tNow);
 
@@ -1060,7 +1060,7 @@ void FlameSolver::prepareProductionTerms()
 {
     deltaUprod.assign(nPoints, 0);
     deltaTprod.assign(nPoints, 0);
-    deltaYprod = dmatrix::Zero(nSpec, nPoints);
+    deltaYprod.setZero(nSpec, nPoints);
 
     setProductionSolverState(tNow);
     if (options.splittingMethod == "strang") {
@@ -1100,7 +1100,7 @@ void FlameSolver::prepareConvectionTerms()
 {
     deltaUconv.assign(nPoints, 0);
     deltaTconv.assign(nPoints, 0);
-    deltaYconv = dmatrix::Zero(nSpec, nPoints);
+    deltaYconv.setZero(nSpec, nPoints);
 
     setConvectionSolverState(tNow, 0);
 
