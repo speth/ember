@@ -38,41 +38,25 @@ env = Environment(**extraEnvArgs)
 opts = Variables('pyro.conf')
 opts.AddVariables(
     PathVariable(
-        'cantera_include',
-        'Location of the Cantera header files.',
-        '/usr/local/include', PathVariable.PathIsDir),
+        'cantera',
+        'Location of the Cantera header and library files.',
+        '/usr/local', PathVariable.PathIsDir),
     PathVariable(
-        'cantera_libs',
-        'Location of the Cantera library files.',
-        '/usr/local/lib', PathVariable.PathIsDir),
+        'sundials',
+        'Location of the Sundials header and library files.',
+        '/usr/local', PathVariable.PathIsDir),
     PathVariable(
-        'sundials_include',
-        'Location of the Sundials header files.',
-        '/usr/local/include', PathVariable.PathIsDir),
-    PathVariable(
-        'sundials_libs',
-        'Location of the Sundials library files',
-        '/usr/local/lib', PathVariable.PathIsDir),
-    PathVariable(
-        'eigen_include',
+        'eigen',
         'Location of the Eigen header files',
         '/usr/local/include', PathVariable.PathIsDir),
     PathVariable(
-        'boost_include',
-        'Location of the Boost header files.',
-        '/usr/include', PathVariable.PathIsDir),
+        'boost',
+        'Location of the Boost header and library files.',
+        '/usr', PathVariable.PathIsDir),
     PathVariable(
-        'boost_libs',
-        'Location of the Boost library files',
-        '/usr/lib', PathVariable.PathIsDir),
-    PathVariable(
-        'hdf5_include',
-        'Location of the HDF5 header files.',
-        '/usr/include', PathVariable.PathIsDir),
-    PathVariable(
-        'hdf5_libs',
-        'Location of the HDF5 library files',
-        '/usr/lib', PathVariable.PathIsDir),
+        'hdf5',
+        'Location of the HDF5 header and library files.',
+        '/usr', PathVariable.PathIsDir),
     ('blas_lapack',
      'Comma-separated list of libraries to include for BLAS/LAPACK support',
      'blas,lapack')
@@ -91,17 +75,16 @@ else:
 python = ['python%s' % get_config_var('VERSION')]
 lastlibs = ['tbb'] + python + hdf5 + env['blas_lapack'].split(',')
 
-env.Append(CPPPATH=[env['cantera_include'],
-                    env['sundials_include'],
-                    env['eigen_include'],
-                    env['boost_include'],
-                    env['hdf5_include'],
+env.Append(CPPPATH=[env['cantera']+'/include',
+                    env['sundials']+'/include',
+                    env['eigen'],
+                    env['boost']+'/include',
+                    env['hdf5']+'/include',
                     get_config_var('INCLUDEPY')],
-           LIBPATH=[env['cantera_libs'],
-                    env['sundials_libs'],
-                    env['boost_libs'],
-                    env['hdf5_libs'],
-                    'lib'],
+           LIBPATH=[env['cantera']+'/lib',
+                    env['sundials']+'/lib',
+                    env['boost']+'/lib',
+                    env['hdf5']+'/lib'],
            LIBS=sundials + cantera + lastlibs)
 
 if env['CC'] == 'gcc':
