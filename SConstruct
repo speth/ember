@@ -78,7 +78,6 @@ opts.AddVariables(
      'blas,lapack')
     )
 
-
 opts.Update(env)
 opts.Save('pyro.conf', env)
 
@@ -89,7 +88,8 @@ if os.name == 'nt':
 else:
     hdf5 = ['hdf5']
 
-lastlibs = ['tbb'] + hdf5 + env['blas_lapack'].split(',')
+python = ['python%s' % get_config_var('VERSION')]
+lastlibs = ['tbb'] + python + hdf5 + env['blas_lapack'].split(',')
 
 env.Append(CPPPATH=[env['cantera_include'],
                     env['sundials_include'],
