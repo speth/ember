@@ -1372,7 +1372,7 @@ void FlameSolver::integrateConvectionTerms(double t, int stage)
 
 void FlameSolver::integrateProductionTerms(double t, int stage)
 {
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, nPoints,4),
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, nPoints,1),
                       SourceTermWrapper(this, t, stage));
 }
 
