@@ -38,17 +38,6 @@ void FlameSolver::setOptions(const configOptions& _options)
 
     gases.resize(options.nThreads);
 
-    // Initialize serially until Cantera's thread safety is fixed
-    std::vector<CanteraGas**> ptrs(options.nThreads);
-    for (int i=0; i<options.nThreads; i++) {
-        ptrs[i] = gases.acquire();
-        (**ptrs[i]).setOptions(options);
-        (**ptrs[i]).initialize();
-    }
-    for (int i=0; i<options.nThreads; i++) {
-        gases.release(ptrs[i]);
-    }
-
     gas.setOptions(_options);
     grid.setOptions(_options);
 }
