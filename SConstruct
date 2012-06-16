@@ -23,15 +23,20 @@ if os.name == 'nt':
     pycomp = platform.python_compiler()
     if pycomp.startswith('MSC v.1400'):
         extraEnvArgs['MSVC_VERSION'] = '8.0' # Visual Studio 2005
+        tbbCompiler = 'vc8'
     elif pycomp.startswith('MSC v.1500'):
         extraEnvArgs['MSVC_VERSION'] = '9.0' # Visual Studio 2008
+        tbbCompiler = 'vc9'
     elif pycomp.startswith('MSC v.1600'):
         extraEnvArgs['MSVC_VERSION'] = '10.0' # Visual Studio 2010
+        tbbCompiler = 'vc10'
 
     if '64 bit' in pycomp:
         extraEnvArgs['TARGET_ARCH'] = 'amd64'
+        tbbArch = 'intel64'
     else:
         extraEnvArgs['TARGET_ARCH'] = 'x86'
+        tbbArch = 'ia32'
 
 env = Environment(**extraEnvArgs)
 
@@ -57,6 +62,10 @@ opts.AddVariables(
         'hdf5',
         'Location of the HDF5 header and library files.',
         '/usr', PathVariable.PathIsDir),
+    PathVariable(
+        'tbb',
+        'Location of the Thread Building Blocks (TBB) header and library files',
+        '/usr', PathVariable.PathIsDir),
     ('blas_lapack',
      'Comma-separated list of libraries to include for BLAS/LAPACK support',
      'blas,lapack')
@@ -69,8 +78,10 @@ cantera = ['cantera']
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
 if os.name == 'nt':
     hdf5 = ['hdf5','libzlib', 'libszip']
+    tbbLibDir = env['tbb']+'/lib/%s/%s' % (tbbArch, tbbCompiler)
 else:
     hdf5 = ['hdf5']
+    tbbLibDir = env['tbb']+'/lib'
 
 python = ['python%s' % get_config_var('VERSION')]
 lastlibs = ['tbb'] + python + hdf5 + env['blas_lapack'].split(',')
@@ -80,11 +91,13 @@ env.Append(CPPPATH=[env['cantera']+'/include',
                     env['eigen'],
                     env['boost']+'/include',
                     env['hdf5']+'/include',
+                    env['tbb']+'/include',
                     get_config_var('INCLUDEPY')],
            LIBPATH=[env['cantera']+'/lib',
                     env['sundials']+'/lib',
                     env['boost']+'/lib',
-                    env['hdf5']+'/lib'],
+                    env['hdf5']+'/lib',
+                    tbbLibDir],
            LIBS=sundials + cantera + lastlibs)
 
 if env['CC'] == 'gcc':
@@ -153,6 +166,11 @@ pylib = pyenv.SharedLibrary('python/pyro/_pyro',
 
 env.Alias('pylib', pylib)
 
+if os.name == 'nt':
+    tbb = env.Command('python/pyro/TBB.dll',
+                      env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
+                      Copy('$TARGET', '$SOURCE'))
+    env.Alias('pylib', tbb)
 
 # GoogleTest tests
 python_lib = 'python%s' % get_config_var('VERSION')
