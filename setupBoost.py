@@ -20,7 +20,7 @@ def main(boost_dir):
     print 'This is Python %s' % platform.python_version()
     print 'Compiled with %s' % platform.python_compiler()
     print 'Architecture: %s' % platform.architecture()[0]
-    buildlibs = ['python', 'filesystem', 'system'] # 'thread', 'date_time'
+    buildlibs = ['python', 'filesystem', 'system', 'thread', 'date_time']
 
     pycomp = platform.python_compiler()
     if pycomp.startswith('MSC v.1400'):
@@ -65,6 +65,8 @@ def main(boost_dir):
 
     os.system('bjam.exe %s stage --stagedir=%s runtime-debugging=off variant=release link=shared %s' % (libstr, stagedir, extra_args))
     os.system('bjam.exe %s stage --stagedir=%s runtime-debugging=on variant=debug link=shared %s' % (libstr, stagedir, extra_args))
+    os.system('bjam.exe %s stage --stagedir=%s runtime-debugging=off variant=release link=static %s' % (libstr, stagedir, extra_args))
+    os.system('bjam.exe %s stage --stagedir=%s runtime-debugging=on variant=debug link=static %s' % (libstr, stagedir, extra_args))
 
     os.remove(jamConfig.name)
 
