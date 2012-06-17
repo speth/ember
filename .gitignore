@@ -21,3 +21,6 @@ config.log
 *.exp
 *.manifest
 *.pyd
+doc/doxygen/html
+doc/sphinx/doctrees
+doc/sphinx/html
