@@ -8,8 +8,26 @@ import time
 
 class Struct(object):
     """
-    data structure with fields accessible as
-    attributes and dictionary keys
+    A dictionary-like data structure where fields are accessible as both
+    attributes and dictionary keys::
+
+        >>> s = Struct()
+        >>> s['foo'] = 6
+        >>> s.foo
+        6
+        >>> s.bar = 'x'
+        >>> 'bar' in s:
+        True
+        >>> s['bar']
+        'x'
+        >>> s.keys()
+        ['foo', 'bar']
+
+    Valid methods of initialization, equivalent to the above:
+
+        >>> s = Struct(foo=6, bar='x')
+        >>> s = Struct({'foo': 6, 'bar': 'x'})
+
     """
     def __init__(self, *args, **kwargs):
         for arg in args:
@@ -47,7 +65,7 @@ class Struct(object):
 
 class HDFStruct(Struct):
     """
-    Like Struct, but converts HDF5 structs to numpy arrays
+    Like :class:`Struct`, but converts HDF5 structs to numpy arrays.
     """
     def __init__(self, filename):
         if not os.path.exists(filename):
@@ -59,10 +77,24 @@ class HDFStruct(Struct):
 
 
 def load(filename):
+    """
+    Generate an :class:`HDFStruct` object from a saved profile.
+    """
     return HDFStruct(filename)
 
 
 def get_qdot(gas, profile, pressure=101325):
+    """
+    Calculate the heat release rate along the flame coordinate.
+
+    :param gas:
+        A Cantera `Solution` object made using the same mechanism file used
+        for the simulation.
+    :param profile:
+        An :class:`.HDFStruct` object created by loading a `profNNNNNN.h5` file.
+    :param pressure:
+        The pressure at which the simulation was run.
+    """
     q = []
     for i in range(len(profile.T)):
         gas.set(P=pressure, T=profile.T[i], Y=profile.Y[:,i])
@@ -74,6 +106,22 @@ def get_qdot(gas, profile, pressure=101325):
 
 
 def expandProfile(prof, gas):
+    """
+    Reconstruct derived data associated with a flame profile.
+
+    :param prof:
+        An :class:`.HDFStruct` object created by loading a `profNNNNNN.h5` file
+    :param gas:
+        A Cantera `Solution` object made using the same mechanism file used
+        for the simulation.
+
+    Arrays which are reconstructed:
+
+        * grid properties: *hh*, *cfp*, *cf*, *cfm*, *rphalf*, *dlj*
+        * thermodynamic properties: *rho*, *cp*, *Wmx*, *W*
+        * kinetic properties: *wdot*, *q*
+        * transport properties: *rhoD*, *k*, *mu*, *Dkt*, *jFick*, *jSoret*, *jCorr*
+    """
     N = len(prof.x)
 
     # Grid properties
@@ -157,6 +205,13 @@ def expandProfile(prof, gas):
     prof.W = gas.molecularWeights()
 
 def run(conf):
+    """
+    Run a single flame simulation using the parameters set in *conf*.
+
+    If the script which calls this function is passed the argument *validate*,
+    then the configuration will be checked for errors and the script will exit
+    without running the simulation.
+    """
     # Validate the configuration and exit
     if len(sys.argv) > 1 and sys.argv[1].lower() == 'validate':
         conf.validate()
@@ -176,6 +231,15 @@ def run(conf):
 
 
 def multirun(conf):
+    """
+    Run a sequence of flame simulations at different strain rates using the
+    parameters set in *conf*. The list of strain rates is defined by the
+    configuration field :attr:`strainParameters.rates`.
+
+    If the script which calls this function is passed the argument *validate*,
+    then the configuration will be checked for errors and the script will exit
+    without running the simulations.
+    """
     # Validate the configuration and exit
     if len(sys.argv) > 1 and sys.argv[1].lower() == 'validate':
         conf.validate()

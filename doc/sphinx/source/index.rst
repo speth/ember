@@ -12,6 +12,8 @@ Contents:
    :maxdepth: 2
 
    input
+   run-sim
+   postprocessing
 
 
 Indices and tables
