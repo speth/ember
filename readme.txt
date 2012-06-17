@@ -43,17 +43,24 @@ Getting Started with Pyro
 
     This produces the python extension ``python/pyro/_pyro.so``.
 
-5. Add the "Pyro" Python module to your Python search path. The easiest way to
-   do this is by creating a symlink into your user Python module path:
+5. Install the "Pyro" Python module:
+
+        $ cd python
+        $ python setup.py install --user
+
+   Alternatively, if you're doing active develpment, you can just create a
+   symlink into your user Python module path:
 
         $ mkdir -p ~/.local/lib/pythonX.Y/site-packages
-        $ ln -s ~/src/1dflameV2/lib ~/.local/lib/pythonX.Y/site-packages/pyro
+        $ ln -s ~/src/1dflameV2/python/pyro ~/.local/lib/pythonX.Y/site-packages/pyro
 
     where *X.Y* is your your installed version of Python, e.g 2.7.
 
     And similarly for Cantera, if it is not already on the Python path:
 
         $ ln -s /path/to/cantera/lib/pythonX.Y/site-packages/Cantera ~/.local/lib/pythonX.Y/site-packages/
+
+    Or add parent directories of each of these modules to your ``PYTHONPATH``.
 
 6. Prepare the documentation (optional)
 
