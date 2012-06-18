@@ -766,7 +766,7 @@ void FlameSolver::resizeAuxiliary()
     deltaYdiff *= NaN;
     deltaYprod *= NaN;
 
-    dTdtCross.resize(nPoints);
+    dTdtCross.setZero(nPoints);
     dTdtDiff.resize(nPoints);
     dTdtProd.resize(nPoints);
     dTdtConv.resize(nPoints);
@@ -782,7 +782,7 @@ void FlameSolver::resizeAuxiliary()
     lambda.setZero(nPoints);
     cp.setZero(nPoints);
     jCorr.resize(nPoints);
-    sumcpj.resize(nPoints);
+    sumcpj.setZero(nPoints);
     qDot.resize(nPoints);
     cpSpec.resize(nSpec, nPoints);
     rhoD.resize(nSpec, nPoints);

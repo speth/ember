@@ -165,9 +165,9 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     dTdx.resize(nPoints);
     drhodt.setConstant(nPoints, 0);
 
-    Wmx.resize(nPoints);
-    dWdt.resize(nPoints);
-    dWdx.resize(nPoints);
+    Wmx.setZero(nPoints);
+    dWdt.setZero(nPoints);
+    dWdx.setZero(nPoints);
 }
 
 void ConvectionSystemUTW::resetSplitConstants()
