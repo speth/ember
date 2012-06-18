@@ -11,6 +11,7 @@
 #include <Eigen/Dense>
 
 using std::abs;
+using std::size_t;
 
 typedef Eigen::ArrayXXd dmatrix;
 typedef Eigen::ArrayXd dvec;

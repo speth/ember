@@ -177,7 +177,7 @@ void FlameSolver::tryrun(void)
         logFile.write(e.errorString);
         throw;
     } catch (tbb::tbb_exception& e) {
-        std::string message("Unhandled TBB exception:\nname:");
+        std::string message("\nUnhandled TBB exception:\nname:");
         message.append(e.name());
         message.append("\nwhat:");
         message.append(e.what());

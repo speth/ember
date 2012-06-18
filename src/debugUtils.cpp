@@ -50,3 +50,7 @@ debugException::debugException(const std::string& error)
 {
     errorString = error;
 }
+
+const char* debugException::what() throw() {
+    return errorString.c_str();
+}
