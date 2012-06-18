@@ -16,9 +16,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
 {
     unroll_y(y);
     // *** Update auxiliary data ***
-    for (size_t j=0; j<nPoints; j++) {
-        rho[j] = gas->pressure*Wmx[j]/(Cantera::GasConstant*T[j]);
-    }
+    rho = gas->pressure * Wmx / (Cantera::GasConstant * T);
 
     // *** Calculate V ***
     if (continuityBC == ContinuityBoundaryCondition::Left) {

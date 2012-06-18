@@ -222,7 +222,7 @@ private:
     ObjectPool<CanteraGas> gases;
 
     void rollVectorVector(vector<dvector>& vv, const dvec& u, const dvec& t, const dmatrix& y) const;
-    void unrollVectorVector(const vector<dvector>& vv, dvec& u, dvec& t, dmatrix& y, size_t i) const;
+    void unrollVectorVector(vector<dvector>& vv, dvec& u, dvec& t, dmatrix& y, size_t i) const;
 
     void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); //!< [m]

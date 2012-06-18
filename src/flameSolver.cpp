@@ -244,16 +244,12 @@ void FlameSolver::run(void)
         // Reset boundary conditions to prevent numerical drift
         if (grid.leftBC == BoundaryCondition::FixedValue) {
             T[0] = Tleft;
-            for (size_t k=0; k<nSpec; k++) {
-                Y(k,0) = Yleft[k];
-            }
+            Y.col(0) = Yleft;
         }
 
         if (grid.rightBC == BoundaryCondition::FixedValue) {
             T[jj] = Tright;
-            for (size_t k=0; k<nSpec; k++) {
-                Y(k,jj) = Yright[k];
-            }
+            Y.col(jj) = Yright;
         }
 
         updateChemicalProperties();
@@ -275,13 +271,11 @@ void FlameSolver::run(void)
         splitTimer.start();
         if (!options.quasi2d) {
             // Diffusion solvers: Energy and momentum
-            for (size_t j=0; j<nPoints; j++) {
-                diffusionTerms[kMomentum].B[j] = 1 / rho[j];
-                diffusionTerms[kEnergy].B[j] = 1 / (rho[j] * cp[j]);
+            diffusionTerms[kMomentum].B = rho.inverse();
+            diffusionTerms[kEnergy].B = (rho * cp).inverse();
 
-                diffusionTerms[kMomentum].D[j] = mu[j];
-                diffusionTerms[kEnergy].D[j] = lambda[j];
-            }
+            diffusionTerms[kMomentum].D = mu;
+            diffusionTerms[kEnergy].D = lambda;
 
             // Diffusion solvers: Species
             for (size_t k=0; k<nSpec; k++) {
@@ -301,13 +295,11 @@ void FlameSolver::run(void)
             }
         } else {
             // Diffusion solvers: Energy and momentum
-            for (size_t j=0; j<nPoints; j++) {
-                diffusionTerms[kMomentum].B[j] = 0;
-                diffusionTerms[kEnergy].B[j] = 0;
+            diffusionTerms[kMomentum].B.setZero(nPoints);
+            diffusionTerms[kEnergy].B.setZero(nPoints);
 
-                diffusionTerms[kMomentum].D[j] = 0;
-                diffusionTerms[kEnergy].D[j] = 0;
-            }
+            diffusionTerms[kMomentum].D.setZero(nPoints);
+            diffusionTerms[kEnergy].D.setZero(nPoints);
 
             // Diffusion solvers: Species
             for (size_t k=0; k<nSpec; k++) {
@@ -464,9 +456,7 @@ void FlameSolver::run(void)
             grid.dampVal.resize(grid.x.size());
             for (size_t j=0; j<nPoints; j++) {
                 double num = std::min(mu[j],lambda[j]/cp[j]);
-                for (size_t k=0; k<nSpec; k++) {
-                    num = std::min(num, rhoD(k,j));
-                }
+                num = std::min(num, rhoD.col(j).minCoeff());
                 grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
                 V_prev[j] = convectionSystem.V[j];
             }
@@ -933,11 +923,9 @@ void FlameSolver::updateCrossTerms()
 
     // Add a bit of artificial diffusion to jCorr to improve stability
     jCorrSolver.y = jCorr;
-    for (size_t j=0; j<nPoints; j++) {
-        jCorrSystem.B[j] = lambda[j] / (rho[j] * cp[j]); // treat as Le = 1
-        jCorrSystem.D[j] = 1.0;
-        jCorrSystem.splitConst[j] = 0;
-    }
+    jCorrSystem.B = lambda / (rho * cp); // treat as Le = 1
+    jCorrSystem.D.setConstant(nPoints, 1.0);
+    jCorrSystem.splitConst.setZero(nPoints);
 
     double dt = options.globalTimestep;
     for (size_t j=1; j<jj; j++) {
@@ -1051,12 +1039,10 @@ void FlameSolver::prepareDiffusionTerms()
     setDiffusionSolverState(tNow);
 
     if (options.splittingMethod == "balanced") {
-        for (size_t j=0; j<nPoints; j++) {
-            diffusionTerms[kEnergy].splitConst[j] = -0.75 * dTdtDiff[j] +
-                0.25 * (dTdtProd[j] + dTdtConv[j] + dTdtCross[j]);
-            diffusionTerms[kMomentum].splitConst[j] = -0.75 * dUdtDiff[j] +
-                0.25 * (dUdtProd[j] + dUdtConv[j]);
-        }
+        diffusionTerms[kEnergy].splitConst = -0.75 * dTdtDiff +
+                0.25 * (dTdtProd + dTdtConv + dTdtCross);
+        diffusionTerms[kMomentum].splitConst = -0.75 * dUdtDiff +
+                0.25 * (dUdtProd + dUdtConv);
 
         for (size_t k=0; k<nSpec; k++) {
             dvec& splitConstY = diffusionTerms[kSpecies+k].splitConst;
@@ -1071,9 +1057,7 @@ void FlameSolver::prepareDiffusionTerms()
             }
         }
     } else { // options.splittingMethod == "strang"
-        for (size_t j=0; j<nPoints; j++) {
-            diffusionTerms[kEnergy].splitConst[j] = dTdtCross[j];
-        }
+        diffusionTerms[kEnergy].splitConst = dTdtCross;
 
         for (size_t k=0; k<nSpec; k++) {
             dvec& splitConstY = diffusionTerms[kSpecies+k].splitConst;
@@ -1138,29 +1122,14 @@ void FlameSolver::prepareConvectionTerms()
     deltaYconv.setZero(nSpec, nPoints);
 
     setConvectionSolverState(tNow, 0);
-
-    drhodt.resize(nPoints);
+    dvec dTdt = dTdtConv + dTdtDiff + dTdtProd;
+    Eigen::MatrixXd dYdt = dYdtConv + dYdtDiff + dYdtProd;
     if (options.splittingMethod == "balanced") {
-        for (size_t j=0; j<nPoints; j++) {
-            drhodt[j] = -rho[j] / T[j] *
-                (dTdtConv[j] + dTdtDiff[j] + dTdtProd[j] + dTdtCross[j]);
-
-            for (size_t k=0; k<nSpec; k++) {
-                drhodt[j] -= rho[j] * Wmx[j] / W[k] *
-                    (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j) + dYdtCross(k,j));
-            }
-        }
-    } else { // options.splittingMethod = "strang"
-        for (size_t j=0; j<nPoints; j++) {
-            drhodt[j] = -rho[j] / T[j] *
-                (dTdtConv[j] + dTdtDiff[j] + dTdtProd[j]);
-
-            for (size_t k=0; k<nSpec; k++) {
-                drhodt[j] -= rho[j] * Wmx[j] / W[k] *
-                    (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtProd(k,j));
-            }
-        }
+        dTdt += dTdtCross;
+        dYdt += dYdtCross.matrix();
     }
+
+    drhodt = - rho * (dTdt / T + (W.inverse().matrix() * dYdt).array() * Wmx);
 
     assert(mathUtils::notnan(drhodt));
     convectionSystem.setDensityDerivative(drhodt);
@@ -1170,16 +1139,9 @@ void FlameSolver::prepareConvectionTerms()
     dmatrix splitConstY = dmatrix::Zero(nSpec, nPoints);
 
     if (options.splittingMethod == "balanced") {
-        for (size_t j=0; j<nPoints; j++) {
-            splitConstT[j] = -0.75 * dTdtConv[j] +
-                0.25 * (dTdtProd[j] + dTdtDiff[j] + dTdtCross[j]);
-            splitConstU[j] = -0.75 * dUdtConv[j] +
-                0.25 * (dUdtProd[j] + dUdtDiff[j]);
-            for (size_t k=0; k<nSpec; k++) {
-                splitConstY(k,j) = -0.75 * dYdtConv(k,j) +
-                    0.25 * (dYdtProd(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
-            }
-        }
+        splitConstT = 0.25 * (dTdtProd + dTdtDiff + dTdtCross - 3 * dTdtConv);
+        splitConstU = 0.25 * (dUdtProd + dUdtDiff - 3 * dUdtConv);
+        splitConstY = 0.25 * (dYdtProd + dYdtDiff + dYdtCross - 3 * dYdtConv);
     }
 
     convectionSystem.setSplitConstants(splitConstU, splitConstT, splitConstY);
@@ -1282,13 +1244,9 @@ void FlameSolver::extractConvectionState(double dt, int stage)
     assert(mathUtils::notnan(U));
     assert(mathUtils::notnan(Y));
 
-    for (size_t j=0; j<nPoints; j++) {
-        deltaUconv[j] += U[j] - Ustart[j];
-        deltaTconv[j] += T[j] - Tstart[j];
-        for (size_t k=0; k<nSpec; k++) {
-            deltaYconv(k,j) += Y(k,j) - Ystart(k,j);
-        }
-    }
+    deltaUconv += U - Ustart;
+    deltaTconv += T - Tstart;
+    deltaYconv += Y - Ystart;
 
     splitTimer.stop();
 
@@ -1319,13 +1277,9 @@ void FlameSolver::extractDiffusionState(double dt, int stage)
     assert(mathUtils::notnan(U));
     assert(mathUtils::notnan(Y));
 
-    for (size_t j=0; j<nPoints; j++) {
-        deltaUdiff[j] += U[j]-Ustart[j];
-        deltaTdiff[j] += T[j]-Tstart[j];
-        for (size_t k=0; k<nSpec; k++) {
-            deltaYdiff(k,j) += Y(k,j)-Ystart(k,j);
-        }
-    }
+    deltaUdiff += U - Ustart;
+    deltaTdiff += T - Tstart;
+    deltaYdiff += Y - Ystart;
 
     splitTimer.stop();
 
@@ -1358,13 +1312,10 @@ void FlameSolver::extractProductionState(double dt)
     assert(mathUtils::notnan(U));
     assert(mathUtils::notnan(Y));
 
-    for (size_t j=0; j<nPoints; j++) {
-        deltaUprod[j] += U[j] - Ustart[j];
-        deltaTprod[j] += T[j] - Tstart[j];
-        for (size_t k=0; k<nSpec; k++) {
-            deltaYprod(k,j) += Y(k,j)-Ystart(k,j);
-        }
-    }
+    deltaUprod += U - Ustart;
+    deltaTprod += T - Tstart;
+    deltaYprod += Y - Ystart;
+
     splitTimer.stop();
 
     if (options.outputDebugIntegratorStages) {
@@ -1413,38 +1364,25 @@ void FlameSolver::integrateDiffusionTerms(double t, int stage)
 void FlameSolver::rollVectorVector
 (vector<dvector>& vv, const dvec& u, const dvec& t, const dmatrix& y) const
 {
-    dvector uTmp(nPoints);
-    dvector tTmp(nPoints);
-    for (size_t j=0; j<nPoints; j++) {
-        uTmp[j] = u[j];
-        tTmp[j] = t[j];
-    }
+    size_t N = vv.size();
+    vv.resize(N + nSpec + 2, dvector(nPoints));
 
-    vv.push_back(uTmp);
-    vv.push_back(tTmp);
-
+    Eigen::Map<dvec>(&vv[N][0], nPoints) = u;
+    Eigen::Map<dvec>(&vv[N+1][0], nPoints) = t;
     for (size_t k=0; k<nSpec; k++) {
-        dvector tmp(nPoints);
-        for (size_t j=0; j<nPoints; j++) {
-            tmp[j] = y(k,j);
-        }
-        vv.push_back(tmp);
+        Eigen::Map<dvec>(&vv[N+k+2][0], nPoints) = y.row(k);
     }
 }
 
 
 void FlameSolver::unrollVectorVector
-(const vector<dvector>& vv, dvec& u, dvec& t, dmatrix& y, size_t i) const
+(vector<dvector>& vv, dvec& u, dvec& t, dmatrix& y, size_t i) const
 {
-    u.resize(nPoints);
-    t.resize(nPoints);
+    u = Eigen::Map<dvec>(&vv[i*nVars+kMomentum][0], nPoints);
+    t = Eigen::Map<dvec>(&vv[i*nVars+kEnergy][0], nPoints);
     y.resize(nSpec, nPoints);
-    for (size_t j=0; j<nPoints; j++) {
-        u[j] = vv[i*nVars+kMomentum][j];
-        t[j] = vv[i*nVars+kEnergy][j];
-        for (size_t k=0; k<nSpec; k++) {
-            y(k,j) = vv[i*nVars+kSpecies+k][j];
-        }
+    for (size_t k=0; k<nSpec; k++) {
+        y.row(k) = Eigen::Map<dvec>(&vv[i*nVars+kSpecies+k][0], nPoints);
     }
 }
 
@@ -1504,12 +1442,8 @@ void FlameSolver::calculateQdot()
     for (size_t j=0; j<nPoints; j++) {
         gas.setStateMass(&Y(0,j), T[j]);
         gas.getEnthalpies(&hk(0,j));
-
         gas.getReactionRates(&wDot(0,j));
-        qDot[j] = 0;
-        for (size_t k=0; k<nSpec; k++) {
-            qDot[j] -= wDot(k,j)*hk(k,j);
-        }
+        qDot[j] = - (wDot.col(j) * hk.col(j)).sum();
     }
     reactionRatesTimer.stop();
 }
@@ -1530,38 +1464,30 @@ void FlameSolver::calculateTimeDerivatives(double dt)
     double split(options.splittingMethod == "balanced");
 
     if (options.splittingMethod == "balanced") {
-        for (size_t j=0; j<nPoints; j++) {
-            deltaUconv[j] -= 0.25 * dt * (dUdtProd[j] + dUdtDiff[j]);
-            deltaUdiff[j] -= 0.25 * dt * (dUdtProd[j] + dUdtConv[j]);
-            deltaUprod[j] -= 0.5 * dt * (dUdtConv[j] + dUdtDiff[j]);
+        deltaUconv -= 0.25 * dt * (dUdtProd + dUdtDiff);
+        deltaUdiff -= 0.25 * dt * (dUdtProd + dUdtConv);
+        deltaUprod -= 0.5 * dt * (dUdtConv + dUdtDiff);
 
-            deltaTconv[j] -= 0.25 * dt * (dTdtProd[j] + dTdtDiff[j] + dTdtCross[j]);
-            deltaTdiff[j] -= 0.25 * dt * (dTdtProd[j] + dTdtConv[j] + dTdtCross[j]);
-            deltaTprod[j] -= 0.5 * dt * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
+        deltaTconv -= 0.25 * dt * (dTdtProd + dTdtDiff + dTdtCross);
+        deltaTdiff -= 0.25 * dt * (dTdtProd + dTdtConv + dTdtCross);
+        deltaTprod -= 0.5 * dt * (dTdtConv + dTdtDiff + dTdtCross);
 
-            for (size_t k=0; k<nSpec; k++) {
-                deltaYconv(k,j) -= 0.25 * dt * (dYdtProd(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
-                deltaYdiff(k,j) -= 0.25 * dt * (dYdtProd(k,j) + dYdtConv(k,j) + dYdtCross(k,j));
-                deltaYprod(k,j) -= 0.5 * dt * (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
-            }
-        }
+        deltaYconv -= 0.25 * dt * (dYdtProd + dYdtDiff + dYdtCross);
+        deltaYdiff -= 0.25 * dt * (dYdtProd + dYdtConv + dYdtCross);
+        deltaYprod -= 0.5 * dt * (dYdtConv + dYdtDiff + dYdtCross);
     }
 
-    for (size_t j=0; j<nPoints; j++) {
-        dUdtConv[j] = deltaUconv[j] / dt + split * 0.75 * dUdtConv[j];
-        dUdtDiff[j] = deltaUdiff[j] / dt + split * 0.75 * dUdtDiff[j];
-        dUdtProd[j] = deltaUprod[j] / dt + split * 0.5 * dUdtProd[j];
+    dUdtConv = deltaUconv / dt + split * 0.75 * dUdtConv;
+    dUdtDiff = deltaUdiff / dt + split * 0.75 * dUdtDiff;
+    dUdtProd = deltaUprod / dt + split * 0.5 * dUdtProd;
 
-        dTdtConv[j] = deltaTconv[j] / dt + split * 0.75 * dTdtConv[j];
-        dTdtDiff[j] = deltaTdiff[j] / dt + split * 0.75 * dTdtDiff[j];
-        dTdtProd[j] = deltaTprod[j] / dt + split * 0.5 * dTdtProd[j];
+    dTdtConv = deltaTconv / dt + split * 0.75 * dTdtConv;
+    dTdtDiff = deltaTdiff / dt + split * 0.75 * dTdtDiff;
+    dTdtProd = deltaTprod / dt + split * 0.5 * dTdtProd;
 
-        for (size_t k=0; k<nSpec; k++) {
-            dYdtConv(k,j) = deltaYconv(k,j) / dt + split * 0.75 * dYdtConv(k,j);
-            dYdtDiff(k,j) = deltaYdiff(k,j) / dt + split * 0.75 * dYdtDiff(k,j);
-            dYdtProd(k,j) = deltaYprod(k,j) / dt + split * 0.5 * dYdtProd(k,j);
-        }
-    }
+    dYdtConv = deltaYconv / dt + split * 0.75 * dYdtConv;
+    dYdtDiff = deltaYdiff / dt + split * 0.75 * dYdtDiff;
+    dYdtProd = deltaYprod / dt + split * 0.5 * dYdtProd;
 }
 
 double FlameSolver::getHeatReleaseRate(void)
@@ -2070,9 +1996,8 @@ void FlameSolver::updateTransportDomain()
             diffusionTestTerm.D[j] = rhoD(k,j);
         }
         const dvec& dYkdt_diff = diffusionTestSolver.get_ydot();
-        //dYdtTotal.setRow(k, const_cast<double*>(&dYkdt_diff[0]));
-        dYdtTotal.row(k) = Eigen::Map<Eigen::RowVectorXd>(const_cast<double*>(&dYkdt_diff[0]), nPoints);
-        dYdtTransport.row(k) = Eigen::Map<Eigen::RowVectorXd>(const_cast<double*>(&dYkdt_diff[0]), nPoints);
+        dYdtTotal.row(k) = dYkdt_diff;
+        dYdtTransport.row(k) = dYkdt_diff;
     }
 
     // Evaluate the reaction term (using the current reduced mechanism, if any)
