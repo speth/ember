@@ -142,13 +142,17 @@ void FlameSolver::initialize(void)
         std::cout << e.errorString << std::endl;
         logFile.write(e.errorString);
         throw;
+    } catch (std::exception& e) {
+        std::string message(e.what());
+        std::cout << message << std::endl;
+        logFile.write(message);
+        throw;
     } catch (...) {
         std::string message = "I have no idea what went wrong!";
         std::cout << message << std::endl;
         logFile.write(message);
         throw;
     }
-
 }
 
 void FlameSolver::tryrun(void)
@@ -163,6 +167,18 @@ void FlameSolver::tryrun(void)
         std::cout << e.errorString << std::endl;
         logFile.write(e.errorString);
         throw;
+    } catch (tbb::tbb_exception& e) {
+        std::string message("Unhandled TBB exception:\nname:");
+        message.append(e.name());
+        message.append("\nwhat:");
+        message.append(e.what());
+        std::cout << message << std::endl;
+        logFile.write(message);
+        throw;
+    } catch (std::exception& e) {
+        std::string message(e.what());
+        std::cout << message << std::endl;
+        logFile.write(message);
     } catch (...) {
         std::string message = "I have no idea what went wrong!";
         std::cout << message << std::endl;
