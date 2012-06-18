@@ -51,10 +51,6 @@ public:
     // Extra constant term introduced by splitting
     dvec splitConst; // constant terms
 
-    // Diagonal Jacobian elements for this this term
-    dvec diagonalJac;
-    bool updateDiagonalJac;
-
     // Cantera data
     CanteraGas* gas;
     PerfTimer* reactionRatesTimer;

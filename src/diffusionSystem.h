@@ -34,9 +34,8 @@ public:
     dvec B; // pre-factor
     dvec D; // "diffusion" coefficient
 
-    // Diagonalized, linear approximations for terms neglected by splitting
+    // Balancing constant introduced by the splitting method
     dvec splitConst; // constant terms
-    dvec splitLinear; // diagonal jacobian components
 
     // Integrate only over the range [jLeft,jRight]
     // All inputs and outputs, except for the grid, cover only this range

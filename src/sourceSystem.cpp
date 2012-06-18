@@ -6,7 +6,6 @@
 SourceSystem::SourceSystem()
     : U(NaN)
     , T(NaN)
-    , updateDiagonalJac(false)
     , gas(NULL)
     , quasi2d(false)
 {
@@ -21,7 +20,6 @@ void SourceSystem::resize(size_t new_nSpec)
     wDot.resize(nSpec);
     hk.resize(nSpec);
     splitConst.resize(nSpec+2);
-    diagonalJac.setConstant(nSpec+2, 0);
 }
 
 void SourceSystem::resetSplitConstants()
@@ -201,12 +199,6 @@ int SourceSystem::fdJacobian(const realtype t, const sdVector& y, const sdVector
         }
     }
 
-    if (updateDiagonalJac) {
-        for (size_t k=0; k<nSpec+2; k++) {
-            diagonalJac[k] = J(k,k);
-        }
-        updateDiagonalJac = false;
-    }
     jacobianTimer->stop();
 
     return 0;

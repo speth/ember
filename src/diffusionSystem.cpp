@@ -24,7 +24,6 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
 
     assert(mathUtils::notnan(c1));
     assert(mathUtils::notnan(c2));
-    assert(mathUtils::notnan(splitLinear));
 
     // Left boundary value
     size_t jStart;
@@ -81,9 +80,6 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
     }
 
     // Contribution from splitting
-    for (size_t j=0; j<N; j++) {
-        A(j,j) += splitLinear[j];
-    }
 }
 
 void DiffusionSystem::get_C(dvec& other_c)
@@ -107,14 +103,12 @@ void DiffusionSystem::setGrid(const oneDimGrid& other)
 void DiffusionSystem::resize(int N_)
 {
     N = N_;
-    B.resize(N);
-    D.resize(N);
-    splitConst.resize(N);
-    splitLinear.resize(N);
+    B.setConstant(N, NaN);
+    D.setConstant(N, NaN);
+    splitConst.setConstant(N, NaN);
 }
 
 void DiffusionSystem::resetSplitConstants()
 {
     splitConst.setZero(N);
-    splitLinear.setZero(N);
 }
