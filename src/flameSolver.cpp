@@ -38,6 +38,16 @@ void FlameSolver::setOptions(const configOptions& _options)
 
     gases.resize(options.nThreads);
 
+    // Windows has problems with the multithreaded initialization of
+    // Cantera objects
+#ifdef _WIN32
+    std::vector<CanteraGas**> ptrs(options.nThreads);
+    for (int i=0; i<options.nThreads; i++) {
+        gases[i]->setOptions(options);
+        gases[i]->initialize();
+    }
+#endif
+
     gas.setOptions(_options);
     grid.setOptions(_options);
 }

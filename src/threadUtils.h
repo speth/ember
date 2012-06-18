@@ -34,6 +34,10 @@ public:
         mutexes[i].unlock();
     }
 
+    T* operator[](size_t i) {
+        return data[i];
+    }
+
 private:
     std::vector<T*> data;
     std::vector<tbb::mutex> mutexes;
