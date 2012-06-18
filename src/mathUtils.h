@@ -66,6 +66,7 @@ namespace mathUtils
     vector<int> find(vector<bool>& v);
 
     void smooth(dvector& v);
+    void smooth(dvec& v);
     dvector linspace(const double x1, const double x2, const int n);
 
     // Internal function for splines

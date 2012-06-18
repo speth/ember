@@ -104,7 +104,7 @@ private:
     // Boundary values
     double rhou, rhob, rhoLeft, rhoRight;
     double Tu, Tb, Tleft, Tright;
-    dvector Yu, Yb, Yleft, Yright;
+    dvec Yu, Yb, Yleft, Yright;
 
     void resizeAuxiliary(); //!< Handle resizing of data structures as grid size changes
     void updateCrossTerms(); //!< calculates values of cross-component terms: jSoret, sumcpj, and jCorr
@@ -143,43 +143,43 @@ private:
     size_t N; //!< total problem size (nSpec * nVars)
 
     // State variables:
-    dvector U; //!< normalized tangential velocity (u*a/u_inf) [1/s]
-    dvector T; //!< temperature [K]
+    dvec U; //!< normalized tangential velocity (u*a/u_inf) [1/s]
+    dvec T; //!< temperature [K]
     dmatrix Y; //!< species mass fractions, Y(k,j) [-]
 
     // components of the time derivatives
     dmatrix dYdtDiff, dYdtProd, dYdtConv;
-    dvector dTdtDiff, dTdtProd, dTdtConv;
-    dvector dUdtDiff, dUdtProd, dUdtConv;
-    dvector drhodt;
+    dvec dTdtDiff, dTdtProd, dTdtConv;
+    dvec dUdtDiff, dUdtProd, dUdtConv;
+    dvec drhodt;
 
     // State variables at the beginning of the current integrator stage
-    dvector Ustart;
-    dvector Tstart;
+    dvec Ustart;
+    dvec Tstart;
     dmatrix Ystart;
 
     // Changes in each state variable for each terms of the governing equations
-    dvector deltaUconv;
-    dvector deltaUdiff;
-    dvector deltaUprod;
-    dvector deltaTconv;
-    dvector deltaTdiff;
-    dvector deltaTprod;
+    dvec deltaUconv;
+    dvec deltaUdiff;
+    dvec deltaUprod;
+    dvec deltaTconv;
+    dvec deltaTdiff;
+    dvec deltaTprod;
     dmatrix deltaYconv;
     dmatrix deltaYdiff;
     dmatrix deltaYprod;
 
     // Auxiliary variables:
-    dvector rho; //!< density [kg/m^3]
-    dvector jCorr; //!< Correction to ensure sum of mass fractions = 1
-    dvector sumcpj; //!< part of the enthalpy flux term
+    dvec rho; //!< density [kg/m^3]
+    dvec jCorr; //!< Correction to ensure sum of mass fractions = 1
+    dvec sumcpj; //!< part of the enthalpy flux term
     dvector qDot; //!< Heat release rate [W/m^3]
     dmatrix wDot; //!< species production rates [kmol/m^3*s]
-    dvector Wmx; //!< mixture molecular weight [kg/kmol]
-    dvector W; //!< species molecular weights [kg/kmol]
-    dvector mu; //!< dynamic viscosity [Pa*s]
-    dvector lambda; //!< thermal conductivity [W/m*K]
-    dvector cp; //!< mixture heat capacity [J/kg*K]
+    dvec Wmx; //!< mixture molecular weight [kg/kmol]
+    dvec W; //!< species molecular weights [kg/kmol]
+    dvec mu; //!< dynamic viscosity [Pa*s]
+    dvec lambda; //!< thermal conductivity [W/m*K]
+    dvec cp; //!< mixture heat capacity [J/kg*K]
     dmatrix cpSpec; //!< species molar heat capacities [J/kmol*K]
     dmatrix rhoD; //!< density * diffusivity [kg/m*s]
     dmatrix Dkt; //!< thermal diffusivity
@@ -188,7 +188,7 @@ private:
     dmatrix jSoret; //!< Soret mass flux [kg/m^2*s]
 
     dmatrix dYdtCross; //!< dYdt due to gradients in other species and temperature
-    dvector dTdtCross; //!< dTdt due to gradients in gas composition
+    dvec dTdtCross; //!< dTdt due to gradients in gas composition
 
     // jCorr is a correction to force the net diffusion mass flux to be zero
     // jCorrSystem / jCorrSolver are used to introduce numerical diffusion into
@@ -221,8 +221,8 @@ private:
     CanteraGas gas;
     ObjectPool<CanteraGas> gases;
 
-    void rollVectorVector(vector<dvector>& vv, const dvector& u, const dvector& t, const dmatrix& y) const;
-    void unrollVectorVector(const vector<dvector>& vv, dvector& u, dvector& t, dmatrix& y, size_t i) const;
+    void rollVectorVector(vector<dvector>& vv, const dvec& u, const dvec& t, const dmatrix& y) const;
+    void unrollVectorVector(const vector<dvector>& vv, dvec& u, dvec& t, dmatrix& y, size_t i) const;
 
     void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); //!< [m]

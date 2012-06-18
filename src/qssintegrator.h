@@ -13,17 +13,17 @@ public:
     virtual void initialize(size_t N);
 
     //! Set state at the start of a global timestep
-    void setState(const dvector& yIn, double tStart);
+    void setState(const dvec& yIn, double tStart);
 
     //! Take as many steps as needed to reach tf.
     //! Note that tf is relative to tstart, not absolute.
     int integrateToTime(double tf);
     int integrateOneStep(double tf); //!< Take one step toward tf without stepping past it.
 
-    virtual void odefun(double t, const dvector& y, dvector& q, dvector& d, bool corrector=false) = 0;
+    virtual void odefun(double t, const dvec& y, dvec& q, dvec& d, bool corrector=false) = 0;
 
     double tn; //!< Internal integrator time (relative to #tstart)
-    dvector y; //!< current state vector
+    dvec y; //!< current state vector
 
     bool stabilityCheck; //!< Flag to enable convergence-based stability check on timestep
 
@@ -37,7 +37,7 @@ public:
 
     double dtmin; //!< Minimum timestep allowed.
     double dtmax; //!< Maximum timestep allowed.
-    dvector ymin; //!< Minimum value allowed for each component
+    dvec ymin; //!< Minimum value allowed for each component
     vector<bool> enforce_ymin; //!< Enforce the minimum value specified in #ymin for each component
     double abstol; //!< Minimum component value to consider when determining stability / step size
 
@@ -57,18 +57,18 @@ private:
     double dt; //!< Integrator internal timestep
     double tstart; //!< Independent variable at the start of the global timestep.
 
-    dvector ym1; //!< Previous corrector iterate.
-    dvector ym2; //!< Second previous corrector iterate.
+    dvec ym1; //!< Previous corrector iterate.
+    dvec ym2; //!< Second previous corrector iterate.
 
-    dvector scratch; //!< temporary array.
+    dvec scratch; //!< temporary array.
 
-    dvector q; //!< production rate
-    dvector d; //!< loss rate
-    dvector rtau; //!< ratio of timestep to timescale.
-    dvector rtaus; //!< ratio of timestep to initial timescale for current timestep
-    dvector y1; //!< predicted value
-    dvector ys; //!< initial conditions for the chemical timestep
-    dvector qs; //!< initial production rate
+    dvec q; //!< production rate
+    dvec d; //!< loss rate
+    dvec rtau; //!< ratio of timestep to timescale.
+    dvec rtaus; //!< ratio of timestep to initial timescale for current timestep
+    dvec y1; //!< predicted value
+    dvec ys; //!< initial conditions for the chemical timestep
+    dvec qs; //!< initial production rate
 
     //! Flag to trigger integrator restart on the next call to
     //! #integrateToTime or #integrateOneStep.

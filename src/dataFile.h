@@ -22,6 +22,10 @@ public:
     void writeVector(const std::string& name, const dvector& v);
     dvector readVector(const std::string& name);
 
+    void writeVec(const std::string& name, const dvec& v);
+    dvec readVec(const std::string& name);
+
+
     void writeArray2D(const std::string& name, const dmatrix& y, bool transpose=false);
     dmatrix readArray2D(const std::string& name, bool transpose=false);
 

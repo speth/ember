@@ -163,7 +163,7 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     T.resize(nPoints);
     dTdt.resize(nPoints);
     dTdx.resize(nPoints);
-    drhodt.resize(nPoints, 0);
+    drhodt.setConstant(nPoints, 0);
 
     Wmx.resize(nPoints);
     dWdt.resize(nPoints);
@@ -172,9 +172,9 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
 
 void ConvectionSystemUTW::resetSplitConstants()
 {
-    splitConstU.assign(nPoints, 0);
-    splitConstT.assign(nPoints, 0);
-    splitConstW.assign(nPoints, 0);
+    splitConstU.setZero(nPoints);
+    splitConstT.setZero(nPoints);
+    splitConstW.setZero(nPoints);
 }
 
 void ConvectionSystemUTW::updateContinuityBoundaryCondition
@@ -364,7 +364,7 @@ void ConvectionSystemY::resize(const size_t new_nPoints)
 
 void ConvectionSystemY::resetSplitConstants()
 {
-    splitConst.assign(nPoints, 0);
+    splitConst.setZero(nPoints);
 }
 
 void ConvectionSystemY::update_v(const double t)
@@ -372,7 +372,7 @@ void ConvectionSystemY::update_v(const double t)
     assert(vInterp->size() > 0);
     if (vInterp->size() == 1) {
         // vInterp only has one data point
-        const dvector& vLeft = vInterp->begin()->second;
+        const dvec& vLeft = vInterp->begin()->second;
         size_t i = 0;
         for (size_t j=startIndex; j<=stopIndex; j++) {
             v[i] = vLeft[j];
@@ -393,8 +393,8 @@ void ConvectionSystemY::update_v(const double t)
         iLeft--;
         iRight--;
     }
-    const dvector& vLeft = iLeft->second;
-    const dvector& vRight = iRight->second;
+    const dvec& vLeft = iLeft->second;
+    const dvec& vRight = iRight->second;
 
     // Linear interpolation
     double s = (t-iLeft->first)/(iRight->first - iLeft->first);
@@ -506,7 +506,7 @@ void ConvectionSystemSplit::setSpeciesDomains
 }
 
 void ConvectionSystemSplit::setState
-(const dvector& U_, const dvector& T_, dmatrix& Y_, double tInitial)
+(const dvec& U_, const dvec& T_, dmatrix& Y_, double tInitial)
 {
     U = U_;
     T = T_;
@@ -547,7 +547,7 @@ void ConvectionSystemSplit::setState
     }
 }
 
-void ConvectionSystemSplit::setLeftBC(const double Tleft, const dvector& Yleft_)
+void ConvectionSystemSplit::setLeftBC(const double Tleft, const dvec& Yleft_)
 {
     utwSystem.Tleft = Tleft;
     Yleft = Yleft_;
@@ -590,7 +590,7 @@ void ConvectionSystemSplit::evaluate()
     }
 }
 
-void ConvectionSystemSplit::setDensityDerivative(const dvector& drhodt)
+void ConvectionSystemSplit::setDensityDerivative(const dvec& drhodt)
 {
     utwSystem.drhodt = drhodt;
 }
@@ -603,8 +603,8 @@ void ConvectionSystemSplit::resetSplitConstants()
     }
 }
 
-void ConvectionSystemSplit::setSplitConstants(const dvector& splitConstU,
-                                              const dvector& splitConstT,
+void ConvectionSystemSplit::setSplitConstants(const dvec& splitConstU,
+                                              const dvec& splitConstT,
                                               const dmatrix& splitConstY)
 {
     utwSystem.splitConstT = splitConstT;

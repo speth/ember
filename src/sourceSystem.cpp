@@ -15,18 +15,18 @@ SourceSystem::SourceSystem()
 void SourceSystem::resize(size_t new_nSpec)
 {
     nSpec = new_nSpec;
-    Y.resize(nSpec, NaN);
+    Y.setConstant(nSpec, NaN);
     dYdt.resize(nSpec);
     cpSpec.resize(nSpec);
     wDot.resize(nSpec);
     hk.resize(nSpec);
     splitConst.resize(nSpec+2);
-    diagonalJac.resize(nSpec+2, 0);
+    diagonalJac.setConstant(nSpec+2, 0);
 }
 
 void SourceSystem::resetSplitConstants()
 {
-    splitConst.assign(splitConst.size(), 0);
+    splitConst.setZero(splitConst.rows());
 }
 
 void SourceSystem::setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
@@ -297,9 +297,9 @@ void SourceSystemQSS::initialize(size_t new_nSpec)
 {
     QSSIntegrator::initialize(new_nSpec + 2);
     nSpec = new_nSpec;
-    Y.resize(nSpec, NaN);
-    dYdtQ.resize(nSpec, 0);
-    dYdtD.resize(nSpec, 0);
+    Y.setConstant(nSpec, NaN);
+    dYdtQ.setConstant(nSpec, 0);
+    dYdtD.setConstant(nSpec, 0);
     cpSpec.resize(nSpec);
     splitConstY.resize(nSpec);
     wDotD.resize(nSpec);
@@ -323,7 +323,7 @@ void SourceSystemQSS::setOptions(configOptions& options_)
 
 void SourceSystemQSS::resetSplitConstants()
 {
-    splitConstY.assign(nSpec, 0);
+    splitConstY.setZero();
     splitConstT = 0;
     splitConstU = 0;
 }
@@ -336,7 +336,7 @@ void SourceSystemQSS::setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInt
     TInterp_ = TInterp;
 }
 
-void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d, bool corrector)
+void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d, bool corrector)
 {
     tCall = t;
     unroll_y(y, corrector);
@@ -400,7 +400,7 @@ void SourceSystemQSS::odefun(double t, const dvector& y, dvector& q, dvector& d,
     roll_ydot(q, d);
 }
 
-void SourceSystemQSS::unroll_y(const dvector& y, bool corrector)
+void SourceSystemQSS::unroll_y(const dvec& y, bool corrector)
 {
     if (!quasi2d) {
         if (!corrector) {
@@ -418,7 +418,7 @@ void SourceSystemQSS::unroll_y(const dvector& y, bool corrector)
     }
 }
 
-void SourceSystemQSS::roll_y(dvector& y) const
+void SourceSystemQSS::roll_y(dvec& y) const
 {
     y[kEnergy] = T;
     y[kMomentum] = U;
@@ -427,7 +427,7 @@ void SourceSystemQSS::roll_y(dvector& y) const
     }
 }
 
-void SourceSystemQSS::roll_ydot(dvector& q, dvector& d) const
+void SourceSystemQSS::roll_ydot(dvec& q, dvec& d) const
 {
     q[kEnergy] = dTdtQ;
     d[kEnergy] = dTdtD;

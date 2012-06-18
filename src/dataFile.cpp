@@ -73,6 +73,27 @@ void DataFile::writeVector(const std::string& name, const dvector& v)
     H5Dclose(dataset);
 }
 
+void DataFile::writeVec(const std::string& name, const dvec& v)
+{
+    require_file_open();
+
+    hsize_t dims = v.rows();
+    if (dims == 0) {
+        logFile.write(format(
+            "DataFile::writeVector: Warning: '%s' is empty.") % name);
+        return;
+    }
+
+    hid_t dataspace, dataset, datatype;
+    dataspace = H5Screate_simple(1, &dims, NULL);
+    datatype = H5Tcopy(H5T_NATIVE_DOUBLE);
+    H5Tset_order(datatype, H5T_ORDER_LE);
+
+    dataset = get_dataset(name, datatype, dataspace);
+    H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, v.data());
+    H5Dclose(dataset);
+}
+
 dvector DataFile::readVector(const std::string& name)
 {
     require_file_open();
@@ -93,6 +114,28 @@ dvector DataFile::readVector(const std::string& name)
     H5Dclose(dataset);
     return values;
 }
+
+dvec DataFile::readVec(const std::string& name)
+{
+    require_file_open();
+
+    hid_t dataspace, dataset;
+    dataset = H5Dopen(file, name.c_str(), H5P_DEFAULT);
+    dataspace = H5Dget_space(dataset);
+
+    if (H5Sget_simple_extent_ndims(dataspace) != 1) {
+        throw debugException((format(
+            "DataFile::readVector: '%s' is not a 1D array.") % name).str());
+    }
+
+    hsize_t N = H5Sget_simple_extent_npoints(dataspace);
+    dvec values(N);
+
+    H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, values.data());
+    H5Dclose(dataset);
+    return values;
+}
+
 
 void DataFile::writeArray2D(const std::string& name, const dmatrix& y, bool transpose)
 {

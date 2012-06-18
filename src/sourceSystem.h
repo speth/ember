@@ -46,13 +46,13 @@ public:
     // current state variables
     double U, dUdt; // tangential velocity
     double T, dTdt; // temperature
-    dvector Y, dYdt; // species mass fractions
+    dvec Y, dYdt; // species mass fractions
 
     // Extra constant term introduced by splitting
-    dvector splitConst; // constant terms
+    dvec splitConst; // constant terms
 
     // Diagonal Jacobian elements for this this term
-    dvector diagonalJac;
+    dvec diagonalJac;
     bool updateDiagonalJac;
 
     // Cantera data
@@ -65,20 +65,20 @@ public:
     size_t nSpec;
     int j; // grid index for this system
     double x; // grid position for this system
-    dvector W; // species molecular weights [kg/kmol]
+    dvec W; // species molecular weights [kg/kmol]
     double rhou; // density of the unburned mixture
 
     // Other quantities
-    dvector wDot; // species net production rates [kmol/m^3*s]
+    dvec wDot; // species net production rates [kmol/m^3*s]
     double qDot; // heat release rate per unit volume [W/m^3]
 
 private:
     // Physical properties
     double rho; // density [kg/m^3]
     double cp; // specific heat capacity (average) [J/kg*K]
-    dvector cpSpec; // species specific heat capacity [J/mol*K]
+    dvec cpSpec; // species specific heat capacity [J/mol*K]
     double Wmx; // mixture molecular weight [kg/mol]
-    dvector hk; // species enthalpies [J/kmol]
+    dvec hk; // species enthalpies [J/kmol]
     bool quasi2d;
     boost::shared_ptr<BilinearInterpolator> vzInterp_;
     boost::shared_ptr<BilinearInterpolator> TInterp_;
@@ -93,11 +93,11 @@ public:
     SourceSystemQSS();
 
     // The ODE function: ydot = f(t,y)
-    void odefun(double t, const dvector& y, dvector& q, dvector& d, bool corrector=false);
+    void odefun(double t, const dvec& y, dvec& q, dvec& d, bool corrector=false);
 
-    void unroll_y(const dvector& y, bool corrector=false); // fill in current state variables from sdvector
-    void roll_y(dvector& y) const; // fill in y with current state variables
-    void roll_ydot(dvector& q, dvector& d) const; // fill in q and d with current time derivatives
+    void unroll_y(const dvec& y, bool corrector=false); // fill in current state variables from sdvector
+    void roll_y(dvec& y) const; // fill in y with current state variables
+    void roll_ydot(dvec& q, dvec& d) const; // fill in q and d with current time derivatives
 
     // Set problem size
     void initialize(size_t nSpec);
@@ -117,7 +117,7 @@ public:
     // current state variables
     double U, dUdtQ, dUdtD; // tangential velocity
     double T, dTdtQ, dTdtD; // temperature
-    dvector Y, dYdtQ, dYdtD; // species mass fractions
+    dvec Y, dYdtQ, dYdtD; // species mass fractions
 
     // Cantera data
     CanteraGas* gas;
@@ -129,24 +129,24 @@ public:
     int j; // grid index for this system
     double x; // grid position for this system
     double tCall; // the last time at which odefun was called
-    dvector W; // species molecular weights [kg/kmol]
+    dvec W; // species molecular weights [kg/kmol]
     double rhou; // density of the unburned mixture
 
     // Constant terms introduced by splitting method
-    dvector splitConstY;
+    dvec splitConstY;
     double splitConstT, splitConstU;
 
     // Other quantities
-    dvector wDotQ, wDotD; // species production / destruction rates [kmol/m^3*s]
+    dvec wDotQ, wDotD; // species production / destruction rates [kmol/m^3*s]
     double qDot; // heat release rate per unit volume [W/m^3]
 
 private:
     // Physical properties
     double rho; // density [kg/m^3]
     double cp; // specific heat capacity (average) [J/kg*K]
-    dvector cpSpec; // species specific heat capacity [J/mol*K]
+    dvec cpSpec; // species specific heat capacity [J/mol*K]
     double Wmx; // mixture molecular weight [kg/mol]
-    dvector hk; // species enthalpies [J/kmol]
+    dvec hk; // species enthalpies [J/kmol]
     bool quasi2d;
     boost::shared_ptr<BilinearInterpolator> vzInterp_;
     boost::shared_ptr<BilinearInterpolator> TInterp_;

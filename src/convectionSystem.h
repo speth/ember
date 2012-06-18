@@ -31,33 +31,33 @@ public:
     void updateContinuityBoundaryCondition(const dvector& qdot,
                                            ContinuityBoundaryCondition::BC newBC);
 
-    dvector U, dUdt;
-    dvector T, dTdt;
-    dvector Wmx, dWdt;
+    dvec U, dUdt;
+    dvec T, dTdt;
+    dvec Wmx, dWdt;
 
     double Tleft; // Temperature left boundary value
     double Wleft; // mixture molecular weight left boundary value
     double rVzero; // mass flux boundary value at j=0
 
-    dvector drhodt;
+    dvec drhodt;
 
     // Constant terms introduced by the splitting method
-    dvector splitConstT;
-    dvector splitConstW;
-    dvector splitConstU;
+    dvec splitConstT;
+    dvec splitConstW;
+    dvec splitConstU;
 
     // Cantera data
     CanteraGas* gas;
 
     // Auxiliary variables
-    dvector V; // mass flux [kg/m^2*s]
-    dvector rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
-    dvector rho; // mixture density [kg/m^3]
+    dvec V; // mass flux [kg/m^2*s]
+    dvec rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
+    dvec rho; // mixture density [kg/m^3]
 
     // variables used internally
-    dvector dUdx;
-    dvector dTdx;
-    dvector dWdx;
+    dvec dUdx;
+    dvec dTdx;
+    dvec dWdx;
 
     ContinuityBoundaryCondition::BC continuityBC;
     size_t jContBC; // The point at which the continuity equation BC is applied
@@ -70,7 +70,7 @@ private:
     size_t nVars; // == 3
 };
 
-typedef std::map<double, dvector> vecInterpolator;
+typedef std::map<double, dvec> vecInterpolator;
 
 class ConvectionSystemY : public sdODE, public GridBased
 {
@@ -87,7 +87,7 @@ public:
 
     double Yleft;
     int k; // species index (only needed for debugging)
-    dvector splitConst; // constant term introduced by splitting
+    dvec splitConst; // constant term introduced by splitting
 
     size_t startIndex;
     size_t stopIndex;
@@ -101,7 +101,7 @@ public:
 
 private:
     void update_v(const double t);
-    dvector v;
+    dvec v;
 };
 
 
@@ -118,18 +118,18 @@ public:
     void setGas(CanteraGas& gas);
     void resize(const size_t nPointsUTW, const vector<size_t>& nPointsSpec, const size_t nSpec);
     void setSpeciesDomains(vector<size_t>& startIndices, vector<size_t>& stopIndices);
-    void setState(const dvector& U, const dvector& T, dmatrix& Y, double tInitial);
-    void setLeftBC(const double Tleft, const dvector& Yleft);
+    void setState(const dvec& U, const dvec& T, dmatrix& Y, double tInitial);
+    void setLeftBC(const double Tleft, const dvec& Yleft);
     void set_rVzero(const double rVzero);
     void evaluate(); // evaluate time derivatives and mass flux at the current state
 
     // Time derivatives of species and temperature from the other split terms are needed
     // to correctly compute the density derivative appearing in the continuity equation
-    void setDensityDerivative(const dvector& drhodt);
+    void setDensityDerivative(const dvec& drhodt);
 
     // Constants introduced by the splitting method
-    void setSplitConstants(const dvector& splitConstU,
-                           const dvector& splitConstT,
+    void setSplitConstants(const dvec& splitConstU,
+                           const dvec& splitConstT,
                            const dmatrix& splitConstY);
 
     void resetSplitConstants();
@@ -140,16 +140,16 @@ public:
     void setupQuasi2D(boost::shared_ptr<BilinearInterpolator>& vzInterp,
                       boost::shared_ptr<BilinearInterpolator>& vrInterp);
 
-    dvector U;
-    dvector T;
-    dvector Wmx;
+    dvec U;
+    dvec T;
+    dvec Wmx;
     dmatrix Y;
 
     // Time derivatives and mass flux are updated by evaluate()
-    dvector V;
-    dvector dUdt;
-    dvector dTdt;
-    dvector dWdt;
+    dvec V;
+    dvec dUdt;
+    dvec dTdt;
+    dvec dWdt;
     dmatrix dYdt;
 
     ConvectionSystemUTW utwSystem;
@@ -173,7 +173,7 @@ private:
     boost::ptr_vector<ConvectionSystemY> speciesSystems;
     boost::ptr_vector<sundialsCVODE> speciesSolvers;
 
-    dvector Yleft;
+    dvec Yleft;
     dvector W;
 
     size_t nSpec;

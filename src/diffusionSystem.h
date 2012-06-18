@@ -24,19 +24,19 @@ public:
     void get_A(sdBandMatrix& J);
 
     // Provides the constant term to the integrator
-    void get_C(dvector& y);
+    void get_C(dvec& y);
 
     void setGrid(const oneDimGrid& grid);
     void resize(int N);
     void resetSplitConstants();
 
     // the coefficients of the ODE
-    dvector B; // pre-factor
-    dvector D; // "diffusion" coefficient
+    dvec B; // pre-factor
+    dvec D; // "diffusion" coefficient
 
     // Diagonalized, linear approximations for terms neglected by splitting
-    dvector splitConst; // constant terms
-    dvector splitLinear; // diagonal jacobian components
+    dvec splitConst; // constant terms
+    dvec splitLinear; // diagonal jacobian components
 
     // Integrate only over the range [jLeft,jRight]
     // All inputs and outputs, except for the grid, cover only this range

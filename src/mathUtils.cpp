@@ -220,6 +220,18 @@ void mathUtils::smooth(dvector& v)
     }
 }
 
+void mathUtils::smooth(dvec& v)
+{
+    if (v.rows() == 0) {return;}
+    double p = v[0];
+    double q = 0;
+    for (dvec::Index i=1; i<v.rows()-1; i++) {
+        q = v[i];
+        v[i] = 0.25*p + 0.5*v[i] + 0.25*v[i+1];
+        std::swap(p,q);
+    }
+}
+
 dvector mathUtils::linspace(const double x1, const double x2, const int n)
 {
     dvector v(n);

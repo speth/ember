@@ -86,9 +86,9 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
     }
 }
 
-void DiffusionSystem::get_C(dvector& other_c)
+void DiffusionSystem::get_C(dvec& other_c)
 {
-    other_c.assign(splitConst.begin(), splitConst.end());
+    other_c = splitConst;
     if (grid.leftBC == BoundaryCondition::WallFlux) {
         other_c[0] += B[0] * (grid.alpha + 1) / hh[0] * wallConst * yInf;
     }
@@ -115,6 +115,6 @@ void DiffusionSystem::resize(int N_)
 
 void DiffusionSystem::resetSplitConstants()
 {
-    splitConst.assign(N, 0);
-    splitLinear.assign(N, 0);
+    splitConst.setZero(N);
+    splitLinear.setZero(N);
 }

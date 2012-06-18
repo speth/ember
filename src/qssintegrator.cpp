@@ -35,8 +35,8 @@ void QSSIntegrator::initialize(size_t N_)
     N = N_;
     y.resize(N);
 
-    q.assign(N, 0);
-    d.assign(N, 0);
+    q.setZero(N);
+    d.setZero(N);
     rtaus.resize(N);
     y1.resize(N);
 
@@ -44,14 +44,14 @@ void QSSIntegrator::initialize(size_t N_)
     rtau.resize(N);
     qs.resize(N);
 
-    ymin.resize(N, 1e-20);
+    ymin.setConstant(N, 1e-20);
     enforce_ymin.resize(N, true);
     ym1.resize(N);
     ym2.resize(N);
     scratch.resize(N);
 }
 
-void QSSIntegrator::setState(const dvector& yIn, double tstart_)
+void QSSIntegrator::setState(const dvec& yIn, double tstart_)
 {
     assert(yIn.size() == N);
 
