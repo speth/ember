@@ -58,19 +58,26 @@ public:
                                      double equivalenceRatio);
 
     void setStateMass(const dvector& Y, const double T);
+    void setStateMass(const dvec& Y, const double T);
     void setStateMass(const double* Y, const double T);
 
     void setStateMole(const dvector& X, const double T);
+    void setStateMole(const dvec& X, const double T);
     void setStateMole(const double* X, const double T);
 
     void getMoleFractions(dvector& X) const;
+    void getMoleFractions(dvec& X) const;
     void getMoleFractions(double* X) const;
+
     void getMassFractions(dvector& Y) const;
+    void getMassFractions(dvec& Y) const;
     void getMassFractions(double* Y) const;
 
     double getDensity() const;
     double getMixtureMolecularWeight() const;
+
     void getMolecularWeights(dvector& W) const;
+    void getMolecularWeights(dvec& W) const;
     void getMolecularWeights(double* W) const;
 
     double getViscosity() const;
@@ -78,29 +85,38 @@ public:
 
     // Diffusion coefficients for calculating v[k] = -D[k] / X[k] * grad(X[k])
     void getDiffusionCoefficientsMole(dvector& Dkm) const;
+    void getDiffusionCoefficientsMole(dvec& Dkm) const;
     void getDiffusionCoefficientsMole(double* Dkm) const;
     void getWeightedDiffusionCoefficientsMole(dvector& rhoD) const;
+    void getWeightedDiffusionCoefficientsMole(dvec& rhoD) const;
     void getWeightedDiffusionCoefficientsMole(double* rhoD) const;
 
     // Diffusion coefficients for calculating j[k] = - rho * D[k] * grad(Y[k])
     void getWeightedDiffusionCoefficientsMass(double* rhoD);
     void getWeightedDiffusionCoefficientsMass(dvector& rhoD);
+    void getWeightedDiffusionCoefficientsMass(dvec& rhoD);
 
     void getThermalDiffusionCoefficients(dvector& Dkt) const;
+    void getThermalDiffusionCoefficients(dvec& Dkt) const;
     void getThermalDiffusionCoefficients(double* Dkt) const;
 
     double getSpecificHeatCapacity() const;
     void getSpecificHeatCapacities(dvector& cpSpec) const;
+    void getSpecificHeatCapacities(dvec& cpSpec) const;
     void getSpecificHeatCapacities(double* cpSpec) const;
     void getEnthalpies(dvector& hk) const;
+    void getEnthalpies(dvec& hk) const;
     void getEnthalpies(double* hk) const;
 
     void getReactionRates(dvector& wDot) const;
+    void getReactionRates(dvec& wDot) const;
     void getReactionRates(double* wDot) const;
 
     void getCreationRates(dvector& wDot) const;
+    void getCreationRates(dvec& wDot) const;
     void getCreationRates(double* wDot) const;
     void getDestructionRates(dvector& wDot) const;
+    void getDestructionRates(dvec& wDot) const;
     void getDestructionRates(double* wDot) const;
 
     Cantera::IdealGasPhase thermo;
