@@ -775,12 +775,12 @@ void FlameSolver::resizeAuxiliary()
     dUdtProd.resize(nPoints);
     dUdtConv.resize(nPoints);
 
-    rho.resize(nPoints);
+    rho.setZero(nPoints);
     drhodt.setZero(nPoints);
     Wmx.resize(nPoints);
     mu.resize(nPoints);
-    lambda.resize(nPoints);
-    cp.resize(nPoints);
+    lambda.setZero(nPoints);
+    cp.setZero(nPoints);
     jCorr.resize(nPoints);
     sumcpj.resize(nPoints);
     qDot.resize(nPoints);
@@ -789,8 +789,8 @@ void FlameSolver::resizeAuxiliary()
     Dkt.resize(nSpec, nPoints);
     wDot.resize(nSpec, nPoints);
     hk.resize(nSpec, nPoints);
-    jFick.resize(nSpec, nPoints);
-    jSoret.resize(nSpec, nPoints);
+    jFick.setZero(nSpec, nPoints);
+    jSoret.setZero(nSpec, nPoints);
 
     grid.jj = nPoints-1;
     grid.updateBoundaryIndices();
@@ -923,6 +923,8 @@ void FlameSolver::updateCrossTerms()
             jCorr[j] -= jFick(k,j) + jSoret(k,j);
         }
     }
+    jCorr[jj] = 0;
+
     assert(mathUtils::notnan(jFick));
     assert(mathUtils::notnan(jSoret));
     assert(mathUtils::notnan(lambda));
@@ -931,9 +933,10 @@ void FlameSolver::updateCrossTerms()
 
     // Add a bit of artificial diffusion to jCorr to improve stability
     jCorrSolver.y = jCorr;
-    for (size_t j=0; j<jj; j++) {
+    for (size_t j=0; j<nPoints; j++) {
         jCorrSystem.B[j] = lambda[j] / (rho[j] * cp[j]); // treat as Le = 1
         jCorrSystem.D[j] = 1.0;
+        jCorrSystem.splitConst[j] = 0;
     }
 
     double dt = options.globalTimestep;

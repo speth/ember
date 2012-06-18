@@ -11,9 +11,11 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
 {
     // Build the matrix A describing the linear ODE
     SetToZero(A.forSundials());
-    size_t N = D.size();
+    size_t N = D.rows();
 
     assert(N == jRight - jLeft + 1);
+    assert(mathUtils::notnan(D));
+    assert(mathUtils::notnan(B));
     dvector c1(N, 0);
     dvector c2(N, 0);
 
