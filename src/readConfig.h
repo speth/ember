@@ -104,12 +104,6 @@ public:
     std::string transportModel;
     double transportThreshold;
 
-    // Transport Elimination configuration
-    bool transportEliminationDiffusion;
-    bool transportEliminationConvection;
-    int transportEliminationStepInterval;
-    double transport_atol;
-
     std::string fuel; // molar composition of the fuel
     std::string oxidizer; // molar composition of the oxidizer
     double equivalenceRatio;

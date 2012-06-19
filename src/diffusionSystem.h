@@ -26,7 +26,6 @@ public:
     // Provides the constant term to the integrator
     void get_C(dvec& y);
 
-    void setGrid(const oneDimGrid& grid);
     void resize(int N);
     void resetSplitConstants();
 
@@ -36,11 +35,6 @@ public:
 
     // Balancing constant introduced by the splitting method
     dvec splitConst; // constant terms
-
-    // Integrate only over the range [jLeft,jRight]
-    // All inputs and outputs, except for the grid, cover only this range
-    size_t jLeft;
-    size_t jRight;
 
     // Number of points in the region to be solved (= jRight - jLeft + 1)
     int N;

@@ -196,18 +196,6 @@ private:
     DiffusionSystem jCorrSystem;
     BDFIntegrator jCorrSolver;
 
-    // Solver used to determine the subdomain on which to evaluate the
-    // transport term for each species
-    DiffusionSystem diffusionTestTerm;
-    BDFIntegrator diffusionTestSolver;
-    vector<size_t> diffusionStartIndices; //!< index of leftmost grid point for each component
-    vector<size_t> diffusionStopIndices; //!< index of rightmost grid point for each component
-    vector<size_t> nPointsDiffusion; //!< number of grid points for transport of each component
-
-    vector<size_t> convectionStartIndices; //!< index of leftmost grid point for each component
-    vector<size_t> convectionStopIndices; //!< index of rightmost grid point for each component
-    vector<size_t> nPointsConvection; //!< number of grid points for transport of each component
-
     //! Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;
 
@@ -230,8 +218,6 @@ private:
     void printPerformanceStats(void);
     void printPerfString(const std::string& label, const PerfTimer& T);
 
-    void updateTransportDomain();
-
     //! Data for solving quasi-2D method-of-lines problems
     boost::shared_ptr<BilinearInterpolator> vzInterp, vrInterp, TInterp;
 
@@ -247,7 +233,7 @@ private:
 
     // These account for special parts of the code
     PerfTimer reactionRatesTimer, transportTimer, thermoTimer;
-    PerfTimer jacobianTimer, adaptiveTransportTimer;
+    PerfTimer jacobianTimer;
     PerfTimer conductivityTimer, viscosityTimer, diffusivityTimer;
 
     friend class SourceTermWrapper;

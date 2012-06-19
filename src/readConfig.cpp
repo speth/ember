@@ -135,13 +135,6 @@ configOptions::configOptions(const bp::object& conf)
     readOption(chem, "transportModel", transportModel);
     readOption(chem, "threshold", transportThreshold);
 
-    // Transport species elimination
-    const object& transport = conf.attr("transportElimination");
-    readOption(transport, "atol", transport_atol);
-    readOption(transport, "diffusion", transportEliminationDiffusion);
-    readOption(transport, "convection", transportEliminationConvection);
-    readOption(transport, "stepInterval", transportEliminationStepInterval);
-
     // Initial Condition
     const object& ic = conf.attr("initialCondition");
     readOption(ic, "nPoints", nPoints);

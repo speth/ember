@@ -89,9 +89,6 @@ public:
     int k; // species index (only needed for debugging)
     dvec splitConst; // constant term introduced by splitting
 
-    size_t startIndex;
-    size_t stopIndex;
-
     boost::shared_ptr<vecInterpolator> vInterp; // axial (normal) velocity [m/s] at various times
 
     //! Interpolators for the quasi-2d problem
@@ -116,8 +113,7 @@ public:
     void setGrid(const oneDimGrid& grid);
     void setTolerances(const configOptions& options);
     void setGas(CanteraGas& gas);
-    void resize(const size_t nPointsUTW, const vector<size_t>& nPointsSpec, const size_t nSpec);
-    void setSpeciesDomains(vector<size_t>& startIndices, vector<size_t>& stopIndices);
+    void resize(const size_t nPoints, const size_t nSpec);
     void setState(const dvec& U, const dvec& T, dmatrix& Y, double tInitial);
     void setLeftBC(const double Tleft, const dvec& Yleft);
     void set_rVzero(const double rVzero);
@@ -178,11 +174,6 @@ private:
 
     size_t nSpec;
     size_t nVars;
-    size_t nPointsUTW;
-    vector<size_t> nPointsSpec;
-
-    vector<size_t>* startIndices; // index of leftmost grid point for each component (U,T,Yk)
-    vector<size_t>* stopIndices; // index of rightmost grid point for each component (U,T,Yk)
 
     CanteraGas* gas;
 

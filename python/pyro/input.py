@@ -146,27 +146,6 @@ class Chemistry(Options):
     threshold = 1e-5
 
 
-class TransportElimination(Options):
-    """
-    Options for integrating each of the species transport
-    equations on a reduced set of grid points.
-    """
-
-    #: Integrate the diffusion equation on the reduced domain
-    diffusion = False
-
-    #: Integrate the convection equation on the reduced domain
-    convection = False
-
-    #: Absolute threshold on the time derivative of the mass fraction
-    #: for each species at a point.
-    atol = 1e-3
-
-    #: Number of timesteps to take before re-evaluating the transport
-    #: domain for each species.
-    stepInterval = 1
-
-
 class Grid(Options):
     """ Parameters controlling the adaptive grid """
     #: Maximum relative scalar variation of each state vector
@@ -575,7 +554,6 @@ class Config(object):
         self.paths = get(Paths)
         self.general = get(General)
         self.chemistry = get(Chemistry)
-        self.transportElimination = get(TransportElimination)
         self.grid = get(Grid)
         self.initialCondition = get(InitialCondition)
         self.wallFlux = opts.get('WallFlux')
