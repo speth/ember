@@ -45,7 +45,7 @@ void QSSIntegrator::initialize(size_t N_)
     qs.resize(N);
 
     ymin.setConstant(N, 1e-20);
-    enforce_ymin.resize(N, true);
+    enforce_ymin.setOnes(N);
     ym1.resize(N);
     ym2.resize(N);
     scratch.resize(N);
@@ -121,30 +121,21 @@ int QSSIntegrator::integrateOneStep(double tf) {
         getInitialStepSize(tf);
     }
 
+    // d must be zero for components where the minimum is not enforced
+    assert((d * (1.0 - enforce_ymin)).sum() == 0);
+
     // Store starting values
     ts = tn;
-    for (size_t i=0; i<N; i++) {
-        if (enforce_ymin[i]) {
-            rtau[i] = dt*d[i]/y[i];
-        } else {
-            assert(d[i] == 0);
-            rtau[i] = 0;
-        }
-        ys[i] = y[i];
-        qs[i] = q[i];
-        rtaus[i] = rtau[i];
-    }
+    rtau = dt * d / y * enforce_ymin;
+    qs = q;
+    ys = y;
+    rtaus = rtau;
 
     // Repeat integration until a successful timestep has been taken
     while (true) {
         // Find the predictor terms.
-        for (size_t i=0; i<N; i++) {
-            // prediction
-            double rtaui = rtau[i];
-            double alpha = (180+rtaui*(60+rtaui*(11+rtaui))) /
-                           (360 + rtaui*(60 + rtaui*(12 + rtaui)));
-           scratch[i] = (q[i]-d[i])/(1.0 + alpha*rtaui);
-        }
+        scratch = (q - d)/(1.0 + rtau * (180+rtau*(60+rtau*(11+rtau))) /
+                           (360 + rtau*(60 + rtau*(12 + rtau))));
 
         double eps = 1e-10;
         for (int iter=0; iter<itermax; iter++) {
@@ -154,9 +145,7 @@ int QSSIntegrator::integrateOneStep(double tf) {
                 ym1 = y;
             }
 
-            for (size_t i=0; i<N; i++) {
-                y[i] = std::max(ys[i] + dt*scratch[i], ymin[i]);
-            }
+            y = ymin.max(ys + dt*scratch);
 
             if (iter == 0) {
                 // The first corrector step advances the time (tentatively) and
@@ -170,18 +159,10 @@ int QSSIntegrator::integrateOneStep(double tf) {
             gcount += 1;
             eps = 1.0e-10;
 
-            double rtaub;
-            for (size_t i=0; i<N; i++) {
-                if (enforce_ymin[i]) {
-                    rtaub = 0.5*(rtaus[i]+dt*d[i]/y[i]);
-                } else {
-                    rtaub = 0;
-                }
-                double alpha = (180.+rtaub*(60.+rtaub*(11.+rtaub))) /
-                               (360. + rtaub*(60. + rtaub*(12. + rtaub)));
-                double qt = qs[i]*(1.0 - alpha) + q[i]*alpha;
-                scratch[i] = (qt - ys[i]*rtaub/dt) / (1.0 + alpha*rtaub);
-            }
+            dvec rtaub = 0.5 * (rtaus + dt * d / y) * enforce_ymin;
+            dvec alpha = (180.+rtaub*(60.+rtaub*(11.+rtaub))) /
+                (360. + rtaub*(60. + rtaub*(12. + rtaub)));
+            scratch = (qs*(1.0 - alpha) + q*alpha - ys*rtaub/dt) / (1.0 + alpha*rtaub);
         }
 
         // Calculate new f, check for convergence, and limit decreasing
@@ -262,11 +243,7 @@ int QSSIntegrator::integrateOneStep(double tf) {
             // change, but dt does, requiring rtaus to be scaled by the
             // ratio of the new and old timesteps.
             rcount += 1;
-            dto = dt/dto;
-
-            for (size_t i=0; i<N; i++) {
-                rtaus[i] *= dto;
-            }
+            rtaus *= dt/dto;
         } else {
             // Successful step
             return 0;

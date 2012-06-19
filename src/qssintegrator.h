@@ -38,7 +38,7 @@ public:
     double dtmin; //!< Minimum timestep allowed.
     double dtmax; //!< Maximum timestep allowed.
     dvec ymin; //!< Minimum value allowed for each component
-    vector<bool> enforce_ymin; //!< Enforce the minimum value specified in #ymin for each component
+    dvec enforce_ymin; //!< Enforce the minimum value specified in #ymin for each component
     double abstol; //!< Minimum component value to consider when determining stability / step size
 
     int rcount; //!< Total number of timestep repeats (after failed timesteps)
