@@ -23,6 +23,7 @@
 
 using std::string;
 class SourceTermWrapper;
+class DiffusionTermWrapper;
 
 //! Class which manages the main integration loop.
 //! Contains the split solvers and is responsible for the large-scale time integration.
@@ -237,6 +238,7 @@ private:
     PerfTimer conductivityTimer, viscosityTimer, diffusivityTimer;
 
     friend class SourceTermWrapper;
+    friend class DiffusionTermWrapper;
 };
 
 class SourceTermWrapper {
@@ -250,5 +252,15 @@ public:
 private:
     FlameSolver* parent_;
     int stage_;
+    double t_;
+};
+
+class DiffusionTermWrapper {
+public:
+    DiffusionTermWrapper(FlameSolver* parent, double t)
+        : parent_(parent), t_(t) {}
+    void operator()(const tbb::blocked_range<size_t>& r) const;
+private:
+    FlameSolver* parent_;
     double t_;
 };

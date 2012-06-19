@@ -1248,9 +1248,8 @@ void FlameSolver::integrateDiffusionTerms(double t, int stage)
     }
 
     diffusionTimer.start();
-    for (size_t k=0; k<nVars; k++) {
-        diffusionSolvers[k].integrateToTime(t);
-    }
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, nVars, 1),
+                       DiffusionTermWrapper(this, t));
     diffusionTimer.stop();
 }
 
@@ -1975,4 +1974,11 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
     }
 
     parent_->gases.release(gasHandle);
+}
+
+void DiffusionTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
+{
+    for (size_t k=r.begin(); k<r.end(); k++) {
+        parent_->diffusionSolvers[k].integrateToTime(t_);
+    }
 }
