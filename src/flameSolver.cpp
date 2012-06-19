@@ -1234,8 +1234,10 @@ void FlameSolver::integrateConvectionTerms(double t, int stage)
 
 void FlameSolver::integrateProductionTerms(double t, int stage)
 {
+    reactionTimer.start();
     tbb::parallel_for(tbb::blocked_range<size_t>(0, nPoints,1),
                       SourceTermWrapper(this, t, stage));
+    reactionTimer.stop();
 }
 
 
@@ -1886,7 +1888,6 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
         gas->initialize();
     }
 
-    parent_->reactionTimer.start();
     int err = 0;
     //std::cout << "pointRange: " << r.begin() << ", " << r.end() << std::endl;
     for (size_t j=r.begin(); j<r.end(); j++) {
@@ -1974,5 +1975,4 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
     }
 
     parent_->gases.release(gasHandle);
-    parent_->reactionTimer.stop();
 }
