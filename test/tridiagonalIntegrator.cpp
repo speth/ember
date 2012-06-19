@@ -69,7 +69,7 @@ TEST_F(TridiagonalIntegratorTest, Stepwise)
 {
     // Check output after each timestep
     integrator.initialize(0, 0.2);
-    dvec y = integrator.get_y_new();
+    dvec y = integrator.get_y();
     for (int j=0; j<6; j++) {
         for (int i=0; i<5; i++) {
             EXPECT_NEAR(soln[j][i], y[i], 1e-10);
@@ -85,7 +85,7 @@ TEST_F(TridiagonalIntegratorTest, FullIntegration)
     // Check output at final time using integrateToTime
     integrator.initialize(0, 0.2);
     integrator.integrateToTime(1.0);
-    dvec y = integrator.get_y_new();
+    dvec y = integrator.get_y();
     for (int i=0; i<5; i++) {
         EXPECT_NEAR(soln[5][i], y[i], 1e-10);
     }
@@ -96,7 +96,7 @@ TEST_F(TridiagonalIntegratorTest, ShortIntegration) {
     // Check for step size reduction to reach specified output time
     integrator.initialize(0, 1.3);
     integrator.integrateToTime(0.2);
-    dvec y = integrator.get_y_new();
+    dvec y = integrator.get_y();
     for (int i=0; i<5; i++) {
         EXPECT_NEAR(soln[1][i], y[i], 1e-10);
     }

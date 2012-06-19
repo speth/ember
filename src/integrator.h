@@ -133,7 +133,6 @@ public:
     void initialize(const double t0, const double h);
 
     const dvec& get_ydot();
-    const dvec& get_y_new() { return y_; };
 
     // Actually do the integration
     void step(); // take a single step
@@ -144,7 +143,7 @@ private:
     dvec a, b, c; // subdiagonal, diagonal, superdiagonal, right-hand-side
     dvec k; // constant contribution to y'
     dvec lu_b, lu_c, lu_d; // matrix elements after factorization
-    dvec y_, yp_, invDenom_; // internal
+    dvec y_, invDenom_; // internal
     unsigned int stepCount; // the number of steps taken since last initialization
 
     int N; // The system size

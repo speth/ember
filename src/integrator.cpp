@@ -157,9 +157,7 @@ void BDFIntegrator::step()
 
         for (int j=0; j<8; j++) {
             // y_n -> y_n+1
-            for (int i=0; i<N; i++) {
-                y[i] = -y[i]/(h/8.0) - c[i];
-            }
+            y = -y / (h/8.0) - c;
             BandGBTRS(LU->forSundials(), &p[0], y.data());
             assert(mathUtils::notnan(y));
         }
@@ -175,10 +173,7 @@ void BDFIntegrator::step()
             assert(ierr == 0);
         }
         dvec tmp(y);
-
-        for (int i=0; i<N; i++) {
-            y[i] = -2*y[i]/h + yprev[i]/(2*h) - c[i];
-        }
+        y = -2*y/h + yprev/(2*h) - c;
         yprev = tmp;
         BandGBTRS(LU->forSundials(), &p[0], y.data());
         assert(mathUtils::notnan(y));
@@ -238,7 +233,6 @@ void TridiagonalIntegrator::set_y0(const dvec& y0)
 {
     Integrator::set_y0(y0);
     stepCount = 0;
-    y_ = Eigen::Map<dvec>(&y[0], y.rows()); // todo: this should no longer be necessary
 }
 
 void TridiagonalIntegrator::initialize(const double t0, const double h_)
@@ -254,13 +248,11 @@ const dvec& TridiagonalIntegrator::get_ydot()
     myODE.get_k(k);
 
     ydot.resize(N);
-    yp_ = Eigen::Map<dvec>(&ydot[0], N); // todo: this should no longer be necessary
-
-    yp_[0] = b[0]*y[0] + c[0]*y[1] + k[0];
+    ydot[0] = b[0]*y[0] + c[0]*y[1] + k[0];
     for (int i=1; i<N-1; i++) {
-        yp_[i] = a[i]*y[i-1] + b[i]*y[i] + c[i]*y[i+1] + k[i];
+        ydot[i] = a[i]*y[i-1] + b[i]*y[i] + c[i]*y[i+1] + k[i];
     }
-    yp_[N-1] = a[N-1]*y[N-2] + b[N-1]*y[N-1] + k[N-1];
+    ydot[N-1] = a[N-1]*y[N-2] + b[N-1]*y[N-1] + k[N-1];
 
     return ydot;
 }
@@ -268,7 +260,7 @@ const dvec& TridiagonalIntegrator::get_ydot()
 void TridiagonalIntegrator::step()
 {
     if (stepCount == 0) {
-        yprev = y_; // current value of y becomes y_(n-1)
+        yprev = y; // current value of y becomes y_(n-1)
 
         // Get ODE coefficients
         myODE.get_A(a, b, c);
@@ -287,21 +279,21 @@ void TridiagonalIntegrator::step()
         // Take 8 substeps using first-order BDF
         for (int j=0; j<8; j++) {
             // RHS for 1st order BDF
-            y_ = -y_/(h/8.0) - k;
+            y = -y/(h/8.0) - k;
 
             // Thomas coefficient depending on y
-            lu_d[0] = y_[0] / lu_b[0];
+            lu_d[0] = y[0] / lu_b[0];
             for (int i=1; i<N; i++) {
-                lu_d[i] = (y_[i] - lu_d[i-1]*a[i]) * invDenom_[i];
+                lu_d[i] = (y[i] - lu_d[i-1]*a[i]) * invDenom_[i];
             }
 
             // Back substitution
-            y_[N-1] = lu_d[N-1];
+            y[N-1] = lu_d[N-1];
             for (int i=N-2; i>=0; i--) {
-                y_[i] = lu_d[i] - lu_c[i] * y_[i+1];
+                y[i] = lu_d[i] - lu_c[i] * y[i+1];
             }
 
-            assert(mathUtils::notnan(y_));
+            assert(mathUtils::notnan(y));
         }
 
     } else {
@@ -316,22 +308,22 @@ void TridiagonalIntegrator::step()
                 lu_c[i] = c[i] * invDenom_[i];
             }
         }
-        dvec ynm1 = y_; // Current value of y becomes y_(n-1)
-        y_ = -2 * ynm1 / h + yprev / (2*h) - k; // RHS for 2nd order BDF
+        dvec ynm1 = y; // Current value of y becomes y_(n-1)
+        y = -2 * ynm1 / h + yprev / (2*h) - k; // RHS for 2nd order BDF
         yprev = ynm1; // y_(n-1) will be y_(n-2) next time
 
         // Compute Thomas coefficients
-        lu_d[0] = y_[0] / lu_b[0];
+        lu_d[0] = y[0] / lu_b[0];
         for (int i=1; i<N; i++) {
-            lu_d[i] = (y_[i] - lu_d[i-1]*a[i]) * invDenom_[i];
+            lu_d[i] = (y[i] - lu_d[i-1]*a[i]) * invDenom_[i];
         }
 
         // Back substitution
-        y_[N-1] = lu_d[N-1];
+        y[N-1] = lu_d[N-1];
         for (int i=N-2; i>=0; i--) {
-            y_[i] = lu_d[i] - lu_c[i] * y_[i+1];
+            y[i] = lu_d[i] - lu_c[i] * y[i+1];
         }
-        assert(mathUtils::notnan(y_));
+        assert(mathUtils::notnan(y));
     }
 
     stepCount++;
