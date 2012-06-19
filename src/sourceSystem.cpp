@@ -51,10 +51,7 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
     cp = gas->getSpecificHeatCapacity();
     thermoTimer->stop();
 
-    qDot = 0.0;
-    for (size_t k=0; k<nSpec; k++) {
-        qDot -= wDot[k]*hk[k];
-    }
+    qDot = - (wDot * hk).sum();
 
     if (t >= options->ignition_tStart && t < options->ignition_tStart + options->ignition_duration) {
         qDot += options->ignition_energy /
@@ -74,9 +71,7 @@ int SourceSystem::f(const realtype t, const sdVector& y, sdVector& ydot)
         dTdt = splitConst[kEnergy];
     }
     double scale = (quasi2d) ? 1.0/vzInterp_->get(x, t) : 1.0;
-    for (size_t k=0; k<nSpec; k++) {
-        dYdt[k] = scale*wDot[k]*W[k]/rho + splitConst[kSpecies+k];
-    }
+    dYdt = scale * wDot * W / rho + splitConst.tail(nSpec);
 
     roll_ydot(ydot);
     return 0;
@@ -213,27 +208,21 @@ void SourceSystem::unroll_y(const sdVector& y, double t)
         T = TInterp_->get(x, t);
         U = 0;
     }
-    for (size_t k=0; k<nSpec; k++) {
-        Y[k] = y[kSpecies+k];
-    }
+    Y = Eigen::Map<dvec>(&y[kSpecies], nSpec);
 }
 
 void SourceSystem::roll_y(sdVector& y) const
 {
     y[kEnergy] = T;
     y[kMomentum] = U;
-    for (size_t k=0; k<nSpec; k++) {
-        y[kSpecies+k] = Y[k];
-    }
+    Eigen::Map<dvec>(&y[kSpecies], nSpec) = Y;
 }
 
 void SourceSystem::roll_ydot(sdVector& ydot) const
 {
     ydot[kEnergy] = dTdt;
     ydot[kMomentum] = dUdt;
-    for (size_t k=0; k<nSpec; k++) {
-        ydot[kSpecies+k] = dYdt[k];
-    }
+    Eigen::Map<dvec>(&ydot[kSpecies], nSpec) = dYdt;
 }
 
 void SourceSystem::writeJacobian(sundialsCVODE& solver, std::ostream& out)
@@ -348,10 +337,7 @@ void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d, bool cor
         thermoTimer->stop();
     }
 
-    qDot = 0.0;
-    for (size_t k=0; k<nSpec; k++) {
-        qDot -= (wDotQ[k]-wDotD[k])*hk[k];
-    }
+    qDot = - ((wDotQ - wDotD) * hk).sum();
 
     if (t >= options->ignition_tStart && t < options->ignition_tStart + options->ignition_duration) {
         qDot += options->ignition_energy /
@@ -374,10 +360,8 @@ void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d, bool cor
     }
 
     double scale = (quasi2d) ? 1.0/vzInterp_->get(x, t) : 1.0;
-    for (size_t k=0; k<nSpec; k++) {
-        dYdtQ[k] = scale * wDotQ[k] * W[k] / rho + splitConstY[k];
-        dYdtD[k] = scale * wDotD[k] * W[k] / rho;
-    }
+    dYdtQ = scale * wDotQ * W / rho + splitConstY;
+    dYdtD = scale * wDotD * W / rho;
 
     assert(rhou > 0);
     assert(rho > 0);
@@ -405,18 +389,14 @@ void SourceSystemQSS::unroll_y(const dvec& y, bool corrector)
         }
         U = 0;
     }
-    for (size_t k=0; k<nSpec; k++) {
-        Y[k] = y[kSpecies+k];
-    }
+    Y = y.tail(nSpec);
 }
 
 void SourceSystemQSS::roll_y(dvec& y) const
 {
     y[kEnergy] = T;
     y[kMomentum] = U;
-    for (size_t k=0; k<nSpec; k++) {
-        y[kSpecies+k] = Y[k];
-    }
+    y.tail(nSpec) = Y;
 }
 
 void SourceSystemQSS::roll_ydot(dvec& q, dvec& d) const
@@ -425,10 +405,8 @@ void SourceSystemQSS::roll_ydot(dvec& q, dvec& d) const
     d[kEnergy] = dTdtD;
     q[kMomentum] = dUdtQ;
     d[kMomentum] = dUdtD;
-    for (size_t k=0; k<nSpec; k++) {
-        q[kSpecies+k] = dYdtQ[k];
-        d[kSpecies+k] = dYdtD[k];
-    }
+    q.tail(nSpec) = dYdtQ;
+    d.tail(nSpec) = dYdtD;
 }
 
 void SourceSystemQSS::writeState(std::ostream& out, bool init)
@@ -443,5 +421,4 @@ void SourceSystemQSS::writeState(std::ostream& out, bool init)
     out << "Y.append(" << Y << ")" << std::endl;
     out << "t.append(" << tn << ")" << std::endl;
 }
-
 
