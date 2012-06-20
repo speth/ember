@@ -1,16 +1,6 @@
 #include "perfTimer.h"
 
 // Platform-independent functions
-void PerfTimer::reset()
-{
-    callCount = 0;
-    cummulativeTime = 0;
-}
-
-double PerfTimer::getTime() const
-{
-    return ((double) cummulativeTime)/1e9;
-}
 
 unsigned long PerfTimer::getCallCount() const
 {
@@ -25,7 +15,18 @@ PerfTimer::PerfTimer()
     cummulativeTime = 0;
     LARGE_INTEGER f;
     QueryPerformanceFrequency(&f);
-    clockFreq = double(f.QuadPart)/1e9;
+    clockFreq = double(f.QuadPart);
+}
+
+double PerfTimer::getTime() const
+{
+    return double(cummulativeTime)/clockFreq;
+}
+
+void PerfTimer::reset()
+{
+    callCount = 0;
+    cummulativeTime = 0;
 }
 
 void PerfTimer::start()
@@ -37,8 +38,7 @@ void PerfTimer::start()
 void PerfTimer::stop()
 {
     QueryPerformanceCounter(&t2);
-
-    cummulativeTime += int(double(t2.QuadPart-t1.QuadPart)/clockFreq);
+    cummulativeTime += t2.QuadPart - t1.QuadPart;
 }
 
 void PerfTimer::resume()
@@ -54,6 +54,17 @@ PerfTimer::PerfTimer()
     cummulativeTime = 0;
 }
 
+double PerfTimer::getTime() const
+{
+    return ((double) cummulativeTime)/1e6;
+}
+
+void PerfTimer::reset()
+{
+    callCount = 0;
+    cummulativeTime = 0;
+}
+
 void PerfTimer::start()
 {
     callCount++;
@@ -63,7 +74,7 @@ void PerfTimer::start()
 void PerfTimer::stop()
 {
     gettimeofday(&t2,NULL);
-    cummulativeTime += (t2.tv_sec-t1.tv_sec)*1000000000 + (t2.tv_usec-t1.tv_usec)*1000;
+    cummulativeTime += (t2.tv_sec-t1.tv_sec)*1000000 + (t2.tv_usec-t1.tv_usec);
 }
 
 void PerfTimer::resume()

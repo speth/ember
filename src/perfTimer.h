@@ -12,12 +12,13 @@
 class PerfTimer {
 private:
     unsigned long int callCount;
-    unsigned long int cummulativeTime; // stored in microseconds
 
 #ifdef _WIN32
     double clockFreq;
     LARGE_INTEGER t1, t2;
+    LONGLONG cummulativeTime; // stored in units of queryPerformanceCounter
 #else
+    unsigned long int cummulativeTime; // stored in microseconds
     timeval t1, t2;
 #endif
 
