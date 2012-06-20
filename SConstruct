@@ -153,8 +153,7 @@ tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
 if tests['CanteraExtendedTransport']:
     env.Append(CPPDEFINES=['CANTERA_EXTENDED_TRANSPORT'])
 
-common = [f for f in Glob('build/core/*.cpp')
-          if 'strainedFlame.cpp' not in f.name]
+common = Glob('build/core/*.cpp')
 
 # The Python module
 pyenv = env.Clone()
