@@ -1,5 +1,7 @@
-// -*- Mode: C++ -*-
 #pragma once
+
+#include "tbb/combinable.h"
+#include "tbb/enumerable_thread_specific.h"
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -10,18 +12,6 @@
 #endif
 
 class PerfTimer {
-private:
-    unsigned long int callCount;
-
-#ifdef _WIN32
-    double clockFreq;
-    LARGE_INTEGER t1, t2;
-    LONGLONG cummulativeTime; // stored in units of queryPerformanceCounter
-#else
-    unsigned long int cummulativeTime; // stored in microseconds
-    timeval t1, t2;
-#endif
-
 public:
     PerfTimer();
     ~PerfTimer() {};
@@ -32,4 +22,16 @@ public:
     void resume(); // starts timer without incrementing callCount
     double getTime() const; // elapsed time in seconds
     unsigned long int getCallCount() const;
+
+private:
+    tbb::combinable<unsigned long int> callCount;
+
+#ifdef _WIN32
+    double clockFreq;
+    tbb::combinable<LONGLONG> cumulativeTime; // stored in units of queryPerformanceCounter
+    tbb::enumerable_thread_specific<LARGE_INTEGER> t1;
+#else
+    tbb::combinable<unsigned long int> cumulativeTime; // stored in microseconds
+    tbb::enumerable_thread_specific<timeval> t1;
+#endif
 };
