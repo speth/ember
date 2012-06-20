@@ -7,16 +7,13 @@ DiffusionSystem::DiffusionSystem()
 {
 }
 
-void DiffusionSystem::get_A(sdBandMatrix& A)
+void DiffusionSystem::get_A(dvec& a, dvec& b, dvec& c)
 {
-    // Build the matrix A describing the linear ODE
-    SetToZero(A.forSundials());
-    size_t N = D.rows();
-
+    // Build the matrix A describing the linear ODE.
+    // a[j], b[j], and c[j] are the subdiagonal, diagonal, and superdiagonal
+    // elements of row j
     assert(mathUtils::notnan(D));
     assert(mathUtils::notnan(B));
-    dvector c1(N, 0);
-    dvector c2(N, 0);
 
     for (size_t j=1; j<=N-2; j++) {
         c1[j] = 0.5*B[j]/(dlj[j]*r[j]);
@@ -33,21 +30,21 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
     } else if (grid.leftBC == BoundaryCondition::ControlVolume) {
         jStart =  1;
         double c0 = B[0] * (grid.alpha + 1) * (D[0]+D[1]) / (2 * hh[0] * hh[0]);
-        A(0,0) = -c0;
-        A(0,1) = c0;
+        b[0] = -c0;
+        c[0] = c0;
     } else if (grid.leftBC == BoundaryCondition::WallFlux) {
         jStart = 1;
         double c0 = B[0] * (grid.alpha + 1) / hh[0];
         double d = 0.5 * (D[0]+D[1]);
-        A(0,0) = - c0 * (d / hh[0] + wallConst);
-        A(0,1) = d * c0 / hh[0];
+        b[0] = - c0 * (d / hh[0] + wallConst);
+        c[0] = d * c0 / hh[0];
     } else  { // (leftBC == BoundaryCondition::ZeroGradient)
         // In the case of a zero gradient boundary condition, the boundary value
         // is not computed, and the value one point in is computed by substituting
         // y[0] = y[1] in the finite difference formula.
         jStart = 2;
-        A(1,1) = -c1[1]*c2[1];
-        A(1,2) = c1[1]*c2[1];
+        b[1] = -c1[1]*c2[1];
+        c[1] = c1[1]*c2[1];
     }
 
     // Right boundary value
@@ -59,25 +56,25 @@ void DiffusionSystem::get_A(sdBandMatrix& A)
         // is not computed, and the value one point in is computed by substituting
         // y[N-1] = y[N-2] in the finite difference formula.
         jStop = N-2;
-        A(N-2,N-3) = c1[N-2]*c2[N-3];
-        A(N-2,N-2) = -c1[N-2]*c2[N-3];
+        a[N-2] = c1[N-2]*c2[N-3];
+        b[N-2] = -c1[N-2]*c2[N-3];
     }
 
     // Intermediate points
     for (size_t j=jStart; j<jStop; j++) {
-        A(j,j-1) = c1[j]*c2[j-1];
-        A(j,j) = -c1[j]*(c2[j-1] + c2[j]);
-        A(j,j+1) = c1[j]*c2[j];
+        a[j] = c1[j]*c2[j-1];
+        b[j] = -c1[j]*(c2[j-1] + c2[j]);
+        c[j] = c1[j]*c2[j];
     }
 }
 
-void DiffusionSystem::get_C(dvec& other_c)
+void DiffusionSystem::get_k(dvec& k)
 {
-    other_c = splitConst;
+    k = splitConst;
     if (grid.leftBC == BoundaryCondition::WallFlux) {
-        other_c[0] += B[0] * (grid.alpha + 1) / hh[0] * wallConst * yInf;
+        k[0] += B[0] * (grid.alpha + 1) / hh[0] * wallConst * yInf;
     }
-    assert(mathUtils::notnan(other_c));
+    assert(mathUtils::notnan(k));
 }
 
 void DiffusionSystem::resize(int N_)
@@ -86,6 +83,8 @@ void DiffusionSystem::resize(int N_)
     B.setConstant(N, NaN);
     D.setConstant(N, NaN);
     splitConst.setConstant(N, NaN);
+    c1.setConstant(N, 0);
+    c2.setConstant(N, 0);
 }
 
 void DiffusionSystem::resetSplitConstants()

@@ -94,7 +94,7 @@ private:
     boost::ptr_vector<DiffusionSystem> diffusionTerms; // One for each species (plus T and U)
 
     boost::ptr_vector<sundialsCVODE> sourceSolvers; // One for each grid point
-    boost::ptr_vector<BDFIntegrator> diffusionSolvers; // One for each state variable
+    boost::ptr_vector<TridiagonalIntegrator> diffusionSolvers; // One for each state variable
 
     boost::ptr_vector<SourceSystemQSS> sourceTermsQSS; // One for each grid point
     vector<bool> useCVODE; // At each grid point, a flag for which integrator to use
@@ -195,7 +195,7 @@ private:
     // jCorrSystem / jCorrSolver are used to introduce numerical diffusion into
     // jCorr to eliminate spatial instabilities
     DiffusionSystem jCorrSystem;
-    BDFIntegrator jCorrSolver;
+    TridiagonalIntegrator jCorrSolver;
 
     //! Function which describes strain rate a(t) and its derivative
     StrainFunction strainfunc;

@@ -84,8 +84,8 @@ void FlameSolver::initialize(void)
 
         for (size_t k=0; k<nVars; k++) {
             DiffusionSystem* term = new DiffusionSystem();
-            BDFIntegrator* integrator = new BDFIntegrator(*term);
-            integrator->resize(nPoints, 1, 1);
+            TridiagonalIntegrator* integrator = new TridiagonalIntegrator(*term);
+            integrator->resize(nPoints);
             diffusionTerms.push_back(term);
             diffusionSolvers.push_back(integrator);
         }
@@ -797,13 +797,13 @@ void FlameSolver::resizeAuxiliary()
 
     // Resize solution vector for diffusion systems / solvers
     for (size_t k=0; k<nVars; k++) {
-        diffusionSolvers[k].resize(nPoints, 1, 1);
+        diffusionSolvers[k].resize(nPoints);
         diffusionTerms[k].setGrid(grid);
     }
 
     // Diffusion solvers: Energy and Momentum
-    diffusionSolvers[kMomentum].resize(nPoints, 1, 1);
-    diffusionSolvers[kEnergy].resize(nPoints, 1, 1);
+    diffusionSolvers[kMomentum].resize(nPoints);
+    diffusionSolvers[kEnergy].resize(nPoints);
 
     convectionSystem.setGrid(grid);
     convectionSystem.resize(nPoints, nSpec);
@@ -814,7 +814,7 @@ void FlameSolver::resizeAuxiliary()
     }
 
     // Resize the jCorr stabilizer
-    jCorrSolver.resize(nPoints, 1, 1);
+    jCorrSolver.resize(nPoints);
     jCorrSystem.setGrid(grid);
 
     // Set the grid position for each of the source solvers
@@ -864,8 +864,8 @@ void FlameSolver::updateCrossTerms()
 
     jCorr = jCorrSolver.y;
 
-    dYdtCross.col(0) = Eigen::RowVectorXd::Zero(nSpec);
-    dYdtCross.col(jj) = Eigen::RowVectorXd::Zero(nSpec);
+    dYdtCross.col(0).setZero();
+    dYdtCross.col(jj).setZero();
     for (size_t j=1; j<jj; j++) {
         sumcpj[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
@@ -1069,7 +1069,7 @@ void FlameSolver::setDiffusionSolverState(double tInitial)
     Ystart = Y;
 
     size_t k = 0;
-    foreach (BDFIntegrator& integrator, diffusionSolvers) {
+    foreach (TridiagonalIntegrator& integrator, diffusionSolvers) {
         double dt = options.globalTimestep;
         for (size_t j=1; j<jj; j++) {
             dt = std::min(dt, options.diffusionTimestepMultiplier*dlj[j]*dlj[j] /
@@ -1162,7 +1162,7 @@ void FlameSolver::extractDiffusionState(double dt, int stage)
     U = diffusionSolvers[kMomentum].y;
     T = diffusionSolvers[kEnergy].y;
     for (size_t k=0; k<nSpec; k++) {
-        const BDFIntegrator& solver = diffusionSolvers[kSpecies+k];
+        const TridiagonalIntegrator& solver = diffusionSolvers[kSpecies+k];
         Y.row(k) = solver.y;
     }
     assert(mathUtils::notnan(T));

@@ -1,12 +1,11 @@
 #pragma once
 
 #include "mathUtils.h"
-#include "sundialsUtils.h"
 #include "chemistry0d.h"
 #include "grid.h"
 #include "integrator.h"
 
-class DiffusionSystem : public LinearODE, public GridBased
+class DiffusionSystem : public TridiagonalODE, public GridBased
 {
     // This is a system representing diffusion of a single solution component,
     // represented by an ODE in one of the following forms:
@@ -21,10 +20,10 @@ public:
     DiffusionSystem();
 
     // Provide the matrix associated with the ODE to the integrator
-    void get_A(sdBandMatrix& J);
+    void get_A(dvec& a, dvec& b, dvec& c);
 
     // Provides the constant term to the integrator
-    void get_C(dvec& y);
+    void get_k(dvec& k);
 
     void resize(int N);
     void resetSplitConstants();
@@ -43,4 +42,8 @@ public:
     double yInf;
     double wallConst;
 
+private:
+    // constants used to compute the matrix coefficients
+    dvec c1;
+    dvec c2;
 };

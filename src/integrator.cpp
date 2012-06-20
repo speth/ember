@@ -71,132 +71,6 @@ void ExplicitIntegrator::integrateToTime(double tEnd)
     }
 }
 
-// ***********************
-// * class BDFIntegrator *
-// ***********************
-
-BDFIntegrator::BDFIntegrator(LinearODE& ode)
-    : myODE(ode)
-    , A(NULL)
-    , LU(NULL)
-    , stepCount(0)
-{
-}
-
-BDFIntegrator::~BDFIntegrator()
-{
-    delete LU;
-    delete A;
-}
-
-void BDFIntegrator::resize(int N_in, int upper_bw_in, int lower_bw_in)
-{
-    N = N_in;
-    upper_bw = upper_bw_in;
-    lower_bw = lower_bw_in;
-
-    delete LU;
-    delete A;
-    LU = new sdBandMatrix(N, upper_bw, lower_bw);
-    A = new sdBandMatrix(N, upper_bw, lower_bw);
-    p.resize(N);
-    y.resize(N);
-
-    myODE.resize(N);
-}
-
-void BDFIntegrator::set_y0(const dvec& y0)
-{
-    Integrator::set_y0(y0);
-    stepCount = 0;
-}
-
-void BDFIntegrator::initialize(const double t0, const double h_)
-{
-    Integrator::initialize(t0, h_);
-    stepCount = 0;
-    myODE.initialize();
-}
-
-const dvec& BDFIntegrator::get_ydot()
-{
-    myODE.get_A(*A);
-    sdBandMatrix& AA = *A;
-    myODE.get_C(c);
-
-    // TODO: Use something more clever for the Matrix-vector product here
-    // Why doesn't sundials provide DAXPY?
-    size_t N = y.rows();
-    ydot.resize(N);
-
-    ydot[0] = AA(0,0)*y[0] + AA(0,1)*y[1] + c[0];
-    for (size_t i=1; i<N-1; i++) {
-        ydot[i] = AA(i,i-1)*y[i-1] + AA(i,i)*y[i] + AA(i,i+1)*y[i+1] + c[i];
-    }
-    ydot[N-1] = AA(N-1,N-2)*y[N-2] + AA(N-1,N-1)*y[N-1] + c[N-1];
-    return ydot;
-}
-
-void BDFIntegrator::step()
-{
-    if (stepCount == 0) {
-        yprev = y;
-
-        // Take 8 substeps using first-order BDF
-        myODE.get_A(*A);
-        myODE.get_C(c);
-        BandCopy(A->forSundials(), LU->forSundials(), upper_bw, lower_bw);
-        sdBandMatrix& M = *LU;
-        for (int i=0; i<N; i++) {
-            M(i,i) -= 1.0/(h/8.0);
-        }
-
-        int ierr = BandGBTRF(LU->forSundials(), &p[0]);
-        assert(ierr == 0);
-        assert(mathUtils::notnan(y));
-
-        for (int j=0; j<8; j++) {
-            // y_n -> y_n+1
-            y = -y / (h/8.0) - c;
-            BandGBTRS(LU->forSundials(), &p[0], y.data());
-            assert(mathUtils::notnan(y));
-        }
-
-    } else {
-        if (stepCount == 1) {
-            BandCopy(A->forSundials(), LU->forSundials(), upper_bw, lower_bw);
-            sdBandMatrix& M = *LU;
-            for (int i=0; i<N; i++) {
-                M(i,i) -= 3.0/(2.0*h);
-            }
-            int ierr = BandGBTRF(LU->forSundials(), &p[0]);
-            assert(ierr == 0);
-        }
-        dvec tmp(y);
-        y = -2*y/h + yprev/(2*h) - c;
-        yprev = tmp;
-        BandGBTRS(LU->forSundials(), &p[0], y.data());
-        assert(mathUtils::notnan(y));
-    }
-
-    stepCount++;
-    t += h;
-}
-
-void BDFIntegrator::integrateToTime(double tEnd)
-{
-    // Make sure we hit tEnd after an integral number of timesteps,
-    // Taking timesteps that are no longer than the given h
-    int nSteps = static_cast<int>((tEnd-t)/h);
-    if (t + h*nSteps != tEnd) {
-        h = (tEnd - t) / (nSteps + 1);
-    }
-    while (t < tEnd) {
-        step();
-    }
-}
-
-
 // *******************************
 // * class TridiagonalIntegrator *
 // *******************************
@@ -213,14 +87,13 @@ void TridiagonalIntegrator::resize(int N_in)
     N = N_in;
 
     y.resize(N);
-    y_in.resize(N);
     yprev.resize(N);
 
     myODE.resize(N);
 
-    a.resize(N);
-    b.resize(N);
-    c.resize(N);
+    a.setZero(N);
+    b.setZero(N);
+    c.setZero(N);
 
     lu_b.resize(N);
     lu_c.resize(N);
