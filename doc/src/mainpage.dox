@@ -1,19 +1,11 @@
 /*! \mainpage Pyro Documentation
 
-<p>
-<b>Pyro</b> is a code for simulating unsteady, quasi-one-dimensional flames
-subjected to arbitrarily varying strain rates and curvature. 
-</p>
-<p>
-In addition to the code documentation accessible via the "Classes" and "Files"links above, the following documents are available:
-</p>
-- \subpage gettingStarted contains instructions for compiling the code.
-- <a href="pyro-model.pdf"><b>Flame Model</b></a> contains a derivation of the 1-D flame governing equations, descriptions of the boundary and initial conditions, and an outline of the numerical solution method.
-- \link input.py Input \endlink - Documentation of the input file format.
-*/
+**Pyro** is a code for simulating unsteady, quasi-one-dimensional flames
+subjected to arbitrarily varying strain rates and curvature.
 
-//-----------------------------------------------------------
+Documentation for the C++ core of the Pyro solver can be accessed via the
+"Classes" and "Files" links above.
 
-/*! \page gettingStarted Getting Started
-\verbinclude "readme.txt"
+For instructions on how to compile, install, and use Pyro, see the
+<a href="../../sphinx/html/index.html">User's Guide</a>.
 */

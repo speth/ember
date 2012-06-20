@@ -16,9 +16,6 @@ Input Files
 .. autoclass:: Chemistry
    :members:
 
-.. autoclass:: TransportElimination
-   :members:
-
 .. autoclass:: Grid
    :members:
 
