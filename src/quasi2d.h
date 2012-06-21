@@ -16,7 +16,7 @@ public:
               const std::string& ycoords="y");
 
     //! Use the supplied data to set up the interpolation
-    void setup(const dmatrix& data, const dvector& x, const dvector& y);
+    void setup(const dmatrix& data, const dvec& x, const dvec& y);
 
     //! Interpolate at point x,y
     double get(double x, double y) const;
@@ -26,7 +26,7 @@ private:
     void initialize();
 
     dmatrix data_; //!< Data values on a rectangular grid
-    dvector x_, y_; //!< x and y values defining the grid
+    dvec x_, y_; //!< x and y values defining the grid
 
     //! Indices corresponding to x and y values to speed up interpolation
     std::map<double, size_t> xi_, yi_;

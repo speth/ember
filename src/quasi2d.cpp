@@ -9,13 +9,13 @@ void BilinearInterpolator::open(const std::string& filename,
 {
     DataFile file(filename);
     data_ = file.readArray2D(path);
-    x_ = file.readVector(xcoords);
-    y_ = file.readVector(ycoords);
+    x_ = file.readVec(xcoords);
+    y_ = file.readVec(ycoords);
     initialize();
 }
 
 void BilinearInterpolator::setup(const dmatrix& data,
-                                 const dvector& x, const dvector& y)
+                                 const dvec& x, const dvec& y)
 {
     data_ = data.transpose().eval();
     x_ = x;
@@ -31,17 +31,17 @@ void BilinearInterpolator::initialize()
     assert(data_.rows() == x_.size());
     assert(data_.cols() == y_.size());
 
-    for (size_t i = 1; i < x_.size() - 1; i++) {
+    for (size_t i = 1; i < x_.rows() - 1; i++) {
         xi_[x_[i]] = i;
     }
     xi_[-1e300] = 0;
-    xi_[1e300] = x_.size() - 1;
+    xi_[1e300] = x_.rows() - 1;
 
-    for (size_t i = 1; i < y_.size() - 1; i++) {
+    for (size_t i = 1; i < y_.rows() - 1; i++) {
         yi_[y_[i]] = i;
     }
     yi_[-1e300] = 0;
-    yi_[1e300] = y_.size() - 1;
+    yi_[1e300] = y_.rows() - 1;
 }
 
 double BilinearInterpolator::get(double x, double y) const
