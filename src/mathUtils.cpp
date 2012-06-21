@@ -1,6 +1,5 @@
 #include "mathUtils.h"
 #include "sundialsUtils.h"
-#include "debugUtils.h"
 #include <map>
 #include <limits>
 
@@ -167,16 +166,6 @@ int mathUtils::nanloc(const dvector& v) {
     return -1;
 }
 
-int mathUtils::findFirst(const vector<bool>& v)
-{
-    for (vector<bool>::size_type i=0; i<v.size(); i++) {
-        if (v[i]) {
-            return i;
-        }
-    }
-    return -1;
-}
-
 dvector mathUtils::abs(const dvector& v)
 {
     dvector a(v);
@@ -187,15 +176,6 @@ dvector mathUtils::abs(const dvector& v)
     return a;
 }
 
-int mathUtils::findLast(const vector<bool>& v)
-{
-    for (vector<bool>::size_type i=v.size()-1; (i+1)>0; i--) {
-        if (v[i]) {
-            return i;
-        }
-    }
-    return -1;
-}
 
 vector<int> mathUtils::find(vector<bool>& v)
 {
@@ -208,30 +188,6 @@ vector<int> mathUtils::find(vector<bool>& v)
     return out;
 }
 
-void mathUtils::smooth(dvector& v)
-{
-    if (v.size() == 0) {return;}
-    double p = v[0];
-    double q = 0;
-    for (dvector::size_type i=1; i<v.size()-1; i++) {
-        q = v[i];
-        v[i] = 0.25*p + 0.5*v[i] + 0.25*v[i+1];
-        std::swap(p,q);
-    }
-}
-
-void mathUtils::smooth(dvec& v)
-{
-    if (v.rows() == 0) {return;}
-    double p = v[0];
-    double q = 0;
-    for (dvec::Index i=1; i<v.rows()-1; i++) {
-        q = v[i];
-        v[i] = 0.25*p + 0.5*v[i] + 0.25*v[i+1];
-        std::swap(p,q);
-    }
-}
-
 dvector mathUtils::linspace(const double x1, const double x2, const int n)
 {
     dvector v(n);
@@ -241,108 +197,23 @@ dvector mathUtils::linspace(const double x1, const double x2, const int n)
     return v;
 }
 
-vector<dvector> mathUtils::computeSplines(const dvector& xIn, const dvector& yIn)
+
+dvec mathUtils::splines(const dvec& xIn, const dvec& yIn, const dvec& xOut)
 {
-    if (xIn.size() != yIn.size()) {
-        throw debugException("mathUtils::ComputeSplines: error: xIn and yIn must be the same size.");
-    }
-
-    int nIn = xIn.size();
-
-    // Compute spacing of x and derivative of y
-    dvector h(nIn), b(nIn);
-    for (int i=0; i<nIn-1;  i++) {
-        h[i] = xIn[i+1]-xIn[i];
-        b[i] = (yIn[i+1]-yIn[i])/h[i];
-    }
-
-    // Gaussian elimination for the Tridiagonal system
-    dvector u(nIn), v(nIn);
-    u[0] = 0; v[0] = 0;
-    u[1] = 2*(h[0]+h[1]);
-    v[1] = 6*(b[1]-b[0]);
-    for (int i=2; i<nIn-1; i++) {
-        u[i] = 2*(h[i-1]+h[i]) - h[i-1]*h[i-1]/u[i-1];
-        v[i] = 6*(b[i]-b[i-1]) - h[i-1]*v[i-1]/u[i-1];
-    }
-
-    // Back-substitute
-    dvector z(nIn);
-    z[nIn-1] = 0;
-    for (int i=nIn-2; i>0; i--) {
-        z[i] = (v[i]-h[i]*z[i+1])/u[i];
-    }
-
-    // Evaluate the polynomial coefficients
-    dvector c0(nIn), c1(nIn), c2(nIn), c3(nIn);
-    vector<dvector> c(4, dvector(nIn));
-    for (int i=0; i<nIn-1; i++) {
-        c[0][i] = yIn[i];
-        c[1][i] = -h[i]/6*z[i+1] - h[i]/3*z[i] + (yIn[i+1]-yIn[i])/h[i];
-        c[2][i] = 0.5*z[i];
-        c[3][i] = (z[i+1]-z[i])/(6*h[i]);
-    }
-
-    return c;
-}
-
-dvector mathUtils::interp1(const dvector& xIn, const dvector& yIn, const dvector& xOut)
-{
-    if (xIn.size() != yIn.size()) {
-        throw debugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
-    }
-    int nOut = xOut.size();
-    int nIn = xIn.size();
-
-    dvector yOut(nOut);
-
-    for (int i=0; i<nOut; i++) {
-        int j = findFirst(xIn >= xOut[i]) - 1;
-        if (j == -1) {
-            j = 0;
-        } else if (j == -2) {
-            j = nIn-2;
-        }
-        yOut[i] = yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut[i]-xIn[j]);
-    }
-
-    return yOut;
-}
-
-double mathUtils::interp1(const dvector& xIn, const dvector& yIn, const double xOut)
-{
-    if (xIn.size() != yIn.size()) {
-        throw debugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
-    }
-
-    int nIn = xIn.size();
-
-    int j = findFirst(xIn >= xOut) - 1;
-    if (j == -1) {
-        j = 0;
-    } else if (j == -2) {
-        j = nIn-2;
-    }
-    return yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut-xIn[j]);
-}
-
-
-dvector mathUtils::splines(const dvector& xIn, const dvector& yIn, const dvector& xOut)
-{
-    if (xIn.size() != yIn.size()) {
+    if (xIn.rows() != yIn.rows()) {
         throw debugException((boost::format(
             "mathUtils::splines: error: xIn (%i) and yIn (%i) must be the same size.") %
-            xIn.size() % yIn.size()).str());
+            xIn.rows() % yIn.rows()).str());
     }
 
-    int nOut = xOut.size();
-    int nIn = xIn.size();
+    int nOut = xOut.rows();
+    int nIn = xIn.rows();
 
-    vector<dvector> c = computeSplines(xIn, yIn);
+    vector<dvec> c = computeSplines(xIn, yIn);
 
     // Evaluate the spline at the selected points
     double dx;
-    dvector yOut(nOut);
+    dvec yOut(nOut);
 
     for (int i=0; i<nOut; i++) {
         int j = findFirst(xIn >= xOut[i]) - 1;
@@ -358,17 +229,17 @@ dvector mathUtils::splines(const dvector& xIn, const dvector& yIn, const dvector
     return yOut;
 }
 
-double mathUtils::splines(const dvector& xIn, const dvector& yIn, const double xOut)
+double mathUtils::splines(const dvec& xIn, const dvec& yIn, const double xOut)
 {
-    if (xIn.size() != yIn.size()) {
+    if (xIn.rows() != yIn.rows()) {
         throw debugException((boost::format(
             "mathUtils::splines: error: xIn (%i) and yIn (%i) must be the same size.") %
-            xIn.size() % yIn.size()).str());
+            xIn.rows() % yIn.rows()).str());
     }
 
-    int nIn = xIn.size();
+    int nIn = xIn.rows();
 
-    vector<dvector> c = computeSplines(xIn, yIn);
+    vector<dvec> c = computeSplines(xIn, yIn);
 
     // Evaluate the spline at the selected point
     int j = findFirst(xIn >= xOut) - 1;
@@ -381,39 +252,6 @@ double mathUtils::splines(const dvector& xIn, const dvector& yIn, const double x
     return c[0][j] + dx*(c[1][j] + dx*(c[2][j] + dx*c[3][j]));
 }
 
-double mathUtils::integrate(const dvector& x, const dvector& y)
-{
-    if (x.size() != y.size()) {
-        throw debugException("mathUtils::integrate: error: xIn and yIn must be the same size.");
-    }
-
-    int n = x.size();
-    vector<dvector> c = computeSplines(x, y);
-    double I=0;
-
-    // Integrate the spline on each interval:
-
-    for (int i=0; i<n-1; i++) {
-        double dx = x[i+1]-x[i];
-        I += dx*(c[0][i] + dx*(c[1][i]/2 + dx*(c[2][i]/3 + dx*c[3][i]/4)));
-    }
-
-    return I;
-}
-
-double mathUtils::trapz(const dvector& x, const dvector& y)
-{
-    if (x.size() != y.size()) {
-        throw debugException("mathUtils::trapz: error: x and y must be the same size.");
-    }
-
-    double I = 0;
-    int n = x.size();
-    for (int i=0; i<n-1; i++) {
-        I += 0.5*(y[i+1]+y[i])*(x[i+1]-x[i]);
-    }
-    return I;
-}
 
 void mathUtils::vectorVectorToArray2D(const vector<dvector>& v, dmatrix& a)
 {
