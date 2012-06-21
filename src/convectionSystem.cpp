@@ -110,13 +110,8 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
         dTdt[jj] = splitConstT[jj] - V[jj] * (T[jj]-T[jj-1])/hh[jj-1]/rho[jj];
        dWdt[jj] = splitConstW[jj] - V[jj] * (Wmx[jj]-Wmx[jj-1])/hh[jj-1]/rho[jj];
     }
-    assert(mathUtils::notnan(dUdt));
-    assert(mathUtils::notnan(dTdt));
-    assert(mathUtils::notnan(dWdt));
-
 
     roll_ydot(ydot);
-    assert(mathUtils::notnan(ydot));
     return 0;
 }
 
@@ -127,10 +122,16 @@ void ConvectionSystemUTW::unroll_y(const sdVector& y)
         U[j] = y[j*nVars+kMomentum];
         Wmx[j] = y[j*nVars+kWmx];
     }
+    assert(mathUtils::notnan(T));
+    assert(mathUtils::notnan(U));
+    assert(mathUtils::notnan(Wmx));
 }
 
 void ConvectionSystemUTW::roll_y(sdVector& y) const
 {
+    assert(mathUtils::notnan(T));
+    assert(mathUtils::notnan(U));
+    assert(mathUtils::notnan(Wmx));
     for (size_t j=0; j<nPoints; j++) {
         y[j*nVars+kEnergy] = T[j];
         y[j*nVars+kMomentum] = U[j];
@@ -140,6 +141,9 @@ void ConvectionSystemUTW::roll_y(sdVector& y) const
 
 void ConvectionSystemUTW::roll_ydot(sdVector& ydot) const
 {
+    assert(mathUtils::notnan(dTdt));
+    assert(mathUtils::notnan(dUdt));
+    assert(mathUtils::notnan(dWdt));
     for (size_t j=0; j<nPoints; j++) {
         ydot[j*nVars+kEnergy] = dTdt[j];
         ydot[j*nVars+kMomentum] = dUdt[j];
@@ -474,6 +478,9 @@ void ConvectionSystemSplit::setState
     U = U_;
     T = T_;
     Y = Y_;
+    assert(mathUtils::notnan(U));
+    assert(mathUtils::notnan(T));
+    assert(mathUtils::notnan(Y));
 
     for (size_t j=0; j<nPoints; j++) {
         utwSolver->y[3*j+kMomentum] = U[j];
@@ -481,6 +488,7 @@ void ConvectionSystemSplit::setState
         gas->setStateMass(&Y(0,j), T[j]);
         utwSolver->y[3*j+kWmx] = Wmx[j] = gas->getMixtureMolecularWeight();
     }
+    assert(mathUtils::notnan(Wmx));
 
     for (size_t k=0; k<nSpec; k++) {
         Eigen::Map<dvec>(&speciesSolvers[k].y[0], nPoints) = Y.row(k);
