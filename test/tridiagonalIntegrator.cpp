@@ -43,7 +43,6 @@ public:
     TridiagonalIntegratorTest()
         : integrator(ode)
         , y0(5)
-        , y0_in(5)
     {
         integrator.resize(5);
         ode.a_ << 0, 1, 1, 1, 1;
@@ -52,16 +51,13 @@ public:
         ode.k_ << 0, 0, 0, 0.2, 0.4;
 
         y0 << 0, 0.5, 2.0, 1.0, 0;
-        dvec::Map(&y0_in[0], 5) = y0;
-
-        integrator.set_y0(y0_in);
+        integrator.set_y0(y0);
     }
 protected:
     ConstantTridiagonalODE ode;
     TridiagonalIntegrator integrator;
 
     dvec y0;
-    dvector y0_in;
 };
 
 
@@ -75,7 +71,7 @@ TEST_F(TridiagonalIntegratorTest, Stepwise)
             EXPECT_NEAR(soln[j][i], y[i], 1e-10);
         }
         integrator.step();
-        y = integrator.get_y_new();
+        y = integrator.get_y();
     }
 }
 
