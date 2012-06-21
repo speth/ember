@@ -648,14 +648,6 @@ void FlameSolver::writeStateFile
     if (incrementFileNumber) {
         options.outputFileNumber++;
     }
-
-//    if (errorFile && options.stopIfError) {
-//        logFile.write(format("Error outputs remaining until termination: %i") %
-//                options.errorStopCount);
-//      if (options.errorStopCount-- <= 0) {
-//        throw debugException("Too many integration failures.");
-//      }
-//    }
 }
 
 void FlameSolver::writeTimeseriesFile(const std::string& filename)
@@ -799,10 +791,6 @@ void FlameSolver::resizeAuxiliary()
         diffusionSolvers[k].resize(nPoints);
         diffusionTerms[k].setGrid(grid);
     }
-
-    // Diffusion solvers: Energy and Momentum
-    diffusionSolvers[kMomentum].resize(nPoints);
-    diffusionSolvers[kEnergy].resize(nPoints);
 
     convectionSystem.setGrid(grid);
     convectionSystem.resize(nPoints, nSpec);
@@ -970,12 +958,8 @@ void FlameSolver::prepareDiffusionTerms()
                 0.25 * (dUdtProd + dUdtConv);
 
         for (size_t k=0; k<nSpec; k++) {
-            dvec& splitConstY = diffusionTerms[kSpecies+k].splitConst;
-            for (size_t j = 0; j <= jj; j++)
-            {
-                splitConstY[j] = -0.75 * dYdtDiff(k,j) +
-                    0.25 * (dYdtProd(k,j) + dYdtConv(k,j) + dYdtCross(k,j));
-            }
+            diffusionTerms[kSpecies+k].splitConst = - 0.75 * dYdtDiff.row(k) +
+                0.25 * (dYdtProd + dYdtConv + dYdtCross).row(k);
         }
     } else { // options.splittingMethod == "strang"
         diffusionTerms[kEnergy].splitConst = dTdtCross;
@@ -1008,19 +992,15 @@ void FlameSolver::prepareProductionTerms()
                     0.5 * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
                 sourceTerms[j].splitConst[kMomentum] = -0.5 * dUdtProd[j] +
                     0.5 * (dUdtConv[j] + dUdtDiff[j]);
-                for (size_t k=0; k<nSpec; k++) {
-                    sourceTerms[j].splitConst[kSpecies+k] = -0.5 * dYdtProd(k,j) +
-                        0.5 * (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
-                }
+                sourceTerms[j].splitConst.tail(nSpec) = -0.5 * dYdtProd.col(j) +
+                    0.5 * (dYdtConv + dYdtDiff + dYdtCross).col(j);
             } else {
                 sourceTermsQSS[j].splitConstT = -0.5 * dTdtProd[j] +
                     0.5 * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
                 sourceTermsQSS[j].splitConstU = -0.5 * dUdtProd[j] +
                     0.5 * (dUdtConv[j] + dUdtDiff[j]);
-                for (size_t k=0; k<nSpec; k++) {
-                    sourceTermsQSS[j].splitConstY[k] = -0.5 * dYdtProd(k,j) +
-                        0.5 * (dYdtConv(k,j) + dYdtDiff(k,j) + dYdtCross(k,j));
-                }
+                sourceTermsQSS[j].splitConstY = -0.5 * dYdtProd.col(j) +
+                    0.5 * (dYdtConv + dYdtDiff + dYdtCross).col(j);
             }
         }
     }
@@ -1069,11 +1049,9 @@ void FlameSolver::setDiffusionSolverState(double tInitial)
 
     size_t k = 0;
     foreach (TridiagonalIntegrator& integrator, diffusionSolvers) {
-        double dt = options.globalTimestep;
-        for (size_t j=1; j<jj; j++) {
-            dt = std::min(dt, options.diffusionTimestepMultiplier*dlj[j]*dlj[j] /
-                              (diffusionTerms[k].B[j]*diffusionTerms[k].D[j]));
-        }
+        double dt = (dlj.square().tail(nPoints - 2) /
+            (diffusionTerms[k].B * diffusionTerms[k].D).segment(1, nPoints-2)).minCoeff();
+        dt = std::min(options.diffusionTimestepMultiplier * dt, options.globalTimestep);
         integrator.initialize(tInitial, dt);
         k++;
     }
@@ -1110,18 +1088,13 @@ void FlameSolver::setProductionSolverState(double tInitial)
             sdVector& ySource = sourceSolvers[j].y;
             ySource[kMomentum] = U[j];
             ySource[kEnergy] = T[j];
-            for (size_t k=0; k<nSpec; k++) {
-                ySource[kSpecies+k] = Y(k,j);
-            }
+            Eigen::Map<dvec>(&ySource[kSpecies], nSpec) = Y.col(j);
             sourceSolvers[j].initialize();
-
         } else {
             dvec ySource(nVars);
             ySource[kMomentum] = U[j];
             ySource[kEnergy] = T[j];
-            for (size_t k=0; k<nSpec; k++) {
-                ySource[kSpecies+k] = Y(k,j);
-            }
+            ySource.tail(nSpec) = Y.col(j);
             sourceTermsQSS[j].setState(ySource, tInitial);
         }
     }
@@ -1187,16 +1160,12 @@ void FlameSolver::extractProductionState(double dt)
             sourceTerms[j].unroll_y(sourceSolvers[j].y, tNow);
             U[j] = sourceTerms[j].U;
             T[j] = sourceTerms[j].T;
-            for (size_t k=0; k<nSpec; k++) {
-                Y(k,j) = sourceTerms[j].Y[k];
-            }
+            Y.col(j) = sourceTerms[j].Y;
         } else {
             sourceTermsQSS[j].unroll_y(sourceTermsQSS[j].y);
             U[j] = sourceTermsQSS[j].U;
             T[j] = sourceTermsQSS[j].T;
-            for (size_t k=0; k<nSpec; k++) {
-                Y(k,j) = sourceTermsQSS[j].Y[k];
-            }
+            Y.col(j) = sourceTermsQSS[j].Y;
         }
     }
     assert(mathUtils::notnan(T));
@@ -1389,11 +1358,7 @@ double FlameSolver::getHeatReleaseRate(void)
 
 double FlameSolver::getConsumptionSpeed(void)
 {
-    dvec q_cp(nPoints);
-    for (size_t j=0; j<nPoints; j++) {
-        q_cp[j] = qDot[j]/cp[j];
-    }
-    double QoverCp = mathUtils::integrate(x,q_cp);
+    double QoverCp = mathUtils::integrate(x, qDot / cp);
     double rhouDeltaT = rhou*(Tb-Tu);
     return QoverCp/rhouDeltaT;
 }
@@ -1623,8 +1588,7 @@ void FlameSolver::generateProfile(void)
         mathUtils::smooth(U);
     }
 
-    if (options.fixedLeftLoc)
-    {
+    if (options.fixedLeftLoc) {
         jm = 0;
     }
 }
@@ -1699,10 +1663,7 @@ void FlameSolver::loadProfile(void)
         // Save the burned gas properties for the case where the burned
         // values are not fixed.
         double TbSave = T[grid.jb];
-        dvector YbSave(nSpec);
-        for (size_t k=0; k<nSpec; k++) {
-            YbSave[k] = Y(k,grid.jb);
-        }
+        dvec YbSave = Y.col(grid.jb);
 
         if (options.overrideReactants) {
             dvector reactants = gas.calculateReactantMixture(
@@ -1720,11 +1681,8 @@ void FlameSolver::loadProfile(void)
         rhou = gas.getDensity();
         gas.setStateMass(&Y(0,grid.jb), T[grid.ju]);
         rhob = gas.getDensity();
-        Yu.resize(nSpec); Yb.resize(nSpec);
-        for (size_t k=0; k<nSpec; k++) {
-            Yu[k] = Y(k,grid.ju);
-            Yb[k] = Y(k,grid.jb);
-        }
+        Yu = Y.col(grid.ju);
+        Yb = Y.col(grid.jb);
 
         if (options.unburnedLeft) {
             rhoLeft = rhou;
@@ -1744,9 +1702,7 @@ void FlameSolver::loadProfile(void)
 
         if (!options.fixedBurnedVal) {
             T[grid.jb] = TbSave;
-            for (size_t k=0; k<nSpec; k++) {
-                Y(k,grid.jb) = YbSave[k];
-            }
+            Y.col(grid.jb) = YbSave;
         }
 
         if (options.overrideTu) {
@@ -1968,7 +1924,6 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
                 logFile.write(format(" [%i/%i]...") % sourceTermsQSS[j].gcount
                         % sourceTermsQSS[j].rcount, false);
             }
-
         }
     }
 
