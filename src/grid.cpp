@@ -53,14 +53,13 @@ void oneDimGrid::updateValues()
     r.resize(jj+1);
     dampVal.resize(jj+1);
 
-    for (unsigned int j=0; j<x.size()-1; j++) {
+    for (unsigned int j=0; j<x.rows()-1; j++) {
         hh[j] = x[j+1]-x[j];
         rphalf[j] =  pow(0.5*(x[j]+x[j+1]),alpha);
-        r[j] = pow(x[j],alpha);
     }
-    r[jj] = pow(x[jj],alpha);
+    r = x.pow(alpha);
 
-    for (unsigned int j=1; j<x.size()-1; j++) {
+    for (unsigned int j=1; j<x.rows()-1; j++) {
         cfp[j] = hh[j-1]/(hh[j]*(hh[j]+hh[j-1]));
         cf[j] = (hh[j]-hh[j-1])/(hh[j]*hh[j-1]);
         cfm[j] = -hh[j]/(hh[j-1]*(hh[j]+hh[j-1]));
@@ -385,24 +384,33 @@ void oneDimGrid::adapt(vector<dvector>& y)
 
 void oneDimGrid::addPoint(int jInsert, vector<dvector>& y)
 {
-    assert(x.size() == dampVal.size());
+    assert(x.rows() == dampVal.rows());
+    dvec::Index N = x.rows();
 
     double xInsert = 0.5*(x[jInsert+1]+x[jInsert]);
 
-    dampVal.insert(dampVal.begin()+jInsert+1,
-                   mathUtils::splines(x,dampVal, xInsert));
+    double val = mathUtils::splines(x, dampVal, xInsert);
+    dvec tmp(N + 1);
+    tmp << dampVal.head(jInsert + 1), val, dampVal.tail(N - jInsert - 1);
+    dampVal = tmp;
 
     foreach(dvector& row, y) {
-        double yNew = mathUtils::splines(x, row, xInsert);
+        double yNew = mathUtils::splines(x, Eigen::Map<dvec>(&row[0], row.size()),
+                                         xInsert);
         row.insert(row.begin()+jInsert+1, yNew);
     }
 
-    x.insert(x.begin()+jInsert+1, xInsert);
+    tmp << x.head(jInsert + 1), xInsert, x.tail(N - jInsert - 1);
+    x = tmp;
 }
 
 void oneDimGrid::removePoint(int jRemove, vector<dvector>& y)
 {
-    x.erase(x.begin() + jRemove);
+    dvec tmp(x.rows() - 1);
+    tmp << x.head(jRemove), x.tail(x.rows() - jRemove - 1);
+    x = tmp;
+    tmp << dampVal.head(jRemove), dampVal.tail(dampVal.rows() - jRemove - 1);
+    dampVal = tmp;
     foreach(dvector& row, y) {
         row.erase(row.begin() + jRemove);
     }
@@ -452,8 +460,11 @@ bool oneDimGrid::addRight(vector<dvector>& y)
     if (pointAdded) {
         logFile.write("Regrid: Adding points to right side.");
 
+        x.conservativeResize(nPoints + addPointCount);
+        dampVal.conservativeResize(nPoints + addPointCount);
         for (size_t i=0; i<addPointCount; i++) {
-            x.push_back(x[jj] + (x[jj]-x[jj-1]));
+            x[jj+1] = x[jj] + (x[jj]-x[jj-1]);
+            dampVal[jj+1] = dampVal[jj];
             for (size_t k=0; k<nVars; k++) {
                 // keep constant boundary value
                 y[k].push_back(y[k][jj]);
@@ -464,11 +475,10 @@ bool oneDimGrid::addRight(vector<dvector>& y)
     }
 
     return pointAdded;
-
 }
 
 
-bool oneDimGrid::addRightUnstrained(vector<dvector>& y, dvector& qdot)
+bool oneDimGrid::addRightUnstrained(vector<dvector>& y, dvec& qdot)
 {
     // *** Criteria for addition to right (j==jj) ***
 
@@ -476,9 +486,9 @@ bool oneDimGrid::addRightUnstrained(vector<dvector>& y, dvector& qdot)
     // depending on whether a zero-gradient condition is being enforced
     bool pointAdded = false; // Assume no addition
 
-    size_t jqMax = maxloc(qdot);
+    dvec::Index jqMax;
+    double qMax = qdot.maxCoeff(&jqMax);
 
-    double qMax = qdot[jqMax];
     size_t jLeft = 0;
     size_t jRight = jj;
     for (size_t j=jqMax; j>=1; j--) {
@@ -508,9 +518,13 @@ bool oneDimGrid::addRightUnstrained(vector<dvector>& y, dvector& qdot)
     if (pointAdded) {
         logFile.write("Regrid: Adding points to right side.");
 
+        x.conservativeResize(nPoints + addPointCount);
+        qdot.conservativeResize(nPoints + addPointCount);
+        dampVal.conservativeResize(nPoints + addPointCount);
         for (size_t i=0; i<addPointCount; i++) {
-            x.push_back(x[jj] + (x[jj]-x[jj-1]));
-            qdot.push_back(qdot[jj]);
+            x[jj+1] = x[jj] + (x[jj]-x[jj-1]);
+            qdot[jj+1] = qdot[jj];
+            dampVal[jj+1] = dampVal[jj];
             for (size_t k=0; k<nVars; k++) {
                 // keep constant boundary value
                 y[k].push_back(y[k][jj]);
@@ -586,7 +600,11 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
             if (debugParameters::debugRegrid) {
                 logFile.write(format("adding point at %i") % xLeft);
             }
-            x.insert(x.begin(),xLeft);
+            dvec tmp(x.rows() + 1);
+            tmp << xLeft, x;
+            x = tmp;
+            tmp << dampVal[0], dampVal;
+            dampVal = tmp;
 
             for (size_t k=0; k<nVars; k++) {
                 // keep constant boundary value
@@ -641,15 +659,14 @@ bool oneDimGrid::removeRight(vector<dvector>& y)
     return pointRemoved;
 }
 
-bool oneDimGrid::removeRightUnstrained(vector<dvector>& y, dvector& qdot)
+bool oneDimGrid::removeRightUnstrained(vector<dvector>& y, dvec& qdot)
 {
     // *** Criterion for removal from the right (j==jj) ***
 
     bool pointRemoved = false;
+    dvec::Index jqMax;
+    double qMax = qdot.maxCoeff(&jqMax);
 
-    size_t jqMax = maxloc(qdot);
-
-    double qMax = qdot[jqMax];
     size_t jLeft = 0;
     size_t jRight = jj;
     for (size_t j=jqMax; j>=1; j--) {
@@ -678,7 +695,7 @@ bool oneDimGrid::removeRightUnstrained(vector<dvector>& y, dvector& qdot)
 
     if (pointRemoved) {
         removePoint(jj,y);
-        qdot.erase(qdot.begin() + jj);
+        qdot.conservativeResize(nPoints-1);
         setSize(nPoints-1);
         updateBoundaryIndices();
     }
@@ -795,7 +812,7 @@ void oneDimGrid::regrid(vector<dvector>& y)
     }
 }
 
-void oneDimGrid::regridUnstrained(vector<dvector>& y, dvector& qdot)
+void oneDimGrid::regridUnstrained(vector<dvector>& y, dvec& qdot)
 {
     nVars = y.size();
     assert(nAdapt <= nVars);

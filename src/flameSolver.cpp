@@ -414,19 +414,19 @@ void FlameSolver::run(void)
 
             // If the left grid point moves, a new boundary value for rVzero
             // needs to be calculated from the mass flux V on the current grid points
-            dvector x_prev = grid.x;
+            dvec x_prev = grid.x;
             convectionSystem.evaluate();
-            dvector V_prev(nPoints);
+            dvec V_prev(nPoints);
 
             // dampVal sets a limit on the maximum grid size
-            grid.dampVal.resize(grid.x.size());
+            grid.dampVal.resize(grid.x.rows());
             for (size_t j=0; j<nPoints; j++) {
                 double num = std::min(mu[j],lambda[j]/cp[j]);
                 num = std::min(num, rhoD.col(j).minCoeff());
                 grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
                 V_prev[j] = convectionSystem.V[j];
             }
-            dvector dampVal_prev = grid.dampVal;
+            dvec dampVal_prev = grid.dampVal;
 
             // "rollVectorVector"
             vector<dvector> currentSolution;
@@ -463,8 +463,7 @@ void FlameSolver::run(void)
 
                 // Update the mass flux (including the left boundary value)
                 rVzero = mathUtils::interp1(x_prev, V_prev, grid.x[0]);
-                dvector V = mathUtils::interp1(x_prev, V_prev, grid.x);
-                convectionSystem.utwSystem.V = Eigen::Map<dvec>(&V[0], V.size());
+                convectionSystem.utwSystem.V = mathUtils::interp1(x_prev, V_prev, grid.x);
 
                 // Allocate the solvers and arrays for auxiliary variables
                 resizeAuxiliary();
@@ -573,7 +572,7 @@ void FlameSolver::writeStateFile
 
     // Write the state data to the output file:
     outFile.writeScalar("t", tNow);
-    outFile.writeVector("x", x);
+    outFile.writeVec("x", x);
     outFile.writeVec("T", T);
     outFile.writeVec("U", U);
     outFile.writeArray2D("Y", Y, true);
@@ -585,7 +584,7 @@ void FlameSolver::writeStateFile
     outFile.writeScalar("fileNumber", options.outputFileNumber);
 
     if (options.outputHeatReleaseRate || errorFile) {
-        outFile.writeVector("q", qDot);
+        outFile.writeVec("q", qDot);
         outFile.writeVec("rho", rho);
     }
 
@@ -635,11 +634,11 @@ void FlameSolver::writeStateFile
         outFile.writeVec("mu", mu);
         outFile.writeVec("Wmx", Wmx);
         outFile.writeVec("W", W);
-        outFile.writeVector("cfp", grid.cfp);
-        outFile.writeVector("cf", grid.cf);
-        outFile.writeVector("cfm", grid.cfm);
-        outFile.writeVector("hh", hh);
-        outFile.writeVector("rphalf", grid.rphalf);
+        outFile.writeVec("cfp", grid.cfp);
+        outFile.writeVec("cf", grid.cf);
+        outFile.writeVec("cfm", grid.cfm);
+        outFile.writeVec("hh", hh);
+        outFile.writeVec("rphalf", grid.rphalf);
         outFile.writeArray2D("jFick", jFick, true);
         outFile.writeArray2D("jSoret", jSoret, true);
         outFile.writeVec("jCorr", jCorr);
@@ -1390,7 +1389,7 @@ double FlameSolver::getHeatReleaseRate(void)
 
 double FlameSolver::getConsumptionSpeed(void)
 {
-    dvector q_cp(nPoints);
+    dvec q_cp(nPoints);
     for (size_t j=0; j<nPoints; j++) {
         q_cp[j] = qDot[j]/cp[j];
     }
@@ -1401,7 +1400,7 @@ double FlameSolver::getConsumptionSpeed(void)
 
 double FlameSolver::getFlamePosition(void)
 {
-    return mathUtils::trapz(x,x*qDot)/mathUtils::trapz(x,qDot);
+    return mathUtils::trapz(x, (x*qDot).eval())/mathUtils::trapz(x,qDot);
 }
 
 void FlameSolver::generateProfile(void)
@@ -1645,7 +1644,7 @@ void FlameSolver::loadProfile(void)
 
         logFile.write(format("Reading initial condition from %s") % inputFilename);
         DataFile infile(inputFilename);
-        x = infile.readVector("x");
+        x = infile.readVec("x");
 
         grid.setSize(x.size());
         grid.updateValues();

@@ -117,7 +117,7 @@ public:
 
     // Initial profiles specified in configuration file
     bool haveInitialProfiles;
-    dvector x_initial;
+    dvec x_initial;
     dvec T_initial;
     dvec U_initial;
     dmatrix Y_initial;

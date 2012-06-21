@@ -180,7 +180,7 @@ void ConvectionSystemUTW::resetSplitConstants()
 }
 
 void ConvectionSystemUTW::updateContinuityBoundaryCondition
-(const dvector& qdot, ContinuityBoundaryCondition::BC newBC)
+(const dvec& qdot, ContinuityBoundaryCondition::BC newBC)
 {
     assert(mathUtils::notnan(V));
     continuityBC = newBC;

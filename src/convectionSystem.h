@@ -28,7 +28,7 @@ public:
     void resize(const size_t nPoints);
     void resetSplitConstants();
 
-    void updateContinuityBoundaryCondition(const dvector& qdot,
+    void updateContinuityBoundaryCondition(const dvec& qdot,
                                            ContinuityBoundaryCondition::BC newBC);
 
     dvec U, dUdt;
