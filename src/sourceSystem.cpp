@@ -11,9 +11,7 @@ SourceSystem::SourceSystem()
 }
 
 SourceSystemCVODE::SourceSystemCVODE()
-    : U(NaN)
-    , T(NaN)
-    , gas(NULL)
+    : gas(NULL)
     , quasi2d(false)
 {
 }
@@ -27,6 +25,24 @@ void SourceSystemCVODE::resize(size_t new_nSpec)
     wDot.resize(nSpec);
     hk.resize(nSpec);
     splitConst.resize(nSpec+2);
+
+    integrator_.reset(new sundialsCVODE(nSpec+2));
+    integrator_->setODE(this);
+    integrator_->linearMultistepMethod = CV_BDF;
+    integrator_->nonlinearSolverMethod = CV_NEWTON;
+    integrator_->maxNumSteps = 1000000;
+}
+
+void SourceSystemCVODE::setOptions(configOptions& options)
+{
+    options_ = &options;
+    integrator_->abstol[kMomentum] = options.integratorMomentumAbsTol;
+    integrator_->abstol[kEnergy] = options.integratorEnergyAbsTol;
+    for (size_t k=0; k<nSpec; k++) {
+        integrator_->abstol[kSpecies+k] = options.integratorSpeciesAbsTol;
+    }
+    integrator_->reltol = options.integratorRelTol;
+    integrator_->minStep = options.integratorMinTimestep;
 }
 
 void SourceSystemCVODE::resetSplitConstants()
@@ -60,10 +76,10 @@ int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
 
     qDot = - (wDot * hk).sum();
 
-    if (t >= options->ignition_tStart && t < options->ignition_tStart + options->ignition_duration) {
-        qDot += options->ignition_energy /
-                (options->ignition_stddev * sqrt(2 * M_PI) * options->ignition_duration) *
-                exp(-pow(x - options->ignition_center, 2) / (2 * pow(options->ignition_stddev, 2)));
+    if (t >= options_->ignition_tStart && t < options_->ignition_tStart + options_->ignition_duration) {
+        qDot += options_->ignition_energy /
+                (options_->ignition_stddev * sqrt(2 * M_PI) * options_->ignition_duration) *
+                exp(-pow(x - options_->ignition_center, 2) / (2 * pow(options_->ignition_stddev, 2)));
     }
 
     double a = strainFunction.a(t);
@@ -206,6 +222,31 @@ int SourceSystemCVODE::fdJacobian(const realtype t, const sdVector& y, const sdV
     return 0;
 }
 
+void SourceSystemCVODE::setState
+(double tInitial, double uu, double tt, const dvec& yy)
+{
+    integrator_->t0 = tInitial;
+    integrator_->y[kMomentum] = uu;
+    integrator_->y[kEnergy] = tt;
+    Eigen::Map<dvec>(&integrator_->y[kSpecies], nSpec) = yy;
+    integrator_->initialize();
+}
+
+int SourceSystemCVODE::integrateToTime(double tf)
+{
+    return integrator_->integrateToTime(integrator_->t0 + tf);
+}
+
+int SourceSystemCVODE::integrateOneStep(double tf)
+{
+    return integrator_->integrateOneStep(integrator_->t0 + tf);
+}
+
+double SourceSystemCVODE::time() const
+{
+    return integrator_->tInt - integrator_->t0;
+}
+
 void SourceSystemCVODE::unroll_y(const sdVector& y, double t)
 {
     if (!quasi2d) {
@@ -232,14 +273,19 @@ void SourceSystemCVODE::roll_ydot(sdVector& ydot) const
     Eigen::Map<dvec>(&ydot[kSpecies], nSpec) = dYdt;
 }
 
-void SourceSystemCVODE::writeJacobian(sundialsCVODE& solver, std::ostream& out)
+std::string SourceSystemCVODE::getStats()
 {
-    size_t N = solver.y.length();
-    double t = solver.tInt;
+    return (format("%i") % integrator_->getNumSteps()).str();
+}
+
+void SourceSystemCVODE::writeJacobian(std::ostream& out)
+{
+    size_t N = integrator_->y.length();
+    double t = integrator_->tInt;
     sdMatrix J(N,N);
     sdVector ydot(N);
-    f(t, solver.y, ydot);
-    denseJacobian(t, solver.y, ydot, J);
+    f(t, integrator_->y, ydot);
+    denseJacobian(t, integrator_->y, ydot, J);
 
     out << "J = []" << std::endl;
     for (size_t i=0; i<N; i++) {
@@ -251,7 +297,7 @@ void SourceSystemCVODE::writeJacobian(sundialsCVODE& solver, std::ostream& out)
     }
 }
 
-void SourceSystemCVODE::writeState(sundialsCVODE& solver, std::ostream& out, bool init)
+void SourceSystemCVODE::writeState(std::ostream& out, bool init)
 {
     if (init) {
         out << "T = []" << std::endl;
@@ -262,7 +308,7 @@ void SourceSystemCVODE::writeState(sundialsCVODE& solver, std::ostream& out, boo
 
     out << "T.append(" << T << ")" << std::endl;
     out << "Y.append(" << Y << ")" << std::endl;
-    out << "t.append(" << solver.tInt << ")" << std::endl;
+    out << "t.append(" << integrator_->tInt << ")" << std::endl;
     out << "wDot.append(" << wDot << ")" << std::endl;
 }
 

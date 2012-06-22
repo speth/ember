@@ -611,14 +611,14 @@ void FlameSolver::writeStateFile
         outFile.writeVec("dWdx", convectionSystem.utwSystem.dWdx);
         outFile.writeVec("dTdx", convectionSystem.utwSystem.dTdx);
 
-        // Number of timesteps in the chemistry solver in the last global timestep
-        dvector chemSteps(nPoints, 0);
-        for (size_t j=0; j<nPoints; j++) {
-            if (sourceSolvers[j].initialized()) {
-                chemSteps[j] = sourceSolvers[j].getNumSteps();
-            }
-        }
-        outFile.writeVector("chemSteps", chemSteps);
+//        // Number of timesteps in the chemistry solver in the last global timestep
+//        dvector chemSteps(nPoints, 0);
+//        for (size_t j=0; j<nPoints; j++) {
+//            if (sourceSolvers[j].initialized()) {
+//                chemSteps[j] = sourceSolvers[j].getNumSteps();
+//            }
+//        }
+//        outFile.writeVector("chemSteps", chemSteps);
     }
 
     if (options.outputExtraVariables || errorFile) {
@@ -721,7 +721,7 @@ void FlameSolver::resizeAuxiliary()
             SourceSystemCVODE* system = new SourceSystemCVODE();
             system->resize(nSpec);
             system->gas = &gas;
-            system->options = &options;
+            system->setOptions(options);
             system->thermoTimer = &thermoTimer;
             system->reactionRatesTimer = &reactionRatesTimer;
             system->jacobianTimer = &jacobianTimer;
@@ -734,23 +734,8 @@ void FlameSolver::resizeAuxiliary()
                 system->setupQuasi2d(vzInterp, TInterp);
             }
 
-            // Create and initialize the new Sundials solver
-            sundialsCVODE* solver = new sundialsCVODE(nVars);
-            solver->setODE(system);
-            solver->abstol[kMomentum] = options.integratorMomentumAbsTol;
-            solver->abstol[kEnergy] = options.integratorEnergyAbsTol;
-            for (size_t k=0; k<nSpec; k++) {
-                solver->abstol[kSpecies+k] = options.integratorSpeciesAbsTol;
-            }
-            solver->reltol = options.integratorRelTol;
-            solver->linearMultistepMethod = CV_BDF;
-            solver->nonlinearSolverMethod = CV_NEWTON;
-            solver->maxNumSteps = 1000000;
-            solver->minStep = options.integratorMinTimestep;
-
             // Store the solver and system
             sourceTerms.push_back(system);
-            sourceSolvers.push_back(solver);
 
             // Create the new SourceSystemQSS
             SourceSystemQSS* qssSolver = new SourceSystemQSS();
@@ -775,7 +760,6 @@ void FlameSolver::resizeAuxiliary()
     } else {
         // Delete the unwanted solvers and systems
         sourceTerms.erase(sourceTerms.begin()+nPoints, sourceTerms.end());
-        sourceSolvers.erase(sourceSolvers.begin()+nPoints, sourceSolvers.end());
         sourceTermsQSS.erase(sourceTermsQSS.begin()+nPoints, sourceTermsQSS.end());
         useCVODE.erase(useCVODE.begin()+nPoints, useCVODE.end());
     }
@@ -1078,12 +1062,7 @@ void FlameSolver::setProductionSolverState(double tInitial)
 
     for (size_t j=0; j<nPoints; j++) {
         if (useCVODE[j]) {
-            sourceSolvers[j].t0 = tInitial;
-            sdVector& ySource = sourceSolvers[j].y;
-            ySource[kMomentum] = U[j];
-            ySource[kEnergy] = T[j];
-            Eigen::Map<dvec>(&ySource[kSpecies], nSpec) = Y.col(j);
-            sourceSolvers[j].initialize();
+            sourceTerms[j].setState(tInitial, U[j], T[j], Y.col(j));
         } else {
             sourceTermsQSS[j].setState(tInitial, U[j], T[j], Y.col(j));
         }
@@ -1147,7 +1126,7 @@ void FlameSolver::extractProductionState(double dt)
     splitTimer.resume();
     for (size_t j=0; j<nPoints; j++) {
         if (useCVODE[j]) {
-            sourceTerms[j].unroll_y(sourceSolvers[j].y, tNow);
+            sourceTerms[j].unroll_y();
             U[j] = sourceTerms[j].U;
             T[j] = sourceTerms[j].T;
             Y.col(j) = sourceTerms[j].Y;
@@ -1597,7 +1576,6 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
     }
     configOptions& options = parent_->options;
     boost::ptr_vector<SourceSystemCVODE>& sourceTerms = parent_->sourceTerms;
-    boost::ptr_vector<sundialsCVODE>& sourceSolvers = parent_->sourceSolvers;
     boost::ptr_vector<SourceSystemQSS>& sourceTermsQSS = parent_->sourceTermsQSS;
 
     CanteraGas** gasHandle = parent_->gases.acquire();
@@ -1618,23 +1596,23 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             if (int(j) == options.debugSourcePoint && t_ >= options.debugSourceTime) {
                 std::ofstream steps;
                 steps.open("cvodeSteps.py");
-                sourceTerms[j].writeState(sourceSolvers[j], steps, true);
+                sourceTerms[j].writeState(steps, true);
 
-                while (sourceSolvers[j].tInt < t_) {
-                    err = sourceSolvers[j].integrateOneStep(t_);
-                    sourceTerms[j].writeState(sourceSolvers[j], steps, false);
+                while (sourceTerms[j].time() < t_ - parent_->tNow) {
+                    err = sourceTerms[j].integrateOneStep(t_ - parent_->tNow);
+                    sourceTerms[j].writeState(steps, false);
                     if (err != CV_SUCCESS) {
                         break;
                     }
                 }
 
-                sourceTerms[j].writeJacobian(sourceSolvers[j], steps);
+                sourceTerms[j].writeJacobian(steps);
 
                 steps.close();
                 std::terminate();
 
             } else {
-                err = sourceSolvers[j].integrateToTime(t_);
+                err = sourceTerms[j].integrateToTime(t_ - parent_->tNow);
             }
             if (err && err != CV_TSTOP_RETURN) {
                 logFile.write(format("Error at j = %i") % j);
@@ -1647,8 +1625,7 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             }
 
             if (debugParameters::veryVerbose) {
-                logFile.write(format(
-                    " [%i]...") % sourceSolvers[j].getNumSteps(), false);
+                logFile.write(format(" [%s]...") % sourceTerms[j].getStats(), false);
             }
 
         } else {

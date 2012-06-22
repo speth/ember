@@ -41,7 +41,7 @@ private:
     bool debug_;
 };
 
-class SourceSystemCVODE : public sdODE
+class SourceSystemCVODE : public SourceSystem, sdODE
 {
     // This is the system representing the (chemical) source term at a point
 public:
@@ -56,28 +56,35 @@ public:
     // A simpler finite difference based Jacobian
     int fdJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J);
 
+    void setState(double tInitial, double uu, double tt, const dvec& yy);
+    int integrateToTime(double tf);
+    int integrateOneStep(double tf);
+    double time() const;
+
     void unroll_y(const sdVector& y, double t); // fill in current state variables from sdvector
+    void unroll_y() { unroll_y(integrator_->y, integrator_->tInt); }
     void roll_y(sdVector& y) const; // fill in sdvector with current state variables
     void roll_ydot(sdVector& ydot) const; // fill in sdvector with current time derivatives
 
+    std::string getStats();
+
     // Setup functions
     void resize(size_t nSpec);
+    void setOptions(configOptions& options);
     void resetSplitConstants();
     void setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
                       boost::shared_ptr<BilinearInterpolator> TInterp);
 
-    void writeJacobian(sundialsCVODE& solver, std::ostream& out);
-    void writeState(sundialsCVODE& solver, std::ostream& out, bool init);
+    void writeJacobian(std::ostream& out);
+    void writeState(std::ostream& out, bool init);
 
     // A class that provides the strain rate and its time derivative
     StrainFunction strainFunction;
 
-    configOptions* options;
-
-    // current state variables
-    double U, dUdt; // tangential velocity
-    double T, dTdt; // temperature
-    dvec Y, dYdt; // species mass fractions
+    // derivatives of current state variables
+    double dUdt; // tangential velocity
+    double dTdt; // temperature
+    dvec dYdt; // species mass fractions
 
     // Extra constant term introduced by splitting
     dvec splitConst; // constant terms
@@ -100,6 +107,9 @@ public:
     double qDot; // heat release rate per unit volume [W/m^3]
 
 private:
+    std::auto_ptr<sundialsCVODE> integrator_;
+    configOptions* options_;
+
     // Physical properties
     double rho; // density [kg/m^3]
     double cp; // specific heat capacity (average) [J/kg*K]

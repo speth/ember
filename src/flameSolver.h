@@ -94,7 +94,6 @@ private:
     boost::ptr_vector<SourceSystemCVODE> sourceTerms; // One for each grid point
     boost::ptr_vector<DiffusionSystem> diffusionTerms; // One for each species (plus T and U)
 
-    boost::ptr_vector<sundialsCVODE> sourceSolvers; // One for each grid point
     boost::ptr_vector<TridiagonalIntegrator> diffusionSolvers; // One for each state variable
 
     boost::ptr_vector<SourceSystemQSS> sourceTermsQSS; // One for each grid point
