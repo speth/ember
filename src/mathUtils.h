@@ -119,14 +119,14 @@ namespace mathUtils
         int nIn = xIn.size();
 
         // Compute spacing of x and derivative of y
-        T1 h(nIn), b(nIn);
+        T1 h(nIn-1), b(nIn-1);
         for (int i=0; i<nIn-1;  i++) {
             h[i] = xIn[i+1]-xIn[i];
             b[i] = (yIn[i+1]-yIn[i])/h[i];
         }
 
         // Gaussian elimination for the Tridiagonal system
-        T1 u(nIn), v(nIn);
+        T1 u(nIn-1), v(nIn-1);
         u[0] = 0; v[0] = 0;
         u[1] = 2*(h[0]+h[1]);
         v[1] = 6*(b[1]-b[0]);
@@ -141,15 +141,21 @@ namespace mathUtils
         for (int i=nIn-2; i>0; i--) {
             z[i] = (v[i]-h[i]*z[i+1])/u[i];
         }
+        z[0] = 0;
+        assert(notnan(z));
 
         // Evaluate the polynomial coefficients
-        vector<T1> c(4, T1(nIn));
+        vector<T1> c(4, T1(nIn-1));
         for (int i=0; i<nIn-1; i++) {
             c[0][i] = yIn[i];
             c[1][i] = -h[i]/6*z[i+1] - h[i]/3*z[i] + (yIn[i+1]-yIn[i])/h[i];
             c[2][i] = 0.5*z[i];
             c[3][i] = (z[i+1]-z[i])/(6*h[i]);
         }
+        assert(notnan(c[0]));
+        assert(notnan(c[1]));
+        assert(notnan(c[2]));
+        assert(notnan(c[3]));
 
         return c;
     }
@@ -210,6 +216,8 @@ namespace mathUtils
             throw debugException("mathUtils::integrate: error: xIn and yIn must be the same size.");
         }
 
+        assert(notnan(x));
+        assert(notnan(y));
         int n = x.size();
         vector<T1> c = computeSplines(x, y);
         double I = 0;
