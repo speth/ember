@@ -129,13 +129,9 @@ private:
     void setConvectionSolverState(double tInitial, int stage);
     void setProductionSolverState(double tInitial);
 
-    void extractConvectionState(double dt, int stage);
-    void extractDiffusionState(double dt, int stage);
-    void extractProductionState(double dt);
-
-    void integrateConvectionTerms(double t, int stage);
-    void integrateProductionTerms(double t, int stage);
-    void integrateDiffusionTerms(double t, int stage);
+    void integrateConvectionTerms(double tStart, double tEnd, int stage);
+    void integrateProductionTerms(double tStart, double tEnd, int stage);
+    void integrateDiffusionTerms(double tStart, double tEnd, int stage);
 
     size_t nSpec; //!< Number of chemical species
     size_t nVars; //!< Number of state variables at each grid point (nSpec + 2)
