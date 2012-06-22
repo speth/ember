@@ -137,12 +137,6 @@ configOptions::configOptions(const bp::object& conf)
 
     // Initial Condition
     const object& ic = conf.attr("initialCondition");
-    readOption(ic, "nPoints", nPoints);
-    readOption(ic, "xLeft", xLeft);
-    readOption(ic, "xRight", xRight);
-    readOption(ic, "centerWidth", initialCenterWidth);
-    readOption(ic, "slopeWidth", initialSlopeWidth);
-    readOption(ic, "smoothCount", initialSmoothCount);
     haveRestartFile = readOption(ic, "restartFile", restartFile);
     useRelativeRestartPath = true;
     readOption(ic, "relativeRestartPath", useRelativeRestartPath);

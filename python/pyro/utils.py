@@ -225,6 +225,8 @@ def run(conf):
     confOut = file(confOutPath, 'w')
     confOut.write(conf.stringify())
 
+    conf.setup()
+
     solver = _pyro.FlameSolver(conf)
     solver.initialize()
     solver.run()
@@ -260,6 +262,9 @@ def multirun(conf):
     conf.initialCondition.relativeRestartPath = False
     if not os.path.exists(conf.paths.outputDir):
         os.mkdir(conf.paths.outputDir, 0755)
+
+    conf.strainParameters.initial = strainRates[0]
+    conf.setup()
 
     Q = []
     Sc = []
@@ -343,3 +348,32 @@ def multirun(conf):
         data['Sc'] = Sc
         data['xFlame'] = xFlame
         data.close()
+
+
+def calculateReactantMixture(gas, fuel, oxidizer, equivalenceRatio):
+    gas.set(X=fuel, T=300.0, P=101325)
+    Xf = gas.moleFractions()
+    gas.set(X=oxidizer, T=300.0, P=101325)
+    Xo = gas.moleFractions()
+
+    nC = np.array([gas.nAtoms(k, 'C') for k in range(gas.nSpecies())])
+    nO = np.array([gas.nAtoms(k, 'O') for k in range(gas.nSpecies())])
+    nH = np.array([gas.nAtoms(k, 'H') for k in range(gas.nSpecies())])
+
+    Cf = (nC * Xf).sum()
+    Co = (nC * Xo).sum()
+    Of = (nO * Xf).sum()
+    Oo = (nO * Xo).sum()
+    Hf = (nH * Xf).sum()
+    Ho = (nH * Xo).sum()
+
+    stoichAirFuelRatio = - (Of - 2*Cf - Hf/2.0) / (Oo - 2*Co - Ho/2.0)
+    Xr = Xf * equivalenceRatio + stoichAirFuelRatio * Xo
+    Xr /= Xr.sum()
+
+    return Xr
+
+
+def smooth(v):
+    v[1:-1] = 0.25 * v[:-2] + 0.5 * v[1:-1] + 0.25 * v[2:]
+    return v

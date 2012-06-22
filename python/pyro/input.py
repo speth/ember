@@ -17,6 +17,7 @@ import numbers
 import os
 import Cantera
 import numpy as np
+import utils
 
 class Options(object):
     """ Base class for elements of :class:`.Config` """
@@ -202,7 +203,7 @@ class Grid(Options):
 
     #: For curved or twin flames, the minimum position of the first
     #: grid point past x = 0.
-    centerGridMin = 1e-4;
+    centerGridMin = 1e-4
 
 
 class InitialCondition(Options):
@@ -567,6 +568,15 @@ class Config(object):
         self.outputFiles = get(OutputFiles)
         self.terminationCondition = get(TerminationCondition)
 
+    def setup(self):
+        """
+        Perform any steps that need to be done before this object can be used
+        to create a FlameSolver, such as generating initial reactant profiles.
+        """
+        if (not self.initialCondition.restartFile and
+            not self.initialCondition.haveProfiles):
+            self.generateInitialCondition()
+
     def stringify(self):
         ans = []
         for item in self.__dict__.itervalues():
@@ -692,3 +702,151 @@ class Config(object):
                 print '    Reverse rate constant: %e' % Rr[i]
 
         return error
+
+    def generateInitialCondition(self):
+        """
+        Generate initial profiles for temperature, species mass fractions, and
+        velocity using the specified fuel and oxidizer compositions and flame
+        configuration parameters.
+        """
+        gas = Cantera.IdealGasMix(self.chemistry.mechanismFile,
+                                  self.chemistry.phaseID)
+
+        IC = self.initialCondition
+        N = IC.nPoints
+
+        xLeft = (0.0 if self.general.twinFlame or self.general.curvedFlame
+                 else IC.xLeft)
+
+        x = np.linspace(xLeft, IC.xRight, N)
+        T = np.zeros(N)
+        Y = np.zeros((gas.nSpecies(), N))
+
+        jm = (N-1) // 2
+
+        # make sure the initial profile fits comfortably in the domain
+        scale = 0.8 * (x[-1] - x[0]) / (IC.centerWidth + 2 * IC.slopeWidth)
+        if scale < 1.0:
+            IC.slopeWidth *= scale
+            IC.centerWidth *= scale
+
+        # Determine the grid indices defining each profile segment
+        dx = x[1]-x[0]
+        centerPointCount = int(0.5 + 0.5 * IC.centerWidth / dx)
+        slopePointCount = int(0.5 + IC.slopeWidth / dx)
+        jl2 = jm - centerPointCount
+        jl1 = jl2 - slopePointCount
+        jr1 = jm + centerPointCount
+        jr2 = jr1 + slopePointCount
+
+        if IC.flameType == 'premixed':
+            # Reactants
+            reactants = utils.calculateReactantMixture(gas, IC.fuel, IC.oxidizer,
+                                                       IC.equivalenceRatio)
+            gas.set(X=reactants, T=IC.Tu, P=IC.pressure)
+            rhou = gas.density()
+            Yu = gas.massFractions()
+
+            # Products
+            gas.equilibrate('HP')
+            Tb = gas.temperature()
+            Yb = gas.massFractions()
+
+            # Diluent in the middle
+            gas.set(X=IC.oxidizer, T=IC.Tu, P=IC.pressure)
+            Y[:,jm] = gas.massFractions()
+
+            if self.general.unburnedLeft:
+                Tleft = IC.Tu
+                Yleft = Yu
+                Tright = Tb
+                Yright = Yb
+            else:
+                Tleft = Tb
+                Yleft = Yb
+                Tright = IC.Tu
+                Yright = Yu
+
+            T[0] = Tleft
+            T[-1] = Tright
+            T[jm] = IC.Tu
+
+        elif IC.flameType == 'diffusion':
+            # Stoichiometric mixture at the center
+            IC.equivalenceRatio = 1.0
+            products = utils.calculateReactantMixture(gas, IC.fuel, IC.oxidizer,
+                                                      IC.equivalenceRatio)
+            gas.set(X=products, T=0.5*(IC.Tfuel+IC.Toxidizer), P=IC.pressure)
+            gas.equilibrate('HP')
+            Tb = gas.temperature()
+            Yb = gas.massFractions()
+            Y[:,jm] = Yb
+
+            # Fuel
+            gas.set(X=IC.fuel, T=IC.Tfuel, P=IC.pressure)
+            Yfuel = gas.massFractions()
+
+            # Oxidizer
+            gas.set(X=IC.oxidizer, T=IC.Toxidizer, P=IC.pressure)
+            Yoxidizer = gas.massFractions()
+
+            if self.general.fuelLeft:
+                Tleft = IC.Tfuel
+                Yleft = Yfuel
+                Tright = IC.Toxidizer
+                Yright = Yoxidizer
+            else:
+                Tleft = IC.Toxidizer
+                Yleft = Yoxidizer
+                Tright = IC.Tfuel
+                Yright = Yfuel
+
+            T[0] = Tleft
+            T[-1] = Tright
+            T[jm] = Tb
+
+            gas.set(Y=Yleft, T=Tleft, P=IC.pressure)
+            rhou = gas.density() # arbitrary for diffusion flame
+
+        Y[:,0] = Yleft
+        Y[:,-1] = Yright
+
+        newaxis = np.newaxis
+        Y[:,1:jl1] = Y[:,0,newaxis]
+        T[1:jl1] = T[0]
+
+        ramp = np.linspace(0, 1, jl2-jl1)
+        Y[:,jl1:jl2] = Y[:,0,newaxis] + (Y[:,jm]-Y[:,0])[:,newaxis]*ramp
+        T[jl1:jl2] = T[0] + (T[jm]-T[0]) * ramp
+
+        Y[:,jl2:jr1] = Y[:,jm,newaxis]
+        T[jl2:jr1] = T[jm]
+
+        ramp = np.linspace(0, 1, jr2-jr1)
+        Y[:,jr1:jr2] = Y[:,jm,newaxis] + (Y[:,-1]-Y[:,jm])[:,newaxis]*ramp
+        T[jr1:jr2] = T[jm] + (T[-1]-T[jm]) * ramp
+
+        Y[:,jr2:] = Y[:,-1,newaxis]
+        T[jr2:] = T[-1]
+
+        YT = Y.T
+        for _ in range(IC.smoothCount):
+            utils.smooth(YT)
+            utils.smooth(T)
+        Y = YT.T
+
+        U = np.zeros(N)
+        for j in range(N):
+            gas.set(Y=Y[:,j], T=T[j], P=IC.pressure)
+            rho = gas.density()
+            U[j] = self.strainParameters.initial * np.sqrt(rhou/rho)
+
+        for _ in range(2):
+            utils.smooth(U)
+
+        IC.x = x
+        IC.Y = Y
+        IC.T = T
+        IC.U = U
+        IC.rVzero = 0.0 # @todo: Better estimate? Is this currently used?
+        IC.haveProfiles = True

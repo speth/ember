@@ -39,9 +39,10 @@ public:
     void run(void); //!< Start the time integration
     void tryrun(void);
 
-    // Called internally by initialize()
-    virtual void generateProfile(); //!< Generate initial conditions based on boundary conditions
-    virtual void loadProfile(); //!< Load initial conditions from a file
+    //! Load initial temperature, mass fraction and velocity profiles.
+    //! Profiles are loaded either from an HDF5 "restart" file or from the
+    //! the configOptions object, populated from the Python "Config" object.
+    virtual void loadProfile();
 
     //! Determine whether to terminate integration based on reaching steady-state solution.
     bool checkTerminationCondition(void);

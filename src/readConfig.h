@@ -142,15 +142,6 @@ public:
     double ignition_center;
     double ignition_stddev;
 
-    // Definition of the starting grid: nPoints evenly spaced between xLeft and xRight
-    int nPoints;
-    double xLeft, xRight;
-
-    // Parameters for the initial profile
-    double initialCenterWidth;
-    double initialSlopeWidth;
-    int initialSmoothCount;
-
     // Tolerances for adaptation and regridding
     double vtol, dvtol, rmTol, dampConst, gridMin, gridMax;
     double uniformityTol, absvtol;
