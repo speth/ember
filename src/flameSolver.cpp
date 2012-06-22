@@ -717,8 +717,8 @@ void FlameSolver::resizeAuxiliary()
 
     if (nPoints > nPointsOld) {
         for (size_t j=nPointsOld; j<nPoints; j++) {
-            // Create and initialize the new SourceSystem
-            SourceSystem* system = new SourceSystem();
+            // Create and initialize the new SourceSystemCVODE
+            SourceSystemCVODE* system = new SourceSystemCVODE();
             system->resize(nSpec);
             system->gas = &gas;
             system->options = &options;
@@ -764,8 +764,6 @@ void FlameSolver::resizeAuxiliary()
             qssSolver->W = W;
             qssSolver->j = j;
             qssSolver->x = x[j];
-            qssSolver->ymin.setConstant(nVars, options.qss_minval);
-            qssSolver->ymin[kMomentum] = -1e4;
             if (options.quasi2d) {
                 qssSolver->setupQuasi2d(vzInterp, TInterp);
             }
@@ -1087,11 +1085,7 @@ void FlameSolver::setProductionSolverState(double tInitial)
             Eigen::Map<dvec>(&ySource[kSpecies], nSpec) = Y.col(j);
             sourceSolvers[j].initialize();
         } else {
-            dvec ySource(nVars);
-            ySource[kMomentum] = U[j];
-            ySource[kEnergy] = T[j];
-            ySource.tail(nSpec) = Y.col(j);
-            sourceTermsQSS[j].setState(ySource, tInitial);
+            sourceTermsQSS[j].setState(tInitial, U[j], T[j], Y.col(j));
         }
     }
     splitTimer.stop();
@@ -1158,7 +1152,7 @@ void FlameSolver::extractProductionState(double dt)
             T[j] = sourceTerms[j].T;
             Y.col(j) = sourceTerms[j].Y;
         } else {
-            sourceTermsQSS[j].unroll_y(sourceTermsQSS[j].y);
+            sourceTermsQSS[j].unroll_y();
             U[j] = sourceTermsQSS[j].U;
             T[j] = sourceTermsQSS[j].T;
             Y.col(j) = sourceTermsQSS[j].Y;
@@ -1602,7 +1596,7 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
         }
     }
     configOptions& options = parent_->options;
-    boost::ptr_vector<SourceSystem>& sourceTerms = parent_->sourceTerms;
+    boost::ptr_vector<SourceSystemCVODE>& sourceTerms = parent_->sourceTerms;
     boost::ptr_vector<sundialsCVODE>& sourceSolvers = parent_->sourceSolvers;
     boost::ptr_vector<SourceSystemQSS>& sourceTermsQSS = parent_->sourceTermsQSS;
 
@@ -1662,12 +1656,12 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             if (int(j) == options.debugSourcePoint &&
                 t_ >= options.debugSourceTime)
             {
-                sourceTermsQSS[j].debug = true;
+                sourceTermsQSS[j].setDebug(true);
                 std::ofstream steps;
                 steps.open("cvodeSteps.py");
                 sourceTermsQSS[j].writeState(steps, true);
 
-                while (sourceTermsQSS[j].tn < (t_-parent_->tNow)) {
+                while (sourceTermsQSS[j].time() < (t_-parent_->tNow)) {
                     err = sourceTermsQSS[j].integrateOneStep(t_-parent_->tNow);
                     sourceTermsQSS[j].writeState(steps, false);
                     if (err) {
@@ -1692,8 +1686,7 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             }
 
             if (debugParameters::veryVerbose) {
-                logFile.write(format(" [%i/%i]...") % sourceTermsQSS[j].gcount
-                        % sourceTermsQSS[j].rcount, false);
+                logFile.write(format(" [%s]...") % sourceTermsQSS[j].getStats(), false);
             }
         }
     }

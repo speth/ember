@@ -2,12 +2,23 @@
 
 #include "mathUtils.h"
 
+class QssOde
+{
+public:
+    QssOde() {}
+    virtual ~QssOde() {}
+    virtual void odefun(double t, const dvec& y, dvec& q, dvec& d, bool corrector=false) = 0;
+};
+
 //! A Quasi-Steady-State ODE Integrator based on CHEMEQ2
 class QSSIntegrator
 {
 public:
     QSSIntegrator();
     virtual ~QSSIntegrator() {}
+
+    //! Set the ODE object to be integrated
+    void setOde(QssOde* ode);
 
     //! Initialize integrator arrays (problem size of N)
     virtual void initialize(size_t N);
@@ -19,8 +30,6 @@ public:
     //! Note that tf is relative to tstart, not absolute.
     int integrateToTime(double tf);
     int integrateOneStep(double tf); //!< Take one step toward tf without stepping past it.
-
-    virtual void odefun(double t, const dvec& y, dvec& q, dvec& d, bool corrector=false) = 0;
 
     double tn; //!< Internal integrator time (relative to #tstart)
     dvec y; //!< current state vector
@@ -49,8 +58,8 @@ public:
 private:
     void getInitialStepSize(double tf); //!< Estimate the initial step size.
 
+    QssOde* ode_;
     size_t N; //!< Number of state variables.
-
 
     double ts; //!< Time at the start of the current internal timestep
     double tfd; //!< Round-off parameter used to determine when integration is complete

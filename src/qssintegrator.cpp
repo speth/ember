@@ -7,6 +7,7 @@ using std::abs;
 using mathUtils::sign;
 
 QSSIntegrator::QSSIntegrator()
+    : ode_(0)
 {
     N = 0;
     epsmax = 20;
@@ -28,6 +29,11 @@ QSSIntegrator::QSSIntegrator()
     tn = 0;
 
     debug = false;
+}
+
+void QSSIntegrator::setOde(QssOde* ode)
+{
+    ode_ = ode;
 }
 
 void QSSIntegrator::initialize(size_t N_)
@@ -114,7 +120,7 @@ int QSSIntegrator::integrateToTime(double tf)
 
 int QSSIntegrator::integrateOneStep(double tf) {
     // Evaluate the derivatives at the initial state.
-    odefun(tn + tstart, y, q, d);
+    ode_->odefun(tn + tstart, y, q, d);
     gcount += 1;
 
     if (firstStep) {
@@ -155,7 +161,7 @@ int QSSIntegrator::integrateOneStep(double tf) {
             }
 
             // Evaluate the derivatives for the corrector.
-            odefun(tn + tstart, y, q, d, true);
+            ode_->odefun(tn + tstart, y, q, d, true);
             gcount += 1;
             eps = 1.0e-10;
 

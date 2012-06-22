@@ -10,11 +10,42 @@
 
 #include <boost/shared_ptr.hpp>
 
-class SourceSystem : public sdODE
+class SourceSystem
+{
+public:
+    SourceSystem();
+    virtual ~SourceSystem() {}
+
+    virtual void setState(double tInitial, double uu, double tt, const dvec& yy) = 0;
+
+    //! Take as many steps as needed to reach tf. tf is relative to tStart.
+    virtual int integrateToTime(double tf) = 0;
+
+    //! Take one step toward tf without stepping past it. tf is relative to tStart.
+    virtual int integrateOneStep(double tf) = 0;
+
+    //! Current integrator time, relative to tStart
+    virtual double time() const = 0;
+
+    //! Extract current internal integrator state into U, T, and Y
+    virtual void unroll_y() = 0;
+
+    virtual void setDebug(bool debug) { debug_ = debug; }
+    virtual std::string getStats() = 0;
+
+    double U; //!< tangential velocity
+    double T; //!< temperature
+    dvec Y; //!< species mass fraction
+
+private:
+    bool debug_;
+};
+
+class SourceSystemCVODE : public sdODE
 {
     // This is the system representing the (chemical) source term at a point
 public:
-    SourceSystem();
+    SourceSystemCVODE();
 
     // The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
@@ -81,7 +112,7 @@ private:
 };
 
 
-class SourceSystemQSS : public QSSIntegrator
+class SourceSystemQSS : public SourceSystem, QssOde
 {
     // This is the system representing the (chemical) source term at a point,
     // Integrated with the QSSIntegrator
@@ -91,7 +122,10 @@ public:
     // The ODE function: ydot = f(t,y)
     void odefun(double t, const dvec& y, dvec& q, dvec& d, bool corrector=false);
 
+    double time() const { return integrator_.tn; }
+
     void unroll_y(const dvec& y, bool corrector=false); // fill in current state variables from sdvector
+    void unroll_y() { unroll_y(integrator_.y); }
     void roll_y(dvec& y) const; // fill in y with current state variables
     void roll_ydot(dvec& q, dvec& d) const; // fill in q and d with current time derivatives
 
@@ -99,11 +133,16 @@ public:
     void initialize(size_t nSpec);
     void setOptions(configOptions& options);
 
+    void setState(double tStart, double uu, double tt, const dvec& yy);
+    int integrateToTime(double tf) { return integrator_.integrateToTime(tf); }
+    int integrateOneStep(double tf) { return integrator_.integrateOneStep(tf); }
+
     void resetSplitConstants();
     void setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
                       boost::shared_ptr<BilinearInterpolator> TInterp);
 
     void writeState(std::ostream& out, bool init);
+    virtual std::string getStats();
 
     // A class that provides the strain rate and its time derivative
     StrainFunction strainFunction;
@@ -111,9 +150,9 @@ public:
     configOptions* options;
 
     // current state variables
-    double U, dUdtQ, dUdtD; // tangential velocity
-    double T, dTdtQ, dTdtD; // temperature
-    dvec Y, dYdtQ, dYdtD; // species mass fractions
+    double dUdtQ, dUdtD; // tangential velocity
+    double dTdtQ, dTdtD; // temperature
+    dvec dYdtQ, dYdtD; // species mass fractions
 
     // Cantera data
     CanteraGas* gas;
@@ -137,6 +176,8 @@ public:
     double qDot; // heat release rate per unit volume [W/m^3]
 
 private:
+    QSSIntegrator integrator_;
+
     // Physical properties
     double rho; // density [kg/m^3]
     double cp; // specific heat capacity (average) [J/kg*K]
