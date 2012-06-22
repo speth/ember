@@ -717,50 +717,33 @@ void FlameSolver::resizeAuxiliary()
 
     if (nPoints > nPointsOld) {
         for (size_t j=nPointsOld; j<nPoints; j++) {
-            // Create and initialize the new SourceSystemCVODE
-            SourceSystemCVODE* system = new SourceSystemCVODE();
-            system->resize(nSpec);
-            system->gas = &gas;
+            useCVODE.push_back(options.chemistryIntegrator == "cvode");
+
+            SourceSystem* system;
+            if (useCVODE[j]) {
+                system = new SourceSystemCVODE();
+            } else {
+                system = new SourceSystemQSS();
+            }
+            // initialize the new SourceSystem
+            system->setGas(&gas);
+            system->initialize(nSpec);
             system->setOptions(options);
-            system->thermoTimer = &thermoTimer;
-            system->reactionRatesTimer = &reactionRatesTimer;
-            system->jacobianTimer = &jacobianTimer;
-            system->strainFunction = strainfunc;
-            system->rhou = rhou;
-            system->W = W;
-            system->j = j;
-            system->x = x[j];
+            system->setTimers(&reactionRatesTimer, &thermoTimer, &jacobianTimer);
+            system->setStrainFunction(strainfunc);
+            system->setRhou(rhou);
+            system->setPosition(j, x[j]);
             if (options.quasi2d) {
                 system->setupQuasi2d(vzInterp, TInterp);
             }
 
             // Store the solver and system
             sourceTerms.push_back(system);
-
-            // Create the new SourceSystemQSS
-            SourceSystemQSS* qssSolver = new SourceSystemQSS();
-            qssSolver->initialize(nSpec);
-            qssSolver->setOptions(options);
-            qssSolver->gas = &gas;
-            qssSolver->thermoTimer = &thermoTimer;
-            qssSolver->reactionRatesTimer = &reactionRatesTimer;
-            qssSolver->strainFunction = strainfunc;
-            qssSolver->rhou = rhou;
-            qssSolver->W = W;
-            qssSolver->j = j;
-            qssSolver->x = x[j];
-            if (options.quasi2d) {
-                qssSolver->setupQuasi2d(vzInterp, TInterp);
-            }
-
-            sourceTermsQSS.push_back(qssSolver);
-            useCVODE.push_back(options.chemistryIntegrator == "cvode");
         }
 
     } else {
         // Delete the unwanted solvers and systems
         sourceTerms.erase(sourceTerms.begin()+nPoints, sourceTerms.end());
-        sourceTermsQSS.erase(sourceTermsQSS.begin()+nPoints, sourceTermsQSS.end());
         useCVODE.erase(useCVODE.begin()+nPoints, useCVODE.end());
     }
 
@@ -784,8 +767,7 @@ void FlameSolver::resizeAuxiliary()
 
     // Set the grid position for each of the source solvers
     for (size_t j=0; j<nPoints; j++) {
-        sourceTerms[j].x = x[j];
-        sourceTermsQSS[j].x = x[j];
+        sourceTerms[j].setPosition(j, x[j]);
     }
 }
 
@@ -957,29 +939,16 @@ void FlameSolver::prepareProductionTerms()
     setProductionSolverState(tNow);
     if (options.splittingMethod == "strang") {
         for (size_t j=0; j<nPoints; j++) {
-            if (useCVODE[j]) {
-                sourceTerms[j].resetSplitConstants();
-            } else {
-                sourceTermsQSS[j].resetSplitConstants();
-            }
+            sourceTerms[j].resetSplitConstants();
         }
     } else { // options.splittingMethod == "balanced"
         for (size_t j=0; j<nPoints; j++) {
-            if (useCVODE[j]) {
-                sourceTerms[j].splitConst[kEnergy] = -0.5 * dTdtProd[j] +
-                    0.5 * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
-                sourceTerms[j].splitConst[kMomentum] = -0.5 * dUdtProd[j] +
-                    0.5 * (dUdtConv[j] + dUdtDiff[j]);
-                sourceTerms[j].splitConst.tail(nSpec) = -0.5 * dYdtProd.col(j) +
-                    0.5 * (dYdtConv + dYdtDiff + dYdtCross).col(j);
-            } else {
-                sourceTermsQSS[j].splitConstT = -0.5 * dTdtProd[j] +
-                    0.5 * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
-                sourceTermsQSS[j].splitConstU = -0.5 * dUdtProd[j] +
-                    0.5 * (dUdtConv[j] + dUdtDiff[j]);
-                sourceTermsQSS[j].splitConstY = -0.5 * dYdtProd.col(j) +
-                    0.5 * (dYdtConv + dYdtDiff + dYdtCross).col(j);
-            }
+            sourceTerms[j].splitConst[kEnergy] = -0.5 * dTdtProd[j] +
+                0.5 * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
+            sourceTerms[j].splitConst[kMomentum] = -0.5 * dUdtProd[j] +
+                0.5 * (dUdtConv[j] + dUdtDiff[j]);
+            sourceTerms[j].splitConst.tail(nSpec) = -0.5 * dYdtProd.col(j) +
+                0.5 * (dYdtConv + dYdtDiff + dYdtCross).col(j);
         }
     }
 }
@@ -1061,11 +1030,7 @@ void FlameSolver::setProductionSolverState(double tInitial)
     Ystart = Y;
 
     for (size_t j=0; j<nPoints; j++) {
-        if (useCVODE[j]) {
-            sourceTerms[j].setState(tInitial, U[j], T[j], Y.col(j));
-        } else {
-            sourceTermsQSS[j].setState(tInitial, U[j], T[j], Y.col(j));
-        }
+        sourceTerms[j].setState(tInitial, U[j], T[j], Y.col(j));
     }
     splitTimer.stop();
 }
@@ -1125,17 +1090,10 @@ void FlameSolver::extractProductionState(double dt)
 {
     splitTimer.resume();
     for (size_t j=0; j<nPoints; j++) {
-        if (useCVODE[j]) {
-            sourceTerms[j].unroll_y();
-            U[j] = sourceTerms[j].U;
-            T[j] = sourceTerms[j].T;
-            Y.col(j) = sourceTerms[j].Y;
-        } else {
-            sourceTermsQSS[j].unroll_y();
-            U[j] = sourceTermsQSS[j].U;
-            T[j] = sourceTermsQSS[j].T;
-            Y.col(j) = sourceTermsQSS[j].Y;
-        }
+        sourceTerms[j].unroll_y();
+        U[j] = sourceTerms[j].U;
+        T[j] = sourceTerms[j].T;
+        Y.col(j) = sourceTerms[j].Y;
     }
     assert(mathUtils::notnan(T));
     assert(mathUtils::notnan(U));
@@ -1282,7 +1240,6 @@ void FlameSolver::calculateQdot()
 void FlameSolver::correctMassFractions() {
     setupTimer.resume();
     for (size_t j=0; j<nPoints; j++) {
-        //
         gas.setStateMass(&Y(0,j), T[j]);
         gas.getMassFractions(&Y(0,j));
     }
@@ -1574,97 +1531,46 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             logFile.write("Source term...", false);
         }
     }
-    configOptions& options = parent_->options;
-    boost::ptr_vector<SourceSystemCVODE>& sourceTerms = parent_->sourceTerms;
-    boost::ptr_vector<SourceSystemQSS>& sourceTermsQSS = parent_->sourceTermsQSS;
-
     CanteraGas** gasHandle = parent_->gases.acquire();
     CanteraGas* gas = *gasHandle;
-    if (!gas->initialized()) {
-        gas->setOptions(options);
-        gas->initialize();
-    }
 
     int err = 0;
-    //std::cout << "pointRange: " << r.begin() << ", " << r.end() << std::endl;
     for (size_t j=r.begin(); j<r.end(); j++) {
+        SourceSystem& system = parent_->sourceTerms[j];
         if (debugParameters::veryVerbose) {
             logFile.write(format("%i") % j, false);
         }
-        if (parent_->useCVODE[j]) {
-            sourceTerms[j].gas = gas;
-            if (int(j) == options.debugSourcePoint && t_ >= options.debugSourceTime) {
-                std::ofstream steps;
-                steps.open("cvodeSteps.py");
-                sourceTerms[j].writeState(steps, true);
+        system.setGas(gas);
+        if (int(j) == parent_->options.debugSourcePoint &&
+            t_ >= parent_->options.debugSourceTime) {
+            system.setDebug(true);
+            std::ofstream steps("sourceTermSteps.py");
+            system.writeState(steps, true);
 
-                while (sourceTerms[j].time() < t_ - parent_->tNow) {
-                    err = sourceTerms[j].integrateOneStep(t_ - parent_->tNow);
-                    sourceTerms[j].writeState(steps, false);
-                    if (err != CV_SUCCESS) {
-                        break;
-                    }
-                }
-
-                sourceTerms[j].writeJacobian(steps);
-
-                steps.close();
-                std::terminate();
-
-            } else {
-                err = sourceTerms[j].integrateToTime(t_ - parent_->tNow);
-            }
-            if (err && err != CV_TSTOP_RETURN) {
-                logFile.write(format("Error at j = %i") % j);
-                logFile.write(format("T = %s") % sourceTerms[j].T);
-                logFile.write(format("U = %s") % sourceTerms[j].U);
-                logFile.write("Y = ", false);
-                logFile.write(sourceTerms[j].Y);
-                parent_->writeStateFile((format("prod%i_error_t%.6f_j%03i") %
-                        stage_ % t_ % j).str(), true, false);
+            while (system.time() < t_ - parent_->tNow && err >= 0) {
+                err = system.integrateOneStep(t_ - parent_->tNow);
+                system.writeState(steps, false);
             }
 
-            if (debugParameters::veryVerbose) {
-                logFile.write(format(" [%s]...") % sourceTerms[j].getStats(), false);
-            }
+            system.writeJacobian(steps);
+            steps.close();
+            std::terminate();
 
         } else {
-            sourceTermsQSS[j].gas = gas;
-            if (int(j) == options.debugSourcePoint &&
-                t_ >= options.debugSourceTime)
-            {
-                sourceTermsQSS[j].setDebug(true);
-                std::ofstream steps;
-                steps.open("cvodeSteps.py");
-                sourceTermsQSS[j].writeState(steps, true);
+            err = system.integrateToTime(t_ - parent_->tNow);
+        }
+        if (err < 0) {
+            logFile.write(format("Error at j = %i") % j);
+            logFile.write(format("T = %s") % system.T);
+            logFile.write(format("U = %s") % system.U);
+            logFile.write("Y = ", false);
+            logFile.write(system.Y);
+            parent_->writeStateFile((format("prod%i_error_t%.6f_j%03i") %
+                    stage_ % t_ % j).str(), true, false);
+        }
 
-                while (sourceTermsQSS[j].time() < (t_-parent_->tNow)) {
-                    err = sourceTermsQSS[j].integrateOneStep(t_-parent_->tNow);
-                    sourceTermsQSS[j].writeState(steps, false);
-                    if (err) {
-                        break;
-                    }
-                }
-
-                steps.close();
-                std::terminate();
-
-            } else {
-                err = sourceTermsQSS[j].integrateToTime(t_-parent_->tNow);
-            }
-            if (err) {
-                logFile.write(format("Error at j = %i") % j);
-                logFile.write(format("T = %s") % sourceTermsQSS[j].T);
-                logFile.write(format("U = %s") % sourceTermsQSS[j].U);
-                logFile.write("Y = ", false);
-                logFile.write(sourceTermsQSS[j].Y);
-                parent_->writeStateFile((format("prod%i_error_t%.6f_j%03i") %
-                        stage_ % t_ % j).str(), true, false);
-            }
-
-            if (debugParameters::veryVerbose) {
-                logFile.write(format(" [%s]...") % sourceTermsQSS[j].getStats(), false);
-            }
+        if (debugParameters::veryVerbose) {
+            logFile.write(format(" [%s]...") % system.getStats(), false);
         }
     }
 

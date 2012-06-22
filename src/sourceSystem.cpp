@@ -7,24 +7,90 @@ SourceSystem::SourceSystem()
     : U(NaN)
     , T(NaN)
     , debug_(false)
-{
-}
-
-SourceSystemCVODE::SourceSystemCVODE()
-    : gas(NULL)
+    , options_(NULL)
+    , gas(NULL)
     , quasi2d(false)
 {
 }
 
-void SourceSystemCVODE::resize(size_t new_nSpec)
+void SourceSystem::updateThermo()
+{
+    thermoTimer->start();
+    gas->getEnthalpies(hk);
+    rho = gas->getDensity();
+    cp = gas->getSpecificHeatCapacity();
+    thermoTimer->stop();
+}
+
+double SourceSystem::getQdotIgniter(double t)
+{
+    configOptions& opt = *options_;
+    if (t >= opt.ignition_tStart &&
+        t < opt.ignition_tStart + opt.ignition_duration) {
+        return opt.ignition_energy /
+                (opt.ignition_stddev * sqrt(2 * M_PI) * opt.ignition_duration) *
+                exp(-pow(x - opt.ignition_center, 2) /
+                    (2 * pow(opt.ignition_stddev, 2)));
+    } else {
+        return 0.0;
+    }
+}
+
+void SourceSystem::initialize(size_t new_nSpec)
 {
     nSpec = new_nSpec;
+
     Y.setConstant(nSpec, NaN);
-    dYdt.resize(nSpec);
     cpSpec.resize(nSpec);
-    wDot.resize(nSpec);
+    splitConst.resize(nSpec + 2);
     hk.resize(nSpec);
-    splitConst.resize(nSpec+2);
+
+    W.resize(gas->nSpec); // move this to initialize
+    gas->getMolecularWeights(W);
+}
+
+void SourceSystem::setTimers
+(PerfTimer* reactionRates, PerfTimer* thermo, PerfTimer* jacobian)
+{
+    reactionRatesTimer = reactionRates;
+    thermoTimer = thermo;
+    jacobianTimer = jacobian;
+}
+
+void SourceSystem::setPosition(size_t _j, double _x)
+{
+    j = _j;
+    x = _x;
+}
+
+void SourceSystem::setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
+                                boost::shared_ptr<BilinearInterpolator> TInterp)
+{
+    quasi2d = true;
+    vzInterp_ = vzInterp;
+    TInterp_ = TInterp;
+}
+
+void SourceSystem::writeState(std::ostream& out, bool init)
+{
+    if (init) {
+        out << "T = []" << std::endl;
+        out << "Y = []" << std::endl;
+        out << "t = []" << std::endl;
+    }
+
+    out << "T.append(" << T << ")" << std::endl;
+    out << "Y.append(" << Y << ")" << std::endl;
+    out << "t.append(" << time() << ")" << std::endl;
+}
+
+// ----------------------------------------------------------------------------
+
+void SourceSystemCVODE::initialize(size_t new_nSpec)
+{
+    SourceSystem::initialize(new_nSpec);
+    dYdt.resize(nSpec);
+    wDot.resize(nSpec);
 
     integrator_.reset(new sundialsCVODE(nSpec+2));
     integrator_->setODE(this);
@@ -35,7 +101,7 @@ void SourceSystemCVODE::resize(size_t new_nSpec)
 
 void SourceSystemCVODE::setOptions(configOptions& options)
 {
-    options_ = &options;
+    SourceSystem::setOptions(options);
     integrator_->abstol[kMomentum] = options.integratorMomentumAbsTol;
     integrator_->abstol[kEnergy] = options.integratorEnergyAbsTol;
     for (size_t k=0; k<nSpec; k++) {
@@ -45,55 +111,32 @@ void SourceSystemCVODE::setOptions(configOptions& options)
     integrator_->minStep = options.integratorMinTimestep;
 }
 
-void SourceSystemCVODE::resetSplitConstants()
-{
-    splitConst.setZero(splitConst.rows());
-}
-
-void SourceSystemCVODE::setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
-                                boost::shared_ptr<BilinearInterpolator> TInterp)
-{
-    quasi2d = true;
-    vzInterp_ = vzInterp;
-    TInterp_ = TInterp;
-}
-
 int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
 {
     unroll_y(y, t);
 
-    // *** Update auxiliary data ***
     reactionRatesTimer->start();
     gas->setStateMass(Y, T);
     gas->getReactionRates(wDot);
     reactionRatesTimer->stop();
 
-    thermoTimer->start();
-    gas->getEnthalpies(hk);
-    rho = gas->getDensity();
-    cp = gas->getSpecificHeatCapacity();
-    thermoTimer->stop();
-
-    qDot = - (wDot * hk).sum();
-
-    if (t >= options_->ignition_tStart && t < options_->ignition_tStart + options_->ignition_duration) {
-        qDot += options_->ignition_energy /
-                (options_->ignition_stddev * sqrt(2 * M_PI) * options_->ignition_duration) *
-                exp(-pow(x - options_->ignition_center, 2) / (2 * pow(options_->ignition_stddev, 2)));
-    }
+    updateThermo();
 
     double a = strainFunction.a(t);
     double dadt = strainFunction.dadt(t);
 
     // *** Calculate the time derivatives
+    double scale;
     if (!quasi2d) {
+        scale = 1.0;
         dUdt = - U*U + rhou/rho*(dadt + a*a) + splitConst[kMomentum];
+        qDot = - (wDot * hk).sum() + getQdotIgniter(t);
         dTdt = qDot/(rho*cp) + splitConst[kEnergy];
     } else {
+        scale = 1.0/vzInterp_->get(x, t);
         dUdt = splitConst[kMomentum];
         dTdt = splitConst[kEnergy];
     }
-    double scale = (quasi2d) ? 1.0/vzInterp_->get(x, t) : 1.0;
     dYdt = scale * wDot * W / rho + splitConst.tail(nSpec);
 
     roll_ydot(ydot);
@@ -297,27 +340,9 @@ void SourceSystemCVODE::writeJacobian(std::ostream& out)
     }
 }
 
-void SourceSystemCVODE::writeState(std::ostream& out, bool init)
-{
-    if (init) {
-        out << "T = []" << std::endl;
-        out << "Y = []" << std::endl;
-        out << "t = []" << std::endl;
-        out << "wDot = []" << std::endl;
-    }
-
-    out << "T.append(" << T << ")" << std::endl;
-    out << "Y.append(" << Y << ")" << std::endl;
-    out << "t.append(" << integrator_->tInt << ")" << std::endl;
-    out << "wDot.append(" << wDot << ")" << std::endl;
-}
-
-// ********************
-
+// ----------------------------------------------------------------------------
 
 SourceSystemQSS::SourceSystemQSS()
-    : gas(NULL)
-    , quasi2d(false)
 {
     integrator_.setOde(this);
     dUdtQ = 0;
@@ -328,31 +353,28 @@ SourceSystemQSS::SourceSystemQSS()
 
 void SourceSystemQSS::initialize(size_t new_nSpec)
 {
+    SourceSystem::initialize(new_nSpec);
     integrator_.initialize(new_nSpec + 2);
-    nSpec = new_nSpec;
-    Y.setConstant(nSpec, NaN);
+
     dYdtQ.setConstant(nSpec, 0);
     dYdtD.setConstant(nSpec, 0);
-    cpSpec.resize(nSpec);
-    splitConstY.resize(nSpec);
     wDotD.resize(nSpec);
     wDotQ.resize(nSpec);
-    hk.resize(nSpec);
 
     integrator_.enforce_ymin[kMomentum] = false;
 }
 
-void SourceSystemQSS::setOptions(configOptions& options_)
+void SourceSystemQSS::setOptions(configOptions& options)
 {
-    options = &options_;
-    integrator_.epsmin = options->qss_epsmin;
-    integrator_.epsmax = options->qss_epsmax;
-    integrator_.dtmin = options->qss_dtmin;
-    integrator_.dtmax = options->qss_dtmax;
-    integrator_.itermax = options->qss_iterationCount;
-    integrator_.abstol = options->qss_abstol;
-    integrator_.stabilityCheck = options->qss_stabilityCheck;
-    integrator_.ymin.setConstant(nSpec + 2, options_.qss_minval);
+    SourceSystem::setOptions(options);
+    integrator_.epsmin = options_->qss_epsmin;
+    integrator_.epsmax = options_->qss_epsmax;
+    integrator_.dtmin = options_->qss_dtmin;
+    integrator_.dtmax = options_->qss_dtmax;
+    integrator_.itermax = options_->qss_iterationCount;
+    integrator_.abstol = options_->qss_abstol;
+    integrator_.stabilityCheck = options_->qss_stabilityCheck;
+    integrator_.ymin.setConstant(nSpec + 2, options_->qss_minval);
     integrator_.ymin[kMomentum] = -1e4;
 }
 
@@ -362,22 +384,6 @@ void SourceSystemQSS::setState
     dvec yIn(nSpec + 2);
     yIn << uu, tt, yy;
     integrator_.setState(yIn, tStart);
-}
-
-
-void SourceSystemQSS::resetSplitConstants()
-{
-    splitConstY.setZero();
-    splitConstT = 0;
-    splitConstU = 0;
-}
-
-void SourceSystemQSS::setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
-                                   boost::shared_ptr<BilinearInterpolator> TInterp)
-{
-    quasi2d = true;
-    vzInterp_ = vzInterp;
-    TInterp_ = TInterp;
 }
 
 void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d, bool corrector)
@@ -393,37 +399,29 @@ void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d, bool cor
     reactionRatesTimer->stop();
 
     if (!corrector) {
-        thermoTimer->start();
-        gas->getEnthalpies(hk);
-        rho = gas->getDensity();
-        cp = gas->getSpecificHeatCapacity();
-        thermoTimer->stop();
+        updateThermo();
     }
 
-    qDot = - ((wDotQ - wDotD) * hk).sum();
-
-    if (t >= options->ignition_tStart && t < options->ignition_tStart + options->ignition_duration) {
-        qDot += options->ignition_energy /
-                (options->ignition_stddev * sqrt(2 * M_PI) * options->ignition_duration) *
-                exp(-pow(x - options->ignition_center, 2) / (2 * pow(options->ignition_stddev, 2)));
-    }
+    qDot = - ((wDotQ - wDotD) * hk).sum() + getQdotIgniter(t);
 
     double a = strainFunction.a(t);
     double dadt = strainFunction.dadt(t);
 
     // *** Calculate the time derivatives
+    double scale;
     if (!quasi2d) {
-        dUdtQ = rhou/rho*(dadt + a*a) - U*U + splitConstU;
+        scale = 1.0;
+        dUdtQ = rhou/rho*(dadt + a*a) - U*U + splitConst[kMomentum];
         dUdtD = 0;
-        dTdtQ = qDot/(rho*cp) + splitConstT;
+        dTdtQ = qDot/(rho*cp) + splitConst[kEnergy];
     } else {
+        scale = 1.0/vzInterp_->get(x, t);
         dUdtQ = 0;
         dUdtD = 0;
         dTdtQ = 0;
     }
 
-    double scale = (quasi2d) ? 1.0/vzInterp_->get(x, t) : 1.0;
-    dYdtQ = scale * wDotQ * W / rho + splitConstY;
+    dYdtQ = scale * wDotQ * W / rho + splitConst.tail(nSpec);
     dYdtD = scale * wDotD * W / rho;
 
     assert(rhou > 0);
@@ -431,7 +429,7 @@ void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d, bool cor
     assert(dadt > -1e100 && dadt < 1e100);
     assert(a > -1e100 && a < 1e100);
     assert(U > -1e100 && U < 1e100);
-    assert(splitConstU > -1e100 && splitConstU < 1e100);
+    assert(splitConst[kMomentum] > -1e100 && splitConst[kMomentum] < 1e100);
 
     assert(dUdtQ > -1e100 && dUdtQ < 1e100);
     assert(dUdtD > -1e100 && dUdtD < 1e100);
@@ -457,32 +455,13 @@ void SourceSystemQSS::unroll_y(const dvec& y, bool corrector)
 
 void SourceSystemQSS::roll_y(dvec& y) const
 {
-    y[kEnergy] = T;
-    y[kMomentum] = U;
-    y.tail(nSpec) = Y;
+    y << U, T, Y;
 }
 
 void SourceSystemQSS::roll_ydot(dvec& q, dvec& d) const
 {
-    q[kEnergy] = dTdtQ;
-    d[kEnergy] = dTdtD;
-    q[kMomentum] = dUdtQ;
-    d[kMomentum] = dUdtD;
-    q.tail(nSpec) = dYdtQ;
-    d.tail(nSpec) = dYdtD;
-}
-
-void SourceSystemQSS::writeState(std::ostream& out, bool init)
-{
-    if (init) {
-        out << "T = []" << std::endl;
-        out << "Y = []" << std::endl;
-        out << "t = []" << std::endl;
-    }
-
-    out << "T.append(" << T << ")" << std::endl;
-    out << "Y.append(" << Y << ")" << std::endl;
-    out << "t.append(" << integrator_.tn << ")" << std::endl;
+    q << dUdtQ, dTdtQ, dYdtQ;
+    d << dUdtD, dTdtD, dYdtD;
 }
 
 std::string SourceSystemQSS::getStats()

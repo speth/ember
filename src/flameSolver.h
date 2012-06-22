@@ -91,13 +91,11 @@ public:
     double tNow; //!< Current time reached by the integrator
 
 private:
-    boost::ptr_vector<SourceSystemCVODE> sourceTerms; // One for each grid point
-    boost::ptr_vector<DiffusionSystem> diffusionTerms; // One for each species (plus T and U)
-
-    boost::ptr_vector<TridiagonalIntegrator> diffusionSolvers; // One for each state variable
-
-    boost::ptr_vector<SourceSystemQSS> sourceTermsQSS; // One for each grid point
+    boost::ptr_vector<SourceSystem> sourceTerms; // One for each grid point
     vector<bool> useCVODE; // At each grid point, a flag for which integrator to use
+
+    boost::ptr_vector<DiffusionSystem> diffusionTerms; // One for each species (plus T and U)
+    boost::ptr_vector<TridiagonalIntegrator> diffusionSolvers; // One for each state variable
 
     //! System representing the convection terms and containing their integrators
     ConvectionSystemSplit convectionSystem;
