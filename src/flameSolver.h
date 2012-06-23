@@ -35,9 +35,9 @@ public:
     virtual ~FlameSolver() {}
 
     void setOptions(const configOptions& options); //!< Set options read from the configuration file
-    void initialize(void); //!< call to generate profiles and perform one-time setup
-    void run(void); //!< Start the time integration
-    void tryrun(void);
+    void initialize(); //!< call to generate profiles and perform one-time setup
+    int step(); //!< Take one global timestep
+    void finalize();
 
     //! Load initial temperature, mass fraction and velocity profiles.
     //! Profiles are loaded either from an HDF5 "restart" file or from the
@@ -89,6 +89,18 @@ public:
     double tStart; //!< Integrator start time
     double tEnd; //!< Integrator termination time (upper bound)
     double tNow; //!< Current time reached by the integrator
+    double t; //!< start time of the current global timestep
+
+    long int nTotal; //!< total number of timesteps taken
+    int nRegrid; //!< number of time steps since regridding/adaptation
+    int nOutput; //!< number of time steps since storing integral flame parameters
+    int nProfile; //!< number of time steps since saving flame profiles
+    int nTerminate; //!< number of steps since last checking termination condition
+    int nCurrentState; //!< number of time steps since profNow.h5 and out.h5 were written
+
+    double tOutput; //!< time of next integral flame parameters output (this step)
+    double tRegrid; //!< time of next regridding
+    double tProfile; //!< time of next profile output
 
 private:
     boost::ptr_vector<SourceSystem> sourceTerms; // One for each grid point
@@ -105,6 +117,7 @@ private:
     double Tu, Tb, Tleft, Tright;
     dvec Yu, Yb, Yleft, Yright;
 
+    int step_internal();
     void resizeAuxiliary(); //!< Handle resizing of data structures as grid size changes
     void updateCrossTerms(); //!< calculates values of cross-component terms: jSoret, sumcpj, and jCorr
     void updateChemicalProperties(); //!< Update thermodynamic, transport, and kinetic properties
@@ -126,7 +139,7 @@ private:
     void prepareConvectionTerms();
 
     void setDiffusionSolverState(double tInitial);
-    void setConvectionSolverState(double tInitial, int stage);
+    void setConvectionSolverState(double tInitial);
     void setProductionSolverState(double tInitial);
 
     void integrateConvectionTerms(double tStart, double tEnd, int stage);

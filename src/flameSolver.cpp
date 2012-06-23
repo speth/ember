@@ -26,7 +26,6 @@ FlameSolver::FlameSolver(const boost::python::api::object& config)
 void FlameSolver::setOptions(const configOptions& _options)
 {
     options = _options;
-
     tStart = options.tStart;
     tEnd = options.tEnd;
 
@@ -48,6 +47,7 @@ void FlameSolver::setOptions(const configOptions& _options)
 void FlameSolver::initialize(void)
 {
     try {
+        tbb::task_scheduler_init tbbTaskSched(options.nThreads);
         strainfunc.setOptions(options);
 
         flamePosIntegralError = 0;
@@ -133,6 +133,25 @@ void FlameSolver::initialize(void)
         }
         calculateQdot();
         convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
+
+        t = tStart;
+        tOutput = t;
+        tRegrid = t + options.regridTimeInterval;
+        tProfile = t + options.profileTimeInterval;
+        nTotal = 0;
+        nRegrid = 0;
+        nOutput = 0;
+        nProfile = 0;
+        nTerminate = 0;
+        nCurrentState = 0;
+
+        grid.updateValues();
+        resizeAuxiliary();
+
+        tFlamePrev = t;
+        tNow = t;
+
+        totalTimer.start();
     }
     catch (Cantera::CanteraError& err) {
         std::cout << err.what() << std::endl;
@@ -154,10 +173,10 @@ void FlameSolver::initialize(void)
     }
 }
 
-void FlameSolver::tryrun(void)
+int FlameSolver::step(void)
 {
     try {
-        run();
+        return step_internal();
     }
     catch (Cantera::CanteraError& err) {
         std::cout << err.what() << std::endl;
@@ -184,234 +203,215 @@ void FlameSolver::tryrun(void)
         logFile.write(message);
         throw;
     }
+    return -1;
 }
 
-void FlameSolver::run(void)
+int FlameSolver::step_internal()
 {
-    totalTimer.start();
-    tbb::task_scheduler_init tbbTaskSched(options.nThreads);
+    setupTimer.start();
 
-    double t = tStart;
-
-    long int nTotal = 0; // total number of timesteps taken
-    int nRegrid = 0; // number of time steps since regridding/adaptation
-    int nOutput = 0; // number of time steps since storing integral flame parameters
-    int nProfile = 0; // number of time steps since saving flame profiles
-    int nTerminate = 1; // number of steps since last checking termination condition
-    int nCurrentState = 0; // number of time steps since profNow.h5 and out.h5 were written
-
-    double tOutput = t; // time of next integral flame parameters output (this step)
-    double tRegrid = t + options.regridTimeInterval; // time of next regridding
-    double tProfile = t + options.profileTimeInterval; // time of next profile output
-
-    grid.updateValues();
-    resizeAuxiliary();
-
-    tFlamePrev = t;
-    tNow = t;
-
-    while (true) {
-        setupTimer.start();
-
-        // Debug sanity check
-        #ifndef NDEBUG
-            bool error = false;
-            for (size_t j=0; j<nPoints; j++) {
-                if (T[j] < 295 || T[j] > 3000) {
-                    logFile.write(format(
-                        "WARNING: Unexpected Temperature: T = %f at j = %i") % T[j] % j);
-                    error = true;
-                }
-            }
-            if (error) {
-                writeStateFile();
-            }
-        #endif
-
-        // Reset boundary conditions to prevent numerical drift
-        if (grid.leftBC == BoundaryCondition::FixedValue) {
-            T[0] = Tleft;
-            Y.col(0) = Yleft;
-        }
-
-        if (grid.rightBC == BoundaryCondition::FixedValue) {
-            T[jj] = Tright;
-            Y.col(jj) = Yright;
-        }
-
-        updateChemicalProperties();
-
-        updateBC();
-        if (options.xFlameControl) {
-            update_xStag(t, true); // calculate the value of rVzero
-        }
-        convectionSystem.set_rVzero(rVzero);
-        setupTimer.stop();
-
-        // Set up solvers for split integration
-        updateCrossTerms();
-        prepareDiffusionTerms();
-        prepareProductionTerms();
-        prepareConvectionTerms();
-
-        double dt = options.globalTimestep;
-        double tNext = tNow + dt;
-
-        if (t == tStart && options.outputProfiles) {
-            writeStateFile("", false, false);
-        }
-
-        if (options.outputDebugIntegratorStages) {
-            writeStateFile((format("start_t%.6f") % t).str(), true, false);
-        }
-
-        // *** Balanced Strang-split Integration ***
-
-        integrateDiffusionTerms(t, t + 0.25*dt, 1); // step 1/4
-        integrateConvectionTerms(t, t + 0.5*dt, 1); // step 1/2
-        integrateDiffusionTerms(t + 0.25*dt, t + 0.5*dt, 2); // step 2/4
-        integrateProductionTerms(t, t + dt, 0); // full step
-        integrateDiffusionTerms(t + 0.5*dt, t + 0.75*dt, 3); // step 3/4
-        integrateConvectionTerms(t + 0.5*dt, t + dt, 2); // step 2/2
-        integrateDiffusionTerms(t + 0.75*dt, t + dt, 4); // step 4/4
-
-        if (debugParameters::veryVerbose) {
-            logFile.write("done!");
-        }
-
-        // *** End of Strang-split integration step ***
-        correctMassFractions();
-        calculateTimeDerivatives(dt);
-
-        t = tNext;
-        tNow = tNext;
-
-        nOutput++;
-        nRegrid++;
-        nProfile++;
-        nTerminate++;
-        nCurrentState++;
-
-        if (debugParameters::debugTimesteps) {
-            int nSteps = convectionSystem.getNumSteps();
-            logFile.write(format("t = %8.6f (dt = %9.3e) [C: %i]") % t % dt % nSteps);
-        }
-
-        setupTimer.resume();
-        if (t > tOutput || nOutput >= options.outputStepInterval) {
-            calculateQdot();
-            timeVector.push_back(t);
-            timestepVector.push_back(dt);
-            heatReleaseRate.push_back(getHeatReleaseRate());
-            consumptionSpeed.push_back(getConsumptionSpeed());
-            flamePosition.push_back(getFlamePosition());
-
-            tOutput = t + options.outputTimeInterval;
-            nOutput = 0;
-        }
-
-        // Periodic check for terminating the integration (based on steady heat
-        // release rate, etc.) Quit now to skip grid adaptation on the last step
-        if (t >= tEnd) {
-            break;
-        } else if (nTerminate >= options.terminateStepInterval) {
-            nTerminate = 0;
-            if (checkTerminationCondition()) {
-                break;
+    // Debug sanity check
+    #ifndef NDEBUG
+        bool error = false;
+        for (size_t j=0; j<nPoints; j++) {
+            if (T[j] < 295 || T[j] > 3000) {
+                logFile.write(format(
+                    "WARNING: Unexpected Temperature: T = %f at j = %i") % T[j] % j);
+                error = true;
             }
         }
-
-        // Save the current integral and profile data in files that are
-        // automatically overwritten, and save the time-series data (out.h5)
-        if (nCurrentState >= options.currentStateStepInterval) {
-            calculateQdot();
-            nCurrentState = 0;
-            writeTimeseriesFile("out");
-            writeStateFile("profNow");
+        if (error) {
+            writeStateFile();
         }
+    #endif
 
-        // *** Save flame profiles
-        if (t > tProfile || nProfile >= options.profileStepInterval) {
-            if (options.outputProfiles) {
-                writeStateFile();
-            }
-            tProfile = t + options.profileTimeInterval;
-            nProfile = 0;
-        }
-        setupTimer.stop();
-
-        if (t > tRegrid || nRegrid >= options.regridStepInterval) {
-            regridTimer.start();
-            tRegrid = t + options.regridTimeInterval;
-            nRegrid = 0;
-
-            // If the left grid point moves, a new boundary value for rVzero
-            // needs to be calculated from the mass flux V on the current grid points
-            dvec x_prev = grid.x;
-            convectionSystem.evaluate();
-            dvec V_prev = convectionSystem.V;
-
-            // dampVal sets a limit on the maximum grid size
-            grid.dampVal.resize(grid.x.rows());
-            for (size_t j=0; j<nPoints; j++) {
-                double num = std::min(mu[j],lambda[j]/cp[j]);
-                num = std::min(num, rhoD.col(j).minCoeff());
-                grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
-            }
-            dvec dampVal_prev = grid.dampVal;
-
-            vector<dvector> currentSolution;
-            rollVectorVector(currentSolution, U, T, Y);
-            rollVectorVector(currentSolution, dUdtConv, dTdtConv, dYdtConv);
-            rollVectorVector(currentSolution, dUdtDiff, dTdtDiff, dYdtDiff);
-            rollVectorVector(currentSolution, dUdtProd, dTdtProd, dYdtProd);
-
-            grid.nAdapt = nVars;
-            if (options.quasi2d) {
-                // do not change grid extents in this case
-            } else if (strainfunc.a(tNow) == 0) {
-                calculateQdot();
-                grid.regridUnstrained(currentSolution, qDot);
-            } else {
-                grid.regrid(currentSolution);
-            }
-
-            // Interpolate dampVal onto the modified grid
-            grid.dampVal = mathUtils::interp1(x_prev, dampVal_prev, grid.x);
-
-            grid.adapt(currentSolution);
-
-            // Perform updates that are necessary if the grid has changed
-            if (grid.updated) {
-                logFile.write(format("Grid size: %i points.") % nPoints);
-
-                unrollVectorVector(currentSolution, U, T, Y, 0);
-                unrollVectorVector(currentSolution, dUdtConv, dTdtConv, dYdtConv, 1);
-                unrollVectorVector(currentSolution, dUdtDiff, dTdtDiff, dYdtDiff, 2);
-                unrollVectorVector(currentSolution, dUdtProd, dTdtProd, dYdtProd, 3);
-                correctMassFractions();
-
-                // Update the mass flux (including the left boundary value)
-                rVzero = mathUtils::interp1(x_prev, V_prev, grid.x[0]);
-                convectionSystem.utwSystem.V = mathUtils::interp1(x_prev, V_prev, grid.x);
-
-                // Allocate the solvers and arrays for auxiliary variables
-                resizeAuxiliary();
-
-                if (debugParameters::debugAdapt || debugParameters::debugRegrid) {
-                    writeStateFile("postAdapt", false, false);
-                }
-                grid.updated = false;
-            }
-            regridTimer.stop();
-        }
-
-        if (nTotal % 10 == 0) {
-            printPerformanceStats();
-        }
-        nTotal++;
+    // Reset boundary conditions to prevent numerical drift
+    if (grid.leftBC == BoundaryCondition::FixedValue) {
+        T[0] = Tleft;
+        Y.col(0) = Yleft;
     }
 
+    if (grid.rightBC == BoundaryCondition::FixedValue) {
+        T[jj] = Tright;
+        Y.col(jj) = Yright;
+    }
+
+    updateChemicalProperties();
+
+    updateBC();
+    if (options.xFlameControl) {
+        update_xStag(t, true); // calculate the value of rVzero
+    }
+    convectionSystem.set_rVzero(rVzero);
+    setupTimer.stop();
+
+    // Set up solvers for split integration
+    updateCrossTerms();
+    prepareDiffusionTerms();
+    prepareProductionTerms();
+    prepareConvectionTerms();
+
+    double dt = options.globalTimestep;
+    double tNext = tNow + dt;
+
+    if (t == tStart && options.outputProfiles) {
+        writeStateFile("", false, false);
+    }
+
+    if (options.outputDebugIntegratorStages) {
+        writeStateFile((format("start_t%.6f") % t).str(), true, false);
+    }
+
+    // *** Balanced Strang-split Integration ***
+
+    integrateDiffusionTerms(t, t + 0.25*dt, 1); // step 1/4
+    integrateConvectionTerms(t, t + 0.5*dt, 1); // step 1/2
+    integrateDiffusionTerms(t + 0.25*dt, t + 0.5*dt, 2); // step 2/4
+    integrateProductionTerms(t, t + dt, 0); // full step
+    integrateDiffusionTerms(t + 0.5*dt, t + 0.75*dt, 3); // step 3/4
+    integrateConvectionTerms(t + 0.5*dt, t + dt, 2); // step 2/2
+    integrateDiffusionTerms(t + 0.75*dt, t + dt, 4); // step 4/4
+
+    if (debugParameters::veryVerbose) {
+        logFile.write("done!");
+    }
+
+    // *** End of Strang-split integration step ***
+    correctMassFractions();
+    calculateTimeDerivatives(dt);
+
+    t = tNext;
+    tNow = tNext;
+
+    nOutput++;
+    nRegrid++;
+    nProfile++;
+    nTerminate++;
+    nCurrentState++;
+
+    if (debugParameters::debugTimesteps) {
+        int nSteps = convectionSystem.getNumSteps();
+        logFile.write(format("t = %8.6f (dt = %9.3e) [C: %i]") % t % dt % nSteps);
+    }
+
+    setupTimer.resume();
+    if (t > tOutput || nOutput >= options.outputStepInterval) {
+        calculateQdot();
+        timeVector.push_back(t);
+        timestepVector.push_back(dt);
+        heatReleaseRate.push_back(getHeatReleaseRate());
+        consumptionSpeed.push_back(getConsumptionSpeed());
+        flamePosition.push_back(getFlamePosition());
+
+        tOutput = t + options.outputTimeInterval;
+        nOutput = 0;
+    }
+
+    // Periodic check for terminating the integration (based on steady heat
+    // release rate, etc.) Quit now to skip grid adaptation on the last step
+    if (t >= tEnd) {
+        return 1;
+    } else if (nTerminate >= options.terminateStepInterval) {
+        nTerminate = 0;
+        if (checkTerminationCondition()) {
+            return 1;
+        }
+    }
+
+    // Save the current integral and profile data in files that are
+    // automatically overwritten, and save the time-series data (out.h5)
+    if (nCurrentState >= options.currentStateStepInterval) {
+        calculateQdot();
+        nCurrentState = 0;
+        writeTimeseriesFile("out");
+        writeStateFile("profNow");
+    }
+
+    // *** Save flame profiles
+    if (t > tProfile || nProfile >= options.profileStepInterval) {
+        if (options.outputProfiles) {
+            writeStateFile();
+        }
+        tProfile = t + options.profileTimeInterval;
+        nProfile = 0;
+    }
+    setupTimer.stop();
+
+    if (t > tRegrid || nRegrid >= options.regridStepInterval) {
+        regridTimer.start();
+        tRegrid = t + options.regridTimeInterval;
+        nRegrid = 0;
+
+        // If the left grid point moves, a new boundary value for rVzero
+        // needs to be calculated from the mass flux V on the current grid points
+        dvec x_prev = grid.x;
+        convectionSystem.evaluate();
+        dvec V_prev = convectionSystem.V;
+
+        // dampVal sets a limit on the maximum grid size
+        grid.dampVal.resize(grid.x.rows());
+        for (size_t j=0; j<nPoints; j++) {
+            double num = std::min(mu[j],lambda[j]/cp[j]);
+            num = std::min(num, rhoD.col(j).minCoeff());
+            grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
+        }
+        dvec dampVal_prev = grid.dampVal;
+
+        vector<dvector> currentSolution;
+        rollVectorVector(currentSolution, U, T, Y);
+        rollVectorVector(currentSolution, dUdtConv, dTdtConv, dYdtConv);
+        rollVectorVector(currentSolution, dUdtDiff, dTdtDiff, dYdtDiff);
+        rollVectorVector(currentSolution, dUdtProd, dTdtProd, dYdtProd);
+
+        grid.nAdapt = nVars;
+        if (options.quasi2d) {
+            // do not change grid extents in this case
+        } else if (strainfunc.a(tNow) == 0) {
+            calculateQdot();
+            grid.regridUnstrained(currentSolution, qDot);
+        } else {
+            grid.regrid(currentSolution);
+        }
+
+        // Interpolate dampVal onto the modified grid
+        grid.dampVal = mathUtils::interp1(x_prev, dampVal_prev, grid.x);
+
+        grid.adapt(currentSolution);
+
+        // Perform updates that are necessary if the grid has changed
+        if (grid.updated) {
+            logFile.write(format("Grid size: %i points.") % nPoints);
+
+            unrollVectorVector(currentSolution, U, T, Y, 0);
+            unrollVectorVector(currentSolution, dUdtConv, dTdtConv, dYdtConv, 1);
+            unrollVectorVector(currentSolution, dUdtDiff, dTdtDiff, dYdtDiff, 2);
+            unrollVectorVector(currentSolution, dUdtProd, dTdtProd, dYdtProd, 3);
+            correctMassFractions();
+
+            // Update the mass flux (including the left boundary value)
+            rVzero = mathUtils::interp1(x_prev, V_prev, grid.x[0]);
+            convectionSystem.utwSystem.V = mathUtils::interp1(x_prev, V_prev, grid.x);
+
+            // Allocate the solvers and arrays for auxiliary variables
+            resizeAuxiliary();
+
+            if (debugParameters::debugAdapt || debugParameters::debugRegrid) {
+                writeStateFile("postAdapt", false, false);
+            }
+            grid.updated = false;
+        }
+        regridTimer.stop();
+    }
+
+    if (nTotal % 10 == 0) {
+        printPerformanceStats();
+    }
+    nTotal++;
+    return 0;
+}
+
+void FlameSolver::finalize()
+{
     calculateQdot();
     writeTimeseriesFile("out");
 
@@ -427,7 +427,6 @@ void FlameSolver::run(void)
 
 bool FlameSolver::checkTerminationCondition(void)
 {
-
     if (options.terminateForSteadyQdot) {
         int j1 = mathUtils::findLast(timeVector < (tNow - options.terminationPeriod));
         if (j1 == -1) {
@@ -913,7 +912,7 @@ void FlameSolver::prepareConvectionTerms()
     deltaTconv.setZero(nPoints);
     deltaYconv.setZero(nSpec, nPoints);
 
-    setConvectionSolverState(tNow, 0);
+    setConvectionSolverState(tNow);
     dvec dTdt = dTdtConv + dTdtDiff + dTdtProd;
     Eigen::MatrixXd dYdt = dYdtConv + dYdtDiff + dYdtProd;
     if (options.splittingMethod == "balanced") {
@@ -965,7 +964,7 @@ void FlameSolver::setDiffusionSolverState(double tInitial)
     splitTimer.stop();
 }
 
-void FlameSolver::setConvectionSolverState(double tInitial, int stage)
+void FlameSolver::setConvectionSolverState(double tInitial)
 {
     splitTimer.resume();
     Ustart = U;
@@ -995,7 +994,7 @@ void FlameSolver::integrateConvectionTerms(double tStart, double tEnd, int stage
     if (debugParameters::veryVerbose) {
         logFile.write(format("convection term %i/2...") % stage, false);
     }
-    setConvectionSolverState(tStart, stage);
+    setConvectionSolverState(tStart);
 
     convectionTimer.start();
     try {

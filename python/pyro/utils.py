@@ -229,7 +229,10 @@ def run(conf):
 
     solver = _pyro.FlameSolver(conf)
     solver.initialize()
-    solver.run()
+    done = 0
+    while not done:
+        done = solver.step()
+    solver.finalize()
 
 
 def multirun(conf):
@@ -314,7 +317,10 @@ def multirun(conf):
             solver = _pyro.FlameSolver(conf)
             t1 = time.time()
             solver.initialize()
-            solver.run()
+            done = 0
+            while not done:
+                done = solver.step()
+            solver.finalize()
             t2 = time.time()
 
             log('Completed run at strain rate a = %g s^-1' % a)
