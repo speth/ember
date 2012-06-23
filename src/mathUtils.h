@@ -1,6 +1,7 @@
 #pragma once
 
 #define _USE_MATH_DEFINES
+#define NOMINMAX
 #include <vector>
 #include <cmath>
 #include <iostream>

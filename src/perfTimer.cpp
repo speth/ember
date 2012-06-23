@@ -8,7 +8,8 @@ unsigned long int zeroInit() {
     return 0;
 }
 
-unsigned long int accumulate(unsigned long int a, unsigned long int b)
+template <class T>
+T accumulate(T a, T b)
 {
     return a+b;
 }
@@ -18,7 +19,7 @@ unsigned long int accumulate(unsigned long int a, unsigned long int b)
 unsigned long PerfTimer::getCallCount() const
 {
     tbb::combinable<unsigned long int> tmp(callCount);
-    return tmp.combine(accumulate);
+    return tmp.combine(accumulate<unsigned long int>);
 }
 
 void PerfTimer::reset()
@@ -35,9 +36,16 @@ void PerfTimer::start()
 
 #ifdef _WIN32 // Windows-specific functions
 
+LARGE_INTEGER largeIntegerZero() {
+    LARGE_INTEGER x;
+    x.QuadPart = 0;
+    return x;
+}
+
 PerfTimer::PerfTimer()
     : callCount(&zeroInit)
     , cumulativeTime(&zeroInit)
+    , t1(&largeIntegerZero)
 {
     LARGE_INTEGER f;
     QueryPerformanceFrequency(&f);
@@ -46,8 +54,8 @@ PerfTimer::PerfTimer()
 
 double PerfTimer::getTime() const
 {
-    tbb::combinable<unsigned long int> tmp(cumulativeTime);
-    return double(tmp.combine(accumulate))/clockFreq;
+    tbb::combinable<LONGLONG> tmp(cumulativeTime);
+    return double(tmp.combine(accumulate<LONGLONG>))/clockFreq;
 }
 
 void PerfTimer::stop()
@@ -73,7 +81,7 @@ PerfTimer::PerfTimer()
 double PerfTimer::getTime() const
 {
     tbb::combinable<unsigned long int> tmp(cumulativeTime);
-    return ((double) tmp.combine(accumulate))/1e6;
+    return ((double) tmp.combine(accumulate<unsigned long int>))/1e6;
 }
 
 void PerfTimer::stop()
