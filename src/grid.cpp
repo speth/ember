@@ -53,13 +53,13 @@ void oneDimGrid::updateValues()
     r.resize(jj+1);
     dampVal.resize(jj+1);
 
-    for (unsigned int j=0; j<x.rows()-1; j++) {
+    for (index_t j=0; j<x.rows()-1; j++) {
         hh[j] = x[j+1]-x[j];
         rphalf[j] =  pow(0.5*(x[j]+x[j+1]),alpha);
     }
     r = x.pow(alpha);
 
-    for (unsigned int j=1; j<x.rows()-1; j++) {
+    for (index_t j=1; j<x.rows()-1; j++) {
         cfp[j] = hh[j-1]/(hh[j]*(hh[j]+hh[j-1]));
         cf[j] = (hh[j]-hh[j-1])/(hh[j]*hh[j-1]);
         cfm[j] = -hh[j]/(hh[j-1]*(hh[j]+hh[j-1]));

@@ -18,6 +18,7 @@ using std::size_t;
 
 typedef Eigen::ArrayXXd dmatrix;
 typedef Eigen::ArrayXd dvec;
+typedef Eigen::ArrayXd::Index index_t;
 
 using std::vector;
 typedef std::vector<double> dvector;

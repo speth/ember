@@ -77,7 +77,7 @@ void DiffusionSystem::get_k(dvec& k)
     assert(mathUtils::notnan(k));
 }
 
-void DiffusionSystem::resize(int N_)
+void DiffusionSystem::resize(size_t N_)
 {
     N = N_;
     B.setConstant(N, NaN);

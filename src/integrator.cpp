@@ -62,7 +62,7 @@ void ExplicitIntegrator::step()
 void ExplicitIntegrator::integrateToTime(double tEnd)
 {
     // Make sure we hit tEnd after an integral number of timesteps
-    int nSteps = (int) (tEnd-t)/h;
+    int nSteps = static_cast<int>((tEnd-t)/h);
     if (t + h*nSteps != tEnd) {
         h = (tEnd - t) / (nSteps + 1);
     }

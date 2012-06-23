@@ -25,7 +25,7 @@ public:
     // Provides the constant term to the integrator
     void get_k(dvec& k);
 
-    void resize(int N);
+    void resize(size_t N);
     void resetSplitConstants();
 
     // the coefficients of the ODE
@@ -36,7 +36,7 @@ public:
     dvec splitConst; // constant terms
 
     // Number of points in the region to be solved (= jRight - jLeft + 1)
-    int N;
+    size_t N;
 
     // Parameters for wall flux boundary condition
     double yInf;

@@ -107,8 +107,8 @@ dvector DataFile::readVector(const std::string& name)
             "DataFile::readVector: '%s' is not a 1D array.") % name).str());
     }
 
-    hsize_t N = H5Sget_simple_extent_npoints(dataspace);
-    dvector values(N);
+    hssize_t N = H5Sget_simple_extent_npoints(dataspace);
+    dvector values(static_cast<size_t>(N));
 
     H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &values[0]);
     H5Dclose(dataset);
@@ -128,8 +128,8 @@ dvec DataFile::readVec(const std::string& name)
             "DataFile::readVector: '%s' is not a 1D array.") % name).str());
     }
 
-    hsize_t N = H5Sget_simple_extent_npoints(dataspace);
-    dvec values(N);
+    hssize_t N = H5Sget_simple_extent_npoints(dataspace);
+    dvec values(static_cast<size_t>(N));
 
     H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, values.data());
     H5Dclose(dataset);

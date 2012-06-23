@@ -94,7 +94,7 @@ public:
     double qss_epsmin;
     double qss_dtmin;
     double qss_dtmax;
-    double qss_iterationCount;
+    int qss_iterationCount;
     double qss_abstol;
     double qss_minval;
     bool qss_stabilityCheck;

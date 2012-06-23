@@ -20,7 +20,7 @@ public:
     // ODE defined as ydot = f(t,y) = J*y + k
     virtual void get_A(dvec& a, dvec& b, dvec& c) = 0;
     virtual void get_k(dvec& k) = 0;
-    virtual void resize(int N) {}
+    virtual void resize(size_t N) {}
     virtual void initialize() {}
 };
 

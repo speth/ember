@@ -31,13 +31,13 @@ void BilinearInterpolator::initialize()
     assert(data_.rows() == x_.size());
     assert(data_.cols() == y_.size());
 
-    for (size_t i = 1; i < x_.rows() - 1; i++) {
+    for (index_t i = 1; i < x_.rows() - 1; i++) {
         xi_[x_[i]] = i;
     }
     xi_[-1e300] = 0;
     xi_[1e300] = x_.rows() - 1;
 
-    for (size_t i = 1; i < y_.rows() - 1; i++) {
+    for (index_t i = 1; i < y_.rows() - 1; i++) {
         yi_[y_[i]] = i;
     }
     yi_[-1e300] = 0;
