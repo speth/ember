@@ -10,17 +10,27 @@ public:
     virtual void f(const double t, const dvec& y, dvec& ydot) = 0;
 };
 
-
+//! A system of linear ODEs represented by a tridiagonal matrix.
+//! The ODE may be written as an inhomogeneous linear linear system:
+//!     \f[ \dot{y} = Ay + k \f]
 class TridiagonalODE
 {
 public:
     TridiagonalODE() {}
     virtual ~TridiagonalODE() {}
 
-    // ODE defined as ydot = f(t,y) = J*y + k
+    //! Provide the matrix associated with the ODE to the integrator.
+    //! @param[out] a elements of the first subdiagonal of *A*
+    //! @param[out] b elements of the main diagonal of *A*
+    //! @param[out] c elements of the first superdiagonal of *A*
     virtual void get_A(dvec& a, dvec& b, dvec& c) = 0;
+
+    //! Provides the constant term *k* to the integrator
     virtual void get_k(dvec& k) = 0;
+
+    //! Set the number of points in the domain.
     virtual void resize(size_t N) {}
+
     virtual void initialize() {}
 };
 
