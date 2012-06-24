@@ -7,6 +7,9 @@ Input Files
 
 .. currentmodule:: pyro.input
 
+Configuration Options
+---------------------
+
 .. autoclass:: Paths
    :members:
 
@@ -52,6 +55,24 @@ Input Files
 .. autoclass:: TerminationCondition
    :members:
 
+Implementation Classes
+----------------------
+
+These classes are used to define configurable options.
+
 .. autoclass:: Options
+   :members:
 
 .. autoclass:: Config
+   :members:
+
+.. autoclass:: Option
+   :members:
+
+.. autoclass:: StringOption
+
+.. autoclass:: BoolOption
+
+.. autoclass:: IntegerOption
+
+.. autoclass:: FloatOption

@@ -217,14 +217,16 @@ def run(conf):
         conf.validate()
         return
 
+    confString = conf.stringify()
+    conf.evaluate()
+
     if not os.path.isdir(conf.paths.outputDir):
         os.makedirs(conf.paths.outputDir, 0755)
     confOutPath = os.path.join(conf.paths.outputDir, 'config')
     if (os.path.exists(confOutPath)):
         os.unlink(confOutPath)
     confOut = file(confOutPath, 'w')
-    confOut.write(conf.stringify())
-
+    confOut.write(confString)
     conf.setup()
 
     solver = _pyro.FlameSolver(conf)
@@ -250,6 +252,8 @@ def multirun(conf):
         conf.validate()
         return
 
+    confString = conf.stringify()
+    conf.evaluate()
     strainRates = conf.strainParameters.rates
     if not strainRates:
         print 'No strain rate list specified'
@@ -309,7 +313,7 @@ def multirun(conf):
 
             log('Beginning run at strain rate a = %g s^-1' % a)
             confOut = file(configPath, 'w')
-            confOut.write(conf.stringify())
+            confOut.write(confString)
 
             conf.strainParameters.initial = a
             conf.strainParameters.final = a

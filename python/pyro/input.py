@@ -15,16 +15,126 @@ configuration by passing :class:`.Options` objects to the constructor for
 
 import numbers
 import os
+import types
 import Cantera
 import numpy as np
 import utils
+
+class Option(object):
+    """
+    Instances of this class are used as class members of descendants of class
+    :class:`Options` to represent a single configurable value. When a
+    user-specified value for an option is specified (as a keyword argument to
+    the constructor of a class derived from :class:`Options`), that value is
+    stored in this object and validated to make sure it satisfies any
+    applicable constraints.
+
+    :param default:
+        The default value for this option
+    :param choices:
+        A sequence of valid values for this option, e.g. ``['Mix', 'Multi']``.
+        The *default* choice is automatically included in *choices*.
+    :param min:
+        The minimum valid value for this option
+    :param max:
+        The maximum valid value for this option
+    :param nullable:
+        Set to *True* if *None* is a valid value for this option, regardless
+        of any other restrictions. Automatically set to *True* if *default* is
+        *None*.
+
+    Requiring values of a particular type is done by using one of the derived
+    classes: :class:`StringOption`, :class:`BoolOption`, :class:`IntegerOption`,
+    :class:`FloatOption`.
+    """
+    def __init__(self, default, choices=None, min=None, max=None, nullable=False):
+        self.value = default
+        self.default = default
+        if choices:
+            self.choices = set(choices)
+            self.choices.add(default)
+        else:
+            self.choices = None
+
+        self.min = min
+        self.max = max
+        self.isSet = False
+        self.nullable = nullable or self.default is None
+
+    def validate(self):
+        if self.choices and self.value not in self.choices:
+            return '%r not in %r' % (self.value, list(self.choices))
+
+        if self.min is not None and self.value < self.min:
+            return 'Value (%s) must be greater than or equal to %s' % (self.value, self.min)
+
+        if self.max is not None and self.value > self.max:
+            return 'Value (%s) must be less than or equal to %s' % (self.value, self.max)
+
+    def __repr__(self):
+        return repr(self.value)
+
+    def __nonzero__(self):
+        return bool(self.value)
+
+    def __eq__(self, other):
+        try:
+            return self.value == other.value
+        except AttributeError:
+            return self.value == other
+
+
+class StringOption(Option):
+    """ An option whose value must be a string. """
+    def validate(self):
+        if not (isinstance(self.value, types.StringTypes) or
+                (self.value is None and self.nullable)):
+            return 'Value must be a string. Got %r' % self.value
+        return Option.validate(self)
+
+
+class BoolOption(Option):
+    """ An option whose value must be a boolean value. """
+    def validate(self):
+        if not (self.value in (True, False, 0, 1) or
+                (self.value is None and self.nullable)):
+            return 'Value must be a boolean. Got %r' % self.value
+        return Option.validate(self)
+
+
+class IntegerOption(Option):
+    """ An option whose value must be a integer. """
+    def validate(self):
+        if not (isinstance(self.value, numbers.Integral) or
+                (self.value is None and self.nullable)):
+            return 'Value must be an integer. Got %r' % self.value
+        return Option.validate(self)
+
+
+class FloatOption(Option):
+    """ An option whose value must be a floating point number. """
+    def validate(self):
+        if not (isinstance(self.value, numbers.Number) or
+                (self.value is None and self.nullable)):
+            return 'Value must be a number. Got %r' % self.value
+        return Option.validate(self)
+
 
 class Options(object):
     """ Base class for elements of :class:`.Config` """
     def __init__(self, **kwargs):
         for key,value in kwargs.iteritems():
             if hasattr(self, key):
-                setattr(self, key, value)
+                opt = getattr(self, key)
+                if isinstance(opt, Option):
+                    opt.value = value
+                    opt.isSet = True
+                    message = opt.validate()
+                    if message:
+                        raise ValueError('\nInvalid option specified for %s.%s:\n%s' %
+                                         (self.__class__.__name__, key, message))
+                else:
+                    setattr(self, key, value)
             else:
                 raise KeyError('Unrecognized configuration option: %s' % key)
 
@@ -34,8 +144,14 @@ class Options(object):
         for attr in dir(self):
             if not attr.startswith('_'):
                 value = getattr(self, attr)
+                if isinstance(value, Option):
+                    if value.value == value.default:
+                        continue
+                    else:
+                        value = value.value
+
                 if not isinstance(value, numbers.Number):
-                    value = '%r' % value
+                    value = repr(value)
 
                 if not spaces:
                     header = ' '*indent + self.__class__.__name__ + '('
@@ -46,7 +162,10 @@ class Options(object):
 
                 ans.append('%s%s=%s,' % (header, attr, value))
 
-        ans[-1] = ans[-1][:-1] + ')'
+        if ans:
+            ans[-1] = ans[-1][:-1] + ')'
+        else:
+            ans = ''
 
         return ans
 
@@ -56,14 +175,14 @@ class Paths(Options):
 
     #: Relative path to the directory where input files (such as the
     #: Cantera mechanism file) are located.
-    inputDir = "input"
+    inputDir = StringOption("input")
 
     #: Relative path to the directory where output files
     #: (outNNNNNN.h5, profNNNNNN.h5) will be stored.
-    outputDir = "run/test1"
+    outputDir = StringOption("run/test1")
 
     #: File to use for log messages. If *None*, write output to stdout
-    logFile = None
+    logFile = StringOption(None)
 
 class General(Options):
     """ High-level configuration options """
@@ -71,19 +190,19 @@ class General(Options):
     #: True if the temperature and mass fractions on the burned gas
     #: side of the flame should be held constant. Applicable only to
     #: premixed flames.
-    fixedBurnedVal = True
+    fixedBurnedVal = BoolOption(True)
 
     #: True if the position of the leftmost grid point should be held
     #: constant. Should usually be True for Twin and Curved flame
     #: configurations.
-    fixedLeftLocation = False
+    fixedLeftLocation = BoolOption(False)
 
     #: True if solving a radially propagating flame in a cylindrical
     #: coordinate system.
-    curvedFlame = False
+    curvedFlame = BoolOption(False)
 
     #: True if solving a planar flame that is symmetric about the x = 0 plane.
-    twinFlame = False
+    twinFlame = BoolOption(False)
 
     #: Input file (HDF5 format) containing the interpolation data needed for
     #: the quasi2d mode. Contains:
@@ -93,43 +212,45 @@ class General(Options):
     #: - Temperature array *T* (size *N* x *M*)
     #: - radial velocity array *vr* (size *N* x *M*)
     #: - axial velocity array *vz* (size *N* x *M*)
-    interpFile = None
+    interpFile = StringOption(None)
 
     #: *True* if the unburned fuel/air mixture should be used as the
     #: left boundary condition. Applicable only to premixed flames.
-    unburnedLeft = True # applies to premixed flames
+    unburnedLeft = BoolOption(True) # applies to premixed flames
 
     #: *True* if the fuel mixture should be used as the left boundary
     #: condition. Applicable only to diffusion flames.
-    fuelLeft = True
+    fuelLeft = BoolOption(True)
 
     #: Method for setting the boundary condition for the continuity equation
     #: Valid options are: ``fixedLeft``, ``fixedRight``, ``fixedQdot``,
     #: ``fixedTemperature``, and ``stagnationPoint``.
-    continuityBC = "fixedLeft"
+    continuityBC = StringOption("fixedLeft",
+                                ("fixedRight", "fixedQdot", "fixedTemperature",
+                                 "stagnationPoint"))
 
     #: Integrator to use for the chemical source terms. Choices are
     #: ``qss`` (explicit, quasi-steady state) and ``cvode`` (implicit,
     #: variable-order BDF).
-    chemistryIntegrator = "qss"
+    chemistryIntegrator = StringOption("qss", ("cvode",))
 
     #: Method to use for splitting the convection / diffusion / reaction
     #: terms. Options are ``strang`` and ``balanced``.
-    splittingMethod = "balanced"
+    splittingMethod = StringOption("balanced", ("strang",))
 
     #: Number of integration failures to tolerate in the chemistry
     #: integrator before aborting.
-    errorStopCount = 100
+    errorStopCount = IntegerOption(100)
 
     #: Number of threads to use for evaluating terms in parallel
-    nThreads = 1
+    nThreads = IntegerOption(1, min=1)
 
 
 class Chemistry(Options):
     """ Settings pertaining to the Cantera mechanism file """
 
     #: Path to the Cantera mechanism file in XML format
-    mechanismFile = "ucsd-methane.xml"
+    mechanismFile = StringOption("ucsd-methane.xml")
 
     #: ID of the phase to use in the mechanism file.
     #: Found on a line that looks like::
@@ -138,13 +259,13 @@ class Chemistry(Options):
     #:
     #: in the mechanism file. This is always "gas" for mechanisms
     #: converted using ck2cti and cti2ctml.
-    phaseID = "gas"
+    phaseID = StringOption("gas")
 
     #: Transport model to use. Valid options are ``Mix``, ``Multi``, and ``Approx``
-    transportModel = "Mix"
+    transportModel = StringOption("Mix", ("Multi", "Approx"))
 
     #: Mole fraction threshold for including species with ``transportModel = "Approx"``
-    threshold = 1e-5
+    threshold = FloatOption(1e-5)
 
 
 class Grid(Options):
@@ -152,58 +273,58 @@ class Grid(Options):
     #: Maximum relative scalar variation of each state vector
     #: component between consecutive grid points. For high accuracy,
     #: ``vtol = 0.08``; For minimal accuracy, ``vtol = 0.20``.
-    vtol = 0.12
+    vtol = FloatOption(0.12)
 
     #: Maximum relative variation of the gradient of each state vector
     #: component between consecutive grid points. For high accuracy,
     #: ``dvtol = 0.12``; For minimal accuracy, ``dvtol = 0.4``.
-    dvtol = 0.2
+    dvtol = FloatOption(0.2)
 
     #: Relative tolerance (compared to vtol and dvtol) for grid point removal.
-    rmTol = 0.6
+    rmTol = FloatOption(0.6)
 
     #: Parameter to limit numerical diffusion in regions with high
     #: convective velocities.
-    dampConst = 7
+    dampConst = FloatOption(7)
 
     #: Minimum grid spacing [m]
-    gridMin = 5e-7
+    gridMin = FloatOption(5e-7)
 
     #: Maximum grid spacing [m]
-    gridMax = 2e-4
+    gridMax = FloatOption(2e-4)
 
     #: Maximum ratio of the distances between adjacent pairs of grid
     #: points.
     #:
     #: .. math:: \frac{1}{\tt uniformityTol} < \frac{x_{j+1}-x_j}{x_j-x_{j-1}}
     #:           < {\tt uniformityTol}
-    uniformityTol = 2.5
+    uniformityTol = FloatOption(2.5)
 
     #: State vector components smaller than this value are not
     #: considered whether to add or remove a grid point.
-    absvtol = 1e-8
+    absvtol = FloatOption(1e-8)
 
     #: Tolerance for each state vector component for extending the
     #: domain to satisfy zero-gradient conditions at the left and
     #: right boundaries.
-    boundaryTol = 5e-5
+    boundaryTol = FloatOption(5e-5)
 
     #: Tolerance for removing points at the boundary. Must be smaller
     #: than boundaryTol.
-    boundaryTolRm = 1e-5
+    boundaryTolRm = FloatOption(1e-5)
 
     #: For unstrained flames, number of flame thicknesses (based on
     #: reaction zone width) downstream of the flame to keep the right
     #: edge of the domain.
-    unstrainedDownstreamWidth = 5
+    unstrainedDownstreamWidth = FloatOption(5)
 
     #: Number of points to add when extending a boundary to satisfy
     #: boundaryTol.
-    addPointCount = 3
+    addPointCount = IntegerOption(3, min=0)
 
     #: For curved or twin flames, the minimum position of the first
     #: grid point past x = 0.
-    centerGridMin = 1e-4
+    centerGridMin = FloatOption(1e-4, min=0)
 
 
 class InitialCondition(Options):
@@ -221,43 +342,43 @@ class InitialCondition(Options):
 
     #: Read initial profiles from the specified file, or if 'None',
     #: create a new initial profile.
-    restartFile = None
+    restartFile = StringOption(None)
 
     #: True if the restart file path is relative to Paths.inputDir.
-    relativeRestartPath = True
+    relativeRestartPath = BoolOption(True)
 
     #: "premixed" or "diffusion"
-    flameType = "premixed"
+    flameType = StringOption('premixed', ('diffusion', 'quasi2d'))
 
     #: Temperature of the unburned fuel/air mixture for premixed flames [K].
-    Tu = 300
+    Tu = FloatOption(300)
 
     #: Temperature of the fuel mixture for diffusion flames [K].
-    Tfuel = 300
+    Tfuel = FloatOption(300)
 
     #: Temperature of the oxidizer mixture for diffusion flames [K].
-    Toxidizer = 300
+    Toxidizer = FloatOption(300)
 
     #: Molar composition of the fuel mixture.
-    fuel = "CH4:1.0"
+    fuel = StringOption("CH4:1.0")
 
     #: Molar composition of the oxidizer mixture.
-    oxidizer = "N2:3.76, O2:1.0"
+    oxidizer = StringOption("N2:3.76, O2:1.0")
 
     #: Equivalence ratio of the fuel/air mixture for premixed flames.
-    equivalenceRatio = 0.75
+    equivalenceRatio = FloatOption(0.75, min=0)
 
     #: Thermodynamic pressure [Pa]
-    pressure = 101325
+    pressure = FloatOption(101325, min=0)
 
     #: Number of points in the initial uniform grid.
-    nPoints = 100
+    nPoints = IntegerOption(100)
 
     #: Position of the leftmost point of the initial grid.
-    xLeft = -0.002
+    xLeft = FloatOption(-0.002)
 
     #: Position of the rightmost point of the initial grid.
-    xRight = 0.002
+    xRight = FloatOption(0.002)
 
     #: The width of the central plateau in the initial profile
     #: [m]. For premixed flames, this mixture is composed of oxidizer
@@ -265,33 +386,33 @@ class InitialCondition(Options):
     #: diffusion flames, this mixture is composed of a stoichiometric
     #: fuel/air brought to equilibrium at constant enthalpy and
     #: pressure. Recommended value: 0.002.
-    centerWidth = 0.000
+    centerWidth = FloatOption(0.000)
 
     #: The width of the slope away from the central plateau in the
     #: initial profile [m]. Recommended value for premixed flames:
     #: 5e-4. Recommended value for diffusion flames: 1e-3.
-    slopeWidth = 0.0005
+    slopeWidth = FloatOption(0.0005)
 
     #: Number of times to run the generated profile through a low pass
     #: filter before starting the simulation.
-    smoothCount = 4
+    smoothCount = IntegerOption(4)
 
     #: True if initial profiles for x,T,U and Y (as well as rVzero) are given
-    haveProfiles = False
+    haveProfiles = BoolOption(False)
 
-    x = None
-    T = None
-    U = None
-    Y = None
-    rVzero = None
+    x = Option(None)
+    T = Option(None)
+    U = Option(None)
+    Y = Option(None)
+    rVzero = FloatOption(None)
 
 
 class WallFlux(Options):
     #: Reference temperature for the wall heat flux
-    Tinf = 300
+    Tinf = FloatOption(300)
 
     #: Conductance of the wall [W/m^2-K]
-    Kwall = 100
+    Kwall = FloatOption(100)
 
 
 class Ignition(Options):
@@ -302,19 +423,19 @@ class Ignition(Options):
     """
 
     #: Beginning of the external heat release rate pulse [s].
-    tStart = 0
+    tStart = FloatOption(0)
 
     #: Duration of the external heat release rate pulse [s].
-    duration = 1e-3
+    duration = FloatOption(1e-3)
 
     #: Integral amplitude of the pulse [W/m^2].
-    energy = 0
+    energy = FloatOption(0)
 
     #: Location of the center of the pulse [m].
-    center = 0 # [m]
+    center = FloatOption(0)
 
     #: Characteristic width (standard deviation) of the pulse [m].
-    stddev = 1e-4
+    stddev = FloatOption(1e-4)
 
 
 class StrainParameters(Options):
@@ -324,10 +445,10 @@ class StrainParameters(Options):
     The strain rate changes linearly from *initial* to *final* over a
     period of *dt* seconds, starting at *tStart*.
     """
-    initial = 400 #: Initial strain rate [1/s]
-    final = 400 #: final strain rate [1/s]
-    tStart = 0.000 #: time at which strain rate starts to change [s]
-    dt = 0.002 #: time period over which strain rate changes [s]
+    initial = FloatOption(400) #: Initial strain rate [1/s]
+    final = FloatOption(400) #: final strain rate [1/s]
+    tStart = FloatOption(0.000) #: time at which strain rate starts to change [s]
+    dt = FloatOption(0.002) #: time period over which strain rate changes [s]
 
     #: A list of strain rates to use for a series of sequential
     #: integration periods (see :func:`~pyro.utils.multirun`), with steady-state
@@ -337,7 +458,7 @@ class StrainParameters(Options):
     #:     rates = [9216, 7680, 6144, 4608, 3840, 3072, 2304, 1920, 1536,
     #:              1152, 960, 768, 576, 480, 384, 288, 240, 192, 144, 120,
     #:              96, 72, 60, 48, 36, 30, 24, 18, 15, 12]
-    rates = None
+    rates = Option(None)
 
 
 class PositionControl(Options):
@@ -355,13 +476,13 @@ class PositionControl(Options):
     *integralGain*.
     """
 
-    xInitial = 0.0025 #:
-    xFinal = 0.0025 #:
-    dt = 0.01 #:
-    tStart = 0 #:
+    xInitial = FloatOption(0.0025) #:
+    xFinal = FloatOption(0.0025) #:
+    dt = FloatOption(0.01) #:
+    tStart = FloatOption(0) #:
 
-    proportionalGain = 10 #:
-    integralGain = 800 #:
+    proportionalGain = FloatOption(10) #:
+    integralGain = FloatOption(800) #:
 
 
 class Times(Options):
@@ -371,145 +492,145 @@ class Times(Options):
     """
 
     #: Integrator start time.
-    tStart = 0
+    tStart = FloatOption(0)
 
     #: Timestep used for operator splitting.
-    globalTimestep = 5e-6
+    globalTimestep = FloatOption(5e-6)
 
     #: Control for timestep used by the diffusion integrator.
     #: Actual timestep will be this multiplier times the stability
     #: limit an explicit integrator.
-    diffusionTimestepMultiplier = 10
+    diffusionTimestepMultiplier = FloatOption(10)
 
     #: Maximum amount of time before regridding / adaptation.
-    regridTimeInterval = 100
+    regridTimeInterval = FloatOption(100)
 
     #: Maximum number of timesteps before regridding / adaptation.
-    regridStepInterval = 20
+    regridStepInterval = IntegerOption(20)
 
     #: Maximum number of steps between storing integral flame
     #: properties.
-    outputStepInterval = 1
+    outputStepInterval = IntegerOption(1)
 
     #: Maximum time between storing integral flame properties.
-    outputTimeInterval = 1e-5
+    outputTimeInterval = FloatOption(1e-5)
 
     #: Maximum number of timesteps before writing flame profiles.
-    profileStepInterval = 5
+    profileStepInterval = IntegerOption(5)
 
     #: Maximum time between writing flame profiles.
-    profileTimeInterval = 1e-4
+    profileTimeInterval = FloatOption(1e-4)
 
     #: Number of timesteps between writing profNow.h5
-    currentStateStepInterval = 10
+    currentStateStepInterval = IntegerOption(10)
 
     #: Number of timesteps between checks of the steady-state
     #: termination conditions.
-    terminateStepInterval = 10
+    terminateStepInterval = IntegerOption(10)
 
 
 class CvodeTolerances(Options):
     """ Tolerances for the CVODE chemistry integrator """
 
     #: Relative tolerance for each state variable
-    relativeTolerance = 1e-6
+    relativeTolerance = FloatOption(1e-6)
 
     #: Absolute tolerance for U velocity
-    momentumAbsTol = 1e-7
+    momentumAbsTol = FloatOption(1e-7)
 
     #: Absolute tolerance for T
-    energyAbsTol = 1e-8
+    energyAbsTol = FloatOption(1e-8)
 
     #: Absolute tolerance for species mass fractions.
-    speciesAbsTol = 1e-13
+    speciesAbsTol = FloatOption(1e-13)
 
-    #: Minimum interal timestep
-    minimumTimestep = 1e-18
+    #: Minimum internal timestep
+    minimumTimestep = FloatOption(1e-18)
 
 
 class QssTolerances(Options):
     """ Tolerances for the QSS chemistry integrator """
 
     #: Accuracy parameter for determining the next timestep.
-    epsmin = 2e-2
+    epsmin = FloatOption(2e-2)
 
     #: Accuracy parameter for repeating timesteps
-    epsmax = 1e1
+    epsmax = FloatOption(1e1)
 
     #: Minimum internal timestep
-    dtmin = 1e-16
+    dtmin = FloatOption(1e-16)
 
     #: Maximum internal timestep
-    dtmax = 1e-6
+    dtmax = FloatOption(1e-6)
 
     #: Number of corrector iterations per timestep.
-    iterationCount = 1
+    iterationCount = IntegerOption(1)
 
     #: Absolute threshold for including each component in the accuracy
     #: tests.
-    abstol = 1e-11
+    abstol = FloatOption(1e-11)
 
     #: Lower limit on the value of each state vector component.
-    minval = 1e-60
+    minval = FloatOption(1e-60)
 
     #: Enable convergence-based stability check on timestep. Not
     #: enabled unless *iterationCount* >= 3.
-    stabilityCheck = False
+    stabilityCheck = BoolOption(False)
 
 
 class Debug(Options):
     """ Control of verbose debugging output """
 
     #: Addition / removal of internal grid points.
-    adaptation = False
+    adaptation = BoolOption(False)
 
     #: Addition / removal of boundary grid points.
-    regridding = True
+    regridding = BoolOption(True)
 
     #: Print current time after each global timestep.
-    timesteps = True
+    timesteps = BoolOption(True)
 
     #: Enable extensive timestep debugging output. Automatically
     #: enabled for debug builds.
-    veryVerbose = False
+    veryVerbose = BoolOption(False)
 
     #: Print information about the flame radius feedback controller.
-    flameRadiusControl = False
+    flameRadiusControl = BoolOption(False)
 
     #: Grid point to print debugging information about at *sourceTime*.
-    sourcePoint = -1
+    sourcePoint = IntegerOption(-1)
 
     #: Time at which to print extensive debugging information about
     #: the source term at j = *sourcePoint*, then terminate.
-    sourceTime = 0.0
+    sourceTime = FloatOption(0.0)
 
 
 class OutputFiles(Options):
     """ Control the contents of the periodic output files """
 
     #: Include the heat release rate as a function of space
-    heatReleaseRate = True
+    heatReleaseRate = BoolOption(True)
 
     #: Include the reaction / diffusion / convection contributions to
     #: the net time derivative of each state variable
-    timeDerivatives = True
+    timeDerivatives = BoolOption(True)
 
     #: Include variables such as transport properties and grid
     #: parameters that can be recomputed from the state variables.
-    extraVariables = False
+    extraVariables = BoolOption(False)
 
     #: Include other miscellaneous variables
-    auxiliaryVariables = False
+    auxiliaryVariables = BoolOption(False)
 
     #: Used to generate a continuous sequence of output files after
     #: restarting the code.
-    firstFileNumber = 0
+    firstFileNumber = IntegerOption(0)
 
     #: Generate ``profNNNNNN.h5`` files
-    saveProfiles = True
+    saveProfiles = BoolOption(True)
 
     #: Write profiles after each stage of the split integrator.
-    debugIntegratorStages = False
+    debugIntegratorStages = BoolOption(False)
 
 
 class TerminationCondition(Options):
@@ -526,12 +647,12 @@ class TerminationCondition(Options):
     sane value for *tEnd*.
     """
 
-    tEnd = 0.8 #:
+    tEnd = FloatOption(0.8) #:
 
-    measurement = "Q" #:
-    tolerance = 1e-4 #:
-    abstol = 0.5 #:
-    steadyPeriod = 0.002 #:
+    measurement = Option("Q", (None,)) #:
+    tolerance = FloatOption(1e-4) #:
+    abstol = FloatOption(0.5, min=0) #:
+    steadyPeriod = FloatOption(0.002, min=0) #:
 
 
 class Config(object):
@@ -568,11 +689,26 @@ class Config(object):
         self.outputFiles = get(OutputFiles)
         self.terminationCondition = get(TerminationCondition)
 
+    def evaluate(self):
+        """
+        Replace all of the :class:`Option` objects with their values so that
+        they can be used by the C++ extension, in
+        :meth:`Config.generateInitialCondition`, etc.
+        """
+        for opts in self.__dict__.itervalues():
+            if not isinstance(opts, Options):
+                continue
+            for name in dir(opts):
+                opt = getattr(opts, name)
+                if isinstance(opt, Option):
+                    setattr(opts, name, opt.value)
+
     def setup(self):
         """
         Perform any steps that need to be done before this object can be used
         to create a FlameSolver, such as generating initial reactant profiles.
         """
+        self.evaluate()
         if (not self.initialCondition.restartFile and
             not self.initialCondition.haveProfiles):
             self.generateInitialCondition()
@@ -581,29 +717,14 @@ class Config(object):
         ans = []
         for item in self.__dict__.itervalues():
             if isinstance(item, Options):
-                ans.append('\n'.join(item._stringify(4)))
-        ans[-1] = ans[-1]+')'
-        return 'conf = Config(\n' + ',\n'.join(ans[:-1]) + ')\n'
+                text = '\n'.join(item._stringify(4))
+                if text:
+                    ans.append(text)
+
+        return 'conf = Config(\n' + ',\n'.join(ans) + ')\n'
 
     def validate(self):
         error = False
-
-        # Check valid choices for string options
-        error = self.checkString(self.terminationCondition,
-                                 'measurement', ('Q', None)) or error
-        error = self.checkString(self.initialCondition,
-                                 'flameType', ('premixed', 'diffusion', 'quasi2d')) or error
-        error = self.checkString(self.general,
-                                 'chemistryIntegrator', ('cvode', 'qss')) or error
-        error = self.checkString(self.chemistry,
-                                'transportModel', ('Multi', 'Mix', 'Approx')) or error
-        error = self.checkString(self.general,
-                                 'splittingMethod', ('strang', 'balanced')) or error
-
-        error = self.checkString(self.general,
-                                 'continuityBC',
-                                 ('fixedLeft', 'fixedRight', 'fixedQdot',
-                                  'fixedTemperature', 'stagnationPoint')) or error
 
         # Position control can only be used with "twin" or "curved" flames
         if (self.positionControl is not None and
@@ -620,42 +741,44 @@ class Config(object):
 
         # the "fuelLeft" option only makes sense for diffusion flames
         if (self.initialCondition.flameType == 'premixed' and
-            'fuelLeft' in self.general.__dict__):
+            self.general.fuelLeft.isSet):
             error = True
             print "Error: 'general.fuelLeft' should not be specified for premixed flames."
 
         # the "unburnedLeft" option only makes sense for premixed flames
         if (self.initialCondition.flameType == 'diffusion' and
-            'unburnedLeft' in self.general.__dict__):
+            self.general.unburnedLeft.isSet):
             error = True
             print "Error: 'general.unburnedLeft' should not be specified for diffusion flames."
 
         # Make sure the mechanism file is in the correct place
-        mech = os.path.join(self.paths.inputDir, self.chemistry.mechanismFile)
+        mech = os.path.join(self.paths.inputDir.value,
+                            self.chemistry.mechanismFile.value)
         if not os.path.exists(mech):
             error = True
             print "Error: Couldn't find mechanism file %r.\n" % mech
 
         # Make sure that the mechanism file actually works and contains the
         # specified fuel and oxidizer species
-        gas = Cantera.IdealGasMix(mech, id=self.chemistry.phaseID)
-        gas.set(X=self.initialCondition.fuel)
-        gas.set(X=self.initialCondition.oxidizer)
+        gas = Cantera.IdealGasMix(mech, id=self.chemistry.phaseID.value)
+        gas.set(X=self.initialCondition.fuel.value)
+        gas.set(X=self.initialCondition.oxidizer.value)
 
         # Make sure that the mechanism file has sane rate coefficients
         if self.initialCondition.flameType == 'premixed':
-            Tcheck = self.initialCondition.Tu
+            Tcheck = self.initialCondition.Tu.value
         else:
-            Tcheck = min(self.initialCondition.Tfuel, self.initialCondition.Toxidizer)
+            Tcheck = min(self.initialCondition.Tfuel.value,
+                         self.initialCondition.Toxidizer.value)
         error |= self.checkRateConstants(gas, Tcheck)
 
         # Make sure the restart file is in the correct place (if specified)
         if self.initialCondition.restartFile:
             if self.initialCondition.relativeRestartPath:
-                restart = os.path.join(self.paths.inputDir,
-                                       self.initialCondition.restartFile)
+                restart = os.path.join(self.paths.inputDir.value,
+                                       self.initialCondition.restartFile.value)
             else:
-                restart = self.initialCondition.restartFile
+                restart = self.initialCondition.restartFile.value
 
             if not os.path.exists(restart):
                 error = True
@@ -666,16 +789,6 @@ class Config(object):
         else:
             print 'Validation completed successfully.'
 
-    def checkString(self, options, attrname, choices):
-        value = getattr(options, attrname)
-        if value not in choices:
-            print 'Error: Invalid option for %s.%s: %r' % (options.__class__.__name__,
-                                                           attrname,
-                                                           value)
-            print '       Valid options are: %r\n' % list(choices)
-            return True
-        else:
-            return False
 
     def checkRateConstants(self, gas, T):
         """
