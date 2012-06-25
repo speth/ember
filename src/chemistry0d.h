@@ -146,6 +146,4 @@ private:
     Cantera::GasTransport* transport;
 
     dmatrix Dbin; //!< binary diffusion coefficients for species k
-    dvec X; //!< mole fractions
-    dvec Y; //!< mass fractions
 };

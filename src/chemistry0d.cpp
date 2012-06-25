@@ -324,8 +324,6 @@ void CanteraGas::initialize()
 
     nSpec = thermo.nSpecies();
     Dbin.setZero(nSpec,nSpec);
-    X.setZero(nSpec);
-    Y.setZero(nSpec);
     isInitialized = true;
 }
 
@@ -370,30 +368,24 @@ dvec CanteraGas::calculateReactantMixture(const std::string& fuel,
     return Xr;
 }
 
-void CanteraGas::setStateMass(const dvec& Y_in, const double T)
+void CanteraGas::setStateMass(const dvec& Y, const double T)
 {
-    setStateMass(Y_in.data(), T);
-}
-
-void CanteraGas::setStateMass(const double* Y_in, const double T)
-{
-    for (size_t k=0; k<nSpec; k++) {
-        Y[k] = std::max(Y_in[k], 0.0);
-    }
     thermo.setState_TPY(T, pressure, Y.data());
 }
 
-void CanteraGas::setStateMole(const dvec& X_in, const double T)
+void CanteraGas::setStateMass(const double* Y, const double T)
 {
-    setStateMole(X_in.data(), T);
+    thermo.setState_TPY(T, pressure, Y);
 }
 
-void CanteraGas::setStateMole(const double* X_in, const double T)
+void CanteraGas::setStateMole(const dvec& X, const double T)
 {
-    for (size_t k=0; k<nSpec; k++) {
-        X[k] = std::max(X_in[k], 0.0);
-    }
     thermo.setState_TPX(T, pressure, X.data());
+}
+
+void CanteraGas::setStateMole(const double* X, const double T)
+{
+    thermo.setState_TPX(T, pressure, X);
 }
 
 void CanteraGas::getMoleFractions(dvec& X) const
