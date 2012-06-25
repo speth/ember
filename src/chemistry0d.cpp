@@ -324,12 +324,12 @@ void CanteraGas::initialize()
 
     nSpec = thermo.nSpecies();
     Dbin.setZero(nSpec,nSpec);
-    X.resize(nSpec,0);
-    Y.resize(nSpec,0);
+    X.setZero(nSpec);
+    Y.setZero(nSpec);
     isInitialized = true;
 }
 
-dvector CanteraGas::calculateReactantMixture(const std::string& fuel,
+dvec CanteraGas::calculateReactantMixture(const std::string& fuel,
                                              const std::string& oxidizer,
                                              double equivalenceRatio)
 {
@@ -340,14 +340,14 @@ dvector CanteraGas::calculateReactantMixture(const std::string& fuel,
     double Cf(0), Hf(0), Of(0); // moles of C/H/O in fuel
     double Co(0), Ho(0), Oo(0); // moles of C/H/O in oxidizer
 
-    dvector Xf(nSpec), Xo(nSpec), Xr(nSpec);
+    dvec Xf(nSpec), Xo(nSpec), Xr(nSpec);
 
     thermo.setState_TPX(300.0, pressure, fuel);
     getMoleFractions(Xf);
     thermo.setState_TPX(300.0, pressure, oxidizer);
     getMoleFractions(Xo);
 
-    dvector a(thermo.nElements());
+    dvec a(thermo.nElements());
     for (size_t k=0; k<nSpec; k++) {
         thermo.getAtoms(k, &a[0]);
         if (mC != -1) {
@@ -365,14 +365,9 @@ dvector CanteraGas::calculateReactantMixture(const std::string& fuel,
     }
     double stoichAirFuelRatio = -(Of-2*Cf-Hf/2)/(Oo-2*Co-Ho/2);
     Xr = Xf * equivalenceRatio + stoichAirFuelRatio * Xo;
-    Xr /= mathUtils::sum(Xr);
+    Xr /= Xr.sum();
 
     return Xr;
-}
-
-void CanteraGas::setStateMass(const dvector& Y_in, const double T)
-{
-    setStateMass(&Y_in[0], T);
 }
 
 void CanteraGas::setStateMass(const dvec& Y_in, const double T)
@@ -385,12 +380,7 @@ void CanteraGas::setStateMass(const double* Y_in, const double T)
     for (size_t k=0; k<nSpec; k++) {
         Y[k] = std::max(Y_in[k], 0.0);
     }
-    thermo.setState_TPY(T, pressure, &Y[0]);
-}
-
-void CanteraGas::setStateMole(const dvector& X_in, const double T)
-{
-    setStateMole(&X_in[0], T);
+    thermo.setState_TPY(T, pressure, Y.data());
 }
 
 void CanteraGas::setStateMole(const dvec& X_in, const double T)
@@ -403,12 +393,7 @@ void CanteraGas::setStateMole(const double* X_in, const double T)
     for (size_t k=0; k<nSpec; k++) {
         X[k] = std::max(X_in[k], 0.0);
     }
-    thermo.setState_TPX(T, pressure, &X[0]);
-}
-
-void CanteraGas::getMoleFractions(dvector& X) const
-{
-    thermo.getMoleFractions(&X[0]);
+    thermo.setState_TPX(T, pressure, X.data());
 }
 
 void CanteraGas::getMoleFractions(dvec& X) const
@@ -426,11 +411,6 @@ void CanteraGas::getMassFractions(double* Y) const
     thermo.getMassFractions(Y);
 }
 
-void CanteraGas::getMassFractions(dvector& Y) const
-{
-    thermo.getMassFractions(&Y[0]);
-}
-
 void CanteraGas::getMassFractions(dvec& Y) const
 {
     thermo.getMassFractions(Y.data());
@@ -444,11 +424,6 @@ double CanteraGas::getDensity() const
 double CanteraGas::getMixtureMolecularWeight() const
 {
     return thermo.meanMolecularWeight();
-}
-
-void CanteraGas::getMolecularWeights(dvector& W) const
-{
-    getMolecularWeights(&W[0]);
 }
 
 void CanteraGas::getMolecularWeights(dvec& W) const
@@ -473,11 +448,6 @@ double CanteraGas::getThermalConductivity() const
     return transport->thermalConductivity();
 }
 
-void CanteraGas::getDiffusionCoefficientsMole(dvector& Dkm) const
-{
-    transport->getMixDiffCoeffs(&Dkm[0]);
-}
-
 void CanteraGas::getDiffusionCoefficientsMole(dvec& Dkm) const
 {
     transport->getMixDiffCoeffs(Dkm.data());
@@ -486,11 +456,6 @@ void CanteraGas::getDiffusionCoefficientsMole(dvec& Dkm) const
 void CanteraGas::getDiffusionCoefficientsMole(double* Dkm) const
 {
     transport->getMixDiffCoeffs(Dkm);
-}
-
-void CanteraGas::getWeightedDiffusionCoefficientsMole(dvector& rhoD) const
-{
-    getWeightedDiffusionCoefficientsMole(&rhoD[0]);
 }
 
 void CanteraGas::getWeightedDiffusionCoefficientsMole(dvec& rhoD) const
@@ -517,19 +482,9 @@ void CanteraGas::getWeightedDiffusionCoefficientsMass(double* rhoD)
     }
 }
 
-void CanteraGas::getWeightedDiffusionCoefficientsMass(dvector& rhoD)
-{
-    getWeightedDiffusionCoefficientsMass(&rhoD[0]);
-}
-
 void CanteraGas::getWeightedDiffusionCoefficientsMass(dvec& rhoD)
 {
     getWeightedDiffusionCoefficientsMass(rhoD.data());
-}
-
-void CanteraGas::getThermalDiffusionCoefficients(dvector& Dkt) const
-{
-    transport->getThermalDiffCoeffs(&Dkt[0]);
 }
 
 void CanteraGas::getThermalDiffusionCoefficients(dvec& Dkt) const
@@ -547,11 +502,6 @@ double CanteraGas::getSpecificHeatCapacity() const
     return thermo.cp_mass();
 }
 
-void CanteraGas::getSpecificHeatCapacities(dvector& cpSpec) const
-{
-    thermo.getPartialMolarCp(&cpSpec[0]);
-}
-
 void CanteraGas::getSpecificHeatCapacities(dvec& cpSpec) const
 {
     thermo.getPartialMolarCp(cpSpec.data());
@@ -562,10 +512,6 @@ void CanteraGas::getSpecificHeatCapacities(double* cpSpec) const
     thermo.getPartialMolarCp(cpSpec);
 }
 
-void CanteraGas::getEnthalpies(dvector& hk) const
-{
-    thermo.getPartialMolarEnthalpies(&hk[0]);
-}
 
 void CanteraGas::getEnthalpies(dvec& hk) const
 {
@@ -575,11 +521,6 @@ void CanteraGas::getEnthalpies(dvec& hk) const
 void CanteraGas::getEnthalpies(double* hk) const
 {
     thermo.getPartialMolarEnthalpies(&hk[0]);
-}
-
-void CanteraGas::getReactionRates(dvector& wDot) const
-{
-    kinetics->getNetProductionRates(&wDot[0]);
 }
 
 void CanteraGas::getReactionRates(dvec& wDot) const
@@ -592,11 +533,6 @@ void CanteraGas::getReactionRates(double* wDot) const
     kinetics->getNetProductionRates(wDot);
 }
 
-void CanteraGas::getCreationRates(dvector& wDot) const
-{
-    kinetics->getCreationRates(&wDot[0]);
-}
-
 void CanteraGas::getCreationRates(dvec& wDot) const
 {
     kinetics->getCreationRates(wDot.data());
@@ -605,11 +541,6 @@ void CanteraGas::getCreationRates(dvec& wDot) const
 void CanteraGas::getCreationRates(double* wDot) const
 {
     kinetics->getCreationRates(wDot);
-}
-
-void CanteraGas::getDestructionRates(dvector& wDot) const
-{
-    kinetics->getDestructionRates(&wDot[0]);
 }
 
 void CanteraGas::getDestructionRates(dvec& wDot) const

@@ -170,8 +170,8 @@ int SourceSystemCVODE::denseJacobian(const realtype t, const sdVector& y, const 
     double TplusdT = T*(1+eps);
 
     double dwhdT = 0;
-    dvector dwdT(nSpec);
-    dvector wDot2(nSpec);
+    dvec dwdT(nSpec);
+    dvec wDot2(nSpec);
 
     reactionRatesTimer->start();
     gas->setStateMass(Y, TplusdT);
@@ -187,9 +187,9 @@ int SourceSystemCVODE::denseJacobian(const realtype t, const sdVector& y, const 
 
     // *** Derivatives with respect to species concentration
     dmatrix dwdY(nSpec, nSpec);
-    dvector hdwdY(nSpec, 0);
-    dvector YplusdY(nSpec);
-    dvector drhodY(nSpec);
+    dvec hdwdY = dvec::Zero(nSpec);
+    dvec YplusdY(nSpec);
+    dvec drhodY(nSpec);
 
     double scale = (quasi2d) ? 1.0/vzInterp_->get(x, t) : 1.0;
 

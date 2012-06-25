@@ -53,7 +53,6 @@ private:
 //! transport properties, and kinetic rates for a constant-pressure mixture.
 class CanteraGas
 {
-
 public:
     CanteraGas();
     ~CanteraGas();
@@ -67,30 +66,25 @@ public:
 
     //! Calculate the mole fractions of the reactant mixture from the
     //! compositions of the fuel and oxidizer mixtures and the equivalence ratio.
-    dvector calculateReactantMixture(const std::string& fuel,
-                                     const std::string& oxidizer,
-                                     double equivalenceRatio);
+    dvec calculateReactantMixture(const std::string& fuel,
+                                  const std::string& oxidizer,
+                                  double equivalenceRatio);
 
-    void setStateMass(const dvector& Y, const double T);
     void setStateMass(const dvec& Y, const double T);
     void setStateMass(const double* Y, const double T);
 
-    void setStateMole(const dvector& X, const double T);
     void setStateMole(const dvec& X, const double T);
     void setStateMole(const double* X, const double T);
 
-    void getMoleFractions(dvector& X) const;
     void getMoleFractions(dvec& X) const;
     void getMoleFractions(double* X) const;
 
-    void getMassFractions(dvector& Y) const;
     void getMassFractions(dvec& Y) const;
     void getMassFractions(double* Y) const;
 
     double getDensity() const;
     double getMixtureMolecularWeight() const;
 
-    void getMolecularWeights(dvector& W) const;
     void getMolecularWeights(dvec& W) const;
     void getMolecularWeights(double* W) const;
 
@@ -100,14 +94,12 @@ public:
     //! Get diffusion coefficients for calculating mass diffusion velocities
     //! with respect to mole fraction gradients.
     //! `v[k] = -D[k] / X[k] * grad(X[k])`
-    void getDiffusionCoefficientsMole(dvector& Dkm) const;
     void getDiffusionCoefficientsMole(dvec& Dkm) const;
     void getDiffusionCoefficientsMole(double* Dkm) const;
 
     //! Get product of density and diffusion coefficients for calculating
     //! diffusive mass fluxes with respect to mole fraction gradients.
     //! `j[k] = - rhoD[k] / X[k] * grad(X[k])`
-    void getWeightedDiffusionCoefficientsMole(dvector& rhoD) const;
     void getWeightedDiffusionCoefficientsMole(dvec& rhoD) const;
     void getWeightedDiffusionCoefficientsMole(double* rhoD) const;
 
@@ -115,33 +107,26 @@ public:
     //! diffusive mass fluxes with respect to mass fraction gradients.
     //! `j[k] = - rho * D[k] * grad(Y[k])`
     void getWeightedDiffusionCoefficientsMass(double* rhoD);
-    void getWeightedDiffusionCoefficientsMass(dvector& rhoD);
     void getWeightedDiffusionCoefficientsMass(dvec& rhoD);
 
     //! Get thermal diffusion coefficients.
     //! `j[k] = - Dt[k] / (T * Y[k]) * grad(T)`
-    void getThermalDiffusionCoefficients(dvector& Dkt) const;
     void getThermalDiffusionCoefficients(dvec& Dkt) const;
     void getThermalDiffusionCoefficients(double* Dkt) const;
 
     double getSpecificHeatCapacity() const;
-    void getSpecificHeatCapacities(dvector& cpSpec) const;
     void getSpecificHeatCapacities(dvec& cpSpec) const;
     void getSpecificHeatCapacities(double* cpSpec) const;
-    void getEnthalpies(dvector& hk) const;
     void getEnthalpies(dvec& hk) const;
     void getEnthalpies(double* hk) const;
 
     //! Get net molar reaction rates for each species
-    void getReactionRates(dvector& wDot) const;
     void getReactionRates(dvec& wDot) const;
     void getReactionRates(double* wDot) const;
 
-    void getCreationRates(dvector& wDot) const;
     void getCreationRates(dvec& wDot) const;
     void getCreationRates(double* wDot) const;
 
-    void getDestructionRates(dvector& wDot) const;
     void getDestructionRates(dvec& wDot) const;
     void getDestructionRates(double* wDot) const;
 
@@ -161,6 +146,6 @@ private:
     Cantera::GasTransport* transport;
 
     dmatrix Dbin; //!< binary diffusion coefficients for species k
-    dvector X; //!< mole fractions
-    dvector Y; //!< mass fractions
+    dvec X; //!< mole fractions
+    dvec Y; //!< mass fractions
 };

@@ -170,7 +170,7 @@ private:
     boost::ptr_vector<sundialsCVODE> speciesSolvers;
 
     dvec Yleft;
-    dvector W;
+    dvec W;
 
     size_t nSpec;
     size_t nVars;

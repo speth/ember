@@ -1298,7 +1298,7 @@ void FlameSolver::loadProfile(void)
         dvec YbSave = Y.col(grid.jb);
 
         if (options.overrideReactants) {
-            dvector reactants = gas.calculateReactantMixture(
+            dvec reactants = gas.calculateReactantMixture(
                 options.fuel, options.oxidizer, options.equivalenceRatio);
             gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
             gas.thermo.getMassFractions(&Y(0,grid.ju));
