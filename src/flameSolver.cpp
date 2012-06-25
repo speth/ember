@@ -29,17 +29,6 @@ void FlameSolver::setOptions(const configOptions& _options)
     tStart = options.tStart;
     tEnd = options.tEnd;
 
-    gases.resize(options.nThreads);
-
-    // Cantera has problems with the multithreaded initialization of objects.
-    std::vector<CanteraGas**> ptrs(options.nThreads);
-    for (int i=0; i<options.nThreads; i++) {
-        logFile.write(format("Intializing Cantera object %i/%i") %
-                      (i+1) % options.nThreads);
-        gases[i]->setOptions(options);
-        gases[i]->initialize();
-    }
-
     gas.setOptions(_options);
     grid.setOptions(_options);
 }
@@ -1473,7 +1462,12 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             logFile.write("Source term...", false);
         }
     }
-    CanteraGas** gasHandle = parent_->gases.acquire();
+    CanteraGas& gas = parent_->gases.local();
+    if (!gas.initialized()) {
+        tbb::mutex::scoped_lock lock(parent_->gasInitMutex);
+        gas.setOptions(parent_->options);
+        gas.initialize();
+    }
 
     int err = 0;
     for (size_t j=r.begin(); j<r.end(); j++) {
@@ -1481,7 +1475,7 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
         if (debugParameters::veryVerbose) {
             logFile.write(format("%i") % j, false);
         }
-        system.setGas(*gasHandle);
+        system.setGas(&gas);
         if (int(j) == parent_->options.debugSourcePoint &&
             t_ >= parent_->options.debugSourceTime) {
             system.setDebug(true);
@@ -1514,8 +1508,6 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             logFile.write(format(" [%s]...") % system.getStats(), false);
         }
     }
-
-    parent_->gases.release(gasHandle);
 }
 
 void DiffusionTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const

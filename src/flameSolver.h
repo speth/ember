@@ -6,6 +6,8 @@
 
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
+#include "tbb/enumerable_thread_specific.h"
+#include "tbb/mutex.h"
 
 #include "readConfig.h"
 #include "sundialsUtils.h"
@@ -19,7 +21,6 @@
 #include "convectionSystem.h"
 #include "strainFunction.h"
 #include "quasi2d.h"
-#include "threadUtils.h"
 
 using std::string;
 class SourceTermWrapper;
@@ -215,7 +216,8 @@ private:
 
     //! Cantera data
     CanteraGas gas;
-    ObjectPool<CanteraGas> gases;
+    tbb::enumerable_thread_specific<CanteraGas> gases;
+    tbb::mutex gasInitMutex;
 
     void rollVectorVector(vector<dvector>& vv, const dvec& u, const dvec& t, const dmatrix& y) const;
     void unrollVectorVector(vector<dvector>& vv, dvec& u, dvec& t, dmatrix& y, size_t i) const;
