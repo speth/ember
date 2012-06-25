@@ -14,11 +14,25 @@
 #include "mathUtils.h"
 #include "readConfig.h"
 
+//! Mixture-averaged transport properties based on major species composition.
+//! For a mixture containing N species, the standard formulas for computing the
+//! mixture-averaged viscosity and diffusion coefficients are \f$ O(N^2) \f$.
+//!
+//! Species present in small concentrations contribute very little to the
+//! mixture viscosity and the diffusion coefficients of other species, so they
+//! can be excluded from the formulas without introducing significant errors.
+//! If there are *M* species with mole fractions above the specified threshold,
+//! (*M* < *N*) then excluding the contribution of the minor species reduces
+//! the computational cost of evaluating the viscosity to \f$ O(M^2) \f$ and
+//! the cost of evaluating the *N* diffusion coefficients to \f$ O(M N) \f$.
 class ApproxMixTransport : public Cantera::MixTransport
 {
 public:
     ApproxMixTransport(Cantera::ThermoPhase& thermo,
                        Cantera::TransportFactory& factory);
+
+    //! Set the mole fraction threshold below which species are not included
+    //! in transport property calculations.
     void setThreshold(double threshold);
 
     double viscosity();
@@ -32,20 +46,20 @@ private:
     void update_C();
 
     double _threshold;
-    vector<size_t> _kMajor; // indices of the species where X[k] >= threshold
+    vector<size_t> _kMajor; //!< indices of the species where X[k] >= threshold
 };
 
+//! A set of Cantera objects needed for calculating thermodynamic properties,
+//! transport properties, and kinetic rates for a constant-pressure mixture.
 class CanteraGas
 {
-    // This class groups together a set of Cantera objects needed for calculating
-    // thermodynamic properties, transport properties, and kinetic rates
 
 public:
     CanteraGas();
     ~CanteraGas();
 
-    double pressure; // thermodynamic pressure
-    size_t nSpec; // number of species
+    double pressure; //!< thermodynamic pressure [Pa]
+    size_t nSpec; //!< number of species
 
     void setOptions(const configOptions& options);
     void initialize();
@@ -83,19 +97,29 @@ public:
     double getViscosity() const;
     double getThermalConductivity() const;
 
-    // Diffusion coefficients for calculating v[k] = -D[k] / X[k] * grad(X[k])
+    //! Get diffusion coefficients for calculating mass diffusion velocities
+    //! with respect to mole fraction gradients.
+    //! `v[k] = -D[k] / X[k] * grad(X[k])`
     void getDiffusionCoefficientsMole(dvector& Dkm) const;
     void getDiffusionCoefficientsMole(dvec& Dkm) const;
     void getDiffusionCoefficientsMole(double* Dkm) const;
+
+    //! Get product of density and diffusion coefficients for calculating
+    //! diffusive mass fluxes with respect to mole fraction gradients.
+    //! `j[k] = - rhoD[k] / X[k] * grad(X[k])`
     void getWeightedDiffusionCoefficientsMole(dvector& rhoD) const;
     void getWeightedDiffusionCoefficientsMole(dvec& rhoD) const;
     void getWeightedDiffusionCoefficientsMole(double* rhoD) const;
 
-    // Diffusion coefficients for calculating j[k] = - rho * D[k] * grad(Y[k])
+    //! Get product of density and diffusion coefficients for calculating
+    //! diffusive mass fluxes with respect to mass fraction gradients.
+    //! `j[k] = - rho * D[k] * grad(Y[k])`
     void getWeightedDiffusionCoefficientsMass(double* rhoD);
     void getWeightedDiffusionCoefficientsMass(dvector& rhoD);
     void getWeightedDiffusionCoefficientsMass(dvec& rhoD);
 
+    //! Get thermal diffusion coefficients.
+    //! `j[k] = - Dt[k] / (T * Y[k]) * grad(T)`
     void getThermalDiffusionCoefficients(dvector& Dkt) const;
     void getThermalDiffusionCoefficients(dvec& Dkt) const;
     void getThermalDiffusionCoefficients(double* Dkt) const;
@@ -108,6 +132,7 @@ public:
     void getEnthalpies(dvec& hk) const;
     void getEnthalpies(double* hk) const;
 
+    //! Get net molar reaction rates for each species
     void getReactionRates(dvector& wDot) const;
     void getReactionRates(dvec& wDot) const;
     void getReactionRates(double* wDot) const;
@@ -115,6 +140,7 @@ public:
     void getCreationRates(dvector& wDot) const;
     void getCreationRates(dvec& wDot) const;
     void getCreationRates(double* wDot) const;
+
     void getDestructionRates(dvector& wDot) const;
     void getDestructionRates(dvec& wDot) const;
     void getDestructionRates(double* wDot) const;
@@ -134,8 +160,7 @@ private:
     Cantera::GasKinetics* kinetics;
     Cantera::GasTransport* transport;
 
-    dmatrix Dbin; // binary diffusion coefficients for species k
-    dvector X; // mole fractions
-    dvector Y; // mass fractions
-    vector<size_t> kMajor; // indices of species with mole fractions above some threshold
+    dmatrix Dbin; //!< binary diffusion coefficients for species k
+    dvector X; //!< mole fractions
+    dvector Y; //!< mass fractions
 };
