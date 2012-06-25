@@ -8,8 +8,13 @@
 #include "perfTimer.h"
 #include "quasi2d.h"
 
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
+
+class ConvectionTermWrapper;
 
 class ConvectionSystemUTW : public sdODE, public GridBased
 {
@@ -178,4 +183,15 @@ private:
     CanteraGas* gas;
 
     bool quasi2d;
+    friend class ConvectionTermWrapper;
+};
+
+class ConvectionTermWrapper {
+public:
+    ConvectionTermWrapper(ConvectionSystemSplit* parent, double t)
+        : parent_(parent), t_(t) {}
+    void operator()(const tbb::blocked_range<size_t>& r) const;
+private:
+    ConvectionSystemSplit* parent_;
+    double t_;
 };

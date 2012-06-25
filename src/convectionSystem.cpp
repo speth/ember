@@ -608,16 +608,8 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
         utwTimer.stop();
     }
 
-    speciesTimer.start();
-    if (debugParameters::veryVerbose) {
-        logFile.write("Yk...", false);
-    }
-    // Integrate the species systems
-    for (size_t k=0; k<nSpec; k++) {
-        speciesSystems[k].vInterp = vInterp;
-        speciesSolvers[k].integrateToTime(tf);
-    }
-    speciesTimer.stop();
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, nSpec, 1),
+                      ConvectionTermWrapper(this, tf));
 }
 
 int ConvectionSystemSplit::getNumSteps()
@@ -668,4 +660,18 @@ void ConvectionSystemSplit::configureSolver(sundialsCVODE& solver, const size_t 
     speciesSystems[k].resize(nPoints);
     speciesSystems[k].Yleft = Yleft[k];
     speciesSystems[k].k = k;
+}
+
+void ConvectionTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
+{
+    parent_->speciesTimer.start();
+    if (debugParameters::veryVerbose) {
+        logFile.write("Yk...", false);
+    }
+    // Integrate the species systems
+    for (size_t k=r.begin(); k<r.end(); k++) {
+        parent_->speciesSystems[k].vInterp = parent_->vInterp;
+        parent_->speciesSolvers[k].integrateToTime(t_);
+    }
+    parent_->speciesTimer.stop();
 }
