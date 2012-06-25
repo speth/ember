@@ -4,8 +4,6 @@
 #include "dataFile.h"
 #include "mathUtils.h"
 
-#include "tbb/task_scheduler_init.h"
-
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/python.hpp>
@@ -14,11 +12,13 @@
 
 FlameSolver::FlameSolver()
     : jCorrSolver(jCorrSystem)
+    , tbbTaskSched(tbb::task_scheduler_init::deferred)
 {
 }
 
 FlameSolver::FlameSolver(const boost::python::api::object& config)
     : jCorrSolver(jCorrSystem)
+    , tbbTaskSched(tbb::task_scheduler_init::deferred)
 {
     setOptions(configOptions(config));
 }
@@ -36,7 +36,7 @@ void FlameSolver::setOptions(const configOptions& _options)
 void FlameSolver::initialize(void)
 {
     try {
-        tbb::task_scheduler_init tbbTaskSched(options.nThreads);
+        tbbTaskSched.initialize (options.nThreads);
         strainfunc.setOptions(options);
 
         flamePosIntegralError = 0;

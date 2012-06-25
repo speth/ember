@@ -8,6 +8,7 @@
 #include "tbb/blocked_range.h"
 #include "tbb/enumerable_thread_specific.h"
 #include "tbb/mutex.h"
+#include "tbb/task_scheduler_init.h"
 
 #include "readConfig.h"
 #include "sundialsUtils.h"
@@ -216,8 +217,10 @@ private:
 
     //! Cantera data
     CanteraGas gas;
+
     tbb::enumerable_thread_specific<CanteraGas> gases;
     tbb::mutex gasInitMutex;
+    tbb::task_scheduler_init tbbTaskSched;
 
     void rollVectorVector(vector<dvector>& vv, const dvec& u, const dvec& t, const dmatrix& y) const;
     void unrollVectorVector(vector<dvector>& vv, dvec& u, dvec& t, dmatrix& y, size_t i) const;
