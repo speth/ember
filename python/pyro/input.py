@@ -169,6 +169,15 @@ class Options(object):
 
         return ans
 
+    def __iter__(self):
+        for name,opt in self.__dict__.iteritems():
+            if isinstance(opt, Option):
+                yield name,opt
+
+        for name,opt in self.__class__.__dict__.iteritems():
+            if isinstance(opt, Option):
+                yield name,opt
+
 
 class Paths(Options):
     """ Directories for input and output files """
@@ -713,13 +722,17 @@ class Config(object):
             not self.initialCondition.haveProfiles):
             self.generateInitialCondition()
 
-    def stringify(self):
-        ans = []
+    def __iter__(self):
         for item in self.__dict__.itervalues():
             if isinstance(item, Options):
-                text = '\n'.join(item._stringify(4))
-                if text:
-                    ans.append(text)
+                yield item
+
+    def stringify(self):
+        ans = []
+        for item in self:
+            text = '\n'.join(item._stringify(4))
+            if text:
+                ans.append(text)
 
         return 'conf = Config(\n' + ',\n'.join(ans) + ')\n'
 
