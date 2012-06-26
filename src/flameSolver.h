@@ -104,7 +104,6 @@ public:
     double tRegrid; //!< time of next regridding
     double tProfile; //!< time of next profile output
 
-private:
     boost::ptr_vector<SourceSystem> sourceTerms; // One for each grid point
     vector<bool> useCVODE; // At each grid point, a flag for which integrator to use
 

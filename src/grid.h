@@ -98,9 +98,10 @@ public:
 
     virtual void setGrid(const oneDimGrid& grid);
 
-protected:
     // the grid:
     oneDimGrid grid;
+
+protected:
 
     // local names for some things that are part of the grid:
     dvec& x;

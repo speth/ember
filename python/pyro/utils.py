@@ -235,6 +235,7 @@ def run(conf):
     while not done:
         done = solver.step()
     solver.finalize()
+    return solver
 
 
 def multirun(conf):
