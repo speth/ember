@@ -86,7 +86,8 @@ else:
 python = ['python%s' % get_config_var('VERSION')]
 lastlibs = ['tbb'] + python + hdf5 + env['blas_lapack'].split(',')
 
-env.Append(CPPPATH=[env['cantera']+'/include',
+env.Append(CPPPATH=['ext/boost.numpy/include',
+                    env['cantera']+'/include',
                     env['sundials']+'/include',
                     env['eigen'],
                     env['boost']+'/include',
@@ -157,6 +158,8 @@ common = Glob('build/core/*.cpp')
 
 # The Python module
 pyenv = env.Clone()
+pyenv.Append(LIBS=['boost-numpy'],
+             LIBPATH=['lib'])
 
 pylib = pyenv.SharedLibrary('python/pyro/_pyro',
                             common + Glob('build/python/*.cpp'),
