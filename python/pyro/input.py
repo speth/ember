@@ -47,6 +47,7 @@ class Option(object):
     classes: :class:`StringOption`, :class:`BoolOption`, :class:`IntegerOption`,
     :class:`FloatOption`.
     """
+    counter = [0] # used to preserve options in the order they are defined
     def __init__(self, default, choices=None, min=None, max=None, nullable=False):
         self.value = default
         self.default = default
@@ -60,6 +61,8 @@ class Option(object):
         self.max = max
         self.isSet = False
         self.nullable = nullable or self.default is None
+        self.sortValue = self.counter[0]
+        self.counter[0] += 1
 
     def validate(self):
         if self.choices and self.value not in self.choices:
@@ -170,13 +173,10 @@ class Options(object):
         return ans
 
     def __iter__(self):
-        for name,opt in self.__dict__.iteritems():
-            if isinstance(opt, Option):
-                yield name,opt
-
-        for name,opt in self.__class__.__dict__.iteritems():
-            if isinstance(opt, Option):
-                yield name,opt
+        allOpts = self.__dict__.items() + self.__class__.__dict__.items()
+        allOpts = [item for item in allOpts if isinstance(item[1], Option)]
+        allOpts.sort(key=lambda item: item[1].sortValue)
+        return allOpts.__iter__()
 
 
 class Paths(Options):
