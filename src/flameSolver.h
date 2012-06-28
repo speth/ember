@@ -99,6 +99,7 @@ public:
     int nProfile; //!< number of time steps since saving flame profiles
     int nTerminate; //!< number of steps since last checking termination condition
     int nCurrentState; //!< number of time steps since profNow.h5 and out.h5 were written
+    double terminationCondition; //!< Current value to be compared with terminationTolerance
 
     double tOutput; //!< time of next integral flame parameters output (this step)
     double tRegrid; //!< time of next regridding

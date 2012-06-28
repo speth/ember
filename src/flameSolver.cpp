@@ -3,6 +3,7 @@
 #include "perfTimer.h"
 #include "dataFile.h"
 #include "mathUtils.h"
+#include "gilReleaser.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
@@ -40,6 +41,7 @@ void FlameSolver::initialize(void)
         strainfunc.setOptions(options);
 
         flamePosIntegralError = 0;
+        terminationCondition = 1e10;
 
         // Cantera initialization
         gas.initialize();
@@ -164,6 +166,7 @@ void FlameSolver::initialize(void)
 
 int FlameSolver::step(void)
 {
+    GILReleaser gil;
     try {
         return step_internal();
     }
@@ -383,6 +386,7 @@ int FlameSolver::step_internal()
 
             // Allocate the solvers and arrays for auxiliary variables
             resizeAuxiliary();
+            calculateQdot();
 
             if (debugParameters::debugAdapt || debugParameters::debugRegrid) {
                 writeStateFile("postAdapt", false, false);
@@ -432,6 +436,7 @@ bool FlameSolver::checkTerminationCondition(void)
             hrrError += pow(heatReleaseRate[j]-qMean, 2);
         }
         hrrError = sqrt(hrrError) / (j2-j1+1);
+        terminationCondition = hrrError / abs(qMean);
 
         logFile.write(format(
             "Heat release rate RMS error = %6.3f%%. absolute error: %9.4e") %

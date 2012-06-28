@@ -835,7 +835,8 @@ class Config(object):
         velocity using the specified fuel and oxidizer compositions and flame
         configuration parameters.
         """
-        gas = Cantera.IdealGasMix(self.chemistry.mechanismFile,
+        gas = Cantera.IdealGasMix(os.path.join(self.paths.inputDir,
+                                               self.chemistry.mechanismFile),
                                   self.chemistry.phaseID)
 
         IC = self.initialCondition
