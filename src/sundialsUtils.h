@@ -29,8 +29,16 @@ public:
     sdVector(const sdVector& other);
     ~sdVector();
 
-    realtype& operator[](unsigned int i);
-    realtype& operator[](unsigned int i) const;
+    realtype& operator[](unsigned int i)
+    {
+        return NV_Ith_S(v,i);
+    }
+
+    realtype& operator[](unsigned int i) const
+    {
+        return NV_Ith_S(v,i);
+    }
+
     N_Vector& forSundials() { return v; }
     unsigned int length() const { return n; }
     size_t size() const { return n; }
@@ -51,8 +59,16 @@ public:
     sdMatrix(DenseMat other);
     sdMatrix();
     ~sdMatrix();
-    realtype& operator()(unsigned int i, unsigned int j);
-    realtype& operator()(unsigned int i, unsigned int j) const;
+    realtype& operator()(unsigned int i, unsigned int j)
+    {
+        return DENSE_ELEM(M,i,j);
+    }
+
+    realtype& operator()(unsigned int i, unsigned int j) const
+    {
+        return DENSE_ELEM(M,i,j);
+    }
+
     realtype* forSundials() { return M->data; }
 
 private:
@@ -67,8 +83,16 @@ public:
     sdBandMatrix(BandMat other);
     sdBandMatrix();
     ~sdBandMatrix();
-    realtype& operator()(long int i, long int j);
-    realtype& operator()(long int i, long int j) const;
+    realtype& operator()(long int i, long int j)
+    {
+        return BAND_ELEM(M,i,j);
+    }
+
+    realtype& operator()(long int i, long int j) const
+    {
+        return BAND_ELEM(M,i,j);
+    }
+
     BandMat& forSundials() { return M; }
 
     void print(const std::string& name="M") const;

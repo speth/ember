@@ -303,16 +303,6 @@ sdVector::~sdVector()
     }
 }
 
-realtype& sdVector::operator[] (unsigned int i)
-{
-    return NV_Ith_S(v,i);
-}
-
-realtype& sdVector::operator[] (unsigned int i) const
-{
-    return NV_Ith_S(v,i);
-}
-
 std::ostream& operator<<(std::ostream& os, const sdVector& v)
 {
     for (unsigned int i=0; i<(v.length()-1); i++) {
@@ -346,16 +336,6 @@ sdMatrix::~sdMatrix() {
     }
 }
 
-realtype& sdMatrix::operator() (unsigned int i, unsigned int j)
-{
-    return DENSE_ELEM(M,i,j);
-}
-
-realtype& sdMatrix::operator() (unsigned int i, unsigned int j) const
-{
-    return DENSE_ELEM(M,i,j);
-}
-
 // Band Matrix
 
 sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower)
@@ -380,16 +360,6 @@ sdBandMatrix::~sdBandMatrix() {
     if (alloc) {
         DestroyMat(M);
     }
-}
-
-realtype& sdBandMatrix::operator() (long int i, long int j)
-{
-    return BAND_ELEM(M,i,j);
-}
-
-realtype& sdBandMatrix::operator() (long int i, long int j) const
-{
-    return BAND_ELEM(M,i,j);
 }
 
 void sdBandMatrix::print(const std::string& name) const
