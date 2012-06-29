@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 
 import sys
+import os
 import threading
+import time
+import types
 import numpy as np
 from PySide import QtGui, QtCore
 import utils
 import input
 import pyro
-import time
 
 import matplotlib
 matplotlib.rcParams['backend.qt4'] = 'PySide'
@@ -356,18 +358,41 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle('Simple')
 
         fileMenu = self.menuBar().addMenu('&File')
-        a = QtGui.QAction('&New', self)
-        a.triggered.connect(lambda: self.newConf())
-        fileMenu.addAction(a)
+        def addToFileMenu(name, triggerFunc):
+            a = QtGui.QAction(name, self)
+            a.triggered.connect(triggerFunc)
+            fileMenu.addAction(a)
 
-        a = QtGui.QAction('&Quit', self)
-        a.triggered.connect(self.close)
-        fileMenu.addAction(a)
+        addToFileMenu('&New', lambda: self.new())
+        addToFileMenu('&Open...', lambda: self.openConf())
+        addToFileMenu('&Save', lambda: self.saveConf(True))
+        addToFileMenu('&Save as...', lambda: self.saveConf(False))
+        addToFileMenu('&Quit', self.close)
 
-        self.new()
+        self.confFileName = None
+        if len(args) == 2:
+            self.new(args[1])
+        else:
+            self.new()
 
-    def new(self):
-        self.conf = input.Config(input.Paths(logFile='gui-runlog.txt'))
+    def new(self, conf=None):
+        if conf is None:
+            self.conf = input.Config(input.Paths(logFile='gui-runlog.txt'))
+        elif isinstance(conf, input.Config):
+            self.conf = conf
+        elif isinstance(conf, types.StringTypes):
+            if not os.path.exists(conf):
+                print "Can't find input file '%s'" % conf
+                return
+            localenv = {}
+            execstatements = ['from numpy import *',
+                              'import numpy as np',
+                              'from input import *']
+
+            execstatements.extend(open(conf).readlines())
+            exec '\n'.join(execstatements) in localenv
+            self.conf = localenv['conf']
+            self.confFileName = conf
 
         self.tabWidget = QtGui.QTabWidget()
         self.setCentralWidget(self.tabWidget)
@@ -379,10 +404,56 @@ class MainWindow(QtGui.QMainWindow):
         self.tabWidget.addTab(self.runWidget, 'Run')
         self.tabWidget.addTab(QtGui.QWidget(), 'Analyze') #TODO: unimplemented
 
+    def openConf(self):
+        fileinfo = QtGui.QFileDialog.getOpenFileName(
+            self, 'Select Configuration', '.', 'Flame Configurations (*.py *.conf)')
+
+        # Dealing with an incompatibility between PySide and PyQt
+        filename = str(fileinfo[0] if isinstance(fileinfo, tuple) else fileinfo)
+
+        if os.path.exists(filename):
+            self.new(filename)
+
+    def saveConf(self, useExisting):
+        if not useExisting or self.confFileName is None:
+            fileinfo = QtGui.QFileDialog.getOpenFileName(
+                        self, 'Select Configuration', '.', 'Flame Configurations (*.py *.conf)')
+
+            # Dealing with an incompatibility between PySide and PyQt
+            filename = str(fileinfo[0] if isinstance(fileinfo, tuple) else fileinfo)
+
+            if not filename:
+                return
+
+            if not filename.endswith('.py') and not filename.endswith('.conf'):
+                filename += '.py'
+
+            # Confirm before overwriting an existing file
+            if os.path.exists(filename) and not useExisting:
+                dlg = QtGui.QMessageBox(self.parent())
+                dlg.setText("A file named '%s' already exists." % filename)
+                dlg.setInformativeText("Do you wish to overwrite it?")
+                dlg.setStandardButtons(dlg.Yes | dlg.No)
+                dlg.setDefaultButton(dlg.Yes)
+
+                ret = dlg.exec_()
+                if ret == dlg.No:
+                    self.saveConf(False)
+                    return
+                elif ret != dlg.Yes:
+                    print 'unknown return value:', ret
+
+            self.confFileName = filename
+        else:
+            filename = self.confFileName
+
+        outFile = open(filename, 'w')
+        outFile.write(self.conf.stringify())
+
 
 def main():
     app = QtGui.QApplication(sys.argv)
-    window = MainWindow()
+    window = MainWindow(*sys.argv)
     window.show()
 
     sys.exit(app.exec_())
