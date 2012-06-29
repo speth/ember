@@ -19,6 +19,7 @@ import types
 import Cantera
 import numpy as np
 import utils
+import copy
 
 class Option(object):
     """
@@ -126,6 +127,12 @@ class FloatOption(Option):
 class Options(object):
     """ Base class for elements of :class:`.Config` """
     def __init__(self, **kwargs):
+        # Copy the defaults from the class's dictionary
+        for name,value in self.__class__.__dict__.iteritems():
+            if isinstance(value, Option):
+                setattr(self, name, copy.deepcopy(value))
+
+        # Apply the options specified in kwargs
         for key,value in kwargs.iteritems():
             if hasattr(self, key):
                 opt = getattr(self, key)
@@ -173,8 +180,8 @@ class Options(object):
         return ans
 
     def __iter__(self):
-        allOpts = self.__dict__.items() + self.__class__.__dict__.items()
-        allOpts = [item for item in allOpts if isinstance(item[1], Option)]
+        allOpts = [item for item in self.__dict__.items()
+                   if isinstance(item[1], Option)]
         allOpts.sort(key=lambda item: item[1].sortValue)
         return allOpts.__iter__()
 
