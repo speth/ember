@@ -89,7 +89,7 @@ class StringOptionWidget(OptionWidget):
         self.text.textChanged.connect(self.updateOpt)
 
     def updateOpt(self):
-        self.opt.value = self.text.text()
+        self.opt.value = str(self.text.text())
         self.checkDefault()
 
 
@@ -103,6 +103,15 @@ class NumericOptionWidget(OptionWidget):
     def updateOpt(self):
         try:
             self.opt.value = float(self.text.text())
+        except ValueError:
+            pass
+        self.checkDefault()
+
+
+class IntegerOptionWidget(NumericOptionWidget):
+    def updateOpt(self):
+        try:
+            self.opt.value = int(self.text.text())
         except ValueError:
             pass
         self.checkDefault()
@@ -169,7 +178,9 @@ class OptionsWidget(QtGui.QGroupBox):
                 w = EnumOptionWidget(label, opt)
             elif isinstance(opt, input.StringOption):
                 w = StringOptionWidget(label, opt)
-            elif isinstance(opt, (input.FloatOption, input.IntegerOption)):
+            elif isinstance(opt, input.IntegerOption):
+                w = IntegerOptionWidget(label, opt)
+            elif isinstance(opt, input.FloatOption):
                 w = NumericOptionWidget(label, opt)
             elif isinstance(opt, input.BoolOption):
                 w = BoolOptionWidget(label, opt)
