@@ -38,7 +38,7 @@ class SolverThread(threading.Thread):
             i += 1
             with self.solver.lock:
                 done = self.solver.step()
-            time.sleep(1e-4)
+            time.sleep(1e-3)
             if not i % 5:
                 self.updateProgress()
             if done:
@@ -222,7 +222,7 @@ class MultiOptionsWidget(QtGui.QWidget):
         self.optionsList.setCurrentRow(0)
         self.setActiveWidget(self.optionsList.currentItem())
         self.setMinimumHeight(height)
-        width = self.optionsList.sizeHintForColumn(0) + 5
+        width = self.optionsList.sizeHintForColumn(0) + 10
         self.optionsList.setMinimumWidth(width)
         self.optionsList.setMaximumWidth(width)
         self.optionsList.currentItemChanged.connect(self.setActiveWidget)
@@ -271,11 +271,17 @@ class SolverWidget(QtGui.QWidget):
         self.layout().addWidget(self.graphContainer)
 
         self.fig = Figure(figsize=(600,400), dpi=72)
+        self.fig.subplots_adjust(0.09, 0.08, 0.93, 0.96, wspace=0.3)
         self.ax1 = self.fig.add_subplot(1,2,1)
+        self.ax1.set_xlabel('time [ms]')
+        self.ax1.set_ylabel('Consumption Speed, $S_c$ [cm/s]')
         self.Sc_timeseries = self.ax1.plot([0],[0], lw=2)[0]
 
         self.ax2a = self.fig.add_subplot(1,2,2)
         self.ax2b = self.ax2a.twinx()
+        self.ax2a.set_xlabel('flame coordinate [mm]')
+        self.ax2a.set_ylabel('Temperature [K]')
+        self.ax2b.set_ylabel('Heat Release Rate [MW/m$^2$]')
 
         self.T_profile = self.ax2a.plot([0],[0], 'b', lw=2)[0]
         self.hrr_profile = self.ax2b.plot([0],[0], 'r', lw=2)[0]
@@ -290,7 +296,7 @@ class SolverWidget(QtGui.QWidget):
         self.solver = None
         self.solverThread = None
         self.updateTimer = QtCore.QTimer()
-        self.updateTimer.setInterval(0.2)
+        self.updateTimer.setInterval(0.5)
         self.updateTimer.timeout.connect(self.updateStatus)
 
     def run(self):
@@ -335,12 +341,14 @@ class SolverWidget(QtGui.QWidget):
 
         self.progressBar.setValue(1000 * self.solver.progress)
         with self.solver.lock:
-            self.Sc_timeseries.set_data(self.solver.timeVector,
-                                        self.solver.consumptionSpeed)
-            self.T_profile.set_data(self.solver.grid.x,
+            t = np.array(self.solver.timeVector)
+            Sc = np.array(self.solver.consumptionSpeed)
+
+            self.T_profile.set_data(self.solver.grid.x * 1000,
                                     self.solver.T)
-            self.hrr_profile.set_data(self.solver.grid.x,
-                                      self.solver.qDot)
+            self.hrr_profile.set_data(self.solver.grid.x * 1000,
+                                      self.solver.qDot / 1e6)
+        self.Sc_timeseries.set_data(1000 * t, Sc * 100)
 
         for ax in (self.ax1, self.ax2a, self.ax2b):
             ax.relim()
@@ -453,6 +461,7 @@ class MainWindow(QtGui.QMainWindow):
 
 def main():
     app = QtGui.QApplication(sys.argv)
+    app.setStyle("Plastique")
     window = MainWindow(*sys.argv)
     window.show()
 
