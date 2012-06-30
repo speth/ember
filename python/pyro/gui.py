@@ -416,7 +416,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def saveConf(self, useExisting):
         if not useExisting or self.confFileName is None:
-            fileinfo = QtGui.QFileDialog.getOpenFileName(
+            fileinfo = QtGui.QFileDialog.getSaveFileName(
                         self, 'Select Configuration', '.', 'Flame Configurations (*.py *.conf)')
 
             # Dealing with an incompatibility between PySide and PyQt
