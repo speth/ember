@@ -1,6 +1,7 @@
 import os
 import platform
 from distutils.sysconfig import get_config_var
+import numpy as np
 
 VariantDir('build/core','src', duplicate=0)
 VariantDir('build/test','test', duplicate=0)
@@ -93,7 +94,8 @@ env.Append(CPPPATH=['ext/boost.numpy/include',
                     env['boost']+'/include',
                     env['hdf5']+'/include',
                     env['tbb']+'/include',
-                    get_config_var('INCLUDEPY')],
+                    get_config_var('INCLUDEPY'),
+                    np.get_include()],
            LIBPATH=[env['cantera']+'/lib',
                     env['sundials']+'/lib',
                     env['boost']+'/lib',

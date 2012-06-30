@@ -1,15 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <boost/ptr_container/ptr_vector.hpp>
-#include <boost/shared_ptr.hpp>
-
-#include "tbb/parallel_for.h"
-#include "tbb/blocked_range.h"
-#include "tbb/enumerable_thread_specific.h"
-#include "tbb/mutex.h"
-#include "tbb/task_scheduler_init.h"
-
 #include "readConfig.h"
 #include "sundialsUtils.h"
 #include "chemistry0d.h"
@@ -22,6 +12,16 @@
 #include "convectionSystem.h"
 #include "strainFunction.h"
 #include "quasi2d.h"
+
+#include <iostream>
+#include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/shared_ptr.hpp>
+
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+#include "tbb/enumerable_thread_specific.h"
+#include "tbb/mutex.h"
+#include "tbb/task_scheduler_init.h"
 
 using std::string;
 class SourceTermWrapper;
