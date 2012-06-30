@@ -76,11 +76,12 @@ class OptionWidget(QtGui.QWidget):
         self.setLayout(QtGui.QHBoxLayout())
         self.layout().setContentsMargins(0,0,0,0)
 
-    def checkDefault(self):
+    def updateOpt(self):
         if self.opt.value != self.opt.default:
             self.label.setText('<i>%s</i>' %  self.optName)
         else:
             self.label.setText('%s' %  self.optName)
+        self.parent().parent().updateVisibility()
 
 
 class StringOptionWidget(OptionWidget):
@@ -92,7 +93,7 @@ class StringOptionWidget(OptionWidget):
 
     def updateOpt(self):
         self.opt.value = str(self.text.text())
-        self.checkDefault()
+        OptionWidget.updateOpt(self)
 
 
 class NumericOptionWidget(OptionWidget):
@@ -107,7 +108,7 @@ class NumericOptionWidget(OptionWidget):
             self.opt.value = float(self.text.text())
         except ValueError:
             pass
-        self.checkDefault()
+        OptionWidget.updateOpt(self)
 
 
 class IntegerOptionWidget(NumericOptionWidget):
@@ -116,7 +117,7 @@ class IntegerOptionWidget(NumericOptionWidget):
             self.opt.value = int(self.text.text())
         except ValueError:
             pass
-        self.checkDefault()
+        OptionWidget.updateOpt(self)
 
 
 class BoolOptionWidget(OptionWidget):
@@ -125,19 +126,36 @@ class BoolOptionWidget(OptionWidget):
 
         self.trueWidget = QtGui.QRadioButton('True')
         self.falseWidget = QtGui.QRadioButton('False')
+        self.noneWidget = QtGui.QRadioButton('None')
         if opt.value:
             self.trueWidget.toggle()
         else:
             self.falseWidget.toggle()
         self.layout().addWidget(self.trueWidget)
         self.layout().addWidget(self.falseWidget)
+        self.layout().addWidget(self.noneWidget)
+        self.noneWidget.hide()
 
-        self.trueWidget.toggled.connect(self.updateOpt)
+        self.trueWidget.released.connect(self.updateOpt)
+        self.falseWidget.released.connect(self.updateOpt)
         self.layout().addStretch(1)
+
+        self._savedValue = None
 
     def updateOpt(self):
         self.opt.value = self.trueWidget.isChecked()
-        self.checkDefault()
+        OptionWidget.updateOpt(self)
+
+    def setEnabled(self, tf):
+        if tf and not self.isEnabled() and self._savedValue is not None:
+            self.trueWidget.setChecked(self._savedValue)
+            self.falseWidget.setChecked(not self._savedValue)
+            self._savedValue = None
+        elif not tf and self.isEnabled() and self._savedValue is None:
+            self._savedValue = self.trueWidget.isChecked()
+            self.noneWidget.setChecked(True)
+
+        OptionWidget.setEnabled(self, tf)
 
 
 class EnumOptionWidget(OptionWidget):
@@ -159,7 +177,7 @@ class EnumOptionWidget(OptionWidget):
 
     def updateOpt(self):
         self.opt.value = self.items[self.combo.currentIndex()]
-        self.checkDefault()
+        OptionWidget.updateOpt(self)
 
 
 class OptionsWidget(QtGui.QGroupBox):
@@ -169,10 +187,15 @@ class OptionsWidget(QtGui.QGroupBox):
         self.setLayout(QtGui.QGridLayout())
         self.layout().setSpacing(0)
         self.setTitle(self.opts.__class__.__name__)
+        self.optionWidgets = []
 
         width = 0
         for i,(name,opt) in enumerate(self.opts):
-            label = QtGui.QLabel(name)
+            if opt.label:
+                label = QtGui.QLabel(opt.label)
+                label.setToolTip('<tt>%s</tt>' % name)
+            else:
+                label = QtGui.QLabel(name)
             self.layout().addWidget(label, i, 0)
             width = max(label.sizeHint().width(), width)
 
@@ -188,14 +211,34 @@ class OptionsWidget(QtGui.QGroupBox):
                 w = BoolOptionWidget(label, opt)
             else:
                 w = QtGui.QLabel(str(opt.value))
+                w.opt = opt
 
             self.layout().addWidget(w, i, 1)
+            self.optionWidgets.append((label,w))
 
         self.layout().setVerticalSpacing(4)
         self.layout().setColumnMinimumWidth(0, width + 5)
         spacer = QtGui.QSpacerItem(1, 1000, QtGui.QSizePolicy.Minimum,
                                    QtGui.QSizePolicy.Maximum)
         self.layout().addItem(spacer, i+1, 0)
+
+    def updateVisibility(self, level, conf):
+        anyVisible = False
+        anyEnabled = False
+        for label,w in self.optionWidgets:
+            if w.opt.level > level:
+                w.hide()
+                label.hide()
+            else:
+                anyVisible = True
+                w.show()
+                label.show()
+                e = w.opt.shouldBeEnabled(conf)
+                w.setEnabled(e)
+                label.setEnabled(e)
+                if e:
+                    anyEnabled = True
+        return anyVisible, anyEnabled
 
 
 class MultiOptionsWidget(QtGui.QWidget):
@@ -208,12 +251,15 @@ class MultiOptionsWidget(QtGui.QWidget):
         self.optionsList.setSpacing(1)
         self.layout().addWidget(self.optionsList)
         self.activeOptionWidget = None
+        self.optionWidgets = []
+        self.level = 0
 
         height = 0
         for item in self.conf:
             listitem = QtGui.QListWidgetItem(item.__class__.__name__)
             self.optionsList.addItem(listitem)
             w = OptionsWidget(item)
+            self.optionWidgets.append((listitem,w))
             height = max(height, w.minimumSizeHint().height())
             listitem.widget = w
             self.layout().addWidget(w)
@@ -235,6 +281,14 @@ class MultiOptionsWidget(QtGui.QWidget):
 
         self.activeOptionWidget = listitem.widget
         self.activeOptionWidget.show()
+
+    def updateVisibility(self, level=None):
+        if level is not None:
+            self.level = level
+        for listitem, w in self.optionWidgets:
+            visible, enabled = w.updateVisibility(self.level, self.conf)
+            listitem.setHidden(not visible or not enabled)
+
 
 class SolverWidget(QtGui.QWidget):
     """ Widget used to run and monitor the Pyro solver """
@@ -366,22 +420,42 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle('Simple')
 
         fileMenu = self.menuBar().addMenu('&File')
-        def addToFileMenu(name, triggerFunc):
-            a = QtGui.QAction(name, self)
-            a.triggered.connect(triggerFunc)
-            fileMenu.addAction(a)
+        optMenu = self.menuBar().addMenu('&Options')
 
-        addToFileMenu('&New', lambda: self.new())
-        addToFileMenu('&Open...', lambda: self.openConf())
-        addToFileMenu('&Save', lambda: self.saveConf(True))
-        addToFileMenu('&Save as...', lambda: self.saveConf(False))
-        addToFileMenu('&Quit', self.close)
+        self.addToMenu(fileMenu, '&New', lambda: self.new())
+        self.addToMenu(fileMenu, '&Open...', lambda: self.openConf())
+        self.addToMenu(fileMenu, '&Save', lambda: self.saveConf(True))
+        self.addToMenu(fileMenu, 'Save &as...', lambda: self.saveConf(False))
+        self.addToMenu(fileMenu, '&Quit', self.close)
 
+        optLevelGroup = QtGui.QActionGroup(optMenu)
+        a = self.addToMenu(optMenu, '&Basic',
+                           lambda: self.setLevel(0), optLevelGroup)
+        self.addToMenu(optMenu, '&Advanced',
+                       lambda: self.setLevel(1), optLevelGroup)
+        self.addToMenu(optMenu, '&Expert',
+                       lambda: self.setLevel(2), optLevelGroup)
+        a.setChecked(True)
+
+        self.level = 0
         self.confFileName = None
         if len(args) == 2:
             self.new(args[1])
         else:
             self.new()
+
+    def addToMenu(self, menu, name, triggerFunc, group=None):
+        a = QtGui.QAction(name, self)
+        a.triggered.connect(triggerFunc)
+        menu.addAction(a)
+        if group:
+            a.setCheckable(True)
+            group.addAction(a)
+        return a
+
+    def setLevel(self, level):
+        self.level = level
+        self.confWidget.updateVisibility(level)
 
     def new(self, conf=None):
         if conf is None:
@@ -407,9 +481,11 @@ class MainWindow(QtGui.QMainWindow):
 
         self.confWidget = MultiOptionsWidget(self.conf)
         self.tabWidget.addTab(self.confWidget, 'Configure')
+        self.setLevel(self.level)
 
         self.runWidget = SolverWidget(self.conf)
         self.tabWidget.addTab(self.runWidget, 'Run')
+
         self.tabWidget.addTab(QtGui.QWidget(), 'Analyze') #TODO: unimplemented
 
     def openConf(self):

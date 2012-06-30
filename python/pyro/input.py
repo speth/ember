@@ -43,13 +43,24 @@ class Option(object):
         Set to *True* if *None* is a valid value for this option, regardless
         of any other restrictions. Automatically set to *True* if *default* is
         *None*.
+    :param label:
+        A human readable label to be used in the GUI in place of the attribute
+        name to which this Option is assigned.
+    :param level:
+        A number from 0-3 indicating the obscurity level of this option. Used
+        to selectively hide advanced options in the GUI. 0 is always shown.
+        3 is never shown.
+    :param filter:
+        A function that takes a :class:`Config` object as an argument and
+        returns *True* if this option should be enabled
 
     Requiring values of a particular type is done by using one of the derived
     classes: :class:`StringOption`, :class:`BoolOption`, :class:`IntegerOption`,
     :class:`FloatOption`.
     """
     counter = [0] # used to preserve options in the order they are defined
-    def __init__(self, default, choices=None, min=None, max=None, nullable=False):
+    def __init__(self, default, choices=None, min=None, max=None,
+                 nullable=False, label=None, level=0, filter=None):
         self.value = default
         self.default = default
         if choices:
@@ -62,6 +73,9 @@ class Option(object):
         self.max = max
         self.isSet = False
         self.nullable = nullable or self.default is None
+        self.label = label
+        self.level = level
+        self.filter = filter
         self.sortValue = self.counter[0]
         self.counter[0] += 1
 
@@ -86,6 +100,12 @@ class Option(object):
             return self.value == other.value
         except AttributeError:
             return self.value == other
+
+    def shouldBeEnabled(self, conf):
+        if self.filter:
+            return bool(self.filter(conf))
+        else:
+            return True
 
 
 class StringOption(Option):
@@ -185,20 +205,35 @@ class Options(object):
         allOpts.sort(key=lambda item: item[1].sortValue)
         return allOpts.__iter__()
 
+# frequently-used filter predicates
+def _isPremixed(conf):
+    return conf.initialCondition.flameType == 'premixed'
+
+def _isDiffusion(conf):
+    return conf.initialCondition.flameType == 'diffusion'
+
+def _isSymmetric(conf):
+    return conf.general.curvedFlame or conf.general.twinFlame
+
+def _usingCvode(conf):
+    return conf.general.chemistryIntegrator == 'cvode'
+
+def _usingQss(conf):
+    return conf.general.chemistryIntegrator == 'qss'
 
 class Paths(Options):
     """ Directories for input and output files """
 
     #: Relative path to the directory where input files (such as the
     #: Cantera mechanism file) are located.
-    inputDir = StringOption("input")
+    inputDir = StringOption("input", label='Input Directory')
 
     #: Relative path to the directory where output files
     #: (outNNNNNN.h5, profNNNNNN.h5) will be stored.
-    outputDir = StringOption("run/test1")
+    outputDir = StringOption("run/test1", label='Output Directory')
 
     #: File to use for log messages. If *None*, write output to stdout
-    logFile = StringOption(None)
+    logFile = StringOption(None, label='Log file', level=2)
 
 class General(Options):
     """ High-level configuration options """
@@ -206,19 +241,21 @@ class General(Options):
     #: True if the temperature and mass fractions on the burned gas
     #: side of the flame should be held constant. Applicable only to
     #: premixed flames.
-    fixedBurnedVal = BoolOption(True)
+    fixedBurnedVal = BoolOption(True, level=1, filter=_isPremixed)
 
     #: True if the position of the leftmost grid point should be held
     #: constant. Should usually be True for Twin and Curved flame
     #: configurations.
-    fixedLeftLocation = BoolOption(False)
+    fixedLeftLocation = BoolOption(False, level=1, filter=_isSymmetric)
 
     #: True if solving a radially propagating flame in a cylindrical
     #: coordinate system.
-    curvedFlame = BoolOption(False)
+    curvedFlame = BoolOption(False,
+        filter=lambda conf: not conf.general.twinFlame)
 
     #: True if solving a planar flame that is symmetric about the x = 0 plane.
-    twinFlame = BoolOption(False)
+    twinFlame = BoolOption(False,
+        filter=lambda conf: not conf.general.curvedFlame)
 
     #: Input file (HDF5 format) containing the interpolation data needed for
     #: the quasi2d mode. Contains:
@@ -228,38 +265,41 @@ class General(Options):
     #: - Temperature array *T* (size *N* x *M*)
     #: - radial velocity array *vr* (size *N* x *M*)
     #: - axial velocity array *vz* (size *N* x *M*)
-    interpFile = StringOption(None)
+    interpFile = StringOption(None, level=2,
+        filter=lambda conf: conf.initialCondition.flameType == 'quasi2d')
 
     #: *True* if the unburned fuel/air mixture should be used as the
     #: left boundary condition. Applicable only to premixed flames.
-    unburnedLeft = BoolOption(True) # applies to premixed flames
+    unburnedLeft = BoolOption(True, level=1, filter=_isPremixed)
 
     #: *True* if the fuel mixture should be used as the left boundary
     #: condition. Applicable only to diffusion flames.
-    fuelLeft = BoolOption(True)
+    fuelLeft = BoolOption(True, level=1, filter=_isDiffusion)
 
     #: Method for setting the boundary condition for the continuity equation
     #: Valid options are: ``fixedLeft``, ``fixedRight``, ``fixedQdot``,
     #: ``fixedTemperature``, and ``stagnationPoint``.
     continuityBC = StringOption("fixedLeft",
                                 ("fixedRight", "fixedQdot", "fixedTemperature",
-                                 "stagnationPoint"))
+                                 "stagnationPoint"),
+                                level=2)
 
     #: Integrator to use for the chemical source terms. Choices are
     #: ``qss`` (explicit, quasi-steady state) and ``cvode`` (implicit,
     #: variable-order BDF).
-    chemistryIntegrator = StringOption("qss", ("cvode",))
+    chemistryIntegrator = StringOption("qss", ("cvode",), level=1)
 
     #: Method to use for splitting the convection / diffusion / reaction
     #: terms. Options are ``strang`` and ``balanced``.
-    splittingMethod = StringOption("balanced", ("strang",))
+    splittingMethod = StringOption("balanced", ("strang",), level=2)
 
     #: Number of integration failures to tolerate in the chemistry
     #: integrator before aborting.
-    errorStopCount = IntegerOption(100)
+    errorStopCount = IntegerOption(100, level=2)
 
     #: Number of threads to use for evaluating terms in parallel
-    nThreads = IntegerOption(1, min=1)
+    nThreads = IntegerOption(1, min=1, level=1,
+                             label='Number of Processors')
 
 
 class Chemistry(Options):
@@ -278,10 +318,11 @@ class Chemistry(Options):
     phaseID = StringOption("gas")
 
     #: Transport model to use. Valid options are ``Mix``, ``Multi``, and ``Approx``
-    transportModel = StringOption("Mix", ("Multi", "Approx"))
+    transportModel = StringOption("Mix", ("Multi", "Approx"), level=1)
 
     #: Mole fraction threshold for including species with ``transportModel = "Approx"``
-    threshold = FloatOption(1e-5)
+    threshold = FloatOption(1e-5, level=2, label='Approx. transport threshold',
+        filter=lambda conf: conf.chemistry.transportModel == 'Approx')
 
 
 class Grid(Options):
@@ -297,50 +338,50 @@ class Grid(Options):
     dvtol = FloatOption(0.2)
 
     #: Relative tolerance (compared to vtol and dvtol) for grid point removal.
-    rmTol = FloatOption(0.6)
+    rmTol = FloatOption(0.6, level=1)
 
     #: Parameter to limit numerical diffusion in regions with high
     #: convective velocities.
-    dampConst = FloatOption(7)
+    dampConst = FloatOption(7, level=2)
 
     #: Minimum grid spacing [m]
-    gridMin = FloatOption(5e-7)
+    gridMin = FloatOption(5e-7, level=1)
 
     #: Maximum grid spacing [m]
-    gridMax = FloatOption(2e-4)
+    gridMax = FloatOption(2e-4, level=1)
 
     #: Maximum ratio of the distances between adjacent pairs of grid
     #: points.
     #:
     #: .. math:: \frac{1}{\tt uniformityTol} < \frac{x_{j+1}-x_j}{x_j-x_{j-1}}
     #:           < {\tt uniformityTol}
-    uniformityTol = FloatOption(2.5)
+    uniformityTol = FloatOption(2.5, level=2)
 
     #: State vector components smaller than this value are not
     #: considered whether to add or remove a grid point.
-    absvtol = FloatOption(1e-8)
+    absvtol = FloatOption(1e-8, level=2)
 
     #: Tolerance for each state vector component for extending the
     #: domain to satisfy zero-gradient conditions at the left and
     #: right boundaries.
-    boundaryTol = FloatOption(5e-5)
+    boundaryTol = FloatOption(5e-5, level=2)
 
     #: Tolerance for removing points at the boundary. Must be smaller
     #: than boundaryTol.
-    boundaryTolRm = FloatOption(1e-5)
+    boundaryTolRm = FloatOption(1e-5, level=2)
 
     #: For unstrained flames, number of flame thicknesses (based on
     #: reaction zone width) downstream of the flame to keep the right
     #: edge of the domain.
-    unstrainedDownstreamWidth = FloatOption(5)
+    unstrainedDownstreamWidth = FloatOption(5, level=2)
 
     #: Number of points to add when extending a boundary to satisfy
     #: boundaryTol.
-    addPointCount = IntegerOption(3, min=0)
+    addPointCount = IntegerOption(3, min=0, level=2)
 
     #: For curved or twin flames, the minimum position of the first
     #: grid point past x = 0.
-    centerGridMin = FloatOption(1e-4, min=0)
+    centerGridMin = FloatOption(1e-4, min=0, level=2, filter=_isSymmetric)
 
 
 class InitialCondition(Options):
@@ -358,37 +399,39 @@ class InitialCondition(Options):
 
     #: Read initial profiles from the specified file, or if 'None',
     #: create a new initial profile.
-    restartFile = StringOption(None)
+    restartFile = StringOption(None, level=1)
 
     #: True if the restart file path is relative to Paths.inputDir.
-    relativeRestartPath = BoolOption(True)
+    relativeRestartPath = BoolOption(True, level=2,
+        filter=lambda conf: conf.initialCondition.restartFile)
 
-    #: "premixed" or "diffusion"
+    #: "premixed", "diffusion", or "quasi2d"
     flameType = StringOption('premixed', ('diffusion', 'quasi2d'))
 
     #: Temperature of the unburned fuel/air mixture for premixed flames [K].
-    Tu = FloatOption(300)
+    Tu = FloatOption(300, label='Reactant Temperature', filter=_isPremixed)
 
     #: Temperature of the fuel mixture for diffusion flames [K].
-    Tfuel = FloatOption(300)
+    Tfuel = FloatOption(300, label='Fuel Temperature', filter=_isDiffusion)
 
     #: Temperature of the oxidizer mixture for diffusion flames [K].
-    Toxidizer = FloatOption(300)
+    Toxidizer = FloatOption(300, label='Oxidizer Temperature', filter=_isDiffusion)
 
     #: Molar composition of the fuel mixture.
-    fuel = StringOption("CH4:1.0")
+    fuel = StringOption("CH4:1.0", label='Molar Fuel Composition')
 
     #: Molar composition of the oxidizer mixture.
-    oxidizer = StringOption("N2:3.76, O2:1.0")
+    oxidizer = StringOption("N2:3.76, O2:1.0", label='Molar Oxidizer Composition')
 
     #: Equivalence ratio of the fuel/air mixture for premixed flames.
-    equivalenceRatio = FloatOption(0.75, min=0)
+    equivalenceRatio = FloatOption(0.75, min=0, label='Equivalence Ratio',
+        filter=_isPremixed)
 
     #: Thermodynamic pressure [Pa]
     pressure = FloatOption(101325, min=0)
 
     #: Number of points in the initial uniform grid.
-    nPoints = IntegerOption(100)
+    nPoints = IntegerOption(100, level=1)
 
     #: Position of the leftmost point of the initial grid.
     xLeft = FloatOption(-0.002)
@@ -402,33 +445,33 @@ class InitialCondition(Options):
     #: diffusion flames, this mixture is composed of a stoichiometric
     #: fuel/air brought to equilibrium at constant enthalpy and
     #: pressure. Recommended value: 0.002.
-    centerWidth = FloatOption(0.000)
+    centerWidth = FloatOption(0.000, level=1)
 
     #: The width of the slope away from the central plateau in the
     #: initial profile [m]. Recommended value for premixed flames:
     #: 5e-4. Recommended value for diffusion flames: 1e-3.
-    slopeWidth = FloatOption(0.0005)
+    slopeWidth = FloatOption(0.0005, level=1)
 
     #: Number of times to run the generated profile through a low pass
     #: filter before starting the simulation.
-    smoothCount = IntegerOption(4)
+    smoothCount = IntegerOption(4, level=2)
 
     #: True if initial profiles for x,T,U and Y (as well as rVzero) are given
-    haveProfiles = BoolOption(False)
+    haveProfiles = BoolOption(False, level=3)
 
-    x = Option(None)
-    T = Option(None)
-    U = Option(None)
-    Y = Option(None)
-    rVzero = FloatOption(None)
+    x = Option(None, level=3)
+    T = Option(None, level=3)
+    U = Option(None, level=3)
+    Y = Option(None, level=3)
+    rVzero = FloatOption(None, level=3)
 
 
 class WallFlux(Options):
     #: Reference temperature for the wall heat flux
-    Tinf = FloatOption(300)
+    Tinf = FloatOption(300, level=2)
 
     #: Conductance of the wall [W/m^2-K]
-    Kwall = FloatOption(100)
+    Kwall = FloatOption(100, level=2)
 
 
 class Ignition(Options):
@@ -439,19 +482,19 @@ class Ignition(Options):
     """
 
     #: Beginning of the external heat release rate pulse [s].
-    tStart = FloatOption(0)
+    tStart = FloatOption(0, level=2)
 
     #: Duration of the external heat release rate pulse [s].
-    duration = FloatOption(1e-3)
+    duration = FloatOption(1e-3, level=2)
 
     #: Integral amplitude of the pulse [W/m^2].
-    energy = FloatOption(0)
+    energy = FloatOption(0, level=2)
 
     #: Location of the center of the pulse [m].
-    center = FloatOption(0)
+    center = FloatOption(0, level=2)
 
     #: Characteristic width (standard deviation) of the pulse [m].
-    stddev = FloatOption(1e-4)
+    stddev = FloatOption(1e-4, level=2)
 
 
 class StrainParameters(Options):
@@ -474,7 +517,7 @@ class StrainParameters(Options):
     #:     rates = [9216, 7680, 6144, 4608, 3840, 3072, 2304, 1920, 1536,
     #:              1152, 960, 768, 576, 480, 384, 288, 240, 192, 144, 120,
     #:              96, 72, 60, 48, 36, 30, 24, 18, 15, 12]
-    rates = Option(None)
+    rates = Option(None, level=3)
 
 
 class PositionControl(Options):
@@ -492,13 +535,13 @@ class PositionControl(Options):
     *integralGain*.
     """
 
-    xInitial = FloatOption(0.0025) #:
-    xFinal = FloatOption(0.0025) #:
-    dt = FloatOption(0.01) #:
-    tStart = FloatOption(0) #:
+    xInitial = FloatOption(0.0025, filter=_isSymmetric) #:
+    xFinal = FloatOption(0.0025, filter=_isSymmetric) #:
+    dt = FloatOption(0.01, filter=_isSymmetric) #:
+    tStart = FloatOption(0, filter=_isSymmetric) #:
 
-    proportionalGain = FloatOption(10) #:
-    integralGain = FloatOption(800) #:
+    proportionalGain = FloatOption(10, filter=_isSymmetric) #:
+    integralGain = FloatOption(800, filter=_isSymmetric) #:
 
 
 class Times(Options):
@@ -508,145 +551,144 @@ class Times(Options):
     """
 
     #: Integrator start time.
-    tStart = FloatOption(0)
+    tStart = FloatOption(0, level=1)
 
     #: Timestep used for operator splitting.
-    globalTimestep = FloatOption(5e-6)
+    globalTimestep = FloatOption(2e-5, level=1)
 
     #: Control for timestep used by the diffusion integrator.
     #: Actual timestep will be this multiplier times the stability
     #: limit an explicit integrator.
-    diffusionTimestepMultiplier = FloatOption(10)
+    diffusionTimestepMultiplier = FloatOption(10, level=2)
 
     #: Maximum amount of time before regridding / adaptation.
-    regridTimeInterval = FloatOption(100)
+    regridTimeInterval = FloatOption(100, level=2)
 
     #: Maximum number of timesteps before regridding / adaptation.
-    regridStepInterval = IntegerOption(20)
+    regridStepInterval = IntegerOption(20, level=2)
 
-    #: Maximum number of steps between storing integral flame
-    #: properties.
-    outputStepInterval = IntegerOption(1)
+    #: Maximum number of steps between storing integral flame properties.
+    outputStepInterval = IntegerOption(1, level=2)
 
     #: Maximum time between storing integral flame properties.
-    outputTimeInterval = FloatOption(1e-5)
+    outputTimeInterval = FloatOption(1e-5, level=2)
 
     #: Maximum number of timesteps before writing flame profiles.
-    profileStepInterval = IntegerOption(5)
+    profileStepInterval = IntegerOption(1000, level=2)
 
     #: Maximum time between writing flame profiles.
-    profileTimeInterval = FloatOption(1e-4)
+    profileTimeInterval = FloatOption(1e-3, level=1)
 
     #: Number of timesteps between writing profNow.h5
-    currentStateStepInterval = IntegerOption(10)
+    currentStateStepInterval = IntegerOption(20, level=2)
 
     #: Number of timesteps between checks of the steady-state
     #: termination conditions.
-    terminateStepInterval = IntegerOption(10)
+    terminateStepInterval = IntegerOption(10, level=2)
 
 
 class CvodeTolerances(Options):
     """ Tolerances for the CVODE chemistry integrator """
 
     #: Relative tolerance for each state variable
-    relativeTolerance = FloatOption(1e-6)
+    relativeTolerance = FloatOption(1e-6, level=2, filter=_usingCvode)
 
     #: Absolute tolerance for U velocity
-    momentumAbsTol = FloatOption(1e-7)
+    momentumAbsTol = FloatOption(1e-7, level=2, filter=_usingCvode)
 
     #: Absolute tolerance for T
-    energyAbsTol = FloatOption(1e-8)
+    energyAbsTol = FloatOption(1e-8, level=2, filter=_usingCvode)
 
     #: Absolute tolerance for species mass fractions.
-    speciesAbsTol = FloatOption(1e-13)
+    speciesAbsTol = FloatOption(1e-13, level=2, filter=_usingCvode)
 
     #: Minimum internal timestep
-    minimumTimestep = FloatOption(1e-18)
+    minimumTimestep = FloatOption(1e-18, level=2, filter=_usingCvode)
 
 
 class QssTolerances(Options):
     """ Tolerances for the QSS chemistry integrator """
 
     #: Accuracy parameter for determining the next timestep.
-    epsmin = FloatOption(2e-2)
+    epsmin = FloatOption(2e-2, level=2, filter=_usingQss)
 
     #: Accuracy parameter for repeating timesteps
-    epsmax = FloatOption(1e1)
+    epsmax = FloatOption(1e1, level=2, filter=_usingQss)
 
     #: Minimum internal timestep
-    dtmin = FloatOption(1e-16)
+    dtmin = FloatOption(1e-16, level=2, filter=_usingQss)
 
     #: Maximum internal timestep
-    dtmax = FloatOption(1e-6)
+    dtmax = FloatOption(1e-6, level=2, filter=_usingQss)
 
     #: Number of corrector iterations per timestep.
-    iterationCount = IntegerOption(1)
+    iterationCount = IntegerOption(1, level=2, filter=_usingQss)
 
     #: Absolute threshold for including each component in the accuracy
     #: tests.
-    abstol = FloatOption(1e-11)
+    abstol = FloatOption(1e-11, level=2, filter=_usingQss)
 
     #: Lower limit on the value of each state vector component.
-    minval = FloatOption(1e-60)
+    minval = FloatOption(1e-60, level=2, filter=_usingQss)
 
     #: Enable convergence-based stability check on timestep. Not
     #: enabled unless *iterationCount* >= 3.
-    stabilityCheck = BoolOption(False)
+    stabilityCheck = BoolOption(False, level=2, filter=_usingQss)
 
 
 class Debug(Options):
     """ Control of verbose debugging output """
 
     #: Addition / removal of internal grid points.
-    adaptation = BoolOption(False)
+    adaptation = BoolOption(False, level=2)
 
     #: Addition / removal of boundary grid points.
-    regridding = BoolOption(True)
+    regridding = BoolOption(True, level=2)
 
     #: Print current time after each global timestep.
-    timesteps = BoolOption(True)
+    timesteps = BoolOption(True, level=2)
 
     #: Enable extensive timestep debugging output. Automatically
     #: enabled for debug builds.
-    veryVerbose = BoolOption(False)
+    veryVerbose = BoolOption(False, level=2)
 
     #: Print information about the flame radius feedback controller.
-    flameRadiusControl = BoolOption(False)
+    flameRadiusControl = BoolOption(False, level=2)
 
     #: Grid point to print debugging information about at *sourceTime*.
-    sourcePoint = IntegerOption(-1)
+    sourcePoint = IntegerOption(-1, level=3)
 
     #: Time at which to print extensive debugging information about
     #: the source term at j = *sourcePoint*, then terminate.
-    sourceTime = FloatOption(0.0)
+    sourceTime = FloatOption(0.0, level=3)
 
 
 class OutputFiles(Options):
     """ Control the contents of the periodic output files """
 
     #: Include the heat release rate as a function of space
-    heatReleaseRate = BoolOption(True)
+    heatReleaseRate = BoolOption(True, level=2)
 
     #: Include the reaction / diffusion / convection contributions to
     #: the net time derivative of each state variable
-    timeDerivatives = BoolOption(True)
+    timeDerivatives = BoolOption(True, level=2)
 
     #: Include variables such as transport properties and grid
     #: parameters that can be recomputed from the state variables.
-    extraVariables = BoolOption(False)
+    extraVariables = BoolOption(False, level=2)
 
     #: Include other miscellaneous variables
-    auxiliaryVariables = BoolOption(False)
+    auxiliaryVariables = BoolOption(False, level=2)
 
     #: Used to generate a continuous sequence of output files after
     #: restarting the code.
-    firstFileNumber = IntegerOption(0)
+    firstFileNumber = IntegerOption(0, level=2)
 
     #: Generate ``profNNNNNN.h5`` files
-    saveProfiles = BoolOption(True)
+    saveProfiles = BoolOption(True, level=1)
 
     #: Write profiles after each stage of the split integrator.
-    debugIntegratorStages = BoolOption(False)
+    debugIntegratorStages = BoolOption(False, level=2)
 
 
 class TerminationCondition(Options):
@@ -666,9 +708,9 @@ class TerminationCondition(Options):
     tEnd = FloatOption(0.8) #:
 
     measurement = Option("Q", (None,)) #:
-    tolerance = FloatOption(1e-4) #:
-    abstol = FloatOption(0.5, min=0) #:
-    steadyPeriod = FloatOption(0.002, min=0) #:
+    tolerance = FloatOption(1e-4, level=2) #:
+    abstol = FloatOption(0.5, min=0, level=2) #:
+    steadyPeriod = FloatOption(0.002, min=0, level=1) #:
 
 
 class Config(object):
