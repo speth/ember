@@ -345,7 +345,8 @@ int FlameSolver::step_internal()
         for (size_t j=0; j<nPoints; j++) {
             double num = std::min(mu[j],lambda[j]/cp[j]);
             num = std::min(num, rhoD.col(j).minCoeff());
-            grid.dampVal[j] = sqrt(num/(rho[j]*strainfunc.a(t)));
+            double den = std::max(std::abs(rho[j]*strainfunc.a(t)), 1e-100);
+            grid.dampVal[j] = sqrt(num/den);
         }
         dvec dampVal_prev = grid.dampVal;
 
