@@ -60,6 +60,7 @@ void QSSIntegrator::initialize(size_t N_)
 void QSSIntegrator::setState(const dvec& yIn, double tstart_)
 {
     assert(yIn.size() == N);
+    assert(mathUtils::notnan(yIn));
 
     // Store and limit to 'ymin' the initial values.
     for (size_t i=0; i<N; i++) {
@@ -120,7 +121,10 @@ int QSSIntegrator::integrateToTime(double tf)
 
 int QSSIntegrator::integrateOneStep(double tf) {
     // Evaluate the derivatives at the initial state.
+    assert(mathUtils::notnan(y));
     ode_->odefun(tn + tstart, y, q, d);
+    assert(mathUtils::notnan(q));
+    assert(mathUtils::notnan(d));
     gcount += 1;
 
     if (firstStep) {
@@ -132,7 +136,9 @@ int QSSIntegrator::integrateOneStep(double tf) {
 
     // Store starting values
     ts = tn;
-    rtau = dt * d / y * enforce_ymin;
+    for (size_t i=0; i<N; i++) {
+        rtau[i] = enforce_ymin[i] ? dt * d[i] / y[i] : 0.0;
+    }
     qs = q;
     ys = y;
     rtaus = rtau;
@@ -161,11 +167,17 @@ int QSSIntegrator::integrateOneStep(double tf) {
             }
 
             // Evaluate the derivatives for the corrector.
+            assert(mathUtils::notnan(y));
             ode_->odefun(tn + tstart, y, q, d, true);
+            assert(mathUtils::notnan(q));
+            assert(mathUtils::notnan(d));
             gcount += 1;
             eps = 1.0e-10;
 
-            dvec rtaub = 0.5 * (rtaus + dt * d / y) * enforce_ymin;
+            dvec rtaub(N);
+            for (size_t i = 0; i < N; i++) {
+                rtaub[i] = enforce_ymin[i] ? 0.5 * (rtaus[i] + dt * d[i] / y[i]) : 0.0;
+            }
             dvec alpha = (180.+rtaub*(60.+rtaub*(11.+rtaub))) /
                 (360. + rtaub*(60. + rtaub*(12. + rtaub)));
             scratch = (qs*(1.0 - alpha) + q*alpha - ys*rtaub/dt) / (1.0 + alpha*rtaub);
@@ -183,6 +195,7 @@ int QSSIntegrator::integrateOneStep(double tf) {
                eps = std::max(.5*(scr1+ std::min(abs(q[i]-d[i])/(q[i]+d[i]+1e-30), scr1)),eps);
             }
         }
+        assert(mathUtils::notnan(y));
 
         if (stabilityCheck) {
             ym2 = ym1;
