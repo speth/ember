@@ -119,7 +119,7 @@ Getting Started with Pyro
 
     Using the ``pyro.utils`` module:
 
-        $ ipython -pylab
-        >>> import pyro
-        >>> prof = pyro.load('run/test/profNow.h5')
-        >>> plot(prof.x, prof.T)
+        $ ipython --pylab
+        In [1]: import pyro
+        In [2]: prof = pyro.utils.load('run/test/profNow.h5')
+        In [3]: plot(prof.x, prof.T)
