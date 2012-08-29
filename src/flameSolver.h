@@ -22,6 +22,7 @@
 #include "tbb/enumerable_thread_specific.h"
 #include "tbb/mutex.h"
 #include "tbb/task_scheduler_init.h"
+#include "tbb/tbb_exception.h"
 
 using std::string;
 class SourceTermWrapper;
