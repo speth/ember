@@ -567,7 +567,8 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
 
     if (fixedLeftLoc &&
         leftBC != BoundaryCondition::ControlVolume &&
-        leftBC != BoundaryCondition::WallFlux)
+        leftBC != BoundaryCondition::WallFlux &&
+        x[0] > 0.0)
     {
         if (!pointAdded && debugParameters::debugRegrid) {
             logFile.write(
