@@ -60,5 +60,5 @@ public:
     debugException(void);
     ~debugException(void) throw() {}
     debugException(const std::string& error);
-    virtual const char* what() throw();
+    virtual const char* what() const throw();
 };

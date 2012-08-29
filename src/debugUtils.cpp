@@ -51,6 +51,6 @@ debugException::debugException(const std::string& error)
     errorString = error;
 }
 
-const char* debugException::what() throw() {
+const char* debugException::what() const throw() {
     return errorString.c_str();
 }
