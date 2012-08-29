@@ -46,27 +46,27 @@ opts.AddVariables(
     PathVariable(
         'cantera',
         'Location of the Cantera header and library files.',
-        '/usr/local', PathVariable.PathIsDir),
+        '', PathVariable.PathAccept),
     PathVariable(
         'sundials',
         'Location of the Sundials header and library files.',
-        '/usr/local', PathVariable.PathIsDir),
+        '', PathVariable.PathAccept),
     PathVariable(
         'eigen',
         'Location of the Eigen header files',
-        '/usr/local/include', PathVariable.PathIsDir),
+        '', PathVariable.PathAccept),
     PathVariable(
         'boost',
         'Location of the Boost header and library files.',
-        '/usr', PathVariable.PathIsDir),
+        '', PathVariable.PathAccept),
     PathVariable(
         'hdf5',
         'Location of the HDF5 header and library files.',
-        '/usr', PathVariable.PathIsDir),
+        '', PathVariable.PathAccept),
     PathVariable(
         'tbb',
         'Location of the Thread Building Blocks (TBB) header and library files',
-        '/usr', PathVariable.PathIsDir),
+        '', PathVariable.PathAccept),
     ('blas_lapack',
      'Comma-separated list of libraries to include for BLAS/LAPACK support',
      'blas,lapack')
@@ -87,20 +87,37 @@ else:
 python = ['python%s' % get_config_var('VERSION')]
 lastlibs = ['tbb'] + python + hdf5 + env['blas_lapack'].split(',')
 
-env.Append(CPPPATH=['ext/boost.numpy/include',
-                    env['cantera']+'/include',
-                    env['sundials']+'/include',
-                    env['eigen'],
-                    env['boost']+'/include',
-                    env['hdf5']+'/include',
-                    env['tbb']+'/include',
-                    get_config_var('INCLUDEPY'),
-                    np.get_include()],
-           LIBPATH=[env['cantera']+'/lib',
-                    env['sundials']+'/lib',
-                    env['boost']+'/lib',
-                    env['hdf5']+'/lib',
-                    tbbLibDir],
+include_dirs = ['ext/boost.numpy/include']
+library_dirs = []
+
+if env['cantera']:
+    include_dirs.append(env['cantera'] + '/include')
+    library_dirs.append(env['cantera'] + '/lib')
+
+if env['sundials']:
+    include_dirs.append(env['sundials'] + '/include')
+    library_dirs.append(env['sundials'] + '/lib')
+
+if env['eigen']:
+    include_dirs.append(env['eigen'])
+
+if env['boost']:
+    include_dirs.append(env['boost'] + '/include')
+    library_dirs.append(env['boost'] + '/lib')
+
+if env['hdf5']:
+    include_dirs.append(env['hdf5'] + '/include')
+    library_dirs.append(env['hdf5'] + '/lib')
+
+if env['tbb']:
+    include_dirs.append(env['tbb'] + '/include')
+    library_dirs.append(tbbLibDir)
+
+include_dirs.extend([get_config_var('INCLUDEPY'),
+                     np.get_include()])
+
+env.Append(CPPPATH=include_dirs,
+           LIBPATH=library_dirs,                  
            LIBS=sundials + cantera + lastlibs)
 
 if env['CC'] == 'gcc':
