@@ -121,6 +121,7 @@ def expandProfile(prof, gas):
         * thermodynamic properties: *rho*, *cp*, *Wmx*, *W*
         * kinetic properties: *wdot*, *q*
         * transport properties: *rhoD*, *k*, *mu*, *Dkt*, *jFick*, *jSoret*, *jCorr*
+        * other: *X* (mole fractions)
     """
     N = len(prof.x)
 
@@ -168,6 +169,7 @@ def expandProfile(prof, gas):
     prof.jFick = np.zeros((K,N))
     prof.jSoret = np.zeros((K,N))
     prof.jCorr = np.zeros(N)
+    prof.X = np.zeros((K,N))
 
     for j in range(N):
         gas.set(T=prof.T[j], Y=prof.Y[:,j], P=P)
@@ -176,6 +178,7 @@ def expandProfile(prof, gas):
         wdot = gas.netProductionRates()
         prof.wdot[:,j] = wdot
         prof.q[j] = -np.dot(wdot,hk)
+        prof.X[:,j] = gas.moleFractions()
 
         Dbin = gas.binaryDiffCoeffs()
         prof.Dkt[:,j] = gas.thermalDiffCoeffs()
