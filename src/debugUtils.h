@@ -29,6 +29,10 @@ public:
             if (newline) {
                 std::cout << std::endl;
             }
+#ifndef NDEBUG
+            std::cout.flush();
+            std::cerr.flush();
+#endif
         }
     }
 
