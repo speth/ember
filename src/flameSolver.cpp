@@ -287,7 +287,7 @@ int FlameSolver::step_internal()
     }
 
     setupTimer.resume();
-    if (t > tOutput || nOutput >= options.outputStepInterval) {
+    if (t + 0.5 * dt > tOutput || nOutput >= options.outputStepInterval) {
         calculateQdot();
         timeVector.push_back(t);
         timestepVector.push_back(dt);
@@ -320,7 +320,7 @@ int FlameSolver::step_internal()
     }
 
     // *** Save flame profiles
-    if (t > tProfile || nProfile >= options.profileStepInterval) {
+    if (t + 0.5 * dt > tProfile || nProfile >= options.profileStepInterval) {
         if (options.outputProfiles) {
             writeStateFile();
         }
