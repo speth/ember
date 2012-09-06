@@ -33,18 +33,22 @@ Getting Started with Ember
         $ mkdir -p src
         $ cd src
         $ git clone git://github.com/speth/ember.git
+        $ cd ember
 
-3. Edit the file ``ember/SConstruct`` to point to the correct include
-   and library directories for your system.
+3. Compiling the Code. If all the necessary libraries are installed in system
+   default locations, then the following should be sufficient:
 
-4. Compiling the Code:
-
-        $ cd ~/src/ember
         $ scons
+
+    Otherwise, specify the necessary paths using the corresponding command-line
+    options: "cantera", "sundials", "eigen", "boost", "hdf5", "tbb". For example:
+
+        $ scons cantera=/home/$USER/.local sundials=/opt/sundials-2.4.0
 
     This produces the python extension ``python/ember/_ember.so``.
 
-5. Install the "Ember" Python module:
+
+4. Install the "Ember" Python module:
 
         $ cd python
         $ python setup.py install --user
@@ -63,15 +67,15 @@ Getting Started with Ember
 
     Or add parent directories of each of these modules to your ``PYTHONPATH``.
 
-6. Prepare the documentation (optional)
+5. Prepare the documentation (optional)
 
         $ doxygen
         $ cd doc/sphinx
-        $ make
+        $ make html
 
     To view the HTML docs, open ``doc/sphinx/html/index.html`` in your web browser.
 
-7. Prepare your kinetics mechanism. If you're starting with a mechanism that's
+6. Prepare your kinetics mechanism. If you're starting with a mechanism that's
    in the Chemkin format, it will need to be converted:
 
         $ source /wherever/cantera/is/installed/setup_cantera
@@ -83,7 +87,7 @@ Getting Started with Ember
 
    to produce ``<mechname>.xml``.
 
-8. Prepare the input file, based on the one specified in
+7. Prepare the input file, based on the one specified in
 
         ember/input/example-premixed.py
 
@@ -95,21 +99,21 @@ Getting Started with Ember
    other parameters you may want to change are in the ``Paths``,
    ``InitialCondition``, and ``StrainParameters`` sections.
 
-9. Check the configuration for errors:
+8. Check the configuration for errors:
 
         $ python myInputFile.py validate
 
    If this prints "Validation completed successfully.", you're all set.
    Otherwise, try to correct the indicated error and try again.
 
-10. Run the code:
+9. Run the code:
 
         $ python myInputFile.py &
 
-    This may take a while. You can watch the solver's progress as it is written
-    to the file specified by ``Paths.logFile`` in the input file.
+   This may take a while. You can watch the solver's progress as it is written
+   to the file specified by ``Paths.logFile`` in the input file.
 
-11. Examine the output files. The files are HDF5 data files, which can be read
+10. Examine the output files. The files are HDF5 data files, which can be read
     using the Python ``h5py`` module or Matlab.
 
     * ``out.h5`` contains integral flame properties (e.g. flame speed) as a
@@ -118,7 +122,8 @@ Getting Started with Ember
       periodically.
     * ``profNow.h5`` contains the most recently saved profiles.
 
-    Using the ``ember.utils`` module:
+    Using the ``ember.utils`` module (and assuming you have IPython and
+    matplotlib installed):
 
         $ ipython --pylab
         In [1]: import ember
