@@ -4,7 +4,7 @@
 
 using namespace boost::python;
 
-BOOST_PYTHON_MODULE(_pyro)
+BOOST_PYTHON_MODULE(_ember)
 {
     boost::numpy::initialize();
     exportConverters();

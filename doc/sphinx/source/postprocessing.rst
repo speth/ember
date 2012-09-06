@@ -3,7 +3,7 @@
 Post-Processing
 ***************
 
-.. currentmodule:: pyro.utils
+.. currentmodule:: ember.utils
 
 .. autoclass:: Struct
 

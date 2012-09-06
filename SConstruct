@@ -41,7 +41,7 @@ if os.name == 'nt':
 
 env = Environment(**extraEnvArgs)
 
-opts = Variables('pyro.conf')
+opts = Variables('ember.conf')
 opts.AddVariables(
     PathVariable(
         'cantera',
@@ -73,7 +73,7 @@ opts.AddVariables(
     )
 
 opts.Update(env)
-opts.Save('pyro.conf', env)
+opts.Save('ember.conf', env)
 
 cantera = ['cantera']
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
@@ -180,7 +180,7 @@ pyenv = env.Clone()
 pyenv.Append(LIBS=['boost-numpy'],
              LIBPATH=['lib'])
 
-pylib = pyenv.SharedLibrary('python/pyro/_pyro',
+pylib = pyenv.SharedLibrary('python/ember/_ember',
                             common + Glob('build/python/*.cpp'),
                             SHLIBPREFIX='',
                             SHLIBSUFFIX=get_config_var('SO'))
@@ -188,7 +188,7 @@ pylib = pyenv.SharedLibrary('python/pyro/_pyro',
 env.Alias('pylib', pylib)
 
 if os.name == 'nt':
-    tbb = env.Command('python/pyro/TBB.dll',
+    tbb = env.Command('python/ember/TBB.dll',
                       env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
                       Copy('$TARGET', '$SOURCE'))
     env.Alias('pylib', tbb)

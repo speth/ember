@@ -30,7 +30,7 @@ elemental flame model are discussed in :ref:`sec-boundary-conditions`.
 Strained Flame Configurations
 =============================
 
-These are the models of strained flames implemented in Pyro.
+These are the models of strained flames implemented in Ember.
 
 .. _sec-opposed-jet:
 

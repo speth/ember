@@ -6,7 +6,7 @@
 #$ -o job-output-example-parallel.txt
 
 import multiprocessing
-from pyro import *
+from ember import *
 
 outputDir = 'run/example-parallel-phi%4.2f'
 logFile = 'out-example-parallel-phi%4.2f'

@@ -1,8 +1,8 @@
 """
-A set of classes for specifying input parameters for the Pyro solver.
+A set of classes for specifying input parameters for the Ember solver.
 
-Create a :class:`.Config` object to be passed to :func:`~pyro.utils.run` or
-:func:`~pyro.utils.multirun`.
+Create a :class:`.Config` object to be passed to :func:`~ember.utils.run` or
+:func:`~ember.utils.multirun`.
 Sane defaults are given for most input parameters. Create a customized
 configuration by passing :class:`.Options` objects to the constructor for
 :class:`.Config`::
@@ -510,7 +510,7 @@ class StrainParameters(Options):
     dt = FloatOption(0.002) #: time period over which strain rate changes [s]
 
     #: A list of strain rates to use for a series of sequential
-    #: integration periods (see :func:`~pyro.utils.multirun`), with steady-state
+    #: integration periods (see :func:`~ember.utils.multirun`), with steady-state
     #: profiles generated for each strain rate before proceeding to the next.
     #: A typical list of strain rates to use::
     #:

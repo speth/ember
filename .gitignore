@@ -11,7 +11,7 @@ bin
 build
 .settings
 .sconf_temp
-pyro.conf
+ember.conf
 .pydevproject
 .cproject
 .project

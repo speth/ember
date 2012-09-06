@@ -3,6 +3,6 @@
 Running Simulations
 *******************
 
-.. autofunction:: pyro.utils.run
+.. autofunction:: ember.utils.run
 
-.. autofunction:: pyro.utils.multirun
+.. autofunction:: ember.utils.multirun

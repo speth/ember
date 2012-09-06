@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from pyro import *
+from ember import *
 
 conf = Config(
     Paths(outputDir='run/premixedTest',

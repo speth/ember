@@ -3,9 +3,9 @@
 Input Files
 ***********
 
-.. automodule:: pyro.input
+.. automodule:: ember.input
 
-.. currentmodule:: pyro.input
+.. currentmodule:: ember.input
 
 Configuration Options
 ---------------------

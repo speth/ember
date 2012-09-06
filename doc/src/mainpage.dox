@@ -1,11 +1,11 @@
-/*! \mainpage Pyro Documentation
+/*! \mainpage Ember Documentation
 
-**Pyro** is a code for simulating unsteady, quasi-one-dimensional flames
+**Ember** is a code for simulating unsteady, quasi-one-dimensional flames
 subjected to arbitrarily varying strain rates and curvature.
 
-Documentation for the C++ core of the Pyro solver can be accessed via the
+Documentation for the C++ core of the Ember solver can be accessed via the
 "Classes" and "Files" links above.
 
-For instructions on how to compile, install, and use Pyro, see the
+For instructions on how to compile, install, and use Ember, see the
 <a href="../../sphinx/html/index.html">User's Guide</a>.
 */

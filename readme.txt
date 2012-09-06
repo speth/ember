@@ -1,5 +1,5 @@
-Getting Started with Pyro
-=========================
+Getting Started with Ember
+==========================
 
 1. **Dependencies:**
     These directions assume you are using a Linux or Windows system with the
@@ -13,9 +13,10 @@ Getting Started with Pyro
     * Cantera (>= 2.0.0)
     * Sundials (== 2.4)
     * HDF5 (>= 1.8.0)
+    * Intel Thread Building Blocks (>= 4.0)
     * numpy
     * h5py
-    * Intel Thread Building Blocks (>= 4.0)
+    * git
 
     Additional Dependencies for processing documentation:
 
@@ -31,28 +32,28 @@ Getting Started with Pyro
         $ cd
         $ mkdir -p src
         $ cd src
-        $ git clone pharos.mit.edu:/var/cache/git/1dflameV2.git
+        $ git clone git://github.com/speth/ember.git
 
-3. Edit the file ``1dflameV2/SConstruct`` to point to the correct include
+3. Edit the file ``ember/SConstruct`` to point to the correct include
    and library directories for your system.
 
 4. Compiling the Code:
 
-        $ cd ~/src/1dflameV2
+        $ cd ~/src/ember
         $ scons
 
-    This produces the python extension ``python/pyro/_pyro.so``.
+    This produces the python extension ``python/ember/_ember.so``.
 
-5. Install the "Pyro" Python module:
+5. Install the "Ember" Python module:
 
         $ cd python
         $ python setup.py install --user
 
-   Alternatively, if you're doing active develpment, you can just create a
+   Alternatively, if you're doing active development, you can just create a
    symlink into your user Python module path:
 
         $ mkdir -p ~/.local/lib/pythonX.Y/site-packages
-        $ ln -s ~/src/1dflameV2/python/pyro ~/.local/lib/pythonX.Y/site-packages/pyro
+        $ ln -s ~/src/ember/python/ember ~/.local/lib/pythonX.Y/site-packages/ember
 
     where *X.Y* is your your installed version of Python, e.g 2.7.
 
@@ -68,7 +69,7 @@ Getting Started with Pyro
         $ cd doc/sphinx
         $ make
 
-    To view the HTML docs, open ``doc/sphix/html/index.html`` in your web browser.
+    To view the HTML docs, open ``doc/sphinx/html/index.html`` in your web browser.
 
 7. Prepare your kinetics mechanism. If you're starting with a mechanism that's
    in the Chemkin format, it will need to be converted:
@@ -84,11 +85,11 @@ Getting Started with Pyro
 
 8. Prepare the input file, based on the one specified in
 
-        1dflameV2/input/example-premixed.py
+        ember/input/example-premixed.py
 
    A complete list of all available input parameters may be found in the HTML
    documentation. Alternatively, you look at the definitions in
-   ``python/pyro/input.py``. Specify the path to your mechanism file (which
+   ``python/ember/input.py``. Specify the path to your mechanism file (which
    needs to be in whatever directory is specified as the "input" directory in
    input file) as the ``mechanismFile`` and ``"gas"`` as the ``phaseID``. The
    other parameters you may want to change are in the ``Paths``,
@@ -117,9 +118,9 @@ Getting Started with Pyro
       periodically.
     * ``profNow.h5`` contains the most recently saved profiles.
 
-    Using the ``pyro.utils`` module:
+    Using the ``ember.utils`` module:
 
         $ ipython --pylab
-        In [1]: import pyro
-        In [2]: prof = pyro.utils.load('run/test/profNow.h5')
+        In [1]: import ember
+        In [2]: prof = ember.utils.load('run/test/profNow.h5')
         In [3]: plot(prof.x, prof.T)

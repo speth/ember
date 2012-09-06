@@ -9,7 +9,7 @@ import numpy as np
 from PySide import QtGui, QtCore
 import utils
 import input
-import pyro
+import ember
 
 import matplotlib
 matplotlib.rcParams['backend.qt4'] = 'PySide'
@@ -291,7 +291,7 @@ class MultiOptionsWidget(QtGui.QWidget):
 
 
 class SolverWidget(QtGui.QWidget):
-    """ Widget used to run and monitor the Pyro solver """
+    """ Widget used to run and monitor the Ember solver """
     def __init__(self, conf, *args, **kwargs):
         QtGui.QWidget.__init__(self)
 
@@ -360,7 +360,7 @@ class SolverWidget(QtGui.QWidget):
         if self.solver is None:
             self.conf.validate()
             self.conf.setup()
-            self.solver = pyro.FlameSolver(self.conf)
+            self.solver = ember.FlameSolver(self.conf)
             self.solver.initialize()
 
         self.solverThread = SolverThread(solver=self.solver,
