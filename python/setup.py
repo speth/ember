@@ -18,6 +18,7 @@ setup(name='Ember',
       author_email='speth@mit.edu',
       url='http://github.com/speth/ember',
       packages = ['ember'],
+      scripts=['scripts/ember'],
       package_data = {'ember': dataFiles})
 
 # From the directory containing this script:
@@ -26,4 +27,4 @@ setup(name='Ember',
 # Install for your user:
 #     $ python setup.py install --user
 # Create a Windows .msi installer:
-#     > python setup.py bdist_msi --target-version=2.7 --dist-dir=.
+#     $ python setup.py bdist_msi --target-version=2.7 --dist-dir=.
