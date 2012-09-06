@@ -1,7 +1,19 @@
 Getting Started with Ember
 ==========================
 
-* Online Documentation: http://speth.github.com/ember-doc
+Ember is a quasi-one-dimensional, unsteady reacting flow solver. It can be used
+to simulate a number of fundamental flame configurations, including premixed
+laminar flames, opposed flow strained flames (premixed or diffusion),
+axisymmetric (tubular) flames with positive or negative curvature, and steady 2D
+flames in a prescribed velocity field (using the method of lines).
+
+Ember integrates the governing equations using a variant on the standard Strang
+splitting method which eliminates steady-state errors.
+
+Online documentation for Ember is located at `<http://speth.github.com/ember-doc>`_.
+
+Compiling Ember
+---------------
 
 * Build Dependencies: These directions assume you are using a Linux or Windows
   system with the following installed:
@@ -75,6 +87,9 @@ Getting Started with Ember
 
   To view the HTML docs, open ``doc/sphinx/html/index.html`` in your web browser.
 
+Running Ember
+-------------
+
 * Prepare your kinetics mechanism. If you're starting with a mechanism that's
   in the Chemkin format, it will need to be converted::
 
@@ -118,9 +133,9 @@ Getting Started with Ember
   using the Python ``h5py`` module or Matlab.
 
   * ``out.h5`` contains integral flame properties (e.g. flame speed) as a
-      function of time
+    function of time
   * ``profNNNNNN.h5`` contain the temperature & species profiles output
-      periodically.
+    periodically.
   * ``profNow.h5`` contains the most recently saved profiles.
 
   Using the ``ember.utils`` module (and assuming you have IPython and
