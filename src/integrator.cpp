@@ -82,7 +82,7 @@ TridiagonalIntegrator::TridiagonalIntegrator(TridiagonalODE& ode)
 }
 
 
-void TridiagonalIntegrator::resize(int N_in)
+void TridiagonalIntegrator::resize(size_t N_in)
 {
     N = N_in;
 

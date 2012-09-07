@@ -94,7 +94,7 @@ public:
 
     // Setup
     void set_y0(const dvec& y0);
-    void resize(int N_in);
+    void resize(size_t N_in);
     void initialize(const double t0, const double h);
 
     const dvec& get_ydot();

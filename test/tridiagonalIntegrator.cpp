@@ -23,7 +23,7 @@ public:
         k = k_;
     }
 
-    void resize(int N) {
+    void resize(size_t N) {
         a_.resize(N);
         b_.resize(N);
         c_.resize(N);
