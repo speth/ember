@@ -8,6 +8,8 @@ Basic usage:
     'scons build' - Compile Ember
 
     'scons test' - Run the test suite
+
+    'scons install' - Install the Ember Python module
 """
 
 import os
@@ -86,7 +88,10 @@ opts.AddVariables(
         '', PathVariable.PathAccept),
     ('blas_lapack',
      'Comma-separated list of libraries to include for BLAS/LAPACK support',
-     'blas,lapack')
+     'blas,lapack'),
+    ('install_args',
+     'Command-line arguments passed to "python setup.py install"',
+     '--user')
     )
 
 opts.Update(env)
@@ -235,6 +240,12 @@ if os.name == 'nt':
                       env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
                       Copy('$TARGET', '$SOURCE'))
     env.Alias('build', tbb)
+
+# Installation of the Python module:
+py_install = env.Command('dummy_target', pylib,
+                         ('cd python && '
+                          'python setup.py install %s' % env['install_args']))
+env.Alias('install', py_install)
 
 # GoogleTest tests
 python_lib = 'python%s' % get_config_var('VERSION')

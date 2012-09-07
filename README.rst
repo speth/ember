@@ -62,8 +62,12 @@ Compiling Ember
 
 * Install the "Ember" Python module::
 
-    $ cd python
-    $ python setup.py install --user
+    $ scons install
+
+  By default, Ember will be installed to your *user* site-packages directory,
+  e.g. `~/.local/lib/python2.7/site-packages/ember`. If you wish install to a
+  different directory, use the `install_args` option to SCons to specify the
+  appropriate command to be passed to `python setup.py install`.
 
   Alternatively, if you're doing active development, you can just create a
   symlink into your user Python module path::
