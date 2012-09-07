@@ -51,7 +51,7 @@ Compiling Ember
 * Compiling the code. If all the necessary libraries are installed in system
   default locations, then the following should be sufficient::
 
-    $ scons
+    $ scons build
 
   Otherwise, specify the necessary paths using the corresponding command-line
   options: "cantera", "sundials", "eigen", "boost", "hdf5", "tbb". For example::

@@ -1,7 +1,24 @@
+"""
+SCons build script for Ember
+
+Basic usage:
+
+    'scons help' - print a description of user-specifiable options
+
+    'scons build' - Compile Ember
+
+    'scons test' - Run the test suite
+"""
+
 import os
 import platform
 from distutils.sysconfig import get_config_var
 import numpy as np
+from buildutils import *
+
+if not COMMAND_LINE_TARGETS:
+    print __doc__
+    sys.exit(0)
 
 VariantDir('build/core','src', duplicate=0)
 VariantDir('build/test','test', duplicate=0)
@@ -74,6 +91,32 @@ opts.AddVariables(
 
 opts.Update(env)
 opts.Save('ember.conf', env)
+
+if 'help' in COMMAND_LINE_TARGETS:
+    # Print help about configuration options and exit
+    print """
+        ************************************************
+        *   Configuration options for building Ember   *
+        ************************************************
+
+The following options can be passed to SCons to customize the Ember build
+process. They should be given in the form:
+
+    scons build option1=value1 option2=value2
+
+Variables set in this way will then be stored in the 'ember.conf' file and
+reusd automatically on subsequent invocations of scons. Alternatively, the
+configuration variables can be entered directly into 'ember.conf' before
+running 'scons build'. The format of this file is:
+
+    option1 = 'value1'
+    option2 = 'value2'
+
+        ************************************************
+"""
+    for opt in opts.options:
+        print '\n'.join(formatOption(env, opt))
+    sys.exit(0)
 
 cantera = ['cantera']
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
@@ -185,13 +228,13 @@ pylib = pyenv.SharedLibrary('python/ember/_ember',
                             SHLIBPREFIX='',
                             SHLIBSUFFIX=get_config_var('SO'))
 
-env.Alias('pylib', pylib)
+env.Alias('build', pylib)
 
 if os.name == 'nt':
     tbb = env.Command('python/ember/TBB.dll',
                       env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
                       Copy('$TARGET', '$SOURCE'))
-    env.Alias('pylib', tbb)
+    env.Alias('build', tbb)
 
 # GoogleTest tests
 python_lib = 'python%s' % get_config_var('VERSION')
@@ -209,11 +252,8 @@ test_alias = testenv.Alias('test', [test_program], test_program[0].abspath)
 # AlwaysBuild(test_alias)
 
 # Google Test
-buildTargets = ['pylib', test_alias]
+buildTargets = ['build', test_alias]
 
 Export('env', 'buildTargets')
 VariantDir('ext/build', 'ext', duplicate=0)
 SConscript('ext/build/SConscript')
-
-Default(['pylib'])
-env.Alias('all', buildTargets)
