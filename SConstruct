@@ -170,8 +170,8 @@ tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
     "Cantera::MixTransport::getMixDiffCoeffsMass",
     includes='#include "cantera/transport.h"')
 
-if tests['CanteraExtendedTransport']:
-    env.Append(CPPDEFINES=['CANTERA_EXTENDED_TRANSPORT'])
+if not tests['CanteraExtendedTransport']:
+    raise EnvironmentError("Missing required Cantera method 'getMixDiffCoeffsMass'.")
 
 common = Glob('build/core/*.cpp')
 
