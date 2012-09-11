@@ -60,7 +60,7 @@ public:
     virtual void initialize(size_t nSpec);
 
     //! Set integrator tolerances and other parameters
-    virtual void setOptions(configOptions& options_) { options = &options_; }
+    virtual void setOptions(ConfigOptions& options_) { options = &options_; }
 
     void setTimers(PerfTimer* reactionRates, PerfTimer* thermo,
                    PerfTimer* jacobian);
@@ -98,7 +98,7 @@ public:
 
 protected:
     bool debug;
-    configOptions* options;
+    ConfigOptions* options;
 
     //! Cantera data
     CanteraGas* gas;
@@ -182,7 +182,7 @@ public:
 
     std::string getStats();
     void initialize(size_t nSpec);
-    void setOptions(configOptions& options);
+    void setOptions(ConfigOptions& options);
 
     //! Print the current Jacobian matrix ot the specified stream
     void writeJacobian(std::ostream& out);
@@ -193,11 +193,11 @@ public:
     dvec wDot; //!< species net production rates [kmol/m^3*s]
 
 private:
-    std::auto_ptr<sundialsCVODE> integrator;
+    std::auto_ptr<SundialsCvode> integrator;
 };
 
 //! This is the system representing the (chemical) source term at a point,
-//! integrated with the QSSIntegrator. The implementation of this class differs
+//! integrated with the QssIntegrator. The implementation of this class differs
 //! from SourceSystemCVODE primarily in that the QSS integrator requires
 //! separately calculating creation (Q) and destruction (D) rates of the state
 //! variables.
@@ -228,7 +228,7 @@ public:
     void roll_ydot(dvec& q, dvec& d) const;
 
     void initialize(size_t nSpec);
-    void setOptions(configOptions& options);
+    void setOptions(ConfigOptions& options);
 
     void setState(double tStart, double uu, double tt, const dvec& yy);
     int integrateToTime(double tf) { return integrator.integrateToTime(tf); }
@@ -248,5 +248,5 @@ public:
     dvec wDotQ, wDotD; //!< species production / destruction rates [kmol/m^3*s]
 
 private:
-    QSSIntegrator integrator;
+    QssIntegrator integrator;
 };

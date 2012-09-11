@@ -268,7 +268,7 @@ void ConvectionSystemUTW::updateContinuityBoundaryCondition
         break;
 
     default:
-        throw debugException("ConvectionSystemUTW::updateContinuityBoundaryCondition failed.");
+        throw DebugException("ConvectionSystemUTW::updateContinuityBoundaryCondition failed.");
     }
 }
 
@@ -403,7 +403,7 @@ ConvectionSystemSplit::ConvectionSystemSplit()
 {
 }
 
-void ConvectionSystemSplit::setGrid(const oneDimGrid& grid)
+void ConvectionSystemSplit::setGrid(const OneDimGrid& grid)
 {
     GridBased::setGrid(grid);
     utwSystem.setGrid(grid);
@@ -412,7 +412,7 @@ void ConvectionSystemSplit::setGrid(const oneDimGrid& grid)
     }
 }
 
-void ConvectionSystemSplit::setTolerances(const configOptions& options)
+void ConvectionSystemSplit::setTolerances(const ConfigOptions& options)
 {
     reltol = options.integratorRelTol;
     abstolU = options.integratorMomentumAbsTol;
@@ -446,18 +446,18 @@ void ConvectionSystemSplit::resize
         // Create speciesSolvers from scratch if the number of species has changed
         speciesSolvers.clear();
         for (size_t k=0; k<nSpec; k++) {
-            speciesSolvers.push_back(new sundialsCVODE(nPoints));
+            speciesSolvers.push_back(new SundialsCvode(nPoints));
             configureSolver(speciesSolvers[k], k);
         }
     } else {
         // Replace the solvers where the number of points has changed
         for (size_t k=0; k<nSpec; k++) {
-            speciesSolvers.replace(k, new sundialsCVODE(nPointsNew));
+            speciesSolvers.replace(k, new SundialsCvode(nPointsNew));
             configureSolver(speciesSolvers[k], k);
         }
     }
 
-    utwSolver.reset(new sundialsCVODE(3*nPoints));
+    utwSolver.reset(new SundialsCvode(3*nPoints));
     utwSolver->setODE(&utwSystem);
     utwSolver->setBandwidth(0,0);
     utwSolver->reltol = reltol;
@@ -500,7 +500,7 @@ void ConvectionSystemSplit::setState
     utwSolver->minStep = 1e-16;
     utwSolver->initialize();
 
-    foreach (sundialsCVODE& solver, speciesSolvers) {
+    foreach (SundialsCvode& solver, speciesSolvers) {
         solver.t0 = tInitial;
         solver.maxNumSteps = 1000000;
         solver.minStep = 1e-16;
@@ -615,7 +615,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
 int ConvectionSystemSplit::getNumSteps()
 {
     int nSteps = utwSolver->getNumSteps();
-    foreach (sundialsCVODE& solver, speciesSolvers) {
+    foreach (SundialsCvode& solver, speciesSolvers) {
         nSteps += solver.getNumSteps();
     }
     return nSteps;
@@ -646,7 +646,7 @@ void ConvectionSystemSplit::setupQuasi2D
     }
 }
 
-void ConvectionSystemSplit::configureSolver(sundialsCVODE& solver, const size_t k)
+void ConvectionSystemSplit::configureSolver(SundialsCvode& solver, const size_t k)
 {
     solver.setODE(&speciesSystems[k]);
     solver.setBandwidth(0,0);

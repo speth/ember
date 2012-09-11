@@ -115,7 +115,7 @@ namespace mathUtils
     vector<T1> computeSplines(const T1& xIn, const T2& yIn)
     {
         if (xIn.size() != yIn.size()) {
-            throw debugException("mathUtils::ComputeSplines: error: xIn and yIn must be the same size.");
+            throw DebugException("mathUtils::ComputeSplines: error: xIn and yIn must be the same size.");
         }
 
         int nIn = xIn.size();
@@ -167,7 +167,7 @@ namespace mathUtils
     T interp1(const T& xIn, const T& yIn, const T& xOut)
     {
         if (xIn.size() != yIn.size()) {
-            throw debugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
+            throw DebugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
         }
         int nOut = xOut.size();
         int nIn = xIn.size();
@@ -192,7 +192,7 @@ namespace mathUtils
     double interp1(const T& xIn, const T& yIn, const double xOut)
     {
         if (xIn.size() != yIn.size()) {
-            throw debugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
+            throw DebugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
         }
 
         int nIn = xIn.size();
@@ -215,7 +215,7 @@ namespace mathUtils
     double integrate(const T1& x, const T2& y)
     {
         if (x.size() != y.size()) {
-            throw debugException("mathUtils::integrate: error: xIn and yIn must be the same size.");
+            throw DebugException("mathUtils::integrate: error: xIn and yIn must be the same size.");
         }
 
         assert(notnan(x));
@@ -239,7 +239,7 @@ namespace mathUtils
     double trapz(const T1& x, const T2& y)
     {
         if (x.size() != y.size()) {
-            throw debugException("mathUtils::trapz: error: x and y must be the same size.");
+            throw DebugException("mathUtils::trapz: error: x and y must be the same size.");
         }
 
         double I = 0;

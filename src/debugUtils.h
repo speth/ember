@@ -53,12 +53,12 @@ public:
 
 extern LogFile logFile;
 
-class debugException : public std::exception
+class DebugException : public std::exception
 {
 public:
     std::string errorString;
-    debugException(void);
-    ~debugException(void) throw() {}
-    debugException(const std::string& error);
+    DebugException(void);
+    ~DebugException(void) throw() {}
+    DebugException(const std::string& error);
     virtual const char* what() const throw();
 };

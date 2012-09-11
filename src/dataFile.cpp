@@ -42,7 +42,7 @@ double DataFile::readScalar(const std::string& name)
     dataspace = H5Dget_space(dataset);
 
     if (H5Sget_simple_extent_ndims(dataspace) !=  0) {
-        throw debugException((format(
+        throw DebugException((format(
             "DataFile::readScalar: '%s' is not a scalar.") % name).str());
     }
 
@@ -103,7 +103,7 @@ dvector DataFile::readVector(const std::string& name)
     dataspace = H5Dget_space(dataset);
 
     if (H5Sget_simple_extent_ndims(dataspace) != 1) {
-        throw debugException((format(
+        throw DebugException((format(
             "DataFile::readVector: '%s' is not a 1D array.") % name).str());
     }
 
@@ -124,7 +124,7 @@ dvec DataFile::readVec(const std::string& name)
     dataspace = H5Dget_space(dataset);
 
     if (H5Sget_simple_extent_ndims(dataspace) != 1) {
-        throw debugException((format(
+        throw DebugException((format(
             "DataFile::readVector: '%s' is not a 1D array.") % name).str());
     }
 
@@ -177,7 +177,7 @@ dmatrix DataFile::readArray2D(const std::string& name, bool transpose)
     dataspace = H5Dget_space(dataset);
 
     if (H5Sget_simple_extent_ndims(dataspace) != 2) {
-        throw debugException((format(
+        throw DebugException((format(
             "DataFile::readVector: '%s' is not a 2D array.\n"
             "(file: '%s'; ndims: %i") % name % filename %
             H5Sget_simple_extent_ndims(dataspace)).str());
@@ -228,10 +228,10 @@ void DataFile::close()
 void DataFile::require_file_open()
 {
     if (!file) {
-        throw debugException(
+        throw DebugException(
             "Can't access DataFile object: H5File object not initialized.");
     } else if (!fileIsOpen) {
-        throw debugException(
+        throw DebugException(
             "Can't access DataFile object: H5File is closed.");
     }
 }

@@ -11,7 +11,7 @@ classes:
   * :cxx:`SourceSystem` - chemical source (reaction) term
 
     * :cxx:`SourceSystemCVODE` - used with *sundialsCVODE*
-    * :cxx:`SourceSystemQSS` - used with *QSSIntegrator*
+    * :cxx:`SourceSystemQSS` - used with *QssIntegrator*
 
   * :cxx:`DiffusionSystem` - diffusion term for a single component
 
@@ -27,11 +27,11 @@ classes:
   * :cxx:`sundialsCVODE` - Integrator used for convection systems and
     *SourceSystemCVODE*
 
-  * :cxx:`QSSIntegrator` - Integrator used with *SourceSystemQSS*
+  * :cxx:`QssIntegrator` - Integrator used with *SourceSystemQSS*
 
 * Other classes of interest:
 
-  * :cxx:`oneDimGrid` - an adaptive, non-uniform one-dimensional grid
+  * :cxx:`OneDimGrid` - an adaptive, non-uniform one-dimensional grid
 
   * :cxx:`GridBased` - base class used with several other classes to provide
     access to the grid parameters

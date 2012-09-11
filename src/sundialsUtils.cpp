@@ -3,7 +3,7 @@
 #include <iostream>
 #include "mathUtils.h" // debug
 
-sundialsCVODE::sundialsCVODE(unsigned int n)
+SundialsCvode::SundialsCvode(unsigned int n)
     : y(n)
     , abstol(n)
     , findRoots(false)
@@ -22,12 +22,12 @@ sundialsCVODE::sundialsCVODE(unsigned int n)
 {
 }
 
-sundialsCVODE::~sundialsCVODE()
+SundialsCvode::~SundialsCvode()
 {
     CVodeFree(&sundialsMem);
 }
 
-void sundialsCVODE::initialize()
+void SundialsCvode::initialize()
 {
     theODE->initialize();
 
@@ -36,7 +36,7 @@ void sundialsCVODE::initialize()
         // Starting over with a new IC, but the same ODE
         flag = CVodeReInit(sundialsMem, t0, y.forSundials());
         if (check_flag(&flag, "CVodeReInit", 1)) {
-            throw debugException("sundialsCVODE::reInitialize: error in CVodeReInit");
+            throw DebugException("SundialsCvode::reInitialize: error in CVodeReInit");
         }
 
         CVodeSetMaxNumSteps(sundialsMem, maxNumSteps);
@@ -48,12 +48,12 @@ void sundialsCVODE::initialize()
     // the Sundials solver, set tolerances and link the ODE functions
     sundialsMem = CVodeCreate(linearMultistepMethod, nonlinearSolverMethod);
     if (check_flag((void *)sundialsMem, "CVodeCreate", 0)) {
-        throw debugException("sundialsCVODE::initialize: error in CVodeCreate");
+        throw DebugException("SundialsCvode::initialize: error in CVodeCreate");
     }
 
     flag = CVodeInit(sundialsMem, f, t0, y.forSundials());
     if (check_flag(&flag, "CVodeMalloc", 1)) {
-        throw debugException("sundialsCVODE::initialize: error in CVodeMalloc");
+        throw DebugException("SundialsCvode::initialize: error in CVodeMalloc");
     }
 
     CVodeSVtolerances(sundialsMem, reltol, abstol.forSundials());
@@ -66,7 +66,7 @@ void sundialsCVODE::initialize()
         // Call CVodeRootInit to specify the root function g with nRoots components
         flag = CVodeRootInit(sundialsMem, nRoots, g);
         if (check_flag(&flag, "CVodeRootInit", 1)) {
-            throw debugException("sundialsCVODE::initialize: error in CVodeRootInit");
+            throw DebugException("SundialsCvode::initialize: error in CVodeRootInit");
         }
     }
 
@@ -74,56 +74,56 @@ void sundialsCVODE::initialize()
         // Call CVDense to specify the CVDENSE dense linear solver
         flag = CVDense(sundialsMem, nEq);
         if (check_flag(&flag, "CVDense", 1)) {
-            throw debugException("sundialsCVODE::initialize: error in CVDense");
+            throw DebugException("SundialsCvode::initialize: error in CVDense");
         }
 
         // Set the Jacobian routine to denseJac (user-supplied)
         flag = CVDlsSetDenseJacFn(sundialsMem, denseJac);
         if (check_flag(&flag, "CVDlsSetDenseJacFn", 1)) {
-            throw debugException("sundialsCVODE::initialize: error in CVDlsSetDenseJacFn");
+            throw DebugException("SundialsCvode::initialize: error in CVDlsSetDenseJacFn");
         }
     } else {
         // Call CVDense to specify the CVBAND Banded linear solver
         flag = CVBand(sundialsMem, nEq, bandwidth_upper, bandwidth_lower);
         if (check_flag(&flag, "CVBand", 1)) {
-            throw debugException("sundialsCVODE::initialize: error in CVBand");
+            throw DebugException("SundialsCvode::initialize: error in CVBand");
         }
 
         // Set the Jacobian routine to bandJac (user-supplied)
         flag = CVDlsSetBandJacFn(sundialsMem, bandJac);
         if (check_flag(&flag, "CVDlsSetBandJacFn", 1)) {
-            throw debugException("sundialsCVODE::initialize: error in CVDlsSetBandJacFn");
+            throw DebugException("SundialsCvode::initialize: error in CVDlsSetBandJacFn");
         }
     }
 
     _initialized = true;
 }
 
-bool sundialsCVODE::initialized() const
+bool SundialsCvode::initialized() const
 {
     return _initialized;
 }
 
-void sundialsCVODE::setBandwidth(int upper, int lower)
+void SundialsCvode::setBandwidth(int upper, int lower)
 {
     bandwidth_upper = upper;
     bandwidth_lower = lower;
 }
 
-int sundialsCVODE::integrateToTime(realtype t)
+int SundialsCvode::integrateToTime(realtype t)
 {
     assert(mathUtils::notnan(y));
     int flag = CVode(sundialsMem, t, y.forSundials(), &tInt, CV_NORMAL);
     if (flag != CV_SUCCESS) {
         errorCount += 1;
         if (errorCount > errorStopCount) {
-            throw debugException("CVODE Integrator had too many errors");
+            throw DebugException("CVODE Integrator had too many errors");
         }
     }
     return flag;
 }
 
-int sundialsCVODE::integrateOneStep(realtype tf)
+int SundialsCvode::integrateOneStep(realtype tf)
 {
     assert(mathUtils::notnan(y));
     CVodeSetStopTime(sundialsMem, tf);
@@ -131,22 +131,22 @@ int sundialsCVODE::integrateOneStep(realtype tf)
     if (flag != CV_SUCCESS && flag != CV_TSTOP_RETURN) {
         errorCount += 1;
         if (errorCount > errorStopCount) {
-            throw debugException("CVODE Integrator had too many errors");
+            throw DebugException("CVODE Integrator had too many errors");
         }
     }
     return flag;
 }
 
-int sundialsCVODE::getRootInfo()
+int SundialsCvode::getRootInfo()
 {
     int flag = CVodeGetRootInfo(sundialsMem, &rootsFound[0]);
     if (check_flag(&flag, "CVodeGetRootInfo", 1)) {
-        throw debugException("sundialsCVODE::getRootInfo: error in CVodeGetRootInfo");
+        throw DebugException("SundialsCvode::getRootInfo: error in CVodeGetRootInfo");
     }
     return flag;
 }
 
-void sundialsCVODE::printStats()
+void SundialsCvode::printStats()
 {
   long int nst, nfe, nsetups, nje, nfeLS, nni, ncfn, netf, nge;
   int flag;
@@ -179,28 +179,28 @@ void sundialsCVODE::printStats()
      nni, ncfn, netf, nge);
 }
 
-long int sundialsCVODE::getNumSteps()
+long int SundialsCvode::getNumSteps()
 {
     long int n;
     CVodeGetNumSteps(sundialsMem, &n);
     return n;
 }
 
-int sundialsCVODE::getLastOrder()
+int SundialsCvode::getLastOrder()
 {
     int n;
     CVodeGetLastOrder(sundialsMem, &n);
     return n;
 }
 
-realtype sundialsCVODE::getLastStep()
+realtype SundialsCvode::getLastStep()
 {
     realtype h;
     CVodeGetLastStep(sundialsMem, &h);
     return h;
 }
 
-int sundialsCVODE::check_flag(void *flagvalue, const char *funcname, int opt)
+int SundialsCvode::check_flag(void *flagvalue, const char *funcname, int opt)
 {
   int *errflag;
 
@@ -228,7 +228,7 @@ int sundialsCVODE::check_flag(void *flagvalue, const char *funcname, int opt)
 }
 
 // f routine. Compute function f(t,y).
-int sundialsCVODE::f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data)
+int SundialsCvode::f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data)
 {
     sdVector y(yIn);
     sdVector ydot(ydotIn);
@@ -237,7 +237,7 @@ int sundialsCVODE::f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data)
 }
 
 // g routine. Compute functions g_i(t,y) for i = 0,1.
-int sundialsCVODE::g(realtype t, N_Vector yIn, realtype *gout, void *g_data)
+int SundialsCvode::g(realtype t, N_Vector yIn, realtype *gout, void *g_data)
 {
     sdVector y(yIn);
     // g_data contains a pointer to the "theODE" object
@@ -245,7 +245,7 @@ int sundialsCVODE::g(realtype t, N_Vector yIn, realtype *gout, void *g_data)
 }
 
 // Jacobian routine. Compute J(t,y) = df/dy. *
-int sundialsCVODE::denseJac(int N, realtype t, N_Vector yIn,
+int SundialsCvode::denseJac(int N, realtype t, N_Vector yIn,
                             N_Vector fyIn, DenseMat JIn, void *user_data,
                             N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
@@ -256,7 +256,7 @@ int sundialsCVODE::denseJac(int N, realtype t, N_Vector yIn,
     return ((sdODE*) user_data)->denseJacobian(t, y, fy, J);
 }
 
-int sundialsCVODE::bandJac(int N, int mupper, int mLower, realtype t,
+int SundialsCvode::bandJac(int N, int mupper, int mLower, realtype t,
         N_Vector yIn, N_Vector fyIn, DlsMat JIn, void* user_data,
         N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
@@ -267,7 +267,7 @@ int sundialsCVODE::bandJac(int N, int mupper, int mLower, realtype t,
     return ((sdODE*) user_data)->bandedJacobian(t, y, fy, J);
 }
 
-void sundialsCVODE::setODE(sdODE* newODE)
+void SundialsCvode::setODE(sdODE* newODE)
 {
     theODE = newODE;
 }
@@ -277,8 +277,8 @@ sdVector::sdVector(unsigned int N)
     alloc = true;
     v = N_VNew_Serial(N);
     n = N;
-    if (sundialsCVODE::check_flag((void *)v, "N_VNew_Serial", 0)) {
-        throw debugException("sdVector: error allocating vector");
+    if (SundialsCvode::check_flag((void *)v, "N_VNew_Serial", 0)) {
+        throw DebugException("sdVector: error allocating vector");
     }
 }
 
@@ -380,7 +380,7 @@ void sdBandMatrix::print(const std::string& name) const
 
 // Sundials IDA Solver
 
-sundialsIDA::sundialsIDA(unsigned int n)
+SundialsIda::SundialsIda(unsigned int n)
     : abstol(n)
     , findRoots(false)
     , calcIC(false)
@@ -398,16 +398,16 @@ sundialsIDA::sundialsIDA(unsigned int n)
 {
 }
 
-sundialsIDA::~sundialsIDA()
+SundialsIda::~SundialsIda()
 {
     IDAFree(&sundialsMem);
 }
 
-void sundialsIDA::initialize()
+void SundialsIda::initialize()
 {
     sundialsMem = IDACreate();
     if (check_flag((void *)sundialsMem, "IDACreate", 0)) {
-        throw debugException("sundialsIDA::initialize: error in IDACreate");
+        throw DebugException("SundialsIda::initialize: error in IDACreate");
     }
 
     IDASetUserData(sundialsMem, theDAE);
@@ -420,7 +420,7 @@ void sundialsIDA::initialize()
 
     flag = IDAInit(sundialsMem, f, t0, y.forSundials(), ydot.forSundials());
     if (check_flag(&flag, "IDAMalloc", 1)) {
-        throw debugException("sundialsIDA::initialize: error in IDAInit");
+        throw DebugException("SundialsIda::initialize: error in IDAInit");
     }
 
     IDASVtolerances(sundialsMem, reltol, abstol.forSundials());
@@ -430,72 +430,72 @@ void sundialsIDA::initialize()
         // Call IDARootInit to specify the root function g with nRoots components
         flag = IDARootInit(sundialsMem, nRoots, g);
         if (check_flag(&flag, "IDARootInit", 1)) {
-            throw debugException("sundialsIDA::initialize: error in IDARootInit");
+            throw DebugException("SundialsIda::initialize: error in IDARootInit");
         }
     }
 
     // Call IDASpbcg to specify the IDASpbcg dense linear solver
     flag = IDASpbcg(sundialsMem, 0);
     if (check_flag(&flag, "IDASpbcg", 1)) {
-        throw debugException("sundialsIDA::initialize: error in IDASpbcg");
+        throw DebugException("SundialsIda::initialize: error in IDASpbcg");
     }
 
     if (imposeConstraints) {
         flag = IDASetConstraints(sundialsMem, constraints.forSundials());
         if (check_flag(&flag, "IDASetConstraints", 1)) {
-            throw debugException("sundialsIDA::initialize: error in IDASetConstraints");
+            throw DebugException("SundialsIda::initialize: error in IDASetConstraints");
         }
     }
 
     // this seems to work better using the default J-v function rather than specifying our own...
     //flag = IDASpilsSetJacTimesVecFn(sundialsMem, JvProd, theDAE);
     //if (check_flag(&flag, "IDASpilsSetJacTimesVecFn", 1)) {
-    //    throw myException("sundialsIDA::initialize: error in IDASpilsSetJacTimesVecFn");
+    //    throw myException("SundialsIda::initialize: error in IDASpilsSetJacTimesVecFn");
     //}
 
     flag = IDASpilsSetPreconditioner(sundialsMem, preconditionerSetup, preconditionerSolve);
     if (check_flag(&flag, "IDASpilsSetPreconditioner", 1)) {
-        throw debugException("sundialsIDA::initialize: error in IDASpilsSetPreconditioner");
+        throw DebugException("SundialsIda::initialize: error in IDASpilsSetPreconditioner");
     }
 
     if (calcIC) {
         flag = IDACalcIC(sundialsMem, IDA_YA_YDP_INIT, t0+1e-4);
         if (check_flag(&flag, "IDACalcIC", 1)) {
             logFile.write("IDACalcIC Error");
-            throw debugException("sundialsIDA::initialize: error in IDACalcIC");
+            throw DebugException("SundialsIda::initialize: error in IDACalcIC");
         }
 
         flag = IDAGetConsistentIC(sundialsMem, y0.forSundials(), ydot0.forSundials());
         if (check_flag(&flag, "IDAGetConsistentIC", 1)) {
-            throw debugException("sundialsIDA::initialize: error in IDAGetConsistentIC");
+            throw DebugException("SundialsIda::initialize: error in IDAGetConsistentIC");
         }
     }
 
 }
 
-int sundialsIDA::integrateToTime(realtype t)
+int SundialsIda::integrateToTime(realtype t)
 {
     int flag = IDASolve(sundialsMem, t, &tInt, y.forSundials(),
         ydot.forSundials(), IDA_NORMAL);
     return flag;
 }
 
-int sundialsIDA::integrateOneStep()
+int SundialsIda::integrateOneStep()
 {
     int flag = IDASolve(sundialsMem, tInt+1, &tInt, y.forSundials(),
         ydot.forSundials(), IDA_ONE_STEP);
     return flag;
 }
 
-int sundialsIDA::getRootInfo()
+int SundialsIda::getRootInfo()
 {
     int flag = IDAGetRootInfo(sundialsMem, &rootsFound[0]);
     if (check_flag(&flag, "IDAGetRootInfo", 1))
-        throw debugException("sundialsIDA::getRootInfo: error in IDAGetRootInfo.");
+        throw DebugException("SundialsIda::getRootInfo: error in IDAGetRootInfo.");
     return flag;
 }
 
-void sundialsIDA::printStats(clock_t dt)
+void SundialsIda::printStats(clock_t dt)
 {
     long int nst, nje, nre, netf, ncfn, nge, npe, nps;
     int retval;
@@ -540,7 +540,7 @@ void sundialsIDA::printStats(clock_t dt)
     }
 }
 
-int sundialsIDA::check_flag(void *flagvalue, const char *funcname, int opt)
+int SundialsIda::check_flag(void *flagvalue, const char *funcname, int opt)
 {
   int *errflag;
   /* Check if SUNDIALS function returned NULL pointer - no memory allocated */
@@ -569,37 +569,37 @@ int sundialsIDA::check_flag(void *flagvalue, const char *funcname, int opt)
   return 0;
 }
 
-double sundialsIDA::getStepSize()
+double SundialsIda::getStepSize()
 {
     double dt;
     IDAGetCurrentStep(sundialsMem, &dt);
     return dt;
 }
 
-void sundialsIDA::setInitialStepSize(double dt)
+void SundialsIda::setInitialStepSize(double dt)
 {
     IDASetInitStep(sundialsMem, dt);
 }
 
-void sundialsIDA::setMaxStepSize(double dt)
+void SundialsIda::setMaxStepSize(double dt)
 {
     IDASetMaxStep(sundialsMem, dt);
 }
 
-int sundialsIDA::getLastOrder()
+int SundialsIda::getLastOrder()
 {
     int order;
     IDAGetLastOrder(sundialsMem, &order);
     return order;
 }
 
-void sundialsIDA::disableErrorOutput()
+void SundialsIda::disableErrorOutput()
 {
     IDASetErrFile(sundialsMem, NULL);
 }
 
 // f routine. Compute function f(t,y,y') = res
-int sundialsIDA::f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void *f_data)
+int SundialsIda::f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, void *f_data)
 {
     sdVector y(yIn), ydot(ydotIn), res(resIn);
     // f_data is a pointer to the "theDAE" object
@@ -607,7 +607,7 @@ int sundialsIDA::f(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn, vo
 }
 
 // g routine. Compute functions g_i(t,y)
-int sundialsIDA::g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, void *g_data)
+int SundialsIda::g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, void *g_data)
 {
     sdVector y(yIn), ydot(ydotIn);
     // g_data is a pointer to the "theDAE" object
@@ -615,7 +615,7 @@ int sundialsIDA::g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, vo
 }
 
 // Jacobian routine. Compute J(t,y) = df/dy.
-int sundialsIDA::Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn,
+int SundialsIda::Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn,
                      N_Vector resIn, realtype c_j, void *jac_data, DenseMat Jin,
                      N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
@@ -625,7 +625,7 @@ int sundialsIDA::Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn,
     return ((sdDAE*) jac_data)->Jac(t, y, ydot, res, c_j, J);
 }
 
-int sundialsIDA::JvProd(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn,
+int SundialsIda::JvProd(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn,
                         N_Vector vIn, N_Vector JvIn, realtype c_j, void* jac_data,
                         N_Vector tmp1, N_Vector tmp2)
 {
@@ -633,7 +633,7 @@ int sundialsIDA::JvProd(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resI
     return ((sdDAE*) jac_data)->JvProd(t,y , ydot, res, v, Jv , c_j);
 }
 
-int sundialsIDA::preconditionerSetup(realtype t, N_Vector yIn, N_Vector ydotIn,
+int SundialsIda::preconditionerSetup(realtype t, N_Vector yIn, N_Vector ydotIn,
                                      N_Vector resIn, realtype c_j, void* p_data,
                                      N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
@@ -641,7 +641,7 @@ int sundialsIDA::preconditionerSetup(realtype t, N_Vector yIn, N_Vector ydotIn,
     return ((sdDAE*) p_data)->preconditionerSetup(t, y, ydot, res, c_j);
 }
 
-int sundialsIDA::preconditionerSolve(realtype t, N_Vector yIn, N_Vector ydotIn,
+int SundialsIda::preconditionerSolve(realtype t, N_Vector yIn, N_Vector ydotIn,
                                      N_Vector resIn, N_Vector rhsIn, N_Vector vIn,
                                      realtype c_j, realtype delta, void* p_data,
                                      N_Vector tmp)
@@ -650,7 +650,7 @@ int sundialsIDA::preconditionerSolve(realtype t, N_Vector yIn, N_Vector ydotIn,
     return ((sdDAE*) p_data)->preconditionerSolve(t, y, ydot, res, rhs, v, c_j, delta);
 }
 
-void sundialsIDA::setDAE(sdDAE* newDAE)
+void SundialsIda::setDAE(sdDAE* newDAE)
 {
     theDAE = newDAE;
 }

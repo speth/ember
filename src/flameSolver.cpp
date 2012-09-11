@@ -21,10 +21,10 @@ FlameSolver::FlameSolver(const boost::python::api::object& config)
     : jCorrSolver(jCorrSystem)
     , tbbTaskSched(tbb::task_scheduler_init::deferred)
 {
-    setOptions(configOptions(config));
+    setOptions(ConfigOptions(config));
 }
 
-void FlameSolver::setOptions(const configOptions& _options)
+void FlameSolver::setOptions(const ConfigOptions& _options)
 {
     options = _options;
     tStart = options.tStart;
@@ -147,7 +147,7 @@ void FlameSolver::initialize(void)
     catch (Cantera::CanteraError& err) {
         std::cout << err.what() << std::endl;
         throw;
-    } catch (debugException& e) {
+    } catch (DebugException& e) {
         std::cout << e.errorString << std::endl;
         logFile.write(e.errorString);
         throw;
@@ -173,7 +173,7 @@ int FlameSolver::step(void)
     catch (Cantera::CanteraError& err) {
         std::cout << err.what() << std::endl;
         throw;
-    } catch (debugException& e) {
+    } catch (DebugException& e) {
         std::cout << e.errorString << std::endl;
         logFile.write(e.errorString);
         throw;
@@ -994,7 +994,7 @@ void FlameSolver::integrateConvectionTerms(double tStart, double tEnd, int stage
     convectionTimer.start();
     try {
         convectionSystem.integrateToTime(tEnd);
-    } catch (debugException& e) {
+    } catch (DebugException& e) {
         logFile.write(e.errorString);
         writeStateFile("err_convectionIntegration", true, false);
         throw;
@@ -1287,7 +1287,7 @@ void FlameSolver::loadProfile(void)
 
         tNow = (options.haveTStart) ? options.tStart : 0.0;
     } else {
-        throw debugException("Initial profile data required but not provided.");
+        throw DebugException("Initial profile data required but not provided.");
     }
 
     Tu = (options.overrideTu) ? options.Tu : T[grid.ju];
@@ -1408,7 +1408,7 @@ void FlameSolver::loadProfile(void)
         rhou = rhoRight;
 
     } else {
-        throw debugException("Invalid flameType: " + options.flameType);
+        throw DebugException("Invalid flameType: " + options.flameType);
     }
 
     updateBC();

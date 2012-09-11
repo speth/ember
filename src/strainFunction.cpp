@@ -1,6 +1,6 @@
 #include "strainFunction.h"
 
-StrainFunction::StrainFunction(const configOptions& options)
+StrainFunction::StrainFunction(const ConfigOptions& options)
     : aInitial(options.strainRateInitial)
     , aFinal(options.strainRateFinal)
     , T0(options.strainRateT0)
@@ -10,7 +10,7 @@ StrainFunction::StrainFunction(const configOptions& options)
     tPrev = T0;
 }
 
-void StrainFunction::setOptions(const configOptions& options)
+void StrainFunction::setOptions(const ConfigOptions& options)
 {
     aInitial = options.strainRateInitial;
     aFinal = options.strainRateFinal;

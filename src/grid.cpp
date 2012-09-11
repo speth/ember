@@ -8,14 +8,14 @@
 using namespace mathUtils;
 using std::max; using std::min;
 
-oneDimGrid::oneDimGrid()
+OneDimGrid::OneDimGrid()
     : updated(true)
     , leftBC(BoundaryCondition::FixedValue)
     , rightBC(BoundaryCondition::FixedValue)
 {
 }
 
-void oneDimGrid::setOptions(const configOptions& options)
+void OneDimGrid::setOptions(const ConfigOptions& options)
 {
     vtol_in = options.vtol;
     dvtol_in = options.dvtol;
@@ -40,7 +40,7 @@ void oneDimGrid::setOptions(const configOptions& options)
     alpha = options.gridAlpha;
 }
 
-void oneDimGrid::updateValues()
+void OneDimGrid::updateValues()
 {
     // Derived mesh sizes
     hh.resize(jj);
@@ -68,13 +68,13 @@ void oneDimGrid::updateValues()
     }
 }
 
-void oneDimGrid::setSize(const size_t N)
+void OneDimGrid::setSize(const size_t N)
 {
     nPoints = N;
     jj = N-1;
 }
 
-void oneDimGrid::adapt(vector<dvector>& y)
+void OneDimGrid::adapt(vector<dvector>& y)
 {
     // This function takes the unadapted solution vector y, analyzes it,
     // and returns an updated solution vector. It tries to remove
@@ -382,7 +382,7 @@ void oneDimGrid::adapt(vector<dvector>& y)
     }
 }
 
-void oneDimGrid::addPoint(int jInsert, vector<dvector>& y)
+void OneDimGrid::addPoint(int jInsert, vector<dvector>& y)
 {
     assert(x.rows() == dampVal.rows());
     dvec::Index N = x.rows();
@@ -404,7 +404,7 @@ void oneDimGrid::addPoint(int jInsert, vector<dvector>& y)
     x = tmp;
 }
 
-void oneDimGrid::removePoint(int jRemove, vector<dvector>& y)
+void OneDimGrid::removePoint(int jRemove, vector<dvector>& y)
 {
     dvec tmp(x.rows() - 1);
     tmp << x.head(jRemove), x.tail(x.rows() - jRemove - 1);
@@ -416,7 +416,7 @@ void oneDimGrid::removePoint(int jRemove, vector<dvector>& y)
     }
 }
 
-bool oneDimGrid::addRight(vector<dvector>& y)
+bool OneDimGrid::addRight(vector<dvector>& y)
 {
     // *** Criteria for addition to right (j==jj) ***
 
@@ -478,7 +478,7 @@ bool oneDimGrid::addRight(vector<dvector>& y)
 }
 
 
-bool oneDimGrid::addRightUnstrained(vector<dvector>& y, dvec& qdot)
+bool OneDimGrid::addRightUnstrained(vector<dvector>& y, dvec& qdot)
 {
     // *** Criteria for addition to right (j==jj) ***
 
@@ -538,7 +538,7 @@ bool oneDimGrid::addRightUnstrained(vector<dvector>& y, dvec& qdot)
 }
 
 
-bool oneDimGrid::addLeft(vector<dvector>& y)
+bool OneDimGrid::addLeft(vector<dvector>& y)
 {
     // *** Criteria for addition to the left (j==0) ***
 
@@ -619,7 +619,7 @@ bool oneDimGrid::addLeft(vector<dvector>& y)
     return pointAdded;
 }
 
-bool oneDimGrid::removeRight(vector<dvector>& y)
+bool OneDimGrid::removeRight(vector<dvector>& y)
 {
     // *** Criteria for removal from the right (j==jj) ***
 
@@ -660,7 +660,7 @@ bool oneDimGrid::removeRight(vector<dvector>& y)
     return pointRemoved;
 }
 
-bool oneDimGrid::removeRightUnstrained(vector<dvector>& y, dvec& qdot)
+bool OneDimGrid::removeRightUnstrained(vector<dvector>& y, dvec& qdot)
 {
     // *** Criterion for removal from the right (j==jj) ***
 
@@ -704,7 +704,7 @@ bool oneDimGrid::removeRightUnstrained(vector<dvector>& y, dvec& qdot)
     return pointRemoved;
 }
 
-bool oneDimGrid::removeLeft(vector<dvector>& y)
+bool OneDimGrid::removeLeft(vector<dvector>& y)
 {
     // *** Criteria for removal from the left (j==0) ***
     int djMom = 2;
@@ -750,7 +750,7 @@ bool oneDimGrid::removeLeft(vector<dvector>& y)
 }
 
 
-void oneDimGrid::regrid(vector<dvector>& y)
+void OneDimGrid::regrid(vector<dvector>& y)
 {
     nVars = y.size();
     assert(nAdapt <= nVars);
@@ -813,7 +813,7 @@ void oneDimGrid::regrid(vector<dvector>& y)
     }
 }
 
-void oneDimGrid::regridUnstrained(vector<dvector>& y, dvec& qdot)
+void OneDimGrid::regridUnstrained(vector<dvector>& y, dvec& qdot)
 {
     nVars = y.size();
     assert(nAdapt <= nVars);
@@ -874,7 +874,7 @@ void oneDimGrid::regridUnstrained(vector<dvector>& y, dvec& qdot)
     }
 }
 
-void oneDimGrid::updateBoundaryIndices(void) {
+void OneDimGrid::updateBoundaryIndices(void) {
     if (unburnedLeft) {
         ju = 0;
         jb = jj;
@@ -899,7 +899,7 @@ GridBased::GridBased()
 {
 }
 
-void GridBased::setGrid(const oneDimGrid& other)
+void GridBased::setGrid(const OneDimGrid& other)
 {
     grid = other;
 }

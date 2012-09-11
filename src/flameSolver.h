@@ -37,14 +37,14 @@ public:
     FlameSolver(const boost::python::api::object& config);
     virtual ~FlameSolver() {}
 
-    void setOptions(const configOptions& options); //!< Set options read from the configuration file
+    void setOptions(const ConfigOptions& options); //!< Set options read from the configuration file
     void initialize(); //!< call to generate profiles and perform one-time setup
     int step(); //!< Take one global timestep
     void finalize();
 
     //! Load initial temperature, mass fraction and velocity profiles.
     //! Profiles are loaded either from an HDF5 "restart" file or from the
-    //! the configOptions object, populated from the Python "Config" object.
+    //! the ConfigOptions object, populated from the Python "Config" object.
     virtual void loadProfile();
 
     //! Determine whether to terminate integration based on reaching steady-state solution.
@@ -74,7 +74,7 @@ public:
     double getFlamePosition(void);
 
     // Time-series data
-    dvector timeVector; //!< Time [s] at the end of every configOptions::outputStepInterval timesteps.
+    dvector timeVector; //!< Time [s] at the end of every ConfigOptions::outputStepInterval timesteps.
     dvector timestepVector; //!< Global integrator timesteps [s] used to get to the times in #timeVector.
     dvector heatReleaseRate; //!< Integral heat release rate [W/m^2] at the times in #timeVector.
     dvector consumptionSpeed; //!< Consumption speed [m/s] at the times in #timeVector.
@@ -87,7 +87,7 @@ public:
     dvector qDotConv1Vec; //!< Integral heat release rate after the first convection half-step.
     dvector qDotConv2Vec; //!< Integral heat release rate after the second convection half-step.
 
-    configOptions options; //!< Options read from the input file
+    ConfigOptions options; //!< Options read from the input file
 
     double tStart; //!< Integrator start time
     double tEnd; //!< Integrator termination time (upper bound)

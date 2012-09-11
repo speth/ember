@@ -115,8 +115,8 @@ class ConvectionSystemSplit : public GridBased
 public:
     ConvectionSystemSplit();
 
-    void setGrid(const oneDimGrid& grid);
-    void setTolerances(const configOptions& options);
+    void setGrid(const OneDimGrid& grid);
+    void setTolerances(const ConfigOptions& options);
     void setGas(CanteraGas& gas);
     void resize(const size_t nPoints, const size_t nSpec);
     void setState(const dvec& U, const dvec& T, dmatrix& Y, double tInitial);
@@ -161,7 +161,7 @@ public:
 
 private:
     // set parameters of a new species solver
-    void configureSolver(sundialsCVODE& solver, const size_t k);
+    void configureSolver(SundialsCvode& solver, const size_t k);
 
     // CVODE integration tolerances
     double reltol; // relative tolerance
@@ -170,9 +170,9 @@ private:
     double abstolW; // molecular weight absolute tolerance
     double abstolY; // mass fraction absolute tolerance
 
-    boost::shared_ptr<sundialsCVODE> utwSolver;
+    boost::shared_ptr<SundialsCvode> utwSolver;
     boost::ptr_vector<ConvectionSystemY> speciesSystems;
-    boost::ptr_vector<sundialsCVODE> speciesSolvers;
+    boost::ptr_vector<SundialsCvode> speciesSolvers;
 
     dvec Yleft;
     dvec W;

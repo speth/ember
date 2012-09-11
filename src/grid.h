@@ -6,10 +6,10 @@ namespace BoundaryCondition {
     enum BC { FixedValue, ZeroGradient, ControlVolume, WallFlux, Floating };
 }
 
-class oneDimGrid
+class OneDimGrid
 {
 public:
-    oneDimGrid();
+    OneDimGrid();
 
     dvec x; // The grid points
     dvec dampVal; // ratio of convective to diffusive coefficients (e.g. nu/v)
@@ -68,7 +68,7 @@ public:
     void adapt(vector<dvector>& y);
     void regrid(vector<dvector>& y);
     void regridUnstrained(vector<dvector>& y, dvec& qdot);
-    void setOptions(const configOptions& options);
+    void setOptions(const ConfigOptions& options);
     void updateValues(void);
     void setSize(const size_t N);
 
@@ -96,10 +96,10 @@ public:
     GridBased();
     virtual ~GridBased() {}
 
-    virtual void setGrid(const oneDimGrid& grid);
+    virtual void setGrid(const OneDimGrid& grid);
 
     // the grid:
-    oneDimGrid grid;
+    OneDimGrid grid;
 
 protected:
 

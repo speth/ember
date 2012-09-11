@@ -34,7 +34,7 @@ public:
 
     int nPoints;
     double D;
-    oneDimGrid grid;
+    OneDimGrid grid;
     DiffusionSystem sys;
     TridiagonalIntegrator solver;
 };

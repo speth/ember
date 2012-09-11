@@ -8,9 +8,9 @@ class StrainFunction
     // then increases linearly to aFinal at time T0+Dt
 public:
     StrainFunction() { }
-    StrainFunction(const configOptions& options);
+    StrainFunction(const ConfigOptions& options);
 
-    void setOptions(const configOptions& options);
+    void setOptions(const ConfigOptions& options);
     double a(double t) const;
     double dadt(double t) const;
     void pin(double t); // call this after each successful timestep

@@ -24,7 +24,7 @@ void SourceSystem::updateThermo()
 
 double SourceSystem::getQdotIgniter(double t)
 {
-    configOptions& opt = *options;
+    ConfigOptions& opt = *options;
     if (t >= opt.ignition_tStart &&
         t < opt.ignition_tStart + opt.ignition_duration) {
         return opt.ignition_energy /
@@ -92,14 +92,14 @@ void SourceSystemCVODE::initialize(size_t new_nSpec)
     dYdt.resize(nSpec);
     wDot.resize(nSpec);
 
-    integrator.reset(new sundialsCVODE(nSpec+2));
+    integrator.reset(new SundialsCvode(nSpec+2));
     integrator->setODE(this);
     integrator->linearMultistepMethod = CV_BDF;
     integrator->nonlinearSolverMethod = CV_NEWTON;
     integrator->maxNumSteps = 1000000;
 }
 
-void SourceSystemCVODE::setOptions(configOptions& opts)
+void SourceSystemCVODE::setOptions(ConfigOptions& opts)
 {
     SourceSystem::setOptions(opts);
     integrator->abstol[kMomentum] = options->integratorMomentumAbsTol;
@@ -369,7 +369,7 @@ void SourceSystemQSS::initialize(size_t new_nSpec)
     integrator.enforce_ymin[kMomentum] = false;
 }
 
-void SourceSystemQSS::setOptions(configOptions& opts)
+void SourceSystemQSS::setOptions(ConfigOptions& opts)
 {
     SourceSystem::setOptions(opts);
     integrator.epsmin = options->qss_epsmin;

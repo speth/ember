@@ -2,7 +2,7 @@
 
 #include "../src/qssintegrator.h"
 
-class QSSTestProblem : public QSSIntegrator
+class QSSTestProblem : public QssIntegrator
 {
 public:
     QSSTestProblem() {}

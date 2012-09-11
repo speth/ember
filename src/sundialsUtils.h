@@ -115,11 +115,11 @@ public:
 };
 
 // wrapper class for the Sundials CVODE solver
-class sundialsCVODE
+class SundialsCvode
 {
 public:
-    sundialsCVODE(unsigned int n);
-    ~sundialsCVODE();
+    SundialsCvode(unsigned int n);
+    ~SundialsCvode();
 
     // *** INITIALIZATION ***
     // Call each of these functions and assign each of these
@@ -214,11 +214,11 @@ public:
 
 // wrapper class for the Sundials IDA solver
 // for Differential-Algebraic Equations
-class sundialsIDA
+class SundialsIda
 {
 public:
-    sundialsIDA(unsigned int n);
-    ~sundialsIDA();
+    SundialsIda(unsigned int n);
+    ~SundialsIda();
 
     void initialize();
     int integrateToTime(realtype t);

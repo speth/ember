@@ -266,7 +266,7 @@ CanteraGas::~CanteraGas()
     delete transport;
 }
 
-void CanteraGas::setOptions(const configOptions& options)
+void CanteraGas::setOptions(const ConfigOptions& options)
 {
     transportModel = options.transportModel;
     transportThreshold = options.transportThreshold;
@@ -279,19 +279,19 @@ void CanteraGas::initialize()
 {
     // XML Information File
     if (!boost::filesystem::exists(mechanismFile)) {
-        throw debugException((format(
+        throw DebugException((format(
             "Error: Cantera input file '%s' not found.") % mechanismFile).str());
     }
 
     rootXmlNode = Cantera::get_XML_File(mechanismFile);
     if (rootXmlNode == NULL) {
-        throw debugException((format(
+        throw DebugException((format(
             "Error parsing Cantera XML file '%s'.") % mechanismFile).str());
     }
 
     phaseXmlNode = rootXmlNode->findNameID("phase", phaseID);
     if (phaseXmlNode == NULL) {
-        throw debugException((format(
+        throw DebugException((format(
             "Error finding phase '%s' in '%s'.") % phaseID % mechanismFile).str());
     }
 
@@ -317,7 +317,7 @@ void CanteraGas::initialize()
         atran->setThreshold(transportThreshold);
         transport = atran;
     } else {
-        throw debugException("Error: Invalid transport model specified.");
+        throw DebugException("Error: Invalid transport model specified.");
     }
     transFac->initTransport(transport, &thermo);
     transFac->deleteFactory();

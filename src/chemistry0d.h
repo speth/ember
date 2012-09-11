@@ -60,7 +60,7 @@ public:
     double pressure; //!< thermodynamic pressure [Pa]
     size_t nSpec; //!< number of species
 
-    void setOptions(const configOptions& options);
+    void setOptions(const ConfigOptions& options);
     void initialize();
     bool initialized() const { return isInitialized; }
 

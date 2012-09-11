@@ -19,13 +19,13 @@ namespace ContinuityBoundaryCondition {
     };
 }
 
-class configOptions
+class ConfigOptions
 {
 public:
-    configOptions() {}
+    ConfigOptions() {}
 
-    //! Create a configOptions object from a parallel python data structure
-    configOptions(const boost::python::api::object& conf);
+    //! Create a ConfigOptions object from a parallel python data structure
+    ConfigOptions(const boost::python::api::object& conf);
 
     std::string inputDir; //!< [paths.inputDir] Directory where input files are located.
 

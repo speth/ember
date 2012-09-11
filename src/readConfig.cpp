@@ -12,7 +12,7 @@ const size_t kWmx = 2; // never used in the same systems as kSpecies
 namespace bp = boost::python;
 
 template <class T1>
-bool configOptions::readOption(const bp::object& conf, const char* name, T1& value)
+bool ConfigOptions::readOption(const bp::object& conf, const char* name, T1& value)
 {
     const bp::object& obj = conf.attr(name);
     if (obj.ptr() != Py_None) {
@@ -25,7 +25,7 @@ bool configOptions::readOption(const bp::object& conf, const char* name, T1& val
 
 // Read 1D array (list, numpy array, etc.) into a vector
 template <>
-bool configOptions::readOption(const bp::object& conf,
+bool ConfigOptions::readOption(const bp::object& conf,
                                const char* name, dvector& value)
 {
     const bp::object& obj = conf.attr(name);
@@ -43,7 +43,7 @@ bool configOptions::readOption(const bp::object& conf,
 
 // Read 1D array (list, numpy array, etc.) into an  Eigen vector
 template <>
-bool configOptions::readOption(const bp::object& conf,
+bool ConfigOptions::readOption(const bp::object& conf,
                                const char* name, dvec& value)
 {
     const bp::object& obj = conf.attr(name);
@@ -61,7 +61,7 @@ bool configOptions::readOption(const bp::object& conf,
 
 // Read 2D Numpy array into an Eigen matrix
 template <>
-bool configOptions::readOption(const bp::object& conf,
+bool ConfigOptions::readOption(const bp::object& conf,
                                const char* name, dmatrix& value)
 {
     const bp::object& obj = conf.attr(name);
@@ -80,7 +80,7 @@ bool configOptions::readOption(const bp::object& conf,
     }
 }
 
-configOptions::configOptions(const bp::object& conf)
+ConfigOptions::ConfigOptions(const bp::object& conf)
 {
     using bp::object;
     using std::string;

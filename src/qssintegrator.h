@@ -11,11 +11,11 @@ public:
 };
 
 //! A Quasi-Steady-State ODE Integrator based on CHEMEQ2
-class QSSIntegrator
+class QssIntegrator
 {
 public:
-    QSSIntegrator();
-    virtual ~QSSIntegrator() {}
+    QssIntegrator();
+    virtual ~QssIntegrator() {}
 
     //! Set the ODE object to be integrated
     void setOde(QssOde* ode);

@@ -6,7 +6,7 @@
 using std::abs;
 using mathUtils::sign;
 
-QSSIntegrator::QSSIntegrator()
+QssIntegrator::QssIntegrator()
     : ode_(0)
 {
     N = 0;
@@ -31,12 +31,12 @@ QSSIntegrator::QSSIntegrator()
     debug = false;
 }
 
-void QSSIntegrator::setOde(QssOde* ode)
+void QssIntegrator::setOde(QssOde* ode)
 {
     ode_ = ode;
 }
 
-void QSSIntegrator::initialize(size_t N_)
+void QssIntegrator::initialize(size_t N_)
 {
     N = N_;
     y.resize(N);
@@ -57,7 +57,7 @@ void QSSIntegrator::initialize(size_t N_)
     scratch.resize(N);
 }
 
-void QSSIntegrator::setState(const dvec& yIn, double tstart_)
+void QssIntegrator::setState(const dvec& yIn, double tstart_)
 {
     assert(yIn.size() == N);
     assert(mathUtils::notnan(yIn));
@@ -78,7 +78,7 @@ void QSSIntegrator::setState(const dvec& yIn, double tstart_)
     firstStep = true;
 }
 
-void QSSIntegrator::getInitialStepSize(double tf)
+void QssIntegrator::getInitialStepSize(double tf)
 {
     // Estimate the initial stepsize.
 
@@ -107,7 +107,7 @@ void QSSIntegrator::getInitialStepSize(double tf)
     dt = std::min(dt, dtmax);
 }
 
-int QSSIntegrator::integrateToTime(double tf)
+int QssIntegrator::integrateToTime(double tf)
 {
     while (tfd*tn < tf) {
         int ret = integrateOneStep(tf);
@@ -119,7 +119,7 @@ int QSSIntegrator::integrateToTime(double tf)
     return 0;
 }
 
-int QSSIntegrator::integrateOneStep(double tf) {
+int QssIntegrator::integrateOneStep(double tf) {
     // Evaluate the derivatives at the initial state.
     assert(mathUtils::notnan(y));
     ode_->odefun(tn + tstart, y, q, d);
@@ -206,7 +206,7 @@ int QSSIntegrator::integrateOneStep(double tf) {
 
         if (dt <= dtmin + 1e-16*tn) {
             // Integration failed with a timestep that is too small.
-            logFile.write("QSSIntegrator failed: timestep too small.");
+            logFile.write("QssIntegrator failed: timestep too small.");
             logFile.write(format("dt = %e, tn = %e, dtmin = %e") % dt % tn % dtmin);
             logFile.write("     i    q[i]     d[i]     y[i]    rtau[i]    dtc    q[i]-d[i]    ys[i]    ymin[i]");
 

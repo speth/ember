@@ -41,16 +41,16 @@ void LogFile::close()
     }
 }
 
-debugException::debugException(void)
+DebugException::DebugException(void)
 {
-    errorString = "debugException: unspecified error.";
+    errorString = "DebugException: unspecified error.";
 }
 
-debugException::debugException(const std::string& error)
+DebugException::DebugException(const std::string& error)
 {
     errorString = error;
 }
 
-const char* debugException::what() const throw() {
+const char* DebugException::what() const throw() {
     return errorString.c_str();
 }

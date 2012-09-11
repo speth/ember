@@ -52,7 +52,7 @@ void exportFlameSolver()
         .def_readonly("dYdtCross", &FlameSolver::dTdtCross)
         ;
 
-    class_<oneDimGrid, boost::noncopyable>("OneDimGrid")
-        .def_readonly("x", &oneDimGrid::x)
+    class_<OneDimGrid, boost::noncopyable>("OneDimGrid")
+        .def_readonly("x", &OneDimGrid::x)
         ;
 }
