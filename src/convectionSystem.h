@@ -188,10 +188,12 @@ private:
 
 class ConvectionTermWrapper {
 public:
-    ConvectionTermWrapper(ConvectionSystemSplit* parent, double t)
-        : parent_(parent), t_(t) {}
+    ConvectionTermWrapper(ConvectionSystemSplit* parent_, double t_)
+        : parent(parent_)
+        , t(t_)
+        {}
     void operator()(const tbb::blocked_range<size_t>& r) const;
 private:
-    ConvectionSystemSplit* parent_;
-    double t_;
+    ConvectionSystemSplit* parent;
+    double t;
 };

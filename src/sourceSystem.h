@@ -22,7 +22,8 @@ public:
     //! @param uu        tangential velocity
     //! @param tt        temperature
     //! @param yy        vector of species mass fractions
-    virtual void setState(double tInitial, double uu, double tt, const dvec& yy) = 0;
+    virtual void setState(double tInitial, double uu, double tt,
+                          const dvec& yy) = 0;
 
     //! Take as many steps as needed to reach `tf`.
     //! `tf` is relative to `tInitial`.
@@ -38,7 +39,7 @@ public:
     //! Extract current internal integrator state into U, T, and Y
     virtual void unroll_y() = 0;
 
-    virtual void setDebug(bool debug) { debug_ = debug; }
+    virtual void setDebug(bool debug_) { debug = debug_; }
 
     //! Return a string indicating the number of internal timesteps taken
     virtual std::string getStats() = 0;
@@ -59,7 +60,7 @@ public:
     virtual void initialize(size_t nSpec);
 
     //! Set integrator tolerances and other parameters
-    virtual void setOptions(configOptions& options) { options_ = &options; }
+    virtual void setOptions(configOptions& options_) { options = &options_; }
 
     void setTimers(PerfTimer* reactionRates, PerfTimer* thermo,
                    PerfTimer* jacobian);
@@ -96,8 +97,8 @@ public:
     dvec splitConst;
 
 protected:
-    bool debug_;
-    configOptions* options_;
+    bool debug;
+    configOptions* options;
 
     //! Cantera data
     CanteraGas* gas;
@@ -134,11 +135,11 @@ protected:
 
     //! An interpolator for computing the axial (z) velocity when solving a
     //! quasi-2D problem
-    boost::shared_ptr<BilinearInterpolator> vzInterp_;
+    boost::shared_ptr<BilinearInterpolator> vzInterp;
 
     //! An interpolator for computing the temperature when solving a
     //! quasi-2D problem
-    boost::shared_ptr<BilinearInterpolator> TInterp_;
+    boost::shared_ptr<BilinearInterpolator> TInterp;
 };
 
 //! Represents a system of equations used to integrate the (chemical) source
@@ -152,7 +153,8 @@ public:
     int f(const realtype t, const sdVector& y, sdVector& ydot);
 
     //! Calculate the Jacobian matrix: J = df/dy
-    int denseJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J);
+    int denseJacobian(const realtype t, const sdVector& y,
+                      const sdVector& ydot, sdMatrix& J);
 
     //! A simpler finite difference based Jacobian
     int fdJacobian(const realtype t, const sdVector& y,
@@ -169,7 +171,7 @@ public:
 
     //! fill in the current state variables from the integrator state
     void unroll_y() {
-        unroll_y(integrator_->y, integrator_->tInt);
+        unroll_y(integrator->y, integrator->tInt);
     }
 
     //! fill in `y` with the values of the current state variables
@@ -191,7 +193,7 @@ public:
     dvec wDot; //!< species net production rates [kmol/m^3*s]
 
 private:
-    std::auto_ptr<sundialsCVODE> integrator_;
+    std::auto_ptr<sundialsCVODE> integrator;
 };
 
 //! This is the system representing the (chemical) source term at a point,
@@ -205,9 +207,10 @@ public:
     SourceSystemQSS();
 
     //! The ODE function: ydot = f(t,y)
-    void odefun(double t, const dvec& y, dvec& q, dvec& d, bool corrector=false);
+    void odefun(double t, const dvec& y, dvec& q, dvec& d,
+                bool corrector=false);
 
-    double time() const { return integrator_.tn; }
+    double time() const { return integrator.tn; }
 
     //! Assign the current state variables from `y`.
     //! The current value of the temperature is not updated during corrector
@@ -215,7 +218,7 @@ public:
     void unroll_y(const dvec& y, bool corrector=false);
 
     //! Assign the state variables using the current integrator state.
-    void unroll_y() { unroll_y(integrator_.y); }
+    void unroll_y() { unroll_y(integrator.y); }
 
     //! fill in `y` with current state variables.
     void roll_y(dvec& y) const;
@@ -228,8 +231,8 @@ public:
     void setOptions(configOptions& options);
 
     void setState(double tStart, double uu, double tt, const dvec& yy);
-    int integrateToTime(double tf) { return integrator_.integrateToTime(tf); }
-    int integrateOneStep(double tf) { return integrator_.integrateOneStep(tf); }
+    int integrateToTime(double tf) { return integrator.integrateToTime(tf); }
+    int integrateOneStep(double tf) { return integrator.integrateOneStep(tf); }
 
     virtual std::string getStats();
 
@@ -245,5 +248,5 @@ public:
     dvec wDotQ, wDotD; //!< species production / destruction rates [kmol/m^3*s]
 
 private:
-    QSSIntegrator integrator_;
+    QSSIntegrator integrator;
 };

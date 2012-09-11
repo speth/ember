@@ -165,7 +165,7 @@ include_dirs.extend([get_config_var('INCLUDEPY'),
                      np.get_include()])
 
 env.Append(CPPPATH=include_dirs,
-           LIBPATH=library_dirs,                  
+           LIBPATH=library_dirs,
            LIBS=sundials + cantera + lastlibs)
 
 if env['CC'] == 'gcc':

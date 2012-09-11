@@ -664,14 +664,14 @@ void ConvectionSystemSplit::configureSolver(sundialsCVODE& solver, const size_t 
 
 void ConvectionTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
 {
-    parent_->speciesTimer.start();
+    parent->speciesTimer.start();
     if (debugParameters::veryVerbose) {
         logFile.write("Yk...", false);
     }
     // Integrate the species systems
     for (size_t k=r.begin(); k<r.end(); k++) {
-        parent_->speciesSystems[k].vInterp = parent_->vInterp;
-        parent_->speciesSolvers[k].integrateToTime(t_);
+        parent->speciesSystems[k].vInterp = parent->vInterp;
+        parent->speciesSolvers[k].integrateToTime(t);
     }
-    parent_->speciesTimer.stop();
+    parent->speciesTimer.stop();
 }

@@ -256,24 +256,26 @@ public:
 
 class SourceTermWrapper {
 public:
-    SourceTermWrapper(FlameSolver* parent, double t, int stage) {
-        parent_ = parent;
-        stage_ = stage;
-        t_ = t;
-    }
+    SourceTermWrapper(FlameSolver* parent_, double t_, int stage_)
+        : parent(parent_)
+        , stage(stage_)
+        , t(t_)
+        {}
     void operator()(const tbb::blocked_range<size_t>& r) const;
 private:
-    FlameSolver* parent_;
-    int stage_;
-    double t_;
+    FlameSolver* parent;
+    int stage;
+    double t;
 };
 
 class DiffusionTermWrapper {
 public:
-    DiffusionTermWrapper(FlameSolver* parent, double t)
-        : parent_(parent), t_(t) {}
+    DiffusionTermWrapper(FlameSolver* parent_, double t_)
+        : parent(parent_)
+        , t(t_)
+        {}
     void operator()(const tbb::blocked_range<size_t>& r) const;
 private:
-    FlameSolver* parent_;
-    double t_;
+    FlameSolver* parent;
+    double t;
 };

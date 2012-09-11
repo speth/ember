@@ -6,8 +6,8 @@
 SourceSystem::SourceSystem()
     : U(NaN)
     , T(NaN)
-    , debug_(false)
-    , options_(NULL)
+    , debug(false)
+    , options(NULL)
     , gas(NULL)
     , quasi2d(false)
 {
@@ -24,7 +24,7 @@ void SourceSystem::updateThermo()
 
 double SourceSystem::getQdotIgniter(double t)
 {
-    configOptions& opt = *options_;
+    configOptions& opt = *options;
     if (t >= opt.ignition_tStart &&
         t < opt.ignition_tStart + opt.ignition_duration) {
         return opt.ignition_energy /
@@ -63,12 +63,12 @@ void SourceSystem::setPosition(size_t _j, double _x)
     x = _x;
 }
 
-void SourceSystem::setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
-                                boost::shared_ptr<BilinearInterpolator> TInterp)
+void SourceSystem::setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vz_int,
+                                boost::shared_ptr<BilinearInterpolator> T_int)
 {
     quasi2d = true;
-    vzInterp_ = vzInterp;
-    TInterp_ = TInterp;
+    vzInterp = vz_int;
+    TInterp = T_int;
 }
 
 void SourceSystem::writeState(std::ostream& out, bool init)
@@ -92,23 +92,23 @@ void SourceSystemCVODE::initialize(size_t new_nSpec)
     dYdt.resize(nSpec);
     wDot.resize(nSpec);
 
-    integrator_.reset(new sundialsCVODE(nSpec+2));
-    integrator_->setODE(this);
-    integrator_->linearMultistepMethod = CV_BDF;
-    integrator_->nonlinearSolverMethod = CV_NEWTON;
-    integrator_->maxNumSteps = 1000000;
+    integrator.reset(new sundialsCVODE(nSpec+2));
+    integrator->setODE(this);
+    integrator->linearMultistepMethod = CV_BDF;
+    integrator->nonlinearSolverMethod = CV_NEWTON;
+    integrator->maxNumSteps = 1000000;
 }
 
-void SourceSystemCVODE::setOptions(configOptions& options)
+void SourceSystemCVODE::setOptions(configOptions& opts)
 {
-    SourceSystem::setOptions(options);
-    integrator_->abstol[kMomentum] = options.integratorMomentumAbsTol;
-    integrator_->abstol[kEnergy] = options.integratorEnergyAbsTol;
+    SourceSystem::setOptions(opts);
+    integrator->abstol[kMomentum] = options->integratorMomentumAbsTol;
+    integrator->abstol[kEnergy] = options->integratorEnergyAbsTol;
     for (size_t k=0; k<nSpec; k++) {
-        integrator_->abstol[kSpecies+k] = options.integratorSpeciesAbsTol;
+        integrator->abstol[kSpecies+k] = options->integratorSpeciesAbsTol;
     }
-    integrator_->reltol = options.integratorRelTol;
-    integrator_->minStep = options.integratorMinTimestep;
+    integrator->reltol = options->integratorRelTol;
+    integrator->minStep = options->integratorMinTimestep;
 }
 
 int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
@@ -133,7 +133,7 @@ int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
         qDot = - (wDot * hk).sum() + getQdotIgniter(t);
         dTdt = qDot/(rho*cp) + splitConst[kEnergy];
     } else {
-        scale = 1.0/vzInterp_->get(x, t);
+        scale = 1.0/vzInterp->get(x, t);
         dUdt = splitConst[kMomentum];
         dTdt = splitConst[kEnergy];
     }
@@ -143,7 +143,8 @@ int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
     return 0;
 }
 
-int SourceSystemCVODE::denseJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J)
+int SourceSystemCVODE::denseJacobian(const realtype t, const sdVector& y,
+                                     const sdVector& ydot, sdMatrix& J)
 {
     // TODO: Verify that f has just been called so that we don't need to
     // unroll y and compute all the transport properties.
@@ -191,7 +192,7 @@ int SourceSystemCVODE::denseJacobian(const realtype t, const sdVector& y, const 
     dvec YplusdY(nSpec);
     dvec drhodY(nSpec);
 
-    double scale = (quasi2d) ? 1.0/vzInterp_->get(x, t) : 1.0;
+    double scale = (quasi2d) ? 1.0/vzInterp->get(x, t) : 1.0;
 
     for (size_t k=0; k<nSpec; k++) {
         YplusdY[k] = (abs(Y[k]) > eps/2) ? Y[k]*(1+eps) : eps;
@@ -211,14 +212,17 @@ int SourceSystemCVODE::denseJacobian(const realtype t, const sdVector& y, const 
     for (size_t k=0; k<nSpec; k++) {
         for (size_t i=0; i<nSpec; i++) {
             // dSpecies/dY
-            J(kSpecies+k, kSpecies+i) = scale * (dwdY(k,i)*W[k]/rho - wDot[k]*W[k]*drhodY[i]/(rho*rho));
+            J(kSpecies+k, kSpecies+i) = scale *
+                (dwdY(k,i)*W[k]/rho - wDot[k]*W[k]*drhodY[i]/(rho*rho));
         }
         if (!quasi2d) {
             // dSpecies/dT
-            J(kSpecies+k, kEnergy) = dwdT[k]*W[k]/rho - wDot[k]*W[k]*drhodT/(rho*rho);
+            J(kSpecies+k, kEnergy) = dwdT[k]*W[k]/rho -
+                wDot[k]*W[k]*drhodT/(rho*rho);
 
             // dEnergy/dY
-            J(kEnergy, kSpecies+k) = -hdwdY[k]/(rho*cp) - qDot*drhodY[k]/(rho*rho*cp);
+            J(kEnergy, kSpecies+k) = -hdwdY[k]/(rho*cp) -
+                qDot*drhodY[k]/(rho*rho*cp);
 
             // dMomentum/dY
             J(kMomentum, kSpecies+k) = -A*drhodY[k]/(rho*rho);
@@ -239,7 +243,8 @@ int SourceSystemCVODE::denseJacobian(const realtype t, const sdVector& y, const 
     return 0;
 }
 
-int SourceSystemCVODE::fdJacobian(const realtype t, const sdVector& y, const sdVector& ydot, sdMatrix& J)
+int SourceSystemCVODE::fdJacobian(const realtype t, const sdVector& y,
+                                  const sdVector& ydot, sdMatrix& J)
 {
     jacobianTimer->start();
     sdVector yplusdy(y.length());
@@ -268,26 +273,26 @@ int SourceSystemCVODE::fdJacobian(const realtype t, const sdVector& y, const sdV
 void SourceSystemCVODE::setState
 (double tInitial, double uu, double tt, const dvec& yy)
 {
-    integrator_->t0 = tInitial;
-    integrator_->y[kMomentum] = uu;
-    integrator_->y[kEnergy] = tt;
-    Eigen::Map<dvec>(&integrator_->y[kSpecies], nSpec) = yy;
-    integrator_->initialize();
+    integrator->t0 = tInitial;
+    integrator->y[kMomentum] = uu;
+    integrator->y[kEnergy] = tt;
+    Eigen::Map<dvec>(&integrator->y[kSpecies], nSpec) = yy;
+    integrator->initialize();
 }
 
 int SourceSystemCVODE::integrateToTime(double tf)
 {
-    return integrator_->integrateToTime(integrator_->t0 + tf);
+    return integrator->integrateToTime(integrator->t0 + tf);
 }
 
 int SourceSystemCVODE::integrateOneStep(double tf)
 {
-    return integrator_->integrateOneStep(integrator_->t0 + tf);
+    return integrator->integrateOneStep(integrator->t0 + tf);
 }
 
 double SourceSystemCVODE::time() const
 {
-    return integrator_->tInt - integrator_->t0;
+    return integrator->tInt - integrator->t0;
 }
 
 void SourceSystemCVODE::unroll_y(const sdVector& y, double t)
@@ -296,7 +301,7 @@ void SourceSystemCVODE::unroll_y(const sdVector& y, double t)
         T = y[kEnergy];
         U = y[kMomentum];
     } else {
-        T = TInterp_->get(x, t);
+        T = TInterp->get(x, t);
         U = 0;
     }
     Y = Eigen::Map<dvec>(&y[kSpecies], nSpec);
@@ -318,17 +323,17 @@ void SourceSystemCVODE::roll_ydot(sdVector& ydot) const
 
 std::string SourceSystemCVODE::getStats()
 {
-    return (format("%i") % integrator_->getNumSteps()).str();
+    return (format("%i") % integrator->getNumSteps()).str();
 }
 
 void SourceSystemCVODE::writeJacobian(std::ostream& out)
 {
-    size_t N = integrator_->y.length();
-    double t = integrator_->tInt;
+    size_t N = integrator->y.length();
+    double t = integrator->tInt;
     sdMatrix J(N,N);
     sdVector ydot(N);
-    f(t, integrator_->y, ydot);
-    denseJacobian(t, integrator_->y, ydot, J);
+    f(t, integrator->y, ydot);
+    denseJacobian(t, integrator->y, ydot, J);
 
     out << "J = []" << std::endl;
     for (size_t i=0; i<N; i++) {
@@ -344,7 +349,7 @@ void SourceSystemCVODE::writeJacobian(std::ostream& out)
 
 SourceSystemQSS::SourceSystemQSS()
 {
-    integrator_.setOde(this);
+    integrator.setOde(this);
     dUdtQ = 0;
     dUdtD = 0;
     dTdtQ = 0;
@@ -354,28 +359,28 @@ SourceSystemQSS::SourceSystemQSS()
 void SourceSystemQSS::initialize(size_t new_nSpec)
 {
     SourceSystem::initialize(new_nSpec);
-    integrator_.initialize(new_nSpec + 2);
+    integrator.initialize(new_nSpec + 2);
 
     dYdtQ.setConstant(nSpec, 0);
     dYdtD.setConstant(nSpec, 0);
     wDotD.resize(nSpec);
     wDotQ.resize(nSpec);
 
-    integrator_.enforce_ymin[kMomentum] = false;
+    integrator.enforce_ymin[kMomentum] = false;
 }
 
-void SourceSystemQSS::setOptions(configOptions& options)
+void SourceSystemQSS::setOptions(configOptions& opts)
 {
-    SourceSystem::setOptions(options);
-    integrator_.epsmin = options_->qss_epsmin;
-    integrator_.epsmax = options_->qss_epsmax;
-    integrator_.dtmin = options_->qss_dtmin;
-    integrator_.dtmax = options_->qss_dtmax;
-    integrator_.itermax = options_->qss_iterationCount;
-    integrator_.abstol = options_->qss_abstol;
-    integrator_.stabilityCheck = options_->qss_stabilityCheck;
-    integrator_.ymin.setConstant(nSpec + 2, options_->qss_minval);
-    integrator_.ymin[kMomentum] = -1e4;
+    SourceSystem::setOptions(opts);
+    integrator.epsmin = options->qss_epsmin;
+    integrator.epsmax = options->qss_epsmax;
+    integrator.dtmin = options->qss_dtmin;
+    integrator.dtmax = options->qss_dtmax;
+    integrator.itermax = options->qss_iterationCount;
+    integrator.abstol = options->qss_abstol;
+    integrator.stabilityCheck = options->qss_stabilityCheck;
+    integrator.ymin.setConstant(nSpec + 2, options->qss_minval);
+    integrator.ymin[kMomentum] = -1e4;
 }
 
 void SourceSystemQSS::setState
@@ -383,10 +388,11 @@ void SourceSystemQSS::setState
 {
     dvec yIn(nSpec + 2);
     yIn << uu, tt, yy;
-    integrator_.setState(yIn, tStart);
+    integrator.setState(yIn, tStart);
 }
 
-void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d, bool corrector)
+void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d,
+                             bool corrector)
 {
     tCall = t;
     unroll_y(y, corrector);
@@ -415,7 +421,7 @@ void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d, bool cor
         dUdtD = 0;
         dTdtQ = qDot/(rho*cp) + splitConst[kEnergy];
     } else {
-        scale = 1.0/vzInterp_->get(x, t);
+        scale = 1.0/vzInterp->get(x, t);
         dUdtQ = 0;
         dUdtD = 0;
         dTdtQ = 0;
@@ -446,7 +452,7 @@ void SourceSystemQSS::unroll_y(const dvec& y, bool corrector)
         U = y[kMomentum];
     } else {
         if (!corrector) {
-            T = TInterp_->get(x, tCall);
+            T = TInterp->get(x, tCall);
         }
         U = 0;
     }
@@ -466,5 +472,5 @@ void SourceSystemQSS::roll_ydot(dvec& q, dvec& d) const
 
 std::string SourceSystemQSS::getStats()
 {
-    return (format("%i/%i") % integrator_.gcount % integrator_.rcount).str();
+    return (format("%i/%i") % integrator.gcount % integrator.rcount).str();
 }

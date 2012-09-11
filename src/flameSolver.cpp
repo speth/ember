@@ -1462,34 +1462,34 @@ void FlameSolver::printPerfString(const std::string& label, const PerfTimer& T)
 void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
 {
     if (debugParameters::veryVerbose) {
-        if (stage_) {
-            logFile.write(format("Source term %i/2...") % stage_, false);
+        if (stage) {
+            logFile.write(format("Source term %i/2...") % stage, false);
         } else {
             logFile.write("Source term...", false);
         }
     }
-    CanteraGas& gas = parent_->gases.local();
+    CanteraGas& gas = parent->gases.local();
     if (!gas.initialized()) {
-        tbb::mutex::scoped_lock lock(parent_->gasInitMutex);
-        gas.setOptions(parent_->options);
+        tbb::mutex::scoped_lock lock(parent->gasInitMutex);
+        gas.setOptions(parent->options);
         gas.initialize();
     }
 
     int err = 0;
     for (size_t j=r.begin(); j<r.end(); j++) {
-        SourceSystem& system = parent_->sourceTerms[j];
+        SourceSystem& system = parent->sourceTerms[j];
         if (debugParameters::veryVerbose) {
             logFile.write(format("%i") % j, false);
         }
         system.setGas(&gas);
-        if (int(j) == parent_->options.debugSourcePoint &&
-            t_ >= parent_->options.debugSourceTime) {
+        if (int(j) == parent->options.debugSourcePoint &&
+            t >= parent->options.debugSourceTime) {
             system.setDebug(true);
             std::ofstream steps("sourceTermSteps.py");
             system.writeState(steps, true);
 
-            while (system.time() < t_ - parent_->tNow && err >= 0) {
-                err = system.integrateOneStep(t_ - parent_->tNow);
+            while (system.time() < t - parent->tNow && err >= 0) {
+                err = system.integrateOneStep(t - parent->tNow);
                 system.writeState(steps, false);
             }
 
@@ -1498,7 +1498,7 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             std::terminate();
 
         } else {
-            err = system.integrateToTime(t_ - parent_->tNow);
+            err = system.integrateToTime(t - parent->tNow);
         }
         if (err < 0) {
             logFile.write(format("Error at j = %i") % j);
@@ -1506,8 +1506,8 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             logFile.write(format("U = %s") % system.U);
             logFile.write("Y = ", false);
             logFile.write(system.Y);
-            parent_->writeStateFile((format("prod%i_error_t%.6f_j%03i") %
-                    stage_ % t_ % j).str(), true, false);
+            parent->writeStateFile((format("prod%i_error_t%.6f_j%03i") %
+                    stage % t % j).str(), true, false);
         }
 
         if (debugParameters::veryVerbose) {
@@ -1519,6 +1519,6 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
 void DiffusionTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
 {
     for (size_t k=r.begin(); k<r.end(); k++) {
-        parent_->diffusionSolvers[k].integrateToTime(t_);
+        parent->diffusionSolvers[k].integrateToTime(t);
     }
 }
