@@ -221,15 +221,15 @@ tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
 if not tests['CanteraExtendedTransport']:
     raise EnvironmentError("Missing required Cantera method 'getMixDiffCoeffsMass'.")
 
-common = Glob('build/core/*.cpp')
-
 # The Python module
 pyenv = env.Clone()
 pyenv.Append(LIBS=['boost-numpy'],
              LIBPATH=['lib'])
 
+common_objects = pyenv.SharedObject(Glob('build/core/*.cpp'))
+
 pylib = pyenv.SharedLibrary('python/ember/_ember',
-                            common + Glob('build/python/*.cpp'),
+                            common_objects + Glob('build/python/*.cpp'),
                             SHLIBPREFIX='',
                             SHLIBSUFFIX=get_config_var('SO'))
 
@@ -250,16 +250,18 @@ env.Alias('install', py_install)
 # GoogleTest tests
 python_lib = 'python%s' % get_config_var('VERSION')
 testenv = env.Clone()
-testenv.Append(LIBS=[pylib, 'gtest', python_lib],
+testenv.Append(LIBS=['gtest', python_lib],
                CPPPATH=['ext/gtest/include'],
                LIBPATH=['lib'])
 
 if os.name == 'nt':
     testenv.Append(LIBPATH=get_config_var('LIBDEST'))
+    testenv['ENV']['PATH'] += ';' + Dir('lib').abspath
 
 test_program = testenv.Program('bin/unittest',
-                               Glob('build/test/*.cpp'))
-test_alias = testenv.Alias('test', [test_program], test_program[0].abspath)
+                               Glob('build/test/*.cpp') + common_objects)
+run_test = testenv.Command('test_dummy', test_program[0].abspath, '$SOURCE $TARGET')
+test_alias = Alias('test', run_test)
 # AlwaysBuild(test_alias)
 
 # Google Test
