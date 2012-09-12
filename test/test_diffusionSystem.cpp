@@ -80,6 +80,36 @@ TEST_F(DiffusionSystemTest, Gaussian)
     }
 }
 
+TEST_F(DiffusionSystemTest, CylindricalCoordinates)
+{
+    // Exact solution in cylindrical coordinates. Same shape as the Cartesian
+    // case, but decays as 1/t instead of 1/sqrt(t).
+
+    grid.curvedFlame = true;
+    grid.alpha = 1;
+    grid.fixedBurnedVal = true;
+    grid.unburnedLeft = false;
+
+    grid.x = dvec::LinSpaced(nPoints, 0, 2);
+    grid.updateValues();
+    grid.updateBoundaryIndices();
+    sys.setGrid(grid);
+
+    double t0 = 0.7;
+    dvec y0 = exp(- grid.x * grid.x / (4 * D * t0));
+    solver.set_y0(y0);
+    solver.initialize(t0, 0.001);
+    double t = 0.8;
+    solver.integrateToTime(t);
+
+    const dvec& y1 = solver.get_y();
+    dvec y1_exact = t0/t * exp(-grid.x * grid.x / (4 * D * t));
+
+    for (int i = 1; i < nPoints; i++) {
+        ASSERT_NEAR(y1[i], y1_exact[i], 2e-4);
+    }
+}
+
 TEST_F(DiffusionSystemTest, Superposition1)
 {
     // Since the diffusion equation is linear, the solution to an initial
@@ -141,5 +171,30 @@ TEST_F(DiffusionSystemTest, Superposition2)
 
     for (int i = 0; i < nPoints; i++) {
         ASSERT_NEAR(y1a[i] + y1b[i], y1[i], 1e-12);
+    }
+}
+
+TEST_F(DiffusionSystemTest, Timestep)
+{
+    // The solution should be (nearly) independent of the timestep
+
+    sys.D = 0.1 + 0.02 * grid.x;
+    sys.B = 1 + 0.5 * grid.x * grid.x;
+
+    double t0 = 0.2;
+    dvec y0 = cos(M_PI * grid.x) + exp(- grid.x * grid.x / (4 * D * t0));
+
+    solver.set_y0(y0);
+    solver.initialize(0, 0.001);
+    solver.integrateToTime(0.1);
+    dvec y1a = solver.get_y();
+
+    solver.set_y0(y0);
+    solver.initialize(0, 0.0005);
+    solver.integrateToTime(0.1);
+    dvec y1b = solver.get_y();
+
+    for (int i = 0; i < nPoints; i++) {
+        ASSERT_NEAR(y1a[i], y1b[i], 5e-6);
     }
 }
