@@ -21,6 +21,7 @@ import numpy as np
 import utils
 import copy
 
+
 class Option(object):
     """
     Instances of this class are used as class members of descendants of class
@@ -58,7 +59,8 @@ class Option(object):
     classes: :class:`StringOption`, :class:`BoolOption`, :class:`IntegerOption`,
     :class:`FloatOption`.
     """
-    counter = [0] # used to preserve options in the order they are defined
+    counter = [0]  # used to preserve options in the order they are defined
+
     def __init__(self, default, choices=None, min=None, max=None,
                  nullable=False, label=None, level=0, filter=None):
         self.value = default
@@ -84,10 +86,12 @@ class Option(object):
             return '%r not in %r' % (self.value, list(self.choices))
 
         if self.min is not None and self.value < self.min:
-            return 'Value (%s) must be greater than or equal to %s' % (self.value, self.min)
+            return ('Value (%s) must be greater than or equal to %s' %
+                    (self.value, self.min))
 
         if self.max is not None and self.value > self.max:
-            return 'Value (%s) must be less than or equal to %s' % (self.value, self.max)
+            return ('Value (%s) must be less than or equal to %s' %
+                    (self.value, self.max))
 
     def __repr__(self):
         return repr(self.value)
@@ -205,21 +209,27 @@ class Options(object):
         allOpts.sort(key=lambda item: item[1].sortValue)
         return allOpts.__iter__()
 
+
 # frequently-used filter predicates
 def _isPremixed(conf):
     return conf.initialCondition.flameType == 'premixed'
 
+
 def _isDiffusion(conf):
     return conf.initialCondition.flameType == 'diffusion'
+
 
 def _isSymmetric(conf):
     return conf.general.curvedFlame or conf.general.twinFlame
 
+
 def _usingCvode(conf):
     return conf.general.chemistryIntegrator == 'cvode'
 
+
 def _usingQss(conf):
     return conf.general.chemistryIntegrator == 'qss'
+
 
 class Paths(Options):
     """ Directories for input and output files """
@@ -234,6 +244,7 @@ class Paths(Options):
 
     #: File to use for log messages. If *None*, write output to stdout
     logFile = StringOption(None, label='Log file', level=2)
+
 
 class General(Options):
     """ High-level configuration options """
@@ -504,10 +515,10 @@ class StrainParameters(Options):
     The strain rate changes linearly from *initial* to *final* over a
     period of *dt* seconds, starting at *tStart*.
     """
-    initial = FloatOption(400) #: Initial strain rate [1/s]
-    final = FloatOption(400) #: final strain rate [1/s]
-    tStart = FloatOption(0.000) #: time at which strain rate starts to change [s]
-    dt = FloatOption(0.002) #: time period over which strain rate changes [s]
+    initial = FloatOption(400)  #: Initial strain rate [1/s]
+    final = FloatOption(400)  #: final strain rate [1/s]
+    tStart = FloatOption(0.000)  #: time at which strain rate starts to change [s]
+    dt = FloatOption(0.002)  #: time period over which strain rate changes [s]
 
     #: A list of strain rates to use for a series of sequential
     #: integration periods (see :func:`~ember.utils.multirun`), with steady-state
@@ -535,13 +546,13 @@ class PositionControl(Options):
     *integralGain*.
     """
 
-    xInitial = FloatOption(0.0025, filter=_isSymmetric) #:
-    xFinal = FloatOption(0.0025, filter=_isSymmetric) #:
-    dt = FloatOption(0.01, filter=_isSymmetric) #:
-    tStart = FloatOption(0, filter=_isSymmetric) #:
+    xInitial = FloatOption(0.0025, filter=_isSymmetric)  #:
+    xFinal = FloatOption(0.0025, filter=_isSymmetric)  #:
+    dt = FloatOption(0.01, filter=_isSymmetric)  #:
+    tStart = FloatOption(0, filter=_isSymmetric)  #:
 
-    proportionalGain = FloatOption(10, filter=_isSymmetric) #:
-    integralGain = FloatOption(800, filter=_isSymmetric) #:
+    proportionalGain = FloatOption(10, filter=_isSymmetric)  #:
+    integralGain = FloatOption(800, filter=_isSymmetric)  #:
 
 
 class Times(Options):
@@ -705,12 +716,12 @@ class TerminationCondition(Options):
     sane value for *tEnd*.
     """
 
-    tEnd = FloatOption(0.8) #:
+    tEnd = FloatOption(0.8)  #:
 
-    measurement = Option("Q", (None,)) #:
-    tolerance = FloatOption(1e-4, level=2) #:
-    abstol = FloatOption(0.5, min=0, level=2) #:
-    steadyPeriod = FloatOption(0.002, min=0, level=1) #:
+    measurement = Option("Q", (None,))  #:
+    tolerance = FloatOption(1e-4, level=2)  #:
+    abstol = FloatOption(0.5, min=0, level=2)  #:
+    steadyPeriod = FloatOption(0.002, min=0, level=1)  #:
 
 
 class Config(object):
@@ -851,7 +862,6 @@ class Config(object):
         else:
             print 'Validation completed successfully.'
 
-
     def checkRateConstants(self, gas, T):
         """
         A function for finding reactions with suspiciously high
@@ -982,7 +992,7 @@ class Config(object):
             T[jm] = Tb
 
             gas.set(Y=Yleft, T=Tleft, P=IC.pressure)
-            rhou = gas.density() # arbitrary for diffusion flame
+            rhou = gas.density()  # arbitrary for diffusion flame
 
         Y[:,0] = Yleft
         Y[:,-1] = Yright
@@ -1024,5 +1034,5 @@ class Config(object):
         IC.Y = Y
         IC.T = T
         IC.U = U
-        IC.rVzero = 0.0 # @todo: Better estimate? Is this currently used?
+        IC.rVzero = 0.0  # @todo: Better estimate? Is this currently used?
         IC.haveProfiles = True
