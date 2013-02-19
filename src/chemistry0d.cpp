@@ -246,6 +246,84 @@ void ApproxMixTransport::update_C()
     }
 }
 
+typedef Eigen::Map<dvec> vec_map;
+
+InterpKinetics::InterpKinetics(Cantera::ThermoPhase* phase)
+    : GasKinetics(phase)
+    , m_ntemps(0)
+    , m_tmin(0)
+    , m_tmax(0)
+{
+}
+
+void InterpKinetics::rebuildInterpData(size_t nTemps, double Tmin, double Tmax)
+{
+    m_ntemps = nTemps;
+    m_tmin = Tmin;
+    m_tmax = Tmax;
+
+    m_rfn_const = dmatrix::Zero(m_ii, m_ntemps);
+    m_rfn_slope = dmatrix::Zero(m_ii, m_ntemps);
+
+    m_rkcn_const = dmatrix::Zero(m_ii, m_ntemps);
+    m_rkcn_slope = dmatrix::Zero(m_ii, m_ntemps);
+
+    m_rfn_low_const = dmatrix::Zero(m_nfall, m_ntemps);
+    m_rfn_low_slope = dmatrix::Zero(m_nfall, m_ntemps);
+    m_rfn_high_const = dmatrix::Zero(m_nfall, m_ntemps);
+    m_rfn_high_slope = dmatrix::Zero(m_nfall, m_ntemps);
+    m_falloff_work_const = dmatrix::Zero(m_nfall, m_ntemps);
+    m_falloff_work_slope = dmatrix::Zero(m_nfall, m_ntemps);
+
+    for (size_t n = 0; n < m_ntemps; n++) {
+        thermo().setState_TP(Tmin + ((double) n)/(m_ntemps - 1) * (Tmax - Tmin),
+                             thermo().pressure());
+        GasKinetics::_update_rates_T();
+        m_rfn_const.col(n) = vec_map(&m_rfn[0], m_ii);
+        m_rkcn_const.col(n) = vec_map(&m_rkcn[0], m_ii);
+        m_rfn_low_const.col(n) = vec_map(&m_rfn_low[0], m_nfall);
+        m_rfn_high_const.col(n) = vec_map(&m_rfn_high[0], m_nfall);
+        m_falloff_work_const.col(n) = vec_map(&falloff_work[0], m_nfall);
+    }
+
+    double dT = (Tmax - Tmin) / (m_ntemps - 1);
+    for (size_t n = 0; n < m_ntemps - 1; n++) {
+        m_rfn_slope.col(n) = (m_rfn_const.col(n+1) - m_rfn_const.col(n)) / dT;
+        m_rkcn_slope.col(n) = (m_rkcn_const.col(n+1) - m_rkcn_const.col(n)) / dT;
+        m_rfn_low_slope.col(n) = (m_rfn_low_const.col(n+1) - m_rfn_low_const.col(n)) / dT;
+        m_rfn_high_slope.col(n) = (m_rfn_high_const.col(n+1) - m_rfn_high_const.col(n)) / dT;
+        m_falloff_work_slope.col(n) = (m_falloff_work_const.col(n+1) - m_falloff_work_const.col(n)) / dT;
+    }
+}
+
+void InterpKinetics::_update_rates_T()
+{
+    if (!m_ntemps) {
+        rebuildInterpData(200, 250, 3000);
+    }
+    double Tnow = thermo().temperature();
+    if (Tnow >= m_tmax) {
+        rebuildInterpData(m_ntemps + 10, m_tmin, Tnow + 100.0);
+    } else if (Tnow <= m_tmin) {
+        rebuildInterpData(m_ntemps + 2, std::max(Tnow - 20.0, 10.0), m_tmax);
+    }
+
+    size_t n = static_cast<size_t>(floor((Tnow-m_tmin)/(m_tmax-m_tmin)*(m_ntemps-1)));
+    double dT = Tnow - n * (m_tmax - m_tmin) / (m_ntemps - 1) - m_tmin;
+    assert(dT >= 0 && dT <= (m_tmax - m_tmin) / (m_ntemps - 1));
+    assert(n < m_ntemps);
+
+    vec_map(&m_rfn[0], m_ii) = m_rfn_const.col(n) + m_rfn_slope.col(n) * dT;
+    vec_map(&m_rkcn[0], m_ii) = m_rkcn_const.col(n) + m_rkcn_slope.col(n) * dT;
+    vec_map(&m_rfn_low[0], m_nfall) = m_rfn_low_const.col(n) + m_rfn_low_slope.col(n) * dT;
+    vec_map(&m_rfn_high[0], m_nfall) = m_rfn_high_const.col(n) + m_rfn_high_slope.col(n) * dT;
+    vec_map(&falloff_work[0], m_nfall) = m_falloff_work_const.col(n) + m_falloff_work_slope.col(n) * dT;
+
+    m_logStandConc = log(thermo().standardConcentration());
+    m_temp = Tnow;
+    m_ROP_ok = false;
+}
+
 CanteraGas::CanteraGas()
     : isInitialized(false)
     , rootXmlNode(NULL)
@@ -294,7 +372,8 @@ void CanteraGas::initialize()
     Cantera::importPhase(*phaseXmlNode, &thermo);
 
     // Initialize the default chemical kinetics object
-    kinetics = new Cantera::GasKinetics(&thermo);
+    //kinetics = new Cantera::GasKinetics(&thermo);
+    kinetics = new InterpKinetics(&thermo);
     kinetics->init();
     Cantera::installReactionArrays(*phaseXmlNode, *kinetics, phaseID);
     kinetics->finalize();

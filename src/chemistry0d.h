@@ -52,6 +52,27 @@ private:
     vector<size_t> _kMajor; //!< indices of the species where X[k] >= threshold
 };
 
+
+class InterpKinetics : public Cantera::GasKinetics
+{
+public:
+    InterpKinetics(Cantera::ThermoPhase* phase);
+
+    virtual void _update_rates_T();
+    void rebuildInterpData(size_t nTemps, double Tmin, double Tmax);
+
+private:
+    size_t m_ntemps; //!< number of temperatures over which to interpolate
+    double m_tmin; //!< minimum temperature
+    double m_tmax; //!< maximum temperature
+
+    dmatrix m_rfn_const, m_rfn_slope;
+    dmatrix m_rfn_low_const, m_rfn_low_slope;
+    dmatrix m_rfn_high_const, m_rfn_high_slope;
+    dmatrix m_falloff_work_const, m_falloff_work_slope;
+    dmatrix m_rkcn_const, m_rkcn_slope;
+};
+
 //! A set of Cantera objects needed for calculating thermodynamic properties,
 //! transport properties, and kinetic rates for a constant-pressure mixture.
 class CanteraGas
