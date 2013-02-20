@@ -70,6 +70,7 @@ void DiffusionSystem::get_A(dvec& a, dvec& b, dvec& c)
 
 void DiffusionSystem::get_k(dvec& k)
 {
+    assert(mathUtils::notnan(splitConst));
     k = splitConst;
     if (grid.leftBC == BoundaryCondition::WallFlux) {
         k[0] += B[0] * (grid.alpha + 1) / hh[0] * wallConst * yInf;

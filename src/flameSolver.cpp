@@ -870,6 +870,7 @@ void FlameSolver::prepareDiffusionTerms()
                 0.25 * (dYdtProd + dYdtConv + dYdtCross).row(k);
         }
     } else { // options.splittingMethod == "strang"
+        diffusionTerms[kMomentum].splitConst.setZero(nPoints);
         diffusionTerms[kEnergy].splitConst = dTdtCross;
         for (size_t k=0; k<nSpec; k++) {
             diffusionTerms[kSpecies+k].splitConst = dYdtCross.row(k);
