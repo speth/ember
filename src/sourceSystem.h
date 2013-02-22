@@ -85,7 +85,7 @@ public:
     //! Write the current values of the state variables, formatted to be read by
     //! Python, to the specified stream. Call with `init=true` when first called
     //! to include initializers for the variables.
-    void writeState(std::ostream& out, bool init);
+    virtual void writeState(std::ostream& out, bool init);
 
     virtual void writeJacobian(std::ostream& out) {};
 
@@ -183,6 +183,8 @@ public:
     std::string getStats();
     void initialize(size_t nSpec);
     void setOptions(ConfigOptions& options);
+
+    virtual void writeState(std::ostream& out, bool init);
 
     //! Print the current Jacobian matrix ot the specified stream
     void writeJacobian(std::ostream& out);

@@ -328,6 +328,24 @@ std::string SourceSystemCVODE::getStats()
     return (format("%i") % integrator->getNumSteps()).str();
 }
 
+void SourceSystemCVODE::writeState(std::ostream& out, bool init)
+{
+    SourceSystem::writeState(out, init);
+    if (init) {
+        out << "dTdt = []" << std::endl;
+        out << "dYdt = []" << std::endl;
+        out << "splitConstT = []" << std::endl;
+        out << "splitConstY = []" << std::endl;
+    }
+
+    Eigen::IOFormat fmt(15, Eigen::DontAlignCols, ", ", "\n", "[", "]");
+
+    out << "dTdt.append(" << dTdt << ")" << std::endl;
+    out << "dYdt.append(" << dYdt.matrix().transpose().format(fmt) << ")" << std::endl;
+    out << "splitConstT.append(" << splitConst[kEnergy] << ")" << std::endl;
+    out << "splitConstY.append(" << splitConst.tail(nSpec).matrix().transpose().format(fmt) << ")" << std::endl;
+}
+
 void SourceSystemCVODE::writeJacobian(std::ostream& out)
 {
     size_t N = integrator->y.length();
