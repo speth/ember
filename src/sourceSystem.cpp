@@ -79,8 +79,10 @@ void SourceSystem::writeState(std::ostream& out, bool init)
         out << "t = []" << std::endl;
     }
 
+    Eigen::IOFormat fmt(15, Eigen::DontAlignCols, ", ", "\n", "[", "]");
+
     out << "T.append(" << T << ")" << std::endl;
-    out << "Y.append(" << Y << ")" << std::endl;
+    out << "Y.append(" << Y.matrix().transpose().format(fmt) << ")" << std::endl;
     out << "t.append(" << time() << ")" << std::endl;
 }
 
