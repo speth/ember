@@ -250,7 +250,7 @@ int FlameSolver::step_internal()
         writeStateFile("", false, false);
     }
 
-    if (options.outputDebugIntegratorStages) {
+    if (options.debugIntegratorStages(tNow)) {
         writeStateFile((format("start_t%.6f") % t).str(), true, false);
     }
 
@@ -1017,7 +1017,7 @@ void FlameSolver::integrateConvectionTerms(double tStart, double tEnd, int stage
     deltaYconv += Y - Ystart;
     splitTimer.stop();
 
-    if (options.outputDebugIntegratorStages) {
+    if (options.debugIntegratorStages(tNow)) {
         writeStateFile((format("conv%i_t%.6f") % stage % tNow).str(), true, false);
     }
 }
@@ -1047,7 +1047,7 @@ void FlameSolver::integrateProductionTerms(double tStart, double tEnd, int stage
     deltaYprod += Y - Ystart;
     splitTimer.stop();
 
-    if (options.outputDebugIntegratorStages) {
+    if (options.debugIntegratorStages(tNow)) {
         writeStateFile((format("prod_t%.6f") % tNow).str(), true, false);
     }
 }
@@ -1081,7 +1081,7 @@ void FlameSolver::integrateDiffusionTerms(double tStart, double tEnd, int stage)
     deltaYdiff += Y - Ystart;
     splitTimer.stop();
 
-    if (stage && options.outputDebugIntegratorStages) {
+    if (stage && options.debugIntegratorStages(tNow)) {
         writeStateFile((format("diff%i_t%.6f") % stage % tNow).str(), true, false);
     }
 }

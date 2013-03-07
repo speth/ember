@@ -260,6 +260,8 @@ ConfigOptions::ConfigOptions(const bp::object& conf)
     debugSourcePoint = -1;
     readOption(debug, "sourcePoint", debugSourcePoint);
     readOption(debug, "sourceTime", debugSourceTime);
+    readOption(debug, "startTime", debugStartTime);
+    readOption(debug, "stopTime", debugStopTime);
 
     // CVODE options
     const object& cvode = conf.attr("cvodeTolerances");
@@ -317,4 +319,10 @@ ConfigOptions::ConfigOptions(const bp::object& conf)
     }
 
     gridAlpha = (curvedFlame) ? 1 : 0;
+}
+
+bool ConfigOptions::debugIntegratorStages(double t) const
+{
+    return (outputDebugIntegratorStages &&
+            t >= debugStartTime && t <= debugStopTime);
 }

@@ -27,6 +27,10 @@ public:
     //! Create a ConfigOptions object from a parallel python data structure
     ConfigOptions(const boost::python::api::object& conf);
 
+    //! Returns true if integrator stage data should be saved at the current
+    //! time step.
+    bool debugIntegratorStages(double t) const;
+
     std::string inputDir; //!< [paths.inputDir] Directory where input files are located.
 
     //! [paths.outputDir] Directory to store output files.
@@ -160,10 +164,11 @@ public:
     bool outputHeatReleaseRate;
     bool outputExtraVariables;
     bool outputProfiles;
-    bool outputDebugIntegratorStages;
 
     int debugSourcePoint; //!< Grid point index marked for verbose output (cvodeSteps.py)
     double debugSourceTime; //!< Integrator time at which to generate verbose output (then terminate)
+    double debugStartTime; //!< Integrator time at which to begin saving output between integrator stages
+    double debugStopTime; //!< Integrator time at which to stop saving output between integrator stages
 
     bool terminateForSteadyQdot; // if true, code finishes when integral heat release rate is constant
     double terminationTolerance; // relative tolerance for termination
@@ -189,6 +194,8 @@ public:
     double xStag;
 
 private:
+    bool outputDebugIntegratorStages;
+
     // Load the config option "name" from "conf" into "value",
     // Return true if value was not None
     template <class T1>

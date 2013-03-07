@@ -673,6 +673,13 @@ class Debug(Options):
     #: the source term at j = *sourcePoint*, then terminate.
     sourceTime = FloatOption(0.0, level=3)
 
+    #: Time at which to start saving intermediate integrator profiles when
+    #: OutputFiles.debugIntegratorStages is True
+    startTime = FloatOption(0.0, level=3)
+
+    #: Time at which to stop saving intermediate integrator profiles when
+    #: OutputFiles.debugIntegratorStages is True
+    stopTime = FloatOption(100.0, level=3)
 
 class OutputFiles(Options):
     """ Control the contents of the periodic output files """
