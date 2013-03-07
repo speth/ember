@@ -487,8 +487,8 @@ void FlameSolver::writeStateFile
     }
     DataFile outFile(filename);
 
-    updateChemicalProperties();
     if (updateDerivatives) {
+        updateChemicalProperties();
         convectionSystem.evaluate();
     }
 
