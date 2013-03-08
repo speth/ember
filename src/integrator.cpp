@@ -38,11 +38,10 @@ void Integrator::integrateToTime(double tEnd)
 {
     // Make sure we hit tEnd after an integral number of timesteps,
     // Taking timesteps that are no longer than the given h
-    int nSteps = static_cast<int>((tEnd-t)/h);
-    if (t + h*nSteps != tEnd) {
-        h = (tEnd - t) / (nSteps + 1);
-    }
-    while (t < tEnd) {
+    int nSteps = static_cast<int>((tEnd-t)/h + 1e-5);
+    nSteps = std::max(nSteps, 1);
+    h = (tEnd - t) / nSteps;
+    for (int i = 0; i < nSteps; i++) {
         step();
     }
 }

@@ -1521,5 +1521,6 @@ void DiffusionTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
 {
     for (size_t k=r.begin(); k<r.end(); k++) {
         parent->diffusionSolvers[k].integrateToTime(t);
+        assert(mathUtils::near(parent->diffusionSolvers[k].t, t));
     }
 }
