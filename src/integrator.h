@@ -53,7 +53,7 @@ public:
 
     // Actually do the integration
     virtual void step() = 0; // take a single step
-    virtual void integrateToTime(double tEnd) = 0;
+    virtual void integrateToTime(double tEnd);
 
     dvec y; // solution vector
     dvec ydot; // derivative of state vector
@@ -77,7 +77,6 @@ public:
 
     // Actually do the integration
     void step(); // take a single step
-    void integrateToTime(double tEnd);
 
 private:
     ODE& myODE;
@@ -101,7 +100,6 @@ public:
 
     // Actually do the integration
     void step(); // take a single step
-    void integrateToTime(double tEnd);
 
 private:
     TridiagonalODE& myODE;

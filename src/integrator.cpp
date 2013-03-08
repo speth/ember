@@ -34,6 +34,19 @@ double Integrator::get_t() const
     return t;
 }
 
+void Integrator::integrateToTime(double tEnd)
+{
+    // Make sure we hit tEnd after an integral number of timesteps,
+    // Taking timesteps that are no longer than the given h
+    int nSteps = static_cast<int>((tEnd-t)/h);
+    if (t + h*nSteps != tEnd) {
+        h = (tEnd - t) / (nSteps + 1);
+    }
+    while (t < tEnd) {
+        step();
+    }
+}
+
 ExplicitIntegrator::ExplicitIntegrator(ODE& ode)
     : myODE(ode)
 {
@@ -57,18 +70,6 @@ void ExplicitIntegrator::step()
     myODE.f(t, y, ydot);
     y += h * ydot;
     t += h;
-}
-
-void ExplicitIntegrator::integrateToTime(double tEnd)
-{
-    // Make sure we hit tEnd after an integral number of timesteps
-    int nSteps = static_cast<int>((tEnd-t)/h);
-    if (t + h*nSteps != tEnd) {
-        h = (tEnd - t) / (nSteps + 1);
-    }
-    while (t < tEnd) {
-        step();
-    }
 }
 
 // *******************************
@@ -203,15 +204,3 @@ void TridiagonalIntegrator::step()
     t += h;
 }
 
-void TridiagonalIntegrator::integrateToTime(double tEnd)
-{
-    // Make sure we hit tEnd after an integral number of timesteps,
-    // Taking timesteps that are no longer than the given h
-    int nSteps = static_cast<int>((tEnd-t)/h);
-    if (t + h*nSteps != tEnd) {
-        h = (tEnd - t) / (nSteps + 1);
-    }
-    while (t < tEnd) {
-        step();
-    }
-}
