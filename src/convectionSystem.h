@@ -129,9 +129,7 @@ public:
     void setDensityDerivative(const dvec& drhodt);
 
     // Constants introduced by the splitting method
-    void setSplitConstants(const dvec& splitConstU,
-                           const dvec& splitConstT,
-                           const dmatrix& splitConstY);
+    void setSplitConstants(const dmatrix& splitConst);
 
     void resetSplitConstants();
 

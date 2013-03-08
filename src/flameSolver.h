@@ -224,8 +224,8 @@ public:
     tbb::mutex gasInitMutex;
     tbb::task_scheduler_init tbbTaskSched;
 
-    void rollVectorVector(vector<dvector>& vv, const VecMap& u, const VecMap& t, const MatrixMap& y) const;
-    void unrollVectorVector(vector<dvector>& vv, VecMap& u, VecMap& t, MatrixMap& y, size_t i) const;
+    void rollVectorVector(vector<dvector>& vv, const dmatrix& M) const;
+    void unrollVectorVector(vector<dvector>& vv, dmatrix& M, size_t i) const;
 
     void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); //!< [m]

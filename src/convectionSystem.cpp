@@ -560,23 +560,21 @@ void ConvectionSystemSplit::resetSplitConstants()
     }
 }
 
-void ConvectionSystemSplit::setSplitConstants(const dvec& splitConstU,
-                                              const dvec& splitConstT,
-                                              const dmatrix& splitConstY)
+void ConvectionSystemSplit::setSplitConstants(const dmatrix& splitConst)
 {
-    utwSystem.splitConstT = splitConstT;
-    utwSystem.splitConstU = splitConstU;
+    utwSystem.splitConstT = splitConst.row(kEnergy);
+    utwSystem.splitConstU = splitConst.row(kMomentum);
     utwSystem.splitConstW.resize(nPoints);
     for (size_t j=0; j<nPoints; j++) {
         double value = 0;
         for (size_t k=0; k<nSpec; k++) {
-             value += splitConstY(k,j)/W[k];
+             value += splitConst(kSpecies+k,j)/W[k];
         }
         utwSystem.splitConstW[j] = - value * Wmx[j] * Wmx[j];
     }
 
     for (size_t k=0; k<nSpec; k++) {
-        speciesSystems[k].splitConst = splitConstY.row(k);
+        speciesSystems[k].splitConst = splitConst.row(kSpecies+k);
     }
 }
 
