@@ -395,7 +395,10 @@ void ConvectionSystemY::update_v(const double t)
 }
 
 ConvectionSystemSplit::ConvectionSystemSplit()
-    : vInterp(new vecInterpolator())
+    : U(0, 0, Stride1X(1 ,1))
+    , T(0, 0, Stride1X(1 ,1))
+    , Y(0, 0, 0, StrideXX(1 ,1))
+    , vInterp(new vecInterpolator())
     , nSpec(0)
     , nVars(3)
     , gas(NULL)
@@ -429,7 +432,7 @@ void ConvectionSystemSplit::setGas(CanteraGas& gas_)
 
 void ConvectionSystemSplit::resize
 (const size_t nPointsNew,
- const size_t nSpecNew)
+ const size_t nSpecNew, dmatrix& state)
 {
     nPoints = nPointsNew;
     // Create or destroy the necessary speciesSystems if nSpec has changed
@@ -441,6 +444,7 @@ void ConvectionSystemSplit::resize
             gas->getMolecularWeights(W);
         }
     }
+    multiremap(state, T, U, Y, nSpec, nPoints);
 
     if (speciesSolvers.size() != nSpec) {
         // Create speciesSolvers from scratch if the number of species has changed
@@ -472,20 +476,12 @@ void ConvectionSystemSplit::resize
     Wmx.resize(nPoints);
 }
 
-void ConvectionSystemSplit::setState
-(const VecMap& U_, const VecMap& T_, MatrixMap& Y_, double tInitial)
+void ConvectionSystemSplit::setState(double tInitial)
 {
-    U = U_;
-    T = T_;
-    Y = Y_;
-    assert(mathUtils::notnan(U));
-    assert(mathUtils::notnan(T));
-    assert(mathUtils::notnan(Y));
-
     for (size_t j=0; j<nPoints; j++) {
-        utwSolver->y[3*j+kMomentum] = U[j];
-        utwSolver->y[3*j+kEnergy] = T[j];
-        gas->setStateMass(&Y(0,j), T[j]);
+        utwSolver->y[3*j+kMomentum] = U(j);
+        utwSolver->y[3*j+kEnergy] = T(j);
+        gas->setStateMass(&Y(0,j), T(j));
         utwSolver->y[3*j+kWmx] = Wmx[j] = gas->getMixtureMolecularWeight();
     }
     assert(mathUtils::notnan(Wmx));
@@ -622,8 +618,8 @@ int ConvectionSystemSplit::getNumSteps()
 void ConvectionSystemSplit::unroll_y()
 {
     for (size_t j=0; j<nPoints; j++) {
-        T[j] = utwSolver->y[j*nVars+kEnergy];
-        U[j] = utwSolver->y[j*nVars+kMomentum];
+        T(j) = utwSolver->y[j*nVars+kEnergy];
+        U(j) = utwSolver->y[j*nVars+kMomentum];
         Wmx[j] = utwSolver->y[j*nVars+kWmx];
     }
 

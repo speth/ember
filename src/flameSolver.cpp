@@ -11,14 +11,6 @@
 
 #define foreach BOOST_FOREACH
 
-static void multiremap(dmatrix& M, VecMap& T, VecMap& U, MatrixMap& Y,
-                index_t nRows, index_t nCols)
-{
-    remap(M, T, nCols, kEnergy);
-    remap(M, U, nCols, kMomentum);
-    remap(M, Y, nRows, nCols, kSpecies);
-}
-
 FlameSolver::FlameSolver()
     : U(0, 0, Stride1X(1 ,1))
     , T(0, 0, Stride1X(1 ,1))
@@ -678,7 +670,7 @@ void FlameSolver::resizeAuxiliary()
     }
 
     convectionSystem.setGrid(grid);
-    convectionSystem.resize(nPoints, nSpec);
+    convectionSystem.resize(nPoints, nSpec, state);
     convectionSystem.setLeftBC(Tleft, Yleft);
 
     if (options.quasi2d) {
@@ -957,7 +949,8 @@ void FlameSolver::setConvectionSolverState(double tInitial)
 {
     splitTimer.resume();
     Sstart = state;
-    convectionSystem.setState(U, T, Y, tInitial);
+    assert(mathUtils::notnan(state));
+    convectionSystem.setState(tInitial);
     splitTimer.stop();
 }
 
@@ -991,10 +984,6 @@ void FlameSolver::integrateConvectionTerms(double tStart, double tEnd, int stage
 
     splitTimer.resume();
     convectionSystem.unroll_y();
-    U = convectionSystem.U;
-    T = convectionSystem.T;
-    Y = convectionSystem.Y;
-
     assert(mathUtils::notnan(state));
     deltaConv += state - Sstart;
     splitTimer.stop();

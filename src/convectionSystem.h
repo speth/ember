@@ -118,8 +118,8 @@ public:
     void setGrid(const OneDimGrid& grid);
     void setTolerances(const ConfigOptions& options);
     void setGas(CanteraGas& gas);
-    void resize(const size_t nPoints, const size_t nSpec);
-    void setState(const VecMap& U, const VecMap& T, MatrixMap& Y, double tInitial);
+    void resize(const size_t nPoints, const size_t nSpec, dmatrix& state);
+    void setState(double tInitial);
     void setLeftBC(const double Tleft, const dvec& Yleft);
     void set_rVzero(const double rVzero);
     void evaluate(); // evaluate time derivatives and mass flux at the current state
@@ -139,10 +139,10 @@ public:
     void setupQuasi2D(boost::shared_ptr<BilinearInterpolator>& vzInterp,
                       boost::shared_ptr<BilinearInterpolator>& vrInterp);
 
-    dvec U;
-    dvec T;
+    VecMap U;
+    VecMap T;
+    MatrixMap Y;
     dvec Wmx;
-    dmatrix Y;
 
     // Time derivatives and mass flux are updated by evaluate()
     dvec V;

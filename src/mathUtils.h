@@ -45,6 +45,14 @@ inline void remap(dmatrix& M, VecMap& A,
     new (&A) VecMap(&M.row(start)[0], nVals, Stride1X(1, M.outerStride()));
 }
 
+inline void multiremap(dmatrix& M, VecMap& T, VecMap& U, MatrixMap& Y,
+                index_t nRows, index_t nCols)
+{
+    remap(M, U, nCols, 0);
+    remap(M, T, nCols, 1);
+    remap(M, Y, nRows, nCols, 2);
+}
+
 extern const double NaN;
 
 namespace mathUtils
