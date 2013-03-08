@@ -12,6 +12,7 @@
 #include "debugUtils.h"
 
 #include <Eigen/Dense>
+#include "sundialsUtils.h"
 
 using std::abs;
 using std::size_t;
@@ -44,10 +45,17 @@ namespace mathUtils
     int minloc(const dvector& v);
     int maxloc(const dvector& v);
 
+    template <typename Derived>
+    bool notnan(const Eigen::EigenBase<Derived>& v)
+    {
+        double s = v.derived().sum();
+        return (s > 0 || s <= 0);
+    }
+
     //! Returns true if v does not contain any NaNs
-    template <class T>
-    bool notnan(const T& v) {
-        for (int i=0; i<static_cast<int>(v.size()); i++) {
+    template <typename T>
+    bool notnan(const vector<T>& v) {
+        for (size_t i=0; i<v.size(); i++) {
             if (!(v[i] > 0) && !(v[i] <= 0)) {
                 return false;
             }
@@ -55,12 +63,17 @@ namespace mathUtils
         return true;
     }
 
-    template <>
-    bool notnan<dmatrix>(const dmatrix& v);
-
-    template <>
-    inline bool notnan<double>(const double& v) {
+    inline bool notnan(const double& v) {
         return (v > 0 || v <= 0);
+    }
+
+    inline bool notnan(const sdVector& v) {
+        for (size_t i=0; i<v.size(); i++) {
+            if (!(v[i] > 0) && !(v[i] <= 0)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     int nanloc(const dvector& v); // returns index of first NaN component. Returns -1 if none
