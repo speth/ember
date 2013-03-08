@@ -65,6 +65,10 @@ namespace mathUtils
 
     int nanloc(const dvector& v); // returns index of first NaN component. Returns -1 if none
 
+    inline bool near(double a, double b, double rtol=1e-10, double atol=1e-18) {
+        return (abs(a - b) < rtol * (abs(a) + abs(b)) + atol);
+    }
+
     dvector abs(const dvector& v);
 
     // Returns the index of the first element of v which is true
