@@ -119,7 +119,7 @@ public:
     void setTolerances(const ConfigOptions& options);
     void setGas(CanteraGas& gas);
     void resize(const size_t nPoints, const size_t nSpec);
-    void setState(const dvec& U, const dvec& T, dmatrix& Y, double tInitial);
+    void setState(const VecMap& U, const VecMap& T, MatrixMap& Y, double tInitial);
     void setLeftBC(const double Tleft, const dvec& Yleft);
     void set_rVzero(const double rVzero);
     void evaluate(); // evaluate time derivatives and mass flux at the current state

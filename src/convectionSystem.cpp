@@ -473,7 +473,7 @@ void ConvectionSystemSplit::resize
 }
 
 void ConvectionSystemSplit::setState
-(const dvec& U_, const dvec& T_, dmatrix& Y_, double tInitial)
+(const VecMap& U_, const VecMap& T_, MatrixMap& Y_, double tInitial)
 {
     U = U_;
     T = T_;

@@ -20,9 +20,30 @@ using std::size_t;
 typedef Eigen::ArrayXXd dmatrix;
 typedef Eigen::ArrayXd dvec;
 typedef Eigen::ArrayXd::Index index_t;
+typedef Eigen::Stride<Eigen::Dynamic,Eigen::Dynamic> StrideXX;
+typedef Eigen::Stride<1,Eigen::Dynamic> Stride1X;
+typedef Eigen::Map<dmatrix, Eigen::Aligned, StrideXX > MatrixMap;
+typedef Eigen::Map<dvec, Eigen::Unaligned, Stride1X> VecMap;
 
 using std::vector;
 typedef std::vector<double> dvector;
+
+inline void remap(dmatrix& M, MatrixMap& A,
+                  index_t nRows, index_t nCols, index_t start)
+{
+    assert(start + nRows <= M.rows());
+    assert(nCols <= M.cols());
+    new (&A) MatrixMap(&M.row(start)[0], nRows, nCols,
+                       StrideXX(M.outerStride(), M.innerStride()));
+}
+
+inline void remap(dmatrix& M, VecMap& A,
+                  index_t nVals, index_t start)
+{
+    assert(start < M.rows());
+    assert(nVals <= M.cols());
+    new (&A) VecMap(&M.row(start)[0], nVals, Stride1X(1, M.outerStride()));
+}
 
 extern const double NaN;
 

@@ -11,8 +11,42 @@
 
 #define foreach BOOST_FOREACH
 
+static void multiremap(dmatrix& M, VecMap& T, VecMap& U, MatrixMap& Y,
+                index_t nRows, index_t nCols)
+{
+    remap(M, T, nCols, kEnergy);
+    remap(M, U, nCols, kMomentum);
+    remap(M, Y, nRows, nCols, kSpecies);
+}
+
 FlameSolver::FlameSolver()
-    : jCorrSolver(jCorrSystem)
+    : U(0, 0, Stride1X(1 ,1))
+    , T(0, 0, Stride1X(1 ,1))
+    , Y(0, 0, 0, StrideXX(1 ,1))
+    , dYdtDiff(0, 0, 0, StrideXX(1 ,1))
+    , dYdtProd(0, 0, 0, StrideXX(1 ,1))
+    , dYdtConv(0, 0, 0, StrideXX(1 ,1))
+    , dTdtDiff(0, 0, Stride1X(1 ,1))
+    , dTdtProd(0, 0, Stride1X(1 ,1))
+    , dTdtConv(0, 0, Stride1X(1 ,1))
+    , dUdtDiff(0, 0, Stride1X(1 ,1))
+    , dUdtProd(0, 0, Stride1X(1 ,1))
+    , dUdtConv(0, 0, Stride1X(1 ,1))
+    , Ustart(0, 0, Stride1X(1 ,1))
+    , Tstart(0, 0, Stride1X(1 ,1))
+    , Ystart(0, 0, 0, StrideXX(1 ,1))
+    , deltaUconv(0, 0, Stride1X(1 ,1))
+    , deltaUdiff(0, 0, Stride1X(1 ,1))
+    , deltaUprod(0, 0, Stride1X(1 ,1))
+    , deltaTconv(0, 0, Stride1X(1 ,1))
+    , deltaTdiff(0, 0, Stride1X(1 ,1))
+    , deltaTprod(0, 0, Stride1X(1 ,1))
+    , deltaYconv(0, 0, 0, StrideXX(1 ,1))
+    , deltaYdiff(0, 0, 0, StrideXX(1 ,1))
+    , deltaYprod(0, 0, 0, StrideXX(1 ,1))
+    , dYdtCross(0, 0, 0, StrideXX(1 ,1))
+    , dTdtCross(0, 0, Stride1X(1 ,1))
+    , jCorrSolver(jCorrSystem)
     , tbbTaskSched(tbb::task_scheduler_init::deferred)
 {
 }
@@ -76,17 +110,9 @@ void FlameSolver::initialize(void)
 
         resizeAuxiliary();
 
-        dUdtConv.setZero(nPoints);
-        dUdtDiff.setZero(nPoints);
-        dUdtProd.setZero(nPoints);
-
-        dTdtConv.setZero(nPoints);
-        dTdtDiff.setZero(nPoints);
-        dTdtProd.setZero(nPoints);
-
-        dYdtConv.setZero(nSpec, nPoints);
-        dYdtDiff.setZero(nSpec, nPoints);
-        dYdtProd.setZero(nSpec, nPoints);
+        ddtConv.setZero();
+        ddtDiff.setZero();
+        ddtProd.setZero();
 
         updateChemicalProperties();
         // Determine initial condition for V
@@ -367,7 +393,7 @@ int FlameSolver::step_internal()
         // Perform updates that are necessary if the grid has changed
         if (grid.updated) {
             logFile.write(format("Grid size: %i points.") % nPoints);
-
+            resizeMappedArrays();
             unrollVectorVector(currentSolution, U, T, Y, 0);
             unrollVectorVector(currentSolution, dUdtConv, dTdtConv, dYdtConv, 1);
             unrollVectorVector(currentSolution, dUdtDiff, dTdtDiff, dYdtDiff, 2);
@@ -584,11 +610,7 @@ void FlameSolver::resizeAuxiliary()
     nVars = 2+nSpec;
     N = nVars*nPoints;
 
-    dYdtCross.resize(nSpec, nPoints);
-
-    deltaYconv.resize(nSpec, nPoints);
-    deltaYdiff.resize(nSpec, nPoints);
-    deltaYprod.resize(nSpec, nPoints);
+    resizeMappedArrays();
 
     dYdtCross *= NaN;
 
@@ -596,14 +618,7 @@ void FlameSolver::resizeAuxiliary()
     deltaYdiff *= NaN;
     deltaYprod *= NaN;
 
-    dTdtCross.setZero(nPoints);
-    dTdtDiff.resize(nPoints);
-    dTdtProd.resize(nPoints);
-    dTdtConv.resize(nPoints);
-
-    dUdtDiff.resize(nPoints);
-    dUdtProd.resize(nPoints);
-    dUdtConv.resize(nPoints);
+    dTdtCross.setZero();
 
     rho.setZero(nPoints);
     drhodt.setZero(nPoints);
@@ -679,6 +694,21 @@ void FlameSolver::resizeAuxiliary()
     for (size_t j=0; j<nPoints; j++) {
         sourceTerms[j].setPosition(j, x[j]);
     }
+}
+
+void FlameSolver::resizeMappedArrays()
+{
+    resize(nVars, nPoints);
+    multiremap(state, T, U, Y, nSpec, nPoints);
+    multiremap(deltaConv, deltaTconv, deltaUconv, deltaYconv, nSpec, nPoints);
+    multiremap(deltaDiff, deltaTdiff, deltaUdiff, deltaYdiff, nSpec, nPoints);
+    multiremap(deltaProd, deltaTprod, deltaUprod, deltaYprod, nSpec, nPoints);
+    multiremap(ddtConv, dTdtConv, dUdtConv, dYdtConv, nSpec, nPoints);
+    multiremap(ddtDiff, dTdtDiff, dUdtDiff, dYdtDiff, nSpec, nPoints);
+    multiremap(ddtProd, dTdtProd, dUdtProd, dYdtProd, nSpec, nPoints);
+    multiremap(Sstart, Tstart, Ustart, Ystart, nSpec, nPoints);
+    remap(ddtCross, dTdtCross, nPoints, kEnergy);
+    remap(ddtCross, dYdtCross, nSpec, nPoints, kSpecies);
 }
 
 void FlameSolver::updateCrossTerms()
@@ -815,9 +845,7 @@ void FlameSolver::prepareDiffusionTerms()
 {
     splitTimer.resume();
 
-    deltaUdiff.setZero(nPoints);
-    deltaTdiff.setZero(nPoints);
-    deltaYdiff.setZero(nSpec, nPoints);
+    deltaDiff.setZero();
 
     if (!options.quasi2d) {
         // Diffusion solvers: Energy and momentum
@@ -874,9 +902,7 @@ void FlameSolver::prepareDiffusionTerms()
 
 void FlameSolver::prepareProductionTerms()
 {
-    deltaUprod.setZero(nPoints);
-    deltaTprod.setZero(nPoints);
-    deltaYprod.setZero(nSpec, nPoints);
+    deltaProd.setZero();
 
     setProductionSolverState(tNow);
     if (options.splittingMethod == "strang") {
@@ -897,9 +923,7 @@ void FlameSolver::prepareProductionTerms()
 
 void FlameSolver::prepareConvectionTerms()
 {
-    deltaUconv.setZero(nPoints);
-    deltaTconv.setZero(nPoints);
-    deltaYconv.setZero(nSpec, nPoints);
+    deltaConv.setZero();
 
     setConvectionSolverState(tNow);
     dvec dTdt = dTdtConv + dTdtDiff + dTdtProd;
@@ -1081,7 +1105,7 @@ void FlameSolver::integrateDiffusionTerms(double tStart, double tEnd, int stage)
 
 
 void FlameSolver::rollVectorVector
-(vector<dvector>& vv, const dvec& u, const dvec& t, const dmatrix& y) const
+(vector<dvector>& vv, const VecMap& u, const VecMap& t, const MatrixMap& y) const
 {
     size_t N = vv.size();
     vv.resize(N + nSpec + 2, dvector(nPoints));
@@ -1095,7 +1119,7 @@ void FlameSolver::rollVectorVector
 
 
 void FlameSolver::unrollVectorVector
-(vector<dvector>& vv, dvec& u, dvec& t, dmatrix& y, size_t i) const
+(vector<dvector>& vv, VecMap& u, VecMap& t, MatrixMap& y, size_t i) const
 {
     u = Eigen::Map<dvec>(&vv[i*nVars+kMomentum][0], nPoints);
     t = Eigen::Map<dvec>(&vv[i*nVars+kEnergy][0], nPoints);
@@ -1245,6 +1269,8 @@ void FlameSolver::loadProfile(void)
         grid.setSize(x.size());
         grid.updateValues();
         grid.updateBoundaryIndices();
+        nPoints = x.size();
+        resizeMappedArrays();
 
         U = infile.readVec("U");
         T = infile.readVec("T");
@@ -1267,6 +1293,9 @@ void FlameSolver::loadProfile(void)
         // Read initial condition specified in the configuration file
         logFile.write("Reading initial condition from configuration file.");
         x = options.x_initial;
+        nPoints = x.size();
+        resizeMappedArrays();
+
         U = options.U_initial;
         T = options.T_initial;
         Y = options.Y_initial;

@@ -4,6 +4,7 @@
 #include "sundialsUtils.h"
 #include "chemistry0d.h"
 #include "grid.h"
+#include "splitSolver.h"
 #include "readConfig.h"
 #include "perfTimer.h"
 #include "integrator.h"
@@ -30,7 +31,7 @@ class DiffusionTermWrapper;
 
 //! Class which manages the main integration loop.
 //! Contains the split solvers and is responsible for the large-scale time integration.
-class FlameSolver : public GridBased
+class FlameSolver : public GridBased, public SplitSolver
 {
 public:
     FlameSolver();
@@ -121,6 +122,7 @@ public:
 
     int step_internal();
     void resizeAuxiliary(); //!< Handle resizing of data structures as grid size changes
+    void resizeMappedArrays(); //!< update data that shadows SplitSolver arrays
     void updateCrossTerms(); //!< calculates values of cross-component terms: jSoret, sumcpj, and jCorr
     void updateChemicalProperties(); //!< Update thermodynamic, transport, and kinetic properties
     void updateBC(); //!< Set boundary condition for left edge of domain
@@ -153,31 +155,31 @@ public:
     size_t N; //!< total problem size (nSpec * nVars)
 
     // State variables:
-    dvec U; //!< normalized tangential velocity (u*a/u_inf) [1/s]
-    dvec T; //!< temperature [K]
-    dmatrix Y; //!< species mass fractions, Y(k,j) [-]
+    VecMap U; //!< normalized tangential velocity (u*a/u_inf) [1/s]
+    VecMap T; //!< temperature [K]
+    MatrixMap Y; //!< species mass fractions, Y(k,j) [-]
 
     // components of the time derivatives
-    dmatrix dYdtDiff, dYdtProd, dYdtConv;
-    dvec dTdtDiff, dTdtProd, dTdtConv;
-    dvec dUdtDiff, dUdtProd, dUdtConv;
+    MatrixMap dYdtDiff, dYdtProd, dYdtConv;
+    VecMap dTdtDiff, dTdtProd, dTdtConv;
+    VecMap dUdtDiff, dUdtProd, dUdtConv;
     dvec drhodt;
 
     // State variables at the beginning of the current integrator stage
-    dvec Ustart;
-    dvec Tstart;
-    dmatrix Ystart;
+    VecMap Ustart;
+    VecMap Tstart;
+    MatrixMap Ystart;
 
     // Changes in each state variable for each terms of the governing equations
-    dvec deltaUconv;
-    dvec deltaUdiff;
-    dvec deltaUprod;
-    dvec deltaTconv;
-    dvec deltaTdiff;
-    dvec deltaTprod;
-    dmatrix deltaYconv;
-    dmatrix deltaYdiff;
-    dmatrix deltaYprod;
+    VecMap deltaUconv;
+    VecMap deltaUdiff;
+    VecMap deltaUprod;
+    VecMap deltaTconv;
+    VecMap deltaTdiff;
+    VecMap deltaTprod;
+    MatrixMap deltaYconv;
+    MatrixMap deltaYdiff;
+    MatrixMap deltaYprod;
 
     // Auxiliary variables:
     dvec rho; //!< density [kg/m^3]
@@ -197,8 +199,8 @@ public:
     dmatrix jFick; //!< Fickian mass flux [kg/m^2*s]
     dmatrix jSoret; //!< Soret mass flux [kg/m^2*s]
 
-    dmatrix dYdtCross; //!< dYdt due to gradients in other species and temperature
-    dvec dTdtCross; //!< dTdt due to gradients in gas composition
+    MatrixMap dYdtCross; //!< dYdt due to gradients in other species and temperature
+    VecMap dTdtCross; //!< dTdt due to gradients in gas composition
 
     // jCorr is a correction to force the net diffusion mass flux to be zero
     // jCorrSystem / jCorrSolver are used to introduce numerical diffusion into
@@ -222,8 +224,8 @@ public:
     tbb::mutex gasInitMutex;
     tbb::task_scheduler_init tbbTaskSched;
 
-    void rollVectorVector(vector<dvector>& vv, const dvec& u, const dvec& t, const dmatrix& y) const;
-    void unrollVectorVector(vector<dvector>& vv, dvec& u, dvec& t, dmatrix& y, size_t i) const;
+    void rollVectorVector(vector<dvector>& vv, const VecMap& u, const VecMap& t, const MatrixMap& y) const;
+    void unrollVectorVector(vector<dvector>& vv, VecMap& u, VecMap& t, MatrixMap& y, size_t i) const;
 
     void update_xStag(const double t, const bool updateIntError);
     double targetFlamePosition(double t); //!< [m]
