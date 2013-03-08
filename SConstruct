@@ -250,9 +250,10 @@ pylib = pyenv.SharedLibrary('python/ember/_ember',
 env.Alias('build', pylib)
 
 if os.name == 'nt':
-    tbb = env.Command('python/ember/TBB.dll',
-                      env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
-                      Copy('$TARGET', '$SOURCE'))
+    for dest in ['python/ember/TBB.dll', 'bin/TBB.dll']:
+        tbb = env.Command(dest,
+                          env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
+                          Copy('$TARGET', '$SOURCE'))
     env.Alias('build', tbb)
 
 # Installation of the Python module:
