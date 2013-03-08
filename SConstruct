@@ -26,9 +26,6 @@ VariantDir('build/core','src', duplicate=0)
 VariantDir('build/test','test', duplicate=0)
 VariantDir('build/python','src/python', duplicate=0)
 
-mode = ARGUMENTS.get('mode','release')
-assert mode in ('release', 'debug'), mode
-
 #try:
 #    import multiprocessing
 #    SetOption('num_jobs', multiprocessing.cpu_count())
@@ -86,6 +83,15 @@ opts.AddVariables(
         'tbb',
         'Location of the Thread Building Blocks (TBB) header and library files',
         '', PathVariable.PathAccept),
+    BoolVariable(
+        'debug_symbols',
+        'Include debug symbols in the compiled module',
+        True),
+    BoolVariable(
+        'debug',
+        """Enable asserts, bounds checking and other debugging code; disable
+           compiler optimizations.""",
+        False),
     ('blas_lapack',
      'Comma-separated list of libraries to include for BLAS/LAPACK support',
      'blas,lapack'),
@@ -164,39 +170,47 @@ if env['tbb']:
 include_dirs.extend([get_config_var('INCLUDEPY'),
                      np.get_include()])
 
-env.Append(CPPPATH=include_dirs,
-           LIBPATH=library_dirs,
-           LIBS=sundials + cantera + lastlibs)
-
 if env['CC'] == 'gcc':
-    common = ['-ftemplate-depth-128', '-fPIC', '-g', '-Wall']
-    if mode == 'debug':
-        env.Append(CXXFLAGS=common + ['-O0','-fno-inline'])
+    flags = ['-ftemplate-depth-128', '-fPIC', '-g', '-Wall']
+    defines = []
+    if env['debug_symbols']:
+        flags.append('-g')
+
+    if env['debug']:
+        flags.extend(['-O0','-fno-inline'])
     else:
-        env.Append(CXXFLAGS=common + ['-O3', '-finline-functions', '-Wno-inline'],
-                   CPPDEFINES=['NDEBUG'])
+        flags.extend(['-O3', '-finline-functions', '-Wno-inline'])
+        defines.append('NDEBUG')
+
     boost_libs = ['boost_%s' % lib
                   for lib in ('python', 'filesystem', 'system')]
 
 elif env['CC'] == 'cl':
-    common_flags = ['/nologo', '/Zi', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc']
-    common_defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS',
+    flags = ['/nologo', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc', '/MD']
+    defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS',
                       'BOOST_ALL_DYN_LINK']
-    if mode == 'debug':
-        env.Append(CXXFLAGS=common_flags + ['/Od', '/Ob0', '/MD'],
-                   CPPDEFINES=common_defines,
-                   LINKFLAGS='/DEBUG')
+    if env['debug_symbols']:
+        env.Append(LINKFLAGS='/DEBUG')
+        flags.append('/Zi')
+
+    if env['debug']:
+        flags.extend(['/Od', '/Ob0', '/MD'])
     else:
-        env.Append(CXXFLAGS=common_flags + ['/O2', '/MD'],
-                   CPPDEFINES=['NDEBUG'] + common_defines)
+        flags.append('/O2')
+        defines.append('NDEBUG')
+
+    library_dirs.append(get_config_var('prefix') + '/libs')
     boost_libs = []
-    env.Append(LIBPATH=get_config_var('prefix') + '/libs')
 
 else:
     print 'error: unknown c++ compiler: "%s"' % env['CC']
     sys.exit(0)
 
-env.Append(LIBS=boost_libs)
+env.Append(CPPPATH=include_dirs,
+           LIBPATH=library_dirs,
+           CXXFLAGS=flags,
+           CPPDEFINES=defines,
+           LIBS=sundials + cantera + lastlibs + boost_libs)
 
 def CheckMemberFunction(context, function, includes=""):
     context.Message('Checking for %s... ' % function)
