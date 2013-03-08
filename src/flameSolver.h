@@ -34,7 +34,6 @@ class FlameSolver : public GridBased
 {
 public:
     FlameSolver();
-    FlameSolver(const boost::python::api::object& config);
     virtual ~FlameSolver() {}
 
     void setOptions(const ConfigOptions& options); //!< Set options read from the configuration file

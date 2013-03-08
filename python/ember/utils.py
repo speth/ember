@@ -3,7 +3,7 @@ import Cantera as ct
 import h5py
 import os
 import sys
-import _ember
+import ember
 import time
 
 class Struct(object):
@@ -232,7 +232,7 @@ def run(conf):
     confOut.write(confString)
     conf.setup()
 
-    solver = _ember.FlameSolver(conf)
+    solver = ember.FlameSolver(conf)
     solver.initialize()
     done = 0
     while not done:
@@ -322,7 +322,7 @@ def multirun(conf):
             conf.strainParameters.initial = a
             conf.strainParameters.final = a
             conf.paths.logFile = os.path.join(conf.paths.outputDir, 'log-eps%04i.txt' % a)
-            solver = _ember.FlameSolver(conf)
+            solver = ember.FlameSolver(conf)
             t1 = time.time()
             solver.initialize()
             done = 0

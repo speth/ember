@@ -17,13 +17,6 @@ FlameSolver::FlameSolver()
 {
 }
 
-FlameSolver::FlameSolver(const boost::python::api::object& config)
-    : jCorrSolver(jCorrSystem)
-    , tbbTaskSched(tbb::task_scheduler_init::deferred)
-{
-    setOptions(ConfigOptions(config));
-}
-
 void FlameSolver::setOptions(const ConfigOptions& _options)
 {
     options = _options;
