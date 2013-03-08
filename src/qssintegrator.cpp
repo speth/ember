@@ -59,7 +59,7 @@ void QssIntegrator::initialize(size_t N_)
 
 void QssIntegrator::setState(const dvec& yIn, double tstart_)
 {
-    assert(yIn.size() == N);
+    assert(yIn.size() == (int) N);
     assert(mathUtils::notnan(yIn));
 
     // Store and limit to 'ymin' the initial values.

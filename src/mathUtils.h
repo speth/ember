@@ -47,7 +47,7 @@ namespace mathUtils
     //! Returns true if v does not contain any NaNs
     template <class T>
     bool notnan(const T& v) {
-        for (size_t i=0; i<v.size(); i++) {
+        for (int i=0; i<static_cast<int>(v.size()); i++) {
             if (!(v[i] > 0) && !(v[i] <= 0)) {
                 return false;
             }
