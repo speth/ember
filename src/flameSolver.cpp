@@ -96,7 +96,7 @@ void FlameSolver::initialize(void)
             rVzero = 0;
             V[0] = 0;
             for (size_t j=1; j<nPoints; j++) {
-                V[j] = V[j-1] - rho[j]*U[j]*(x[j]-x[j-1]);
+                V[j] = V[j-1] - rho[j]*U(j)*(x[j]-x[j-1]);
             }
         } else {
             // Put the stagnation point on the burned side of the flame
@@ -105,12 +105,12 @@ void FlameSolver::initialize(void)
             V[jz] = 0;
 
             for (size_t j=jz+1; j<nPoints; j++) {
-                V[j] = V[j-1] - rho[j]*U[j]*(x[j]-x[j-1]);
+                V[j] = V[j-1] - rho[j]*U(j)*(x[j]-x[j-1]);
             }
 
             if (jz != 0) {
                 for (size_t j=jz; j>0; j--) {
-                    V[j-1] = V[j] + rho[j-1]*U[j-1]*(x[j]-x[j-1]);
+                    V[j-1] = V[j] + rho[j-1]*U(j-1)*(x[j]-x[j-1]);
                 }
             }
             rVzero = V[0];
@@ -199,9 +199,9 @@ int FlameSolver::step_internal()
     #ifndef NDEBUG
         bool error = false;
         for (size_t j=0; j<nPoints; j++) {
-            if (T[j] < 295 || T[j] > 3000) {
+            if (T(j) < 295 || T(j) > 3000) {
                 logFile.write(format(
-                    "WARNING: Unexpected Temperature: T = %f at j = %i") % T[j] % j);
+                    "WARNING: Unexpected Temperature: T = %f at j = %i") % T(j) % j);
                 error = true;
             }
         }
@@ -212,12 +212,12 @@ int FlameSolver::step_internal()
 
     // Reset boundary conditions to prevent numerical drift
     if (grid.leftBC == BoundaryCondition::FixedValue) {
-        T[0] = Tleft;
+        T(0) = Tleft;
         Y.col(0) = Yleft;
     }
 
     if (grid.rightBC == BoundaryCondition::FixedValue) {
-        T[jj] = Tright;
+        T(jj) = Tright;
         Y.col(jj) = Yright;
     }
 
@@ -691,8 +691,8 @@ void FlameSolver::updateCrossTerms()
         jCorr[j] = 0;
         for (size_t k=0; k<nSpec; k++) {
             jFick(k,j) = -0.5*(rhoD(k,j)+rhoD(k,j+1)) * ((Y(k,j+1)-Y(k,j))/hh[j]);
-            jSoret(k,j) = -0.5*(Dkt(k,j)/T[j] + Dkt(k,j+1)/T[j+1])
-                * (T[j+1]-T[j])/hh[j];
+            jSoret(k,j) = -0.5*(Dkt(k,j)/T(j) + Dkt(k,j+1)/T(j+1))
+                * (T(j+1)-T(j))/hh[j];
             jCorr[j] -= jFick(k,j) + jSoret(k,j);
         }
     }
@@ -734,7 +734,7 @@ void FlameSolver::updateCrossTerms()
             sumcpj[j] += 0.5*(cpSpec(k,j) + cpSpec(k,j+1)) / W[k] *
                 (jFick(k,j) + jSoret(k,j) + 0.5 * (Y(k,j) + Y(k,j+1)) * jCorr[j]);
         }
-        double dTdx = cfm[j] * T[j-1] + cf[j] * T[j] + cfp[j] * T[j+1];
+        double dTdx = cfm[j] * T(j-1) + cf[j] * T(j) + cfp[j] * T(j+1);
         if (!options.quasi2d) {
             dTdtCross[j] = - 0.5 * (sumcpj[j] + sumcpj[j-1]) * dTdx / (cp[j] * rho[j]);
         }
@@ -784,7 +784,7 @@ void FlameSolver::updateChemicalProperties()
     for (size_t j=0; j<nPoints; j++) {
         // Thermodynamic properties
         thermoTimer.start();
-        gas.setStateMass(&Y(0,j), T[j]);
+        gas.setStateMass(&Y(0,j), T(j));
         rho[j] = gas.getDensity();
         Wmx[j] = gas.getMixtureMolecularWeight();
         cp[j] = gas.getSpecificHeatCapacity();
@@ -885,10 +885,10 @@ void FlameSolver::prepareProductionTerms()
         }
     } else { // options.splittingMethod == "balanced"
         for (size_t j=0; j<nPoints; j++) {
-            sourceTerms[j].splitConst[kEnergy] = -0.5 * dTdtProd[j] +
-                0.5 * (dTdtConv[j] + dTdtDiff[j] + dTdtCross[j]);
-            sourceTerms[j].splitConst[kMomentum] = -0.5 * dUdtProd[j] +
-                0.5 * (dUdtConv[j] + dUdtDiff[j]);
+            sourceTerms[j].splitConst[kEnergy] = -0.5 * dTdtProd(j) +
+                0.5 * (dTdtConv(j) + dTdtDiff(j) + dTdtCross(j));
+            sourceTerms[j].splitConst[kMomentum] = -0.5 * dUdtProd(j) +
+                0.5 * (dUdtConv(j) + dUdtDiff(j));
             sourceTerms[j].splitConst.tail(nSpec) = -0.5 * dYdtProd.col(j) +
                 0.5 * (dYdtConv + dYdtDiff + dYdtCross).col(j);
         }
@@ -972,7 +972,7 @@ void FlameSolver::setProductionSolverState(double tInitial)
     Ystart = Y;
 
     for (size_t j=0; j<nPoints; j++) {
-        sourceTerms[j].setState(tInitial, U[j], T[j], Y.col(j));
+        sourceTerms[j].setState(tInitial, U(j), T(j), Y.col(j));
     }
     splitTimer.stop();
 }
@@ -1027,8 +1027,8 @@ void FlameSolver::integrateProductionTerms(double tStart, double tEnd, int stage
     splitTimer.resume();
     for (size_t j=0; j<nPoints; j++) {
         sourceTerms[j].unroll_y();
-        U[j] = sourceTerms[j].U;
-        T[j] = sourceTerms[j].T;
+        U(j) = sourceTerms[j].U;
+        T(j) = sourceTerms[j].T;
         Y.col(j) = sourceTerms[j].Y;
     }
     assert(mathUtils::notnan(T));
@@ -1159,7 +1159,7 @@ void FlameSolver::calculateQdot()
 {
     reactionRatesTimer.start();
     for (size_t j=0; j<nPoints; j++) {
-        gas.setStateMass(&Y(0,j), T[j]);
+        gas.setStateMass(&Y(0,j), T(j));
         gas.getEnthalpies(&hk(0,j));
         gas.getReactionRates(&wDot(0,j));
         qDot[j] = - (wDot.col(j) * hk.col(j)).sum();
@@ -1171,7 +1171,7 @@ void FlameSolver::calculateQdot()
 void FlameSolver::correctMassFractions() {
     setupTimer.resume();
     for (size_t j=0; j<nPoints; j++) {
-        gas.setStateMass(&Y(0,j), T[j]);
+        gas.setStateMass(&Y(0,j), T(j));
         gas.getMassFractions(&Y(0,j));
     }
     setupTimer.stop();
@@ -1284,7 +1284,7 @@ void FlameSolver::loadProfile(void)
         throw DebugException("Initial profile data required but not provided.");
     }
 
-    Tu = (options.overrideTu) ? options.Tu : T[grid.ju];
+    Tu = (options.overrideTu) ? options.Tu : T(grid.ju);
 
     CanteraGas gas;
     gas.setOptions(options);
@@ -1294,7 +1294,7 @@ void FlameSolver::loadProfile(void)
     if (options.flameType == "premixed") {
         // Save the burned gas properties for the case where the burned
         // values are not fixed.
-        double TbSave = T[grid.jb];
+        double TbSave = T(grid.jb);
         dvec YbSave = Y.col(grid.jb);
 
         if (options.overrideReactants) {
@@ -1305,13 +1305,13 @@ void FlameSolver::loadProfile(void)
             gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
             Cantera::equilibrate(gas.thermo,"HP");
             gas.thermo.getMassFractions(&Y(0,grid.jb));
-            T[grid.jb] = gas.thermo.temperature();
+            T(grid.jb) = gas.thermo.temperature();
         }
-        Tb = T[grid.jb];
+        Tb = T(grid.jb);
 
-        gas.setStateMass(&Y(0,grid.ju), T[grid.ju]);
+        gas.setStateMass(&Y(0,grid.ju), T(grid.ju));
         rhou = gas.getDensity();
-        gas.setStateMass(&Y(0,grid.jb), T[grid.ju]);
+        gas.setStateMass(&Y(0,grid.jb), T(grid.ju));
         rhob = gas.getDensity();
         Yu = Y.col(grid.ju);
         Yb = Y.col(grid.jb);
@@ -1333,12 +1333,12 @@ void FlameSolver::loadProfile(void)
         }
 
         if (!options.fixedBurnedVal) {
-            T[grid.jb] = TbSave;
+            T(grid.jb) = TbSave;
             Y.col(grid.jb) = YbSave;
         }
 
         if (options.overrideTu) {
-            T[grid.ju] = Tu;
+            T(grid.ju) = Tu;
         }
 
     } else if (options.flameType == "diffusion") {
@@ -1347,7 +1347,7 @@ void FlameSolver::loadProfile(void)
         if (options.overrideReactants) {
             gas.thermo.setState_TPX(options.Tfuel, options.pressure, options.fuel);
         } else {
-            gas.thermo.setState_TPY(T[jFuel], options.pressure, &Y(0,jFuel));
+            gas.thermo.setState_TPY(T(jFuel), options.pressure, &Y(0,jFuel));
         }
         double rhoFuel = gas.getDensity();
         dvec Yfuel(nSpec);
@@ -1361,7 +1361,7 @@ void FlameSolver::loadProfile(void)
                                     options.pressure,
                                     options.oxidizer);
         } else {
-            gas.thermo.setState_TPY(T[jOxidizer],
+            gas.thermo.setState_TPY(T(jOxidizer),
                                     options.pressure,
                                     &Y(0,jOxidizer));
         }
@@ -1388,14 +1388,14 @@ void FlameSolver::loadProfile(void)
 
         rhou = rhoLeft;
     } else if (options.flameType == "quasi2d") {
-        gas.thermo.setState_TPY(T[0], options.pressure, &Y(0,0));
+        gas.thermo.setState_TPY(T(0), options.pressure, &Y(0,0));
         rhoLeft = gas.thermo.density();
-        Tleft = T[0];
+        Tleft = T(0);
         Yleft.resize(nSpec);
         gas.getMassFractions(Yleft);
-        gas.thermo.setState_TPY(T[jj], options.pressure, &Y(0,jj));
+        gas.thermo.setState_TPY(T(jj), options.pressure, &Y(0,jj));
         rhoRight = gas.thermo.density();
-        Tright = T[jj];
+        Tright = T(jj);
         Yright.resize(nSpec);
         gas.getMassFractions(Yright);
 
