@@ -1354,29 +1354,30 @@ void FlameSolver::printPerformanceStats(void)
     if (boost::filesystem::exists(filename)) {
         boost::filesystem::remove(filename);
     }
-    statsFile.open(filename.c_str(), std::ios::trunc | std::ios::out);
-    statsFile << "\n   *** Performance Stats ***       time   ( call count )\n";
-    printPerfString("                General Setup: ", setupTimer);
-    printPerfString("             Split Term Setup: ", splitTimer);
-    printPerfString("    Reaction Term Integration: ", reactionTimer);
-    printPerfString("   Diffusion Term Integration: ", diffusionTimer);
-    printPerfString("  Convection Term Integration: ", convectionTimer);
-    statsFile << "\n Subcomponents:\n";
-    printPerfString("               Reaction Rates: ", reactionRatesTimer);
-    printPerfString("         Transport Properties: ", transportTimer);
-    printPerfString("          - thermal cond.    : ", conductivityTimer);
-    printPerfString("          - viscosity        : ", viscosityTimer);
-    printPerfString("          - diffusion coeff. : ", diffusivityTimer);
-    printPerfString("     Thermodynamic Properties: ", thermoTimer);
-    printPerfString("   Source Jacobian Evaluation: ", jacobianTimer);
-    printPerfString("   UTW Convection Integration: ", convectionSystem.utwTimer);
-    printPerfString("    Yk Convection Integration: ", convectionSystem.speciesTimer);
-    statsFile.close();
+    std::ofstream stats(filename.c_str(), std::ios::trunc | std::ios::out);
+    stats << "\n   *** Performance Stats ***       time   ( call count )\n";
+    printPerfString(stats, "                General Setup: ", setupTimer);
+    printPerfString(stats, "             Split Term Setup: ", splitTimer);
+    printPerfString(stats, "    Reaction Term Integration: ", reactionTimer);
+    printPerfString(stats, "   Diffusion Term Integration: ", diffusionTimer);
+    printPerfString(stats, "  Convection Term Integration: ", convectionTimer);
+    stats << "\n Subcomponents:\n";
+    printPerfString(stats, "               Reaction Rates: ", reactionRatesTimer);
+    printPerfString(stats, "         Transport Properties: ", transportTimer);
+    printPerfString(stats, "          - thermal cond.    : ", conductivityTimer);
+    printPerfString(stats, "          - viscosity        : ", viscosityTimer);
+    printPerfString(stats, "          - diffusion coeff. : ", diffusivityTimer);
+    printPerfString(stats, "     Thermodynamic Properties: ", thermoTimer);
+    printPerfString(stats, "   Source Jacobian Evaluation: ", jacobianTimer);
+    printPerfString(stats, "   UTW Convection Integration: ", convectionSystem.utwTimer);
+    printPerfString(stats, "    Yk Convection Integration: ", convectionSystem.speciesTimer);
+    stats.close();
 }
 
-void FlameSolver::printPerfString(const std::string& label, const PerfTimer& T)
+void FlameSolver::printPerfString(std::ostream& stats, const std::string& label,
+                                  const PerfTimer& T)
 {
-    statsFile << format("%s %9.3f (%12i)\n") % label % T.getTime() % T.getCallCount();
+    stats << format("%s %9.3f (%12i)\n") % label % T.getTime() % T.getCallCount();
 }
 
 void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const

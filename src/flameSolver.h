@@ -207,12 +207,10 @@ public:
     double targetFlamePosition(double t); //!< [m]
 
     void printPerformanceStats(void);
-    void printPerfString(const std::string& label, const PerfTimer& T);
+    void printPerfString(std::ostream& stats, const std::string& label, const PerfTimer& T);
 
     //! Data for solving quasi-2D method-of-lines problems
     boost::shared_ptr<BilinearInterpolator> vzInterp, vrInterp, TInterp;
-
-    std::ofstream statsFile;
 
     // Performance Timers
     // Just the total time:
