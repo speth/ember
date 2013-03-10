@@ -79,10 +79,10 @@ void SourceSystem::writeState(std::ostream& out, bool init)
         out << "t = []" << std::endl;
     }
 
-    Eigen::IOFormat fmt(15, Eigen::DontAlignCols, ", ", "\n", "[", "]");
+    Eigen::IOFormat fmt(15, Eigen::DontAlignCols, ",", ",", "", "", "[", "]");
 
     out << "T.append(" << T << ")" << std::endl;
-    out << "Y.append(" << Y.matrix().transpose().format(fmt) << ")" << std::endl;
+    out << "Y.append(" << Y.format(fmt) << ")" << std::endl;
     out << "t.append(" << time() << ")" << std::endl;
 }
 
@@ -338,12 +338,12 @@ void SourceSystemCVODE::writeState(std::ostream& out, bool init)
         out << "splitConstY = []" << std::endl;
     }
 
-    Eigen::IOFormat fmt(15, Eigen::DontAlignCols, ", ", "\n", "[", "]");
+    Eigen::IOFormat fmt(15, Eigen::DontAlignCols, ",", ",", "", "", "[", "]");
 
     out << "dTdt.append(" << dTdt << ")" << std::endl;
-    out << "dYdt.append(" << dYdt.matrix().transpose().format(fmt) << ")" << std::endl;
+    out << "dYdt.append(" << dYdt.format(fmt) << ")" << std::endl;
     out << "splitConstT.append(" << splitConst[kEnergy] << ")" << std::endl;
-    out << "splitConstY.append(" << splitConst.tail(nSpec).matrix().transpose().format(fmt) << ")" << std::endl;
+    out << "splitConstY.append(" << splitConst.tail(nSpec).format(fmt) << ")" << std::endl;
 }
 
 void SourceSystemCVODE::writeJacobian(std::ostream& out)
