@@ -127,7 +127,6 @@ public:
     void updateChemicalProperties(); //!< Update thermodynamic, transport, and kinetic properties
     void updateBC(); //!< Set boundary condition for left edge of domain
     void calculateQdot(); //!< Compute heat release rate using the current temperature and mass fractions
-    void calculateTimeDerivatives_old(); //!< Combine dUdt, dTdt and dYdt from the split solvers
 
     //! Correct the drift of the total mass fractions and reset any negative mass fractions.
     void correctMassFractions();
