@@ -575,10 +575,6 @@ void FlameSolver::resizeAuxiliary()
         return; // nothing to do
     }
 
-    nSpec = gas.nSpec;
-    nVars = 2+nSpec;
-    N = nVars*nPoints;
-
     resizeMappedArrays();
 
     ddtCross.topRows(2).setZero();
@@ -1211,11 +1207,6 @@ void FlameSolver::loadProfile(void)
     }
 
     Tu = (options.overrideTu) ? options.Tu : T(grid.ju);
-
-    CanteraGas gas;
-    gas.setOptions(options);
-    gas.initialize();
-    size_t nSpec = gas.nSpec;
 
     if (options.flameType == "premixed") {
         // Save the burned gas properties for the case where the burned

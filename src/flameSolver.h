@@ -152,7 +152,6 @@ public:
 
     size_t nSpec; //!< Number of chemical species
     size_t nVars; //!< Number of state variables at each grid point (nSpec + 2)
-    size_t N; //!< total problem size (nSpec * nVars)
 
     // State variables:
     VecMap U; //!< normalized tangential velocity (u*a/u_inf) [1/s]
