@@ -444,7 +444,9 @@ void ConvectionSystemSplit::resize
             gas->getMolecularWeights(W);
         }
     }
-    multiremap(state, T, U, Y, nSpec, nPoints);
+    remap(state, T, nPoints, kEnergy);
+    remap(state, U, nPoints, kMomentum);
+    remap(state, Y, nSpec, nPoints, kSpecies);
 
     if (speciesSolvers.size() != nSpec) {
         // Create speciesSolvers from scratch if the number of species has changed

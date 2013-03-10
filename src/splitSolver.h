@@ -20,8 +20,15 @@ public:
         state.resize(nRows, nCols);
     }
 
-protected:
+    // Current state
+    dmatrix state;
+
+    // State at the start of the current integrator stage
+    dmatrix Sstart;
+
+    // Changes in each state variable for each terms of the governing equations
     dmatrix deltaConv, deltaDiff, deltaProd;
+
+    // Estimated time derivatives for each split term
     dmatrix ddtConv, ddtDiff, ddtProd, ddtCross;
-    dmatrix Sstart, state;
 };

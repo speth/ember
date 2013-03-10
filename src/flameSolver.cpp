@@ -15,29 +15,6 @@ FlameSolver::FlameSolver()
     : U(0, 0, Stride1X(1 ,1))
     , T(0, 0, Stride1X(1 ,1))
     , Y(0, 0, 0, StrideXX(1 ,1))
-    , dYdtDiff(0, 0, 0, StrideXX(1 ,1))
-    , dYdtProd(0, 0, 0, StrideXX(1 ,1))
-    , dYdtConv(0, 0, 0, StrideXX(1 ,1))
-    , dTdtDiff(0, 0, Stride1X(1 ,1))
-    , dTdtProd(0, 0, Stride1X(1 ,1))
-    , dTdtConv(0, 0, Stride1X(1 ,1))
-    , dUdtDiff(0, 0, Stride1X(1 ,1))
-    , dUdtProd(0, 0, Stride1X(1 ,1))
-    , dUdtConv(0, 0, Stride1X(1 ,1))
-    , Ustart(0, 0, Stride1X(1 ,1))
-    , Tstart(0, 0, Stride1X(1 ,1))
-    , Ystart(0, 0, 0, StrideXX(1 ,1))
-    , deltaUconv(0, 0, Stride1X(1 ,1))
-    , deltaUdiff(0, 0, Stride1X(1 ,1))
-    , deltaUprod(0, 0, Stride1X(1 ,1))
-    , deltaTconv(0, 0, Stride1X(1 ,1))
-    , deltaTdiff(0, 0, Stride1X(1 ,1))
-    , deltaTprod(0, 0, Stride1X(1 ,1))
-    , deltaYconv(0, 0, 0, StrideXX(1 ,1))
-    , deltaYdiff(0, 0, 0, StrideXX(1 ,1))
-    , deltaYprod(0, 0, 0, StrideXX(1 ,1))
-    , dYdtCross(0, 0, 0, StrideXX(1 ,1))
-    , dTdtCross(0, 0, Stride1X(1 ,1))
     , jCorrSolver(jCorrSystem)
     , tbbTaskSched(tbb::task_scheduler_init::deferred)
 {
@@ -522,19 +499,19 @@ void FlameSolver::writeStateFile
     }
 
     if (options.outputTimeDerivatives || errorFile) {
-        outFile.writeVec("dUdtDiff", dUdtDiff);
-        outFile.writeVec("dUdtConv", dUdtConv);
-        outFile.writeVec("dUdtProd", dUdtProd);
+        outFile.writeVec("dUdtDiff", ddtDiff.row(kMomentum));
+        outFile.writeVec("dUdtConv", ddtConv.row(kMomentum));
+        outFile.writeVec("dUdtProd", ddtProd.row(kMomentum));
 
-        outFile.writeVec("dTdtDiff", dTdtDiff);
-        outFile.writeVec("dTdtConv", dTdtConv);
-        outFile.writeVec("dTdtProd", dTdtProd);
-        outFile.writeVec("dTdtCross", dTdtCross);
+        outFile.writeVec("dTdtDiff", ddtDiff.row(kEnergy));
+        outFile.writeVec("dTdtConv", ddtConv.row(kEnergy));
+        outFile.writeVec("dTdtProd", ddtProd.row(kEnergy));
+        outFile.writeVec("dTdtCross", ddtCross.row(kEnergy));
 
-        outFile.writeArray2D("dYdtConv", dYdtConv, true);
-        outFile.writeArray2D("dYdtDiff", dYdtDiff, true);
-        outFile.writeArray2D("dYdtProd", dYdtProd, true);
-        outFile.writeArray2D("dYdtCross", dYdtCross, true);
+        outFile.writeArray2D("dYdtConv", ddtConv.bottomRows(nSpec), true);
+        outFile.writeArray2D("dYdtDiff", ddtDiff.bottomRows(nSpec), true);
+        outFile.writeArray2D("dYdtProd", ddtProd.bottomRows(nSpec), true);
+        outFile.writeArray2D("dYdtCross", ddtCross.bottomRows(nSpec), true);
 
         outFile.writeVec("dWdt", convectionSystem.dWdt);
         outFile.writeVec("drhodt", drhodt);
@@ -604,12 +581,12 @@ void FlameSolver::resizeAuxiliary()
 
     resizeMappedArrays();
 
-    ddtCross.setZero();
-    dYdtCross *= NaN;
+    ddtCross.topRows(2).setZero();
+    ddtCross.bottomRows(nSpec) *= NaN;
 
-    deltaYconv *= NaN;
-    deltaYdiff *= NaN;
-    deltaYprod *= NaN;
+    deltaConv.bottomRows(nSpec) *= NaN;
+    deltaDiff.bottomRows(nSpec) *= NaN;
+    deltaProd.bottomRows(nSpec) *= NaN;
 
     rho.setZero(nPoints);
     drhodt.setZero(nPoints);
@@ -690,16 +667,9 @@ void FlameSolver::resizeAuxiliary()
 void FlameSolver::resizeMappedArrays()
 {
     resize(nVars, nPoints);
-    multiremap(state, T, U, Y, nSpec, nPoints);
-    multiremap(deltaConv, deltaTconv, deltaUconv, deltaYconv, nSpec, nPoints);
-    multiremap(deltaDiff, deltaTdiff, deltaUdiff, deltaYdiff, nSpec, nPoints);
-    multiremap(deltaProd, deltaTprod, deltaUprod, deltaYprod, nSpec, nPoints);
-    multiremap(ddtConv, dTdtConv, dUdtConv, dYdtConv, nSpec, nPoints);
-    multiremap(ddtDiff, dTdtDiff, dUdtDiff, dYdtDiff, nSpec, nPoints);
-    multiremap(ddtProd, dTdtProd, dUdtProd, dYdtProd, nSpec, nPoints);
-    multiremap(Sstart, Tstart, Ustart, Ystart, nSpec, nPoints);
-    remap(ddtCross, dTdtCross, nPoints, kEnergy);
-    remap(ddtCross, dYdtCross, nSpec, nPoints, kSpecies);
+    remap(state, T, nPoints, kEnergy);
+    remap(state, U, nPoints, kMomentum);
+    remap(state, Y, nSpec, nPoints, kSpecies);
 }
 
 void FlameSolver::updateCrossTerms()
@@ -740,6 +710,12 @@ void FlameSolver::updateCrossTerms()
     assert(mathUtils::notnan(jCorrSolver.y));
 
     jCorr = jCorrSolver.y;
+
+    // dYdt due to gradients in other species and temperature
+    Eigen::Block<dmatrix> dYdtCross = ddtCross.bottomRows(nSpec);
+
+    // dTdt due to gradients in species composition
+    Eigen::Block<dmatrix, 1> dTdtCross = ddtCross.row(kEnergy);
 
     dYdtCross.col(0).setZero();
     dYdtCross.col(jj).setZero();
@@ -903,15 +879,13 @@ void FlameSolver::prepareConvectionTerms()
     deltaConv.setZero();
 
     setConvectionSolverState(tNow);
-    dvec dTdt = dTdtConv + dTdtDiff + dTdtProd;
-    Eigen::MatrixXd dYdt = dYdtConv + dYdtDiff + dYdtProd;
+    dmatrix ddt = ddtConv + ddtDiff + ddtProd;
     if (options.splittingMethod == "balanced") {
-        dTdt += dTdtCross;
-        dYdt += dYdtCross.matrix();
+        ddt += ddtCross;
     }
 
-    dvec tmp = (W.inverse().matrix().transpose() * dYdt).array();
-    drhodt = - rho * (dTdt / T + tmp * Wmx);
+    dvec tmp = (W.inverse().matrix().transpose() * ddt.bottomRows(nSpec).matrix()).array();
+    drhodt = - rho * (ddt.row(kEnergy).transpose() / T + tmp * Wmx);
 
     assert(mathUtils::notnan(drhodt));
     convectionSystem.setDensityDerivative(drhodt);

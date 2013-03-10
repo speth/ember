@@ -159,30 +159,9 @@ public:
     VecMap T; //!< temperature [K]
     MatrixMap Y; //!< species mass fractions, Y(k,j) [-]
 
-    // components of the time derivatives
-    MatrixMap dYdtDiff, dYdtProd, dYdtConv;
-    VecMap dTdtDiff, dTdtProd, dTdtConv;
-    VecMap dUdtDiff, dUdtProd, dUdtConv;
-    dvec drhodt;
-
-    // State variables at the beginning of the current integrator stage
-    VecMap Ustart;
-    VecMap Tstart;
-    MatrixMap Ystart;
-
-    // Changes in each state variable for each terms of the governing equations
-    VecMap deltaUconv;
-    VecMap deltaUdiff;
-    VecMap deltaUprod;
-    VecMap deltaTconv;
-    VecMap deltaTdiff;
-    VecMap deltaTprod;
-    MatrixMap deltaYconv;
-    MatrixMap deltaYdiff;
-    MatrixMap deltaYprod;
-
     // Auxiliary variables:
     dvec rho; //!< density [kg/m^3]
+    dvec drhodt; //!< time derivative of density [kg/m^3*s]
     dvec jCorr; //!< Correction to ensure sum of mass fractions = 1
     dvec sumcpj; //!< part of the enthalpy flux term
     dvec qDot; //!< Heat release rate [W/m^3]
@@ -198,9 +177,6 @@ public:
     dmatrix hk; //!< species molar enthalpies [J/kmol]
     dmatrix jFick; //!< Fickian mass flux [kg/m^2*s]
     dmatrix jSoret; //!< Soret mass flux [kg/m^2*s]
-
-    MatrixMap dYdtCross; //!< dYdt due to gradients in other species and temperature
-    VecMap dTdtCross; //!< dTdt due to gradients in gas composition
 
     // jCorr is a correction to force the net diffusion mass flux to be zero
     // jCorrSystem / jCorrSolver are used to introduce numerical diffusion into
