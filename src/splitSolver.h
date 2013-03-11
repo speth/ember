@@ -16,7 +16,7 @@ public:
         ddtDiff.resize(nRows, nCols);
         ddtProd.resize(nRows, nCols);
         ddtCross.resize(nRows, nCols);
-        Sstart.resize(nRows, nCols);
+        startState.resize(nRows, nCols);
         state.resize(nRows, nCols);
     }
 
@@ -24,7 +24,7 @@ public:
     dmatrix state;
 
     // State at the start of the current integrator stage
-    dmatrix Sstart;
+    dmatrix startState;
 
     // Changes in each state variable for each terms of the governing equations
     dmatrix deltaConv, deltaDiff, deltaProd;

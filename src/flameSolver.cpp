@@ -898,7 +898,7 @@ void FlameSolver::prepareConvectionTerms()
 void FlameSolver::setDiffusionSolverState(double tInitial)
 {
     splitTimer.resume();
-    Sstart = state;
+    startState = state;
 
     size_t k = 0;
     foreach (TridiagonalIntegrator& integrator, diffusionSolvers) {
@@ -918,7 +918,7 @@ void FlameSolver::setDiffusionSolverState(double tInitial)
 void FlameSolver::setConvectionSolverState(double tInitial)
 {
     splitTimer.resume();
-    Sstart = state;
+    startState = state;
     assert(mathUtils::notnan(state));
     convectionSystem.setState(tInitial);
     splitTimer.stop();
@@ -927,7 +927,7 @@ void FlameSolver::setConvectionSolverState(double tInitial)
 void FlameSolver::setProductionSolverState(double tInitial)
 {
     splitTimer.resume();
-    Sstart = state;
+    startState = state;
     for (size_t j=0; j<nPoints; j++) {
         sourceTerms[j].setState(tInitial, U(j), T(j), Y.col(j));
     }
@@ -955,7 +955,7 @@ void FlameSolver::integrateConvectionTerms(double tStart, double tEnd, int stage
     splitTimer.resume();
     convectionSystem.unroll_y();
     assert(mathUtils::notnan(state));
-    deltaConv += state - Sstart;
+    deltaConv += state - startState;
     splitTimer.stop();
 
     if (options.debugIntegratorStages(tNow)) {
@@ -981,7 +981,7 @@ void FlameSolver::integrateProductionTerms(double tStart, double tEnd, int stage
     }
     assert(mathUtils::notnan(state));
 
-    deltaProd += state - Sstart;
+    deltaProd += state - startState;
     splitTimer.stop();
 
     if (options.debugIntegratorStages(tNow)) {
@@ -1009,7 +1009,7 @@ void FlameSolver::integrateDiffusionTerms(double tStart, double tEnd, int stage)
     }
     assert(mathUtils::notnan(state));
 
-    deltaDiff += state - Sstart;
+    deltaDiff += state - startState;
     splitTimer.stop();
 
     if (stage && options.debugIntegratorStages(tNow)) {
