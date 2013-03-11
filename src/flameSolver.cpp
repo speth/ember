@@ -22,7 +22,7 @@ FlameSolver::FlameSolver()
 
 void FlameSolver::setOptions(const ConfigOptions& _options)
 {
-    options = _options;
+    SplitSolver::setOptions(_options);
     tStart = options.tStart;
     tEnd = options.tEnd;
 
@@ -156,7 +156,7 @@ int FlameSolver::step(void)
 {
     GILReleaser gil;
     try {
-        return step_internal();
+        return takeSplitStep();
     }
     catch (Cantera::CanteraError& err) {
         std::cout << err.what() << std::endl;
@@ -186,7 +186,7 @@ int FlameSolver::step(void)
     return -1;
 }
 
-int FlameSolver::step_internal()
+void FlameSolver::setupStep()
 {
     setupTimer.start();
 
@@ -227,41 +227,82 @@ int FlameSolver::step_internal()
 
     // Set up solvers for split integration
     updateCrossTerms();
-    prepareDiffusionTerms();
-    prepareProductionTerms();
-    prepareConvectionTerms();
+}
 
-    double dt = options.globalTimestep;
-    double tNext = tNow + dt;
+void FlameSolver::prepareIntegrators()
+{
+    splitTimer.resume();
+    // Diffusion terms
+    if (!options.quasi2d) {
+        // Diffusion solvers: Energy and momentum
+        diffusionTerms[kMomentum].B = rho.inverse();
+        diffusionTerms[kEnergy].B = (rho * cp).inverse();
 
-    if (t == tStart && options.outputProfiles) {
-        writeStateFile("", false, false);
+        diffusionTerms[kMomentum].D = mu;
+        diffusionTerms[kEnergy].D = lambda;
+
+        // Diffusion solvers: Species
+        for (size_t k=0; k<nSpec; k++) {
+            diffusionTerms[kSpecies+k].B =rho.inverse();
+            diffusionTerms[kSpecies+k].D = rhoD.row(k);
+        }
+    } else {
+        // Diffusion solvers: Energy and momentum
+        diffusionTerms[kMomentum].B.setZero(nPoints);
+        diffusionTerms[kEnergy].B.setZero(nPoints);
+
+        diffusionTerms[kMomentum].D.setZero(nPoints);
+        diffusionTerms[kEnergy].D.setZero(nPoints);
+
+        // Diffusion solvers: Species
+        for (size_t k=0; k<nSpec; k++) {
+            DiffusionSystem& sys = diffusionTerms[kSpecies+k];
+            sys.D = rhoD.row(k);
+            for (size_t j = 0; j <= jj; j++) {
+                sys.B[j] = 1 / (rho[j] * vzInterp->get(x[j], tNow));
+            }
+        }
     }
 
-    if (options.debugIntegratorStages(tNow)) {
-        writeStateFile((format("start_t%.6f") % t).str(), true, false);
+    setDiffusionSolverState(tNow);
+    for (size_t i=0; i<nVars; i++) {
+        diffusionTerms[i].splitConst = splitConstDiff.row(i);
     }
 
-    // *** Balanced Strang-split Integration ***
+    // Production terms
+    setProductionSolverState(tNow);
+    for (size_t j=0; j<nPoints; j++) {
+        sourceTerms[j].splitConst = splitConstProd.col(j);
+    }
 
-    integrateDiffusionTerms(t, t + 0.25*dt, 1); // step 1/4
-    integrateConvectionTerms(t, t + 0.5*dt, 1); // step 1/2
-    integrateDiffusionTerms(t + 0.25*dt, t + 0.5*dt, 2); // step 2/4
-    integrateProductionTerms(t, t + dt, 0); // full step
-    integrateDiffusionTerms(t + 0.5*dt, t + 0.75*dt, 3); // step 3/4
-    integrateConvectionTerms(t + 0.5*dt, t + dt, 2); // step 2/2
-    integrateDiffusionTerms(t + 0.75*dt, t + dt, 4); // step 4/4
+    // Convection terms
+    setConvectionSolverState(tNow);
+    dmatrix ddt = ddtConv + ddtDiff + ddtProd;
+    if (options.splittingMethod == "balanced") {
+        ddt += ddtCross;
+    }
 
+    dvec tmp = (W.inverse().matrix().transpose() * ddt.bottomRows(nSpec).matrix()).array();
+    drhodt = - rho * (ddt.row(kEnergy).transpose() / T + tmp * Wmx);
+
+    assert(mathUtils::notnan(drhodt));
+    convectionSystem.setDensityDerivative(drhodt);
+    convectionSystem.setSplitConstants(splitConstConv);
+    convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
+    splitTimer.stop();
+}
+
+int FlameSolver::finishStep()
+{
     if (debugParameters::veryVerbose) {
         logFile.write("done!");
     }
 
     // *** End of Strang-split integration step ***
     correctMassFractions();
-    calculateTimeDerivatives(dt);
 
-    t = tNext;
-    tNow = tNext;
+    t = tNow + dt;
+    tNow += dt;
 
     nOutput++;
     nRegrid++;
@@ -580,10 +621,6 @@ void FlameSolver::resizeAuxiliary()
     ddtCross.topRows(2).setZero();
     ddtCross.bottomRows(nSpec) *= NaN;
 
-    deltaConv.bottomRows(nSpec) *= NaN;
-    deltaDiff.bottomRows(nSpec) *= NaN;
-    deltaProd.bottomRows(nSpec) *= NaN;
-
     rho.setZero(nPoints);
     drhodt.setZero(nPoints);
     Wmx.resize(nPoints);
@@ -802,104 +839,9 @@ void FlameSolver::updateChemicalProperties()
     }
 }
 
-void FlameSolver::prepareDiffusionTerms()
-{
-    splitTimer.resume();
-    deltaDiff.setZero();
-
-    if (!options.quasi2d) {
-        // Diffusion solvers: Energy and momentum
-        diffusionTerms[kMomentum].B = rho.inverse();
-        diffusionTerms[kEnergy].B = (rho * cp).inverse();
-
-        diffusionTerms[kMomentum].D = mu;
-        diffusionTerms[kEnergy].D = lambda;
-
-        // Diffusion solvers: Species
-        for (size_t k=0; k<nSpec; k++) {
-            diffusionTerms[kSpecies+k].B =rho.inverse();
-            diffusionTerms[kSpecies+k].D = rhoD.row(k);
-        }
-    } else {
-        // Diffusion solvers: Energy and momentum
-        diffusionTerms[kMomentum].B.setZero(nPoints);
-        diffusionTerms[kEnergy].B.setZero(nPoints);
-
-        diffusionTerms[kMomentum].D.setZero(nPoints);
-        diffusionTerms[kEnergy].D.setZero(nPoints);
-
-        // Diffusion solvers: Species
-        for (size_t k=0; k<nSpec; k++) {
-            DiffusionSystem& sys = diffusionTerms[kSpecies+k];
-            sys.D = rhoD.row(k);
-            for (size_t j = 0; j <= jj; j++) {
-                sys.B[j] = 1 / (rho[j] * vzInterp->get(x[j], tNow));
-            }
-        }
-    }
-
-    setDiffusionSolverState(tNow);
-
-    if (options.splittingMethod == "balanced") {
-        for (size_t i=0; i<nVars; i++) {
-            diffusionTerms[i].splitConst = - 0.75 * ddtDiff.row(i) +
-                0.25 * (ddtProd + ddtConv + ddtCross).row(i);
-        }
-    } else { // options.splittingMethod == "strang"
-        for (size_t i=0; i<nVars; i++) {
-            diffusionTerms[i].splitConst = ddtCross.row(i);
-        }
-    }
-    splitTimer.stop();
-}
-
-void FlameSolver::prepareProductionTerms()
-{
-    deltaProd.setZero();
-
-    setProductionSolverState(tNow);
-    if (options.splittingMethod == "strang") {
-        for (size_t j=0; j<nPoints; j++) {
-            sourceTerms[j].resetSplitConstants();
-        }
-    } else { // options.splittingMethod == "balanced"
-        for (size_t j=0; j<nPoints; j++) {
-            sourceTerms[j].splitConst = -0.5 * ddtProd.col(j) +
-                0.5 * (ddtConv + ddtDiff + ddtCross).col(j);
-        }
-    }
-}
-
-void FlameSolver::prepareConvectionTerms()
-{
-    deltaConv.setZero();
-
-    setConvectionSolverState(tNow);
-    dmatrix ddt = ddtConv + ddtDiff + ddtProd;
-    if (options.splittingMethod == "balanced") {
-        ddt += ddtCross;
-    }
-
-    dvec tmp = (W.inverse().matrix().transpose() * ddt.bottomRows(nSpec).matrix()).array();
-    drhodt = - rho * (ddt.row(kEnergy).transpose() / T + tmp * Wmx);
-
-    assert(mathUtils::notnan(drhodt));
-    convectionSystem.setDensityDerivative(drhodt);
-
-    dmatrix splitConst = dmatrix::Zero(nVars, nPoints);
-    if (options.splittingMethod == "balanced") {
-        splitConst = 0.25 * (ddtProd + ddtDiff + ddtCross - 3 * ddtConv);
-    }
-
-    convectionSystem.setSplitConstants(splitConst);
-    convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
-}
-
 void FlameSolver::setDiffusionSolverState(double tInitial)
 {
     splitTimer.resume();
-    startState = state;
-
     size_t k = 0;
     foreach (TridiagonalIntegrator& integrator, diffusionSolvers) {
         double dt = (dlj.square().tail(nPoints - 2) /
@@ -918,8 +860,6 @@ void FlameSolver::setDiffusionSolverState(double tInitial)
 void FlameSolver::setConvectionSolverState(double tInitial)
 {
     splitTimer.resume();
-    startState = state;
-    assert(mathUtils::notnan(state));
     convectionSystem.setState(tInitial);
     splitTimer.stop();
 }
@@ -927,21 +867,15 @@ void FlameSolver::setConvectionSolverState(double tInitial)
 void FlameSolver::setProductionSolverState(double tInitial)
 {
     splitTimer.resume();
-    startState = state;
     for (size_t j=0; j<nPoints; j++) {
         sourceTerms[j].setState(tInitial, U(j), T(j), Y.col(j));
     }
     splitTimer.stop();
 }
 
-void FlameSolver::integrateConvectionTerms(double tStart, double tEnd, int stage)
+void FlameSolver::integrateConvectionTerms(double tStart, double tEnd)
 {
-    assert(stage == 1 || stage == 2);
-    if (debugParameters::veryVerbose) {
-        logFile.write(format("convection term %i/2...") % stage, false);
-    }
     setConvectionSolverState(tStart);
-
     convectionTimer.start();
     try {
         convectionSystem.integrateToTime(tEnd);
@@ -954,22 +888,15 @@ void FlameSolver::integrateConvectionTerms(double tStart, double tEnd, int stage
 
     splitTimer.resume();
     convectionSystem.unroll_y();
-    assert(mathUtils::notnan(state));
-    deltaConv += state - startState;
     splitTimer.stop();
-
-    if (options.debugIntegratorStages(tNow)) {
-        writeStateFile((format("conv%i_t%.6f") % stage % tNow).str(), true, false);
-    }
 }
 
-void FlameSolver::integrateProductionTerms(double tStart, double tEnd, int stage)
+void FlameSolver::integrateProductionTerms(double tStart, double tEnd)
 {
     setProductionSolverState(tStart);
-
     reactionTimer.start();
     tbb::parallel_for(tbb::blocked_range<size_t>(0, nPoints,1),
-                      SourceTermWrapper(this, tEnd, stage));
+                      SourceTermWrapper(this, tEnd));
     reactionTimer.stop();
 
     splitTimer.resume();
@@ -979,24 +906,12 @@ void FlameSolver::integrateProductionTerms(double tStart, double tEnd, int stage
         T(j) = sourceTerms[j].T;
         Y.col(j) = sourceTerms[j].Y;
     }
-    assert(mathUtils::notnan(state));
-
-    deltaProd += state - startState;
     splitTimer.stop();
-
-    if (options.debugIntegratorStages(tNow)) {
-        writeStateFile((format("prod_t%.6f") % tNow).str(), true, false);
-    }
 }
 
 
-void FlameSolver::integrateDiffusionTerms(double tStart, double tEnd, int stage)
+void FlameSolver::integrateDiffusionTerms(double tStart, double tEnd)
 {
-    assert(stage >= 0 && stage <= 4);
-    if (debugParameters::veryVerbose) {
-        logFile.write(format("diffusion terms %i/4...") % stage, false);
-    }
-
     setDiffusionSolverState(tStart);
     diffusionTimer.start();
     tbb::parallel_for(tbb::blocked_range<size_t>(0, nVars, 1),
@@ -1007,14 +922,7 @@ void FlameSolver::integrateDiffusionTerms(double tStart, double tEnd, int stage)
     for (size_t i=0; i<nVars; i++) {
         state.row(i) = diffusionSolvers[i].y;
     }
-    assert(mathUtils::notnan(state));
-
-    deltaDiff += state - startState;
     splitTimer.stop();
-
-    if (stage && options.debugIntegratorStages(tNow)) {
-        writeStateFile((format("diff%i_t%.6f") % stage % tNow).str(), true, false);
-    }
 }
 
 
@@ -1108,21 +1016,6 @@ void FlameSolver::correctMassFractions() {
         gas.getMassFractions(&Y(0,j));
     }
     setupTimer.stop();
-}
-
-void FlameSolver::calculateTimeDerivatives(double dt)
-{
-    double split(options.splittingMethod == "balanced");
-
-    if (options.splittingMethod == "balanced") {
-        deltaConv -= 0.25 * dt * (ddtProd + ddtDiff + ddtCross);
-        deltaDiff -= 0.25 * dt * (ddtProd + ddtConv + ddtCross);
-        deltaProd -= 0.5 * dt * (ddtConv + ddtDiff + ddtCross);
-    }
-
-    ddtConv = deltaConv / dt + split * 0.75 * ddtConv;
-    ddtDiff = deltaDiff / dt + split * 0.75 * ddtDiff;
-    ddtProd = deltaProd / dt + split * 0.5 * ddtProd;
 }
 
 double FlameSolver::getHeatReleaseRate(void)
@@ -1373,13 +1266,6 @@ void FlameSolver::printPerfString(std::ostream& stats, const std::string& label,
 
 void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
 {
-    if (debugParameters::veryVerbose) {
-        if (stage) {
-            logFile.write(format("Source term %i/2...") % stage, false);
-        } else {
-            logFile.write("Source term...", false);
-        }
-    }
     CanteraGas& gas = parent->gases.local();
     if (!gas.initialized()) {
         tbb::mutex::scoped_lock lock(parent->gasInitMutex);
@@ -1419,7 +1305,7 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             logFile.write("Y = ", false);
             logFile.write(system.Y);
             parent->writeStateFile((format("prod%i_error_t%.6f_j%03i") %
-                    stage % t % j).str(), true, false);
+                    1 % t % j).str(), true, false);
         }
 
         if (debugParameters::veryVerbose) {

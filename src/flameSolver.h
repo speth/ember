@@ -50,15 +50,7 @@ public:
     //! Determine whether to terminate integration based on reaching steady-state solution.
     bool checkTerminationCondition(void);
 
-    //! Create prof.h5 file.
-    //! @param fileName The name of the output file.
-    //! @param errorFile Setting this to 'true' will generate a more verbose output file
-    //! @param updateDerivatives Setting this to 'true' will compute time derivatives based
-    //!        on the current state. This flag should only set if all of the solvers and auxillary
-    //!        arrays are sized corresponding to the current state, e.g. after integration but
-    //!        but before regridding.
     void writeStateFile(const std::string& fileName="", bool errorFile=false, bool updateDerivatives=true);
-
     void writeTimeseriesFile(const std::string& filename); //!< create out.h5 file
 
     //! Compute integral heat release rate [W/m^2].
@@ -87,13 +79,6 @@ public:
     dvector qDotConv1Vec; //!< Integral heat release rate after the first convection half-step.
     dvector qDotConv2Vec; //!< Integral heat release rate after the second convection half-step.
 
-    ConfigOptions options; //!< Options read from the input file
-
-    double tStart; //!< Integrator start time
-    double tEnd; //!< Integrator termination time (upper bound)
-    double tNow; //!< Current time reached by the integrator
-    double t; //!< start time of the current global timestep
-
     long int nTotal; //!< total number of timesteps taken
     int nRegrid; //!< number of time steps since regridding/adaptation
     int nOutput; //!< number of time steps since storing integral flame parameters
@@ -120,7 +105,9 @@ public:
     double Tu, Tb, Tleft, Tright;
     dvec Yu, Yb, Yleft, Yright;
 
-    int step_internal();
+    void setupStep();
+    void prepareIntegrators();
+    int finishStep();
     void resizeAuxiliary(); //!< Handle resizing of data structures as grid size changes
     void resizeMappedArrays(); //!< update data that shadows SplitSolver arrays
     void updateCrossTerms(); //!< calculates values of cross-component terms: jSoret, sumcpj, and jCorr
@@ -131,23 +118,14 @@ public:
     //! Correct the drift of the total mass fractions and reset any negative mass fractions.
     void correctMassFractions();
 
-    //! Calculate the apparent time derivatives for each term in the governing equations
-    void calculateTimeDerivatives(double dt);
-
-    // Steps in the Strang split integration process
-
-    // Prepare the balanced splitting terms for integration
-    void prepareDiffusionTerms();
-    void prepareProductionTerms();
-    void prepareConvectionTerms();
-
     void setDiffusionSolverState(double tInitial);
     void setConvectionSolverState(double tInitial);
     void setProductionSolverState(double tInitial);
 
-    void integrateConvectionTerms(double tStart, double tEnd, int stage);
-    void integrateProductionTerms(double tStart, double tEnd, int stage);
-    void integrateDiffusionTerms(double tStart, double tEnd, int stage);
+    // Steps in the Strang split integration process
+    void integrateConvectionTerms(double tStart, double tEnd);
+    void integrateProductionTerms(double tStart, double tEnd);
+    void integrateDiffusionTerms(double tStart, double tEnd         );
 
     size_t nSpec; //!< Number of chemical species
     size_t nVars; //!< Number of state variables at each grid point (nSpec + 2)
@@ -215,7 +193,7 @@ public:
     PerfTimer totalTimer;
 
     // These add up to the total run time:
-    PerfTimer setupTimer, splitTimer, reactionTimer, diffusionTimer,
+    PerfTimer setupTimer, reactionTimer, diffusionTimer,
               convectionTimer, regridTimer;
 
     // These account for special parts of the code
@@ -229,9 +207,8 @@ public:
 
 class SourceTermWrapper {
 public:
-    SourceTermWrapper(FlameSolver* parent_, double t_, int stage_)
+    SourceTermWrapper(FlameSolver* parent_, double t_)
         : parent(parent_)
-        , stage(stage_)
         , t(t_)
         {}
     void operator()(const tbb::blocked_range<size_t>& r) const;
