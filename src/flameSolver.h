@@ -72,13 +72,6 @@ public:
     dvector consumptionSpeed; //!< Consumption speed [m/s] at the times in #timeVector.
     dvector flamePosition; //!< Heat release centroid [m] at the times in #timeVector.
 
-    dvector qDotProd1Vec; //!< Integral heat release rate after the first production half-step.
-    dvector qDotProd2Vec; //!< Integral heat release rate after the second production half-step.
-    dvector qDotDiff1Vec; //!< Integral heat release rate after the first diffusion half-step.
-    dvector qDotDiff2Vec; //!< Integral heat release rate after the second diffusion half-step.
-    dvector qDotConv1Vec; //!< Integral heat release rate after the first convection half-step.
-    dvector qDotConv2Vec; //!< Integral heat release rate after the second convection half-step.
-
     long int nTotal; //!< total number of timesteps taken
     int nRegrid; //!< number of time steps since regridding/adaptation
     int nOutput; //!< number of time steps since storing integral flame parameters
