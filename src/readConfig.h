@@ -31,17 +31,12 @@ public:
     //! time step.
     bool debugIntegratorStages(double t) const;
 
-    std::string inputDir; //!< [paths.inputDir] Directory where input files are located.
-
     //! [paths.outputDir] Directory to store output files.
     //! Automatically created if it does not already exist.
     std::string outputDir;
 
     //! [initialCondition.file] A prof.h5 file to load initial conditions from.
     std::string restartFile;
-
-    //! True if #restartFile is in #inputDir.
-    bool useRelativeRestartPath;
 
     //! Set a new temperature boundary value. Automatically set to 'true' if initialCondition.Tu
     //! is specified in the config file.

@@ -270,7 +270,6 @@ def multirun(conf):
         _logFile.write('\n')
         _logFile.flush()
 
-    conf.initialCondition.relativeRestartPath = False
     if not os.path.exists(conf.paths.outputDir):
         os.mkdir(conf.paths.outputDir, 0755)
 

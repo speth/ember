@@ -1037,15 +1037,9 @@ void FlameSolver::loadProfile(void)
     grid.unburnedLeft = options.unburnedLeft;
 
     if (options.haveRestartFile) {
-        std::string inputFilename;
-        if (options.useRelativeRestartPath) {
-            inputFilename = options.inputDir + "/" + options.restartFile;
-        } else {
-            inputFilename = options.restartFile;
-        }
-
-        logFile.write(format("Reading initial condition from %s") % inputFilename);
-        DataFile infile(inputFilename);
+        logFile.write(format("Reading initial condition from %s") %
+                      options.restartFile);
+        DataFile infile(options.restartFile);
         x = infile.readVec("x");
 
         grid.setSize(x.size());

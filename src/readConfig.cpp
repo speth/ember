@@ -89,7 +89,6 @@ ConfigOptions::ConfigOptions(const bp::object& conf)
 
     // Paths
     const object& paths = conf.attr("paths");
-    readOption(paths, "inputDir", inputDir);
     readOption(paths, "outputDir", outputDir);
 
     string logFileName;
@@ -138,13 +137,11 @@ ConfigOptions::ConfigOptions(const bp::object& conf)
     // Initial Condition
     const object& ic = conf.attr("initialCondition");
     haveRestartFile = readOption(ic, "restartFile", restartFile);
-    useRelativeRestartPath = true;
-    readOption(ic, "relativeRestartPath", useRelativeRestartPath);
     if (haveRestartFile) {
-        haveRestartFile = boost::filesystem::exists(inputDir + "/" + restartFile);
+        haveRestartFile = boost::filesystem::exists(restartFile);
         if (!haveRestartFile) {
-            logFile.write(format("WARNING: couldn't find restart file '%s/%s'") %
-                inputDir % restartFile);
+            logFile.write(format("WARNING: couldn't find restart file '%s'") %
+                restartFile);
         }
     }
 
@@ -312,10 +309,6 @@ ConfigOptions::ConfigOptions(const bp::object& conf)
     // Create output directory if necessary
     if (!boost::filesystem::exists(outputDir)) {
         boost::filesystem::create_directory(outputDir);
-    }
-
-    if (boost::filesystem::exists(inputDir + "/" + gasMechanismFile)) {
-        gasMechanismFile = inputDir + "/" + gasMechanismFile;
     }
 
     gridAlpha = (curvedFlame) ? 1 : 0;

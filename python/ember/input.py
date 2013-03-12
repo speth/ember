@@ -8,8 +8,7 @@ configuration by passing :class:`.Options` objects to the constructor for
 :class:`.Config`::
 
     conf = Config(
-        Paths(inputDir="somewhere",
-              outputDir="somewhereElse"),
+        Paths(outputDir="somewhere"),
         InitialCondition(equivalenceRatio=0.9))
 """
 
@@ -234,10 +233,6 @@ def _usingQss(conf):
 class Paths(Options):
     """ Directories for input and output files """
 
-    #: Relative path to the directory where input files (such as the
-    #: Cantera mechanism file) are located.
-    inputDir = StringOption("input", label='Input Directory')
-
     #: Relative path to the directory where output files
     #: (outNNNNNN.h5, profNNNNNN.h5) will be stored.
     outputDir = StringOption("run/test1", label='Output Directory')
@@ -411,10 +406,6 @@ class InitialCondition(Options):
     #: Read initial profiles from the specified file, or if 'None',
     #: create a new initial profile.
     restartFile = StringOption(None, level=1)
-
-    #: True if the restart file path is relative to Paths.inputDir.
-    relativeRestartPath = BoolOption(True, level=2,
-        filter=lambda conf: conf.initialCondition.restartFile)
 
     #: "premixed", "diffusion", or "quasi2d"
     flameType = StringOption('premixed', ('diffusion', 'quasi2d'))
@@ -831,13 +822,6 @@ class Config(object):
             error = True
             print "Error: 'general.unburnedLeft' should not be specified for diffusion flames."
 
-        # Make sure the mechanism file is in the correct place
-        mech = os.path.join(self.paths.inputDir.value,
-                            self.chemistry.mechanismFile.value)
-        if not os.path.exists(mech):
-            error = True
-            print "Error: Couldn't find mechanism file %r.\n" % mech
-
         # Make sure that the mechanism file actually works and contains the
         # specified fuel and oxidizer species
         gas = Cantera.IdealGasMix(mech, id=self.chemistry.phaseID.value)
@@ -854,12 +838,7 @@ class Config(object):
 
         # Make sure the restart file is in the correct place (if specified)
         if self.initialCondition.restartFile:
-            if self.initialCondition.relativeRestartPath:
-                restart = os.path.join(self.paths.inputDir.value,
-                                       self.initialCondition.restartFile.value)
-            else:
-                restart = self.initialCondition.restartFile.value
-
+            restart = self.initialCondition.restartFile.value
             if not os.path.exists(restart):
                 error = True
                 print "Error: Couldn't find restart file %r.\n" % restart
@@ -901,8 +880,7 @@ class Config(object):
         velocity using the specified fuel and oxidizer compositions and flame
         configuration parameters.
         """
-        gas = Cantera.IdealGasMix(os.path.join(self.paths.inputDir,
-                                               self.chemistry.mechanismFile),
+        gas = Cantera.IdealGasMix(self.chemistry.mechanismFile,
                                   self.chemistry.phaseID)
 
         IC = self.initialCondition
