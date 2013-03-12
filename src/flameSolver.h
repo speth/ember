@@ -1,7 +1,6 @@
 #pragma once
 
 #include "readConfig.h"
-#include "sundialsUtils.h"
 #include "chemistry0d.h"
 #include "grid.h"
 #include "splitSolver.h"

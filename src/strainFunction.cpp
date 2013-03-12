@@ -1,4 +1,5 @@
 #include "strainFunction.h"
+#include "readConfig.h"
 
 StrainFunction::StrainFunction(const ConfigOptions& options)
     : aInitial(options.strainRateInitial)

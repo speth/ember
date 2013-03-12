@@ -1,5 +1,8 @@
 #include "sourceSystem.h"
 #include "readConfig.h"
+#include "perfTimer.h"
+#include "sundialsUtils.h"
+#include "chemistry0d.h"
 
 #include <boost/format.hpp>
 

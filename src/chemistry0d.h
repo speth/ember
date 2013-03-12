@@ -12,7 +12,8 @@
 #include "cantera/base/ctml.h"
 
 #include "mathUtils.h"
-#include "readConfig.h"
+
+class ConfigOptions;
 
 //! Mixture-averaged transport properties based on major species composition.
 //! For a mixture containing N species, the standard formulas for computing the

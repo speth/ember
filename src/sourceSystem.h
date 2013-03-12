@@ -2,13 +2,14 @@
 
 #include "mathUtils.h"
 #include "sundialsUtils.h"
-#include "chemistry0d.h"
 #include "strainFunction.h"
-#include "perfTimer.h"
 #include "qssintegrator.h"
 #include "quasi2d.h"
 
 #include <boost/shared_ptr.hpp>
+
+class PerfTimer;
+class CanteraGas;
 
 //! Base class used to integrate the chemical source term at a single point.
 class SourceSystem

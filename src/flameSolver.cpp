@@ -1,13 +1,9 @@
 #include "flameSolver.h"
-#include "debugUtils.h"
-#include "perfTimer.h"
 #include "dataFile.h"
-#include "mathUtils.h"
 #include "gilReleaser.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
-#include <boost/python.hpp>
 
 #define foreach BOOST_FOREACH
 

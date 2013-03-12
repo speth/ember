@@ -1,7 +1,6 @@
 #pragma once
 
 #include "mathUtils.h"
-#include "chemistry0d.h"
 #include "grid.h"
 #include "integrator.h"
 

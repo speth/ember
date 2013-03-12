@@ -2,9 +2,7 @@
 
 #include "mathUtils.h"
 #include "sundialsUtils.h"
-#include "strainFunction.h"
 #include "grid.h"
-#include "chemistry0d.h"
 #include "perfTimer.h"
 #include "quasi2d.h"
 
@@ -14,6 +12,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 
+class CanteraGas;
 class ConvectionTermWrapper;
 
 class ConvectionSystemUTW : public sdODE, public GridBased

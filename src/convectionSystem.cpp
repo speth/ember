@@ -1,5 +1,6 @@
 #include "convectionSystem.h"
 #include "debugUtils.h"
+#include "chemistry0d.h"
 
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH

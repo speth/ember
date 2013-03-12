@@ -1,6 +1,5 @@
 #pragma once
 
-//#include <Python.h>
 #ifdef _MSC_VER
 #define __thread __declspec(thread)
 #endif

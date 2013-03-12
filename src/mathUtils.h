@@ -12,7 +12,6 @@
 #include "debugUtils.h"
 
 #include <Eigen/Dense>
-#include "sundialsUtils.h"
 
 using std::abs;
 using std::size_t;
@@ -27,6 +26,8 @@ typedef Eigen::Map<dvec, Eigen::Unaligned, Stride1X> VecMap;
 
 using std::vector;
 typedef std::vector<double> dvector;
+
+class sdVector;
 
 inline void remap(dmatrix& M, MatrixMap& A,
                   index_t nRows, index_t nCols, index_t start)
@@ -88,14 +89,7 @@ namespace mathUtils
         return (v > 0 || v <= 0);
     }
 
-    inline bool notnan(const sdVector& v) {
-        for (size_t i=0; i<v.size(); i++) {
-            if (!(v[i] > 0) && !(v[i] <= 0)) {
-                return false;
-            }
-        }
-        return true;
-    }
+    bool notnan(const sdVector& v);
 
     int nanloc(const dvector& v); // returns index of first NaN component. Returns -1 if none
 

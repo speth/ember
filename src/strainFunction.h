@@ -1,6 +1,6 @@
 #pragma once
 
-#include "readConfig.h"
+class ConfigOptions;
 
 class StrainFunction
 {
