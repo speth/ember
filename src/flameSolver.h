@@ -10,7 +10,6 @@
 #include "sourceSystem.h"
 #include "diffusionSystem.h"
 #include "convectionSystem.h"
-#include "strainFunction.h"
 #include "quasi2d.h"
 
 #include <iostream>
@@ -27,6 +26,7 @@
 using std::string;
 class SourceTermWrapper;
 class DiffusionTermWrapper;
+class StrainFunction;
 
 //! Class which manages the main integration loop.
 //! Contains the split solvers and is responsible for the large-scale time integration.
@@ -34,7 +34,7 @@ class FlameSolver : public GridBased, public SplitSolver
 {
 public:
     FlameSolver();
-    virtual ~FlameSolver() {}
+    virtual ~FlameSolver();
 
     void setOptions(const ConfigOptions& options); //!< Set options read from the configuration file
     void initialize(); //!< call to generate profiles and perform one-time setup
@@ -153,7 +153,7 @@ public:
     TridiagonalIntegrator jCorrSolver;
 
     //! Function which describes strain rate a(t) and its derivative
-    StrainFunction strainfunc;
+    StrainFunction* strainfunc;
 
     double rVcenter; //!< mass flux at centerline [kg/m^2 or kg/m*rad*s]
     double rVzero; //!< mass flux at j=0

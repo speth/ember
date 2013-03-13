@@ -3,6 +3,7 @@
 #include "perfTimer.h"
 #include "sundialsUtils.h"
 #include "chemistry0d.h"
+#include "strainFunction.h"
 
 #include <boost/format.hpp>
 
@@ -12,6 +13,7 @@ SourceSystem::SourceSystem()
     , debug(false)
     , options(NULL)
     , gas(NULL)
+    , strainFunction(NULL)
     , quasi2d(false)
 {
 }
@@ -127,8 +129,8 @@ int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
 
     updateThermo();
 
-    double a = strainFunction.a(t);
-    double dadt = strainFunction.dadt(t);
+    double a = strainFunction->a(t);
+    double dadt = strainFunction->dadt(t);
 
     // *** Calculate the time derivatives
     double scale;
@@ -157,8 +159,8 @@ int SourceSystemCVODE::denseJacobian(const realtype t, const sdVector& y,
     fdJacobian(t, y, ydot, J);
     return 0;
 
-    double a = strainFunction.a(t);
-    double dadt = strainFunction.dadt(t);
+    double a = strainFunction->a(t);
+    double dadt = strainFunction->dadt(t);
     double A = a*a + dadt;
 
     // Additional properties not needed for the normal function evaluations:
@@ -433,8 +435,8 @@ void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d,
 
     qDot = - ((wDotQ - wDotD) * hk).sum() + getQdotIgniter(t);
 
-    double a = strainFunction.a(t);
-    double dadt = strainFunction.dadt(t);
+    double a = strainFunction->a(t);
+    double dadt = strainFunction->dadt(t);
 
     // *** Calculate the time derivatives
     double scale;

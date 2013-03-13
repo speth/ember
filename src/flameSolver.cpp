@@ -1,6 +1,7 @@
 #include "flameSolver.h"
 #include "dataFile.h"
 #include "gilReleaser.h"
+#include "strainFunction.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
@@ -12,8 +13,14 @@ FlameSolver::FlameSolver()
     , T(0, 0, Stride1X(1 ,1))
     , Y(0, 0, 0, StrideXX(1 ,1))
     , jCorrSolver(jCorrSystem)
+    , strainfunc(NULL)
     , tbbTaskSched(tbb::task_scheduler_init::deferred)
 {
+}
+
+FlameSolver::~FlameSolver()
+{
+    delete strainfunc;
 }
 
 void FlameSolver::setOptions(const ConfigOptions& _options)
@@ -30,7 +37,9 @@ void FlameSolver::initialize(void)
 {
     try {
         tbbTaskSched.initialize (options.nThreads);
-        strainfunc.setOptions(options);
+        delete strainfunc;
+        strainfunc = new LinearStrainFunction(options);
+        strainfunc->pin(tStart);
 
         flamePosIntegralError = 0;
         terminationCondition = 1e10;
@@ -370,7 +379,7 @@ int FlameSolver::finishStep()
         for (size_t j=0; j<nPoints; j++) {
             double num = std::min(mu[j],lambda[j]/cp[j]);
             num = std::min(num, rhoD.col(j).minCoeff());
-            double den = std::max(std::abs(rho[j]*strainfunc.a(t)), 1e-100);
+            double den = std::max(std::abs(rho[j]*strainfunc->a(t)), 1e-100);
             grid.dampVal[j] = sqrt(num/den);
         }
         dvec dampVal_prev = grid.dampVal;
@@ -384,7 +393,7 @@ int FlameSolver::finishStep()
         grid.nAdapt = nVars;
         if (options.quasi2d) {
             // do not change grid extents in this case
-        } else if (strainfunc.a(tNow) == 0) {
+        } else if (strainfunc->a(tNow) == 0) {
             calculateQdot();
             grid.regridUnstrained(currentSolution, qDot);
         } else {
@@ -526,8 +535,8 @@ void FlameSolver::writeStateFile
     outFile.writeVec("V", convectionSystem.V);
     outFile.writeScalar("P", options.pressure);
     outFile.writeScalar("gridAlpha", grid.alpha);
-    outFile.writeScalar("a", strainfunc.a(tNow));
-    outFile.writeScalar("dadt", strainfunc.dadt(tNow));
+    outFile.writeScalar("a", strainfunc->a(tNow));
+    outFile.writeScalar("dadt", strainfunc->dadt(tNow));
     outFile.writeScalar("fileNumber", options.outputFileNumber);
 
     if (options.outputHeatReleaseRate || errorFile) {
@@ -970,7 +979,7 @@ void FlameSolver::update_xStag(const double t, const bool updateIntError)
             (t - tFlamePrev));
     }
 
-    double a = strainfunc.a(t);
+    double a = strainfunc->a(t);
     if (alpha == 1) {
         rVzero = 0.5*rhoLeft*(controlSignal*abs(controlSignal)-a*x[0]*x[0]);
     } else {
