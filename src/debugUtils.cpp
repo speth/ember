@@ -41,6 +41,16 @@ void LogFile::close()
     }
 }
 
+void debugParameters::setParameters(bool adapt, bool regrid, bool timesteps,
+                                           bool radius, bool verbose)
+{
+    debugAdapt = adapt;
+    debugRegrid = regrid;
+    debugTimesteps = timesteps;
+    debugFlameRadiusControl = radius;
+    veryVerbose = verbose;
+}
+
 DebugException::DebugException(void)
 {
     errorString = "DebugException: unspecified error.";

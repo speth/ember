@@ -21,12 +21,12 @@ class ConfigOptions
 public:
     ConfigOptions() {}
 
-    //! Create a ConfigOptions object from a parallel python data structure
-//    ConfigOptions(const boost::python::api::object& conf);
-
     //! Returns true if integrator stage data should be saved at the current
     //! time step.
     bool debugIntegratorStages(double t) const;
+
+    //! Set the value of #continuityBC by name
+    void setContinuityBC(const std::string& condition);
 
     //! [paths.outputDir] Directory to store output files.
     //! Automatically created if it does not already exist.
@@ -187,9 +187,4 @@ public:
 
 private:
     bool outputDebugIntegratorStages;
-
-    // Load the config option "name" from "conf" into "value",
-    // Return true if value was not None
-//    template <class T1>
-//    bool readOption(const boost::python::api::object& conf, const char* name, T1& value);
 };

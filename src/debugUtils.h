@@ -44,6 +44,8 @@ private:
 class debugParameters
 {
 public:
+    static void setParameters(bool adapt, bool regrid, bool timesteps,
+                              bool radius, bool verbose);
     static bool debugAdapt;
     static bool debugRegrid;
     static bool debugTimesteps;
