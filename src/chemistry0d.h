@@ -1,5 +1,7 @@
 #pragma once
 
+#undef NO_ERROR // fix for interaction between reaction_defs.h and winerror.h
+
 #include "cantera/IdealGasMix.h"    // defines class IdealGasMix
 
 #include "cantera/equilibrium.h"    // chemical equilibrium
