@@ -82,6 +82,11 @@ opts.AddVariables(
         'tbb',
         'Location of the Thread Building Blocks (TBB) header and library files',
         '', PathVariable.PathAccept),
+    PathVariable(
+        'python_cmd',
+        """Path to the Python interpreter to be used for building the Python module,
+           if different from the interpreter being used by SCons.""",
+        sys.executable, PathVariable.PathAccept),
     BoolVariable(
         'debug_symbols',
         'Include debug symbols in the compiled module',
@@ -247,17 +252,21 @@ if os.name == 'nt':
     env.Alias('build', tbb)
 
 # The Python module
-
 env['py_include_dirs'] = repr(['../src'] + include_dirs)
-env['py_libraries'] = repr(['ember'] + env['LIBS'])
+env['py_libraries'] = repr([L for L in (['ember'] + env['LIBS']) if L])
 env['py_libdirs'] = repr(['../build/core'] + env['LIBPATH'])
 make_setup = env.SubstFile('#python/setup.py',
                            '#python/setup.py.in')
 
-py_install = env.Command('dummy_target', corelib,
+py_build = env.Command('dummy_target1', corelib,
+                       'cd python && %s setup.py build_ext' % env['python_cmd'])
+env.Alias('build', py_build)
+env.Depends(py_build, make_setup)
+
+py_install = env.Command('dummy_target2', corelib,
                          ('cd python && '
-                          'python setup.py install %s' % env['install_args']))
-env.Depends(py_install, make_setup)
+                          '%s setup.py install %s' % (env['python_cmd'], env['install_args'])))
+env.Depends(py_install, py_build)
 env.Alias('install', py_install)
 
 # GoogleTest tests
