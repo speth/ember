@@ -258,15 +258,13 @@ env['py_libdirs'] = repr(['../build/core'] + env['LIBPATH'])
 make_setup = env.SubstFile('#python/setup.py',
                            '#python/setup.py.in')
 
-py_build = env.Command('dummy_target1', corelib,
-                       'cd python && %s setup.py build_ext' % env['python_cmd'])
+setup_cmd = 'cd python && $python_cmd setup.py '
+py_build = env.Command('#build/python/ember/__init__.py', make_setup,
+                       setup_cmd + 'build_ext build ' +
+                      '--build-lib=../build/python --build-temp=../build/tmp-python')
 env.Alias('build', py_build)
-env.Depends(py_build, make_setup)
 
-py_install = env.Command('dummy_target2', corelib,
-                         ('cd python && '
-                          '%s setup.py install %s' % (env['python_cmd'], env['install_args'])))
-env.Depends(py_install, py_build)
+py_install = env.Command('dummy_target', py_build, setup_cmd + 'install $install_args')
 env.Alias('install', py_install)
 
 # GoogleTest tests

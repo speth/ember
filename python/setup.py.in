@@ -3,7 +3,7 @@ from distutils.sysconfig import get_config_var
 from Cython.Build import cythonize
 import os
 
-dataFiles = ['_ember%s' % get_config_var('SO')]
+dataFiles = []
 
 exts = cythonize("ember/_ember.pyx")
 exts[0].include_dirs += @py_include_dirs@
@@ -12,7 +12,7 @@ exts[0].library_dirs += @py_libdirs@
 
 if os.name == 'nt':
     for f in os.listdir('ember'):
-        # Expect to find: tbb, boost_filesystem, boost_python, boost_system
+        # Expect to find: tbb, boost_filesystem, boost_system
         if f.lower().endswith('.dll'):
             dataFiles.append(f)
 
