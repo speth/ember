@@ -180,3 +180,7 @@ cdef class ConfigOptions:
 cdef class FlameSolver:
     cdef ConfigOptions options
     cdef CxxFlameSolver* solver
+
+    # usedby the GUI
+    cdef public object lock
+    cdef public object progress

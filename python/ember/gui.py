@@ -9,7 +9,7 @@ import numpy as np
 from PySide import QtGui, QtCore
 import utils
 import input
-import ember
+import _ember
 
 import matplotlib
 matplotlib.rcParams['backend.qt4'] = 'PySide'
@@ -360,7 +360,7 @@ class SolverWidget(QtGui.QWidget):
         if self.solver is None:
             self.conf.validate()
             self.conf.setup()
-            self.solver = ember.FlameSolver(self.conf)
+            self.solver = _ember.FlameSolver(self.conf)
             self.solver.initialize()
 
         self.solverThread = SolverThread(solver=self.solver,
@@ -398,9 +398,9 @@ class SolverWidget(QtGui.QWidget):
             t = np.array(self.solver.timeVector)
             Sc = np.array(self.solver.consumptionSpeed)
 
-            self.T_profile.set_data(self.solver.grid.x * 1000,
+            self.T_profile.set_data(self.solver.x * 1000,
                                     self.solver.T)
-            self.hrr_profile.set_data(self.solver.grid.x * 1000,
+            self.hrr_profile.set_data(self.solver.x * 1000,
                                       self.solver.qDot / 1e6)
         self.Sc_timeseries.set_data(1000 * t, Sc * 100)
 
@@ -469,7 +469,7 @@ class MainWindow(QtGui.QMainWindow):
             localenv = {}
             execstatements = ['from numpy import *',
                               'import numpy as np',
-                              'from input import *']
+                              'from ember.input import *']
 
             execstatements.extend(open(conf).readlines())
             exec '\n'.join(execstatements) in localenv

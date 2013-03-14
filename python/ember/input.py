@@ -830,7 +830,8 @@ class Config(_ember.ConfigOptions):
 
         # Make sure that the mechanism file actually works and contains the
         # specified fuel and oxidizer species
-        gas = Cantera.IdealGasMix(mech, id=self.chemistry.phaseID.value)
+        gas = Cantera.IdealGasMix(self.chemistry.mechanismFile.value,
+                                  id=self.chemistry.phaseID.value)
         gas.set(X=self.initialCondition.fuel.value)
         gas.set(X=self.initialCondition.oxidizer.value)
 
