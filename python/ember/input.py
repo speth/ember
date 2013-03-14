@@ -756,6 +756,7 @@ class Config(_ember.ConfigOptions):
         self.debug = get(Debug)
         self.outputFiles = get(OutputFiles)
         self.terminationCondition = get(TerminationCondition)
+        self._evaluated = False
 
     def evaluate(self):
         """
@@ -763,6 +764,9 @@ class Config(_ember.ConfigOptions):
         they can be used by the C++ extension, in
         :meth:`Config.generateInitialCondition`, etc.
         """
+        if self._evaluated:
+            return
+
         for opts in self.__dict__.itervalues():
             if not isinstance(opts, Options):
                 continue
@@ -770,8 +774,7 @@ class Config(_ember.ConfigOptions):
                 opt = getattr(opts, name)
                 if isinstance(opt, Option):
                     setattr(opts, name, opt.value)
-
-        self.apply_options()
+        self._evaluated = True
 
     def setup(self):
         """

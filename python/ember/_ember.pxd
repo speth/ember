@@ -111,11 +111,15 @@ cdef extern from "debugUtils.h":
 
 cdef extern from "flameSolver.h":
     cdef cppclass CxxFlameSolver "FlameSolver":
-        pass
+        void setOptions(CxxConfigOptions&)
+        void initialize()
+        void finalize()
+        int step() except +
 
 
 cdef class ConfigOptions:
     cdef CxxConfigOptions* opts
 
 cdef class FlameSolver:
+    cdef ConfigOptions options
     cdef CxxFlameSolver* solver

@@ -5,6 +5,7 @@ import numpy as np
 cimport numpy as np
 import os
 
+from cython.operator cimport dereference as deref
 from _ember cimport *
 
 cdef class ConfigOptions:
@@ -210,5 +211,20 @@ cdef class FlameSolver:
     def __cinit__(self, *args, **kwargs):
         self.solver = new CxxFlameSolver()
 
+    def __init__(self, ConfigOptions options):
+        self.options = options # keep to prevent garbage collection
+        options.evaluate()
+        options.apply_options()
+        self.solver.setOptions(deref(options.opts))
+
     def __dealloc__(self):
         del self.solver
+
+    def initialize(self):
+        self.solver.initialize()
+
+    def finalize(self):
+        self.solver.finalize()
+
+    def step(self):
+        return self.solver.step()
