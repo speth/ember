@@ -279,11 +279,6 @@ void CanteraGas::setOptions(const ConfigOptions& options)
 void CanteraGas::initialize()
 {
     // XML Information File
-    if (!boost::filesystem::exists(mechanismFile)) {
-        throw DebugException((format(
-            "Error: Cantera input file '%s' not found.") % mechanismFile).str());
-    }
-
     rootXmlNode = Cantera::get_XML_File(mechanismFile);
     if (rootXmlNode == NULL) {
         throw DebugException((format(
