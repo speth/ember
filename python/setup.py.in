@@ -1,8 +1,14 @@
 from distutils.core import setup, Extension
 from distutils.sysconfig import get_config_var
+from Cython.Build import cythonize
 import os
 
 dataFiles = ['_ember%s' % get_config_var('SO')]
+
+exts = cythonize("ember/_ember.pyx")
+exts[0].include_dirs += @py_include_dirs@
+exts[0].libraries += @py_libraries@
+exts[0].library_dirs += @py_libdirs@
 
 if os.name == 'nt':
     for f in os.listdir('ember'):
@@ -18,6 +24,7 @@ setup(name='Ember',
       author_email='speth@mit.edu',
       url='http://github.com/speth/ember',
       packages = ['ember'],
+      ext_modules=exts,
       scripts=['scripts/ember'],
       package_data = {'ember': dataFiles})
 

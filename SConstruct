@@ -24,7 +24,6 @@ if not COMMAND_LINE_TARGETS:
 
 VariantDir('build/core','src', duplicate=0)
 VariantDir('build/test','test', duplicate=0)
-VariantDir('build/python','src/python', duplicate=0)
 
 #try:
 #    import multiprocessing
@@ -55,7 +54,7 @@ if os.name == 'nt':
         extraEnvArgs['TARGET_ARCH'] = 'x86'
         tbbArch = 'ia32'
 
-env = Environment(**extraEnvArgs)
+env = Environment(tools=['default', 'subst'], **extraEnvArgs)
 
 opts = Variables('ember.conf')
 opts.AddVariables(
@@ -139,9 +138,9 @@ else:
     tbbLibDir = env['tbb']+'/lib'
 
 python = ['python%s' % get_config_var('VERSION')]
-lastlibs = ['tbb'] + python + hdf5 + env['blas_lapack'].split(',')
+lastlibs = ['tbb'] + hdf5 + env['blas_lapack'].split(',')
 
-include_dirs = ['ext/boost.numpy/include']
+include_dirs = []
 library_dirs = []
 
 if env['cantera']:
@@ -183,7 +182,7 @@ if env['CC'] == 'gcc':
         defines.append('NDEBUG')
 
     boost_libs = ['boost_%s' % lib
-                  for lib in ('python', 'filesystem', 'system')]
+                  for lib in ('filesystem', 'system')]
 
 elif env['CC'] == 'cl':
     flags = ['/nologo', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc', '/MD']
@@ -235,19 +234,10 @@ tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
 if not tests['CanteraExtendedTransport']:
     raise EnvironmentError("Missing required Cantera method 'getMixDiffCoeffsMass'.")
 
-# The Python module
-pyenv = env.Clone()
-pyenv.Append(LIBS=['boost-numpy'],
-             LIBPATH=['lib'])
+common_objects = env.SharedObject(Glob('build/core/*.cpp'))
 
-common_objects = pyenv.SharedObject(Glob('build/core/*.cpp'))
-
-pylib = pyenv.SharedLibrary('python/ember/_ember',
-                            common_objects + Glob('build/python/*.cpp'),
-                            SHLIBPREFIX='',
-                            SHLIBSUFFIX=get_config_var('SO'))
-
-env.Alias('build', pylib)
+corelib = env.Library('build/core/ember', common_objects)
+env.Alias('build', corelib)
 
 if os.name == 'nt':
     for dest in ['python/ember/TBB.dll', 'bin/TBB.dll']:
@@ -256,16 +246,23 @@ if os.name == 'nt':
                           Copy('$TARGET', '$SOURCE'))
     env.Alias('build', tbb)
 
-# Installation of the Python module:
-py_install = env.Command('dummy_target', pylib,
+# The Python module
+
+env['py_include_dirs'] = repr(['../src'] + include_dirs)
+env['py_libraries'] = repr(['ember'] + env['LIBS'])
+env['py_libdirs'] = repr(['../build/core'] + env['LIBPATH'])
+make_setup = env.SubstFile('#python/setup.py',
+                           '#python/setup.py.in')
+
+py_install = env.Command('dummy_target', corelib,
                          ('cd python && '
                           'python setup.py install %s' % env['install_args']))
+env.Depends(py_install, make_setup)
 env.Alias('install', py_install)
 
 # GoogleTest tests
-python_lib = 'python%s' % get_config_var('VERSION')
 testenv = env.Clone()
-testenv.Append(LIBS=['gtest', python_lib],
+testenv.Append(LIBS=['gtest', python],
                CPPPATH=['ext/gtest/include'],
                LIBPATH=['lib'])
 

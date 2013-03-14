@@ -20,6 +20,7 @@ import numpy as np
 import utils
 import copy
 
+import _ember
 
 class Option(object):
     """
@@ -722,7 +723,7 @@ class TerminationCondition(Options):
     steadyPeriod = FloatOption(0.002, min=0, level=1)  #:
 
 
-class Config(object):
+class Config(_ember.ConfigOptions):
     """
     An object consisting of a set of Options objects which define a
     complete set of configuration options needed to run the flame
@@ -769,6 +770,8 @@ class Config(object):
                 opt = getattr(opts, name)
                 if isinstance(opt, Option):
                     setattr(opts, name, opt.value)
+
+        self.apply_options()
 
     def setup(self):
         """

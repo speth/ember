@@ -25,3 +25,5 @@ doc/doxygen/html
 doc/sphinx/doctrees
 doc/sphinx/html
 doc/ember-cxx.tag
+python/setup.py
+python/ember/*.cpp

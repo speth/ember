@@ -3,9 +3,6 @@
 
 #include <string>
 
-// Forward declaration to avoid needing to #include boost/python.hpp
-namespace boost { namespace python { namespace api { class object; } } }
-
 // indices of the respective equations / solution components
 extern const size_t kMomentum, kEnergy, kSpecies, kWmx;
 
@@ -25,7 +22,7 @@ public:
     ConfigOptions() {}
 
     //! Create a ConfigOptions object from a parallel python data structure
-    ConfigOptions(const boost::python::api::object& conf);
+//    ConfigOptions(const boost::python::api::object& conf);
 
     //! Returns true if integrator stage data should be saved at the current
     //! time step.
@@ -193,6 +190,6 @@ private:
 
     // Load the config option "name" from "conf" into "value",
     // Return true if value was not None
-    template <class T1>
-    bool readOption(const boost::python::api::object& conf, const char* name, T1& value);
+//    template <class T1>
+//    bool readOption(const boost::python::api::object& conf, const char* name, T1& value);
 };

@@ -2,15 +2,14 @@
 #include "boost/filesystem.hpp"
 #include "debugUtils.h"
 
-#include <boost/python.hpp>
-
 const size_t kMomentum = 0;
 const size_t kEnergy = 1;
 const size_t kSpecies = 2;
 const size_t kWmx = 2; // never used in the same systems as kSpecies
 
-namespace bp = boost::python;
+//namespace bp = boost::python;
 
+/*
 template <class T1>
 bool ConfigOptions::readOption(const bp::object& conf, const char* name, T1& value)
 {
@@ -313,6 +312,7 @@ ConfigOptions::ConfigOptions(const bp::object& conf)
 
     gridAlpha = (curvedFlame) ? 1 : 0;
 }
+*/
 
 bool ConfigOptions::debugIntegratorStages(double t) const
 {
