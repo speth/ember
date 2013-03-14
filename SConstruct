@@ -258,17 +258,22 @@ env['py_libraries'] = repr([L for L in (['ember'] + env['LIBS']) if L])
 env['py_libdirs'] = repr(['../build/core'] + env['LIBPATH'])
 make_setup = env.SubstFile('#python/setup.py',
                            '#python/setup.py.in')
-script = '\n'.join(('from distutils.sysconfig import *',
-                   'print(get_config_var("SO"))'))
+script = ('from distutils.sysconfig import *\n'
+          'print(get_config_var("SO"))')
 env['module_ext'] = subprocess.check_output([env['python_cmd'], '-c', script]).strip()
 
 setup_cmd = 'cd python && $python_cmd setup.py '
-py_build = env.Command('#build/python/ember/__init__.py', make_setup,
-                       setup_cmd + 'build_ext build ' +
-                      '--build-lib=../build/python --build-temp=../build/tmp-python')
+build_args = '--build-lib=../build/python --build-temp=../build/tmp-python'
+py_build_ext = env.Command('build/python/ember/_ember${module_ext}', make_setup,
+                       setup_cmd + 'build_ext ' + build_args)
+env.AddPreAction(py_build_ext, Delete('build/python/ember/_ember${module_ext}'))
+env.Depends(py_build_ext, corelib)
+env.Depends(py_build_ext, mglob(env, 'python/ember', 'h', 'pxd', 'pyx'))
+
+py_build = env.Command('build/python/ember/__init__.py', py_build_ext,
+                       setup_cmd + 'build ' + build_args)
 env.Alias('build', py_build)
-env.Depends(py_build, corelib)
-env.AddPreAction(py_build, Delete('build/python/ember/_ember${module_ext}'))
+env.Depends(py_build, mglob(env, 'python/ember', 'py'))
 
 py_install = env.Command('dummy_target', py_build, setup_cmd + 'install $install_args')
 env.Alias('install', py_install)
