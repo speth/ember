@@ -8,6 +8,44 @@ import os
 from cython.operator cimport dereference as deref
 from _ember cimport *
 
+cdef np.ndarray[np.double_t, ndim=1] getArray_vector(vector[double]& vec):
+    cdef np.ndarray[np.double_t, ndim=1] v = np.empty(vec.size())
+    cdef int i
+    for i in range(len(v)):
+        v[i] = vec[i]
+    return v
+
+cdef np.ndarray[np.double_t, ndim=1] getArray_Vec(CxxEigenVec& vec):
+    cdef np.ndarray[np.double_t, ndim=1] v = np.empty(vec.size())
+    cdef int i
+    for i in range(len(v)):
+        v[i] = vec.item(i)
+    return v
+
+cdef np.ndarray[np.double_t, ndim=2] getArray_Matrix(CxxEigenMatrix& M):
+    cdef np.ndarray[np.double_t, ndim=2] v = np.empty((M.rows(), M.cols()))
+    cdef int i, j
+    for i in range(M.rows()):
+        for j in range(M.cols()):
+            v[i,j] = M.item(i,j)
+    return v
+
+cdef np.ndarray[np.double_t, ndim=1] getArray_VecMap(CxxEigenVecMap& vec):
+    cdef np.ndarray[np.double_t, ndim=1] v = np.empty(vec.size())
+    cdef int i
+    for i in range(len(v)):
+        v[i] = vec.item(i)
+    return v
+
+cdef np.ndarray[np.double_t, ndim=2] getArray_MatrixMap(CxxEigenMatrixMap& M):
+    cdef np.ndarray[np.double_t, ndim=2] v = np.empty((M.rows(), M.cols()))
+    cdef int i, j
+    for i in range(M.rows()):
+        for j in range(M.cols()):
+            v[i,j] = M.item(i,j)
+    return v
+
+
 cdef class ConfigOptions:
     def __cinit__(self, *args, **kwargs):
         self.opts = new CxxConfigOptions()
@@ -228,3 +266,43 @@ cdef class FlameSolver:
 
     def step(self):
         return self.solver.step()
+
+    property x:
+        def __get__(self):
+            return getArray_Vec(self.solver.grid.x)
+
+    property T:
+        def __get__(self):
+            return getArray_VecMap(self.solver.T)
+
+    property U:
+        def __get__(self):
+            return getArray_VecMap(self.solver.U)
+
+    property Y:
+        def __get__(self):
+            return getArray_MatrixMap(self.solver.Y)
+
+    property timeVector:
+        def __get__(self):
+            return getArray_vector(self.solver.timeVector)
+
+    property heatReleaseRate:
+        def __get__(self):
+            return getArray_vector(self.solver.heatReleaseRate)
+
+    property consumptionSpeed:
+        def __get__(self):
+            return getArray_vector(self.solver.consumptionSpeed)
+
+    property flamePosition:
+        def __get__(self):
+            return getArray_vector(self.solver.flamePosition)
+
+    property terminationCondition:
+        def __get__(self):
+            return self.solver.terminationCondition
+
+    property qDot:
+        def __get__(self):
+            return getArray_Vec(self.solver.qDot)

@@ -7,11 +7,28 @@ import numpy as np
 cimport numpy as np
 
 cdef extern from "eigen_utils.h":
+    cdef cppclass CxxEigenVecMap "VecMap":
+        double& item "operator()" (int)
+        int size()
+        void resize(int)
+
     cdef cppclass CxxEigenVec "dvec":
-        pass
+        double& item "operator()" (int)
+        int size()
+        void resize(int)
 
     cdef cppclass CxxEigenMatrix "dmatrix":
-        pass
+        double& item "operator()" (int, int)
+        int rows()
+        int cols()
+        void resize(int, int)
+
+    cdef cppclass CxxEigenMatrixMap "MatrixMap":
+        double& item "operator()" (int, int)
+        int rows()
+        int cols()
+        void resize(int, int)
+
 
     # Technically, these functions return Map<...> objects, but it's better
     # if Cython doesn't know about that.
@@ -109,12 +126,52 @@ cdef extern from "debugUtils.h":
         void open(string)
     cdef CxxLogFile CxxSingletonLogfile "logFile"
 
+
+cdef extern from "grid.h":
+    cdef cppclass CxxOneDimGrid "OneDimGrid":
+        CxxEigenVec x
+
+
 cdef extern from "flameSolver.h":
     cdef cppclass CxxFlameSolver "FlameSolver":
         void setOptions(CxxConfigOptions&)
         void initialize()
         void finalize()
         int step() except +
+
+        vector[double] timeVector
+        vector[double] heatReleaseRate
+        vector[double] consumptionSpeed
+        vector[double] flamePosition
+        double terminationCondition
+
+        CxxOneDimGrid grid
+
+        CxxEigenVecMap T
+        CxxEigenVecMap U
+        CxxEigenMatrixMap Y
+
+        CxxEigenMatrix ddtDiff
+        CxxEigenMatrix ddtConv
+        CxxEigenMatrix ddtProd
+        CxxEigenMatrix ddtCross
+        CxxEigenVec drhodt
+        CxxEigenVec rho
+        CxxEigenVec jCorr
+        CxxEigenVec sumcpj
+        CxxEigenVec qDot
+        CxxEigenMatrix wDot
+        CxxEigenVec Wmx
+        CxxEigenVec W
+        CxxEigenVec mu
+        CxxEigenVec k "lambda"
+        CxxEigenVec cp
+        CxxEigenMatrix cpSpec
+        CxxEigenMatrix rhoD
+        CxxEigenMatrix Dkt
+        CxxEigenMatrix hk
+        CxxEigenMatrix jFick
+        CxxEigenMatrix jSoret
 
 
 cdef class ConfigOptions:
