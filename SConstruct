@@ -16,6 +16,7 @@ import os
 import platform
 from distutils.sysconfig import get_config_var
 import numpy as np
+import subprocess
 from buildutils import *
 
 if not COMMAND_LINE_TARGETS:
@@ -257,12 +258,17 @@ env['py_libraries'] = repr([L for L in (['ember'] + env['LIBS']) if L])
 env['py_libdirs'] = repr(['../build/core'] + env['LIBPATH'])
 make_setup = env.SubstFile('#python/setup.py',
                            '#python/setup.py.in')
+script = '\n'.join(('from distutils.sysconfig import *',
+                   'print(get_config_var("SO"))'))
+env['module_ext'] = subprocess.check_output([env['python_cmd'], '-c', script]).strip()
 
 setup_cmd = 'cd python && $python_cmd setup.py '
 py_build = env.Command('#build/python/ember/__init__.py', make_setup,
                        setup_cmd + 'build_ext build ' +
                       '--build-lib=../build/python --build-temp=../build/tmp-python')
 env.Alias('build', py_build)
+env.Depends(py_build, corelib)
+env.AddPreAction(py_build, Delete('build/python/ember/_ember${module_ext}'))
 
 py_install = env.Command('dummy_target', py_build, setup_cmd + 'install $install_args')
 env.Alias('install', py_install)
