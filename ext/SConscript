@@ -10,14 +10,8 @@ def prep_gtest(env):
                     CPPDEFINES=('GTEST_HAS_PTHREAD=0'))
     return localenv
 
-def prep_boost_np(env):
-    localenv = env.Clone()
-    localenv.Append(CPPPATH=[Dir('#ext/boost.numpy/include')])
-    return localenv
-
 # (subdir, library name, (file extensions), prepfunction)
-libs = [('gtest/src','gtest',['^gtest-all.cc'], prep_gtest),
-        ('boost.numpy/src','boost-numpy',['cpp'], prep_boost_np)]
+libs = [('gtest/src','gtest',['^gtest-all.cc'], prep_gtest)]
 
 for subdir, libname, extensions, prepFunction in libs:
     localenv = prepFunction(env)
