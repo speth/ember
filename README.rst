@@ -20,15 +20,16 @@ Compiling Ember
 
   * A C++ compiler (g++ or Visual Studio 2008)
   * Python (2.6 or 2.7)
-  * Boost, including boost-python and boost-filesystem
+  * Cython (>= 0.18)
+  * Boost (>= 1.40, including boost-filesystem)
   * SCons (2.1.0 recommended)
   * Eigen (>= 3.0)
   * Cantera (>= 2.0.0)
   * Sundials (== 2.4)
   * HDF5 (>= 1.8.0)
   * Intel Threading Building Blocks (>= 4.0)
-  * numpy
-  * h5py
+  * numpy (>= 1.3.0)
+  * h5py (>= 1.2.1)
   * git
 
   Additional dependencies for processing documentation:
@@ -58,7 +59,7 @@ Compiling Ember
 
     $ scons cantera=/home/$USER/.local sundials=/opt/sundials-2.4.0
 
-  This produces the python extension ``python/ember/_ember.so``.
+  This produces the Python extension module ``build/python/ember/_ember.so``.
 
 * Install the "Ember" Python module::
 
@@ -73,7 +74,7 @@ Compiling Ember
   symlink into your user Python module path::
 
     $ mkdir -p ~/.local/lib/pythonX.Y/site-packages
-    $ ln -s ~/src/ember/python/ember ~/.local/lib/pythonX.Y/site-packages/ember
+    $ ln -s ~/src/ember/build/python/ember ~/.local/lib/pythonX.Y/site-packages/ember
 
   where *X.Y* is your your installed version of Python, e.g 2.7.
 
@@ -81,7 +82,9 @@ Compiling Ember
 
     $ ln -s /path/to/cantera/lib/pythonX.Y/site-packages/Cantera ~/.local/lib/pythonX.Y/site-packages/
 
-  Or add parent directories of each of these modules to your ``PYTHONPATH``.
+  Or add parent directories of each of these modules to your ``PYTHONPATH``::
+
+    $ export PYTHONPATH=/path/to/cantera/lib/python2.7/site-packages:~/src/ember/build/python
 
 * Prepare the documentation (optional)::
 
