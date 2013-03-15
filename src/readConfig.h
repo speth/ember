@@ -108,6 +108,8 @@ public:
     double Tu; //!< Temperature of the unburned mixture for premixed flames
     double Tfuel; //!< Temperature of the fuel for diffusion flames
     double Toxidizer; //!< Temperature of the oxidizer for diffusion flames
+
+    std::string strainFunctionType;
     double strainRateInitial, strainRateFinal;
     double strainRateDt, strainRateT0;
 

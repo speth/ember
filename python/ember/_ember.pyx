@@ -146,10 +146,14 @@ cdef class ConfigOptions:
         opts.ignition_stddev = self.ignition.stddev
 
         # strain rate parameters
-        opts.strainRateInitial = self.strainParameters.initial
-        opts.strainRateFinal = self.strainParameters.final
-        opts.strainRateT0 = self.strainParameters.tStart
-        opts.strainRateDt = self.strainParameters.dt
+        if self.strainParameters.function is not None:
+            opts.strainFunctionType = 'chebyshev'
+        else:
+            opts.strainFunctionType = 'linear'
+            opts.strainRateInitial = self.strainParameters.initial
+            opts.strainRateFinal = self.strainParameters.final
+            opts.strainRateT0 = self.strainParameters.tStart
+            opts.strainRateDt = self.strainParameters.dt
 
         # Flame position control
         if self.positionControl is not None:
@@ -246,6 +250,43 @@ cdef class ConfigOptions:
             opts.terminationAbsTol = TC.abstol
 
 
+cdef np.ndarray[np.double_t, ndim=1] chebyshev1(double x, int N):
+    """
+    Return the values of the Chebyshev polynomials of the first kind
+    evaluated at *x* up to order *N*.
+    """
+    cdef np.ndarray[np.double_t, ndim=1] T = np.empty(N+1)
+    T[0] = 1
+    if N == 1:
+        return T
+
+    T[1] = x
+    if N == 2:
+        return T
+
+    cdef int i
+    for i in range(1, N-1):
+        T[i+1] = 2 * x * T[i] - T[i-1]
+
+    return T
+
+
+cdef np.ndarray[np.double_t, ndim=1] getChebyshevCoeffs(f, int N, double t0, double t1):
+    cdef np.ndarray[np.double_t, ndim=1] a = np.zeros(N)
+    cdef np.ndarray[np.double_t, ndim=1] T = np.zeros(N)
+    cdef int k, n
+    cdef np.ndarray[np.double_t, ndim=1] X = np.array([np.cos(np.pi * (k + 0.5) / N) for k in range(N)])
+    cdef double fx, t
+    for k in range(N):
+        T = chebyshev1(X[k], N)
+        t = 0.5 * (X[k] * (t1-t0) + t1 + t0)
+        fx = f(t)
+        a[0] += 1.0 / N * T[0] * fx
+        for n in range(1, N):
+            a[n] += 2.0 / N * T[n] * fx
+    return a
+
+
 cdef class FlameSolver:
     def __cinit__(self, *args, **kwargs):
         self.solver = new CxxFlameSolver()
@@ -255,6 +296,11 @@ cdef class FlameSolver:
         options.evaluate()
         options.apply_options()
         self.solver.setOptions(deref(options.opts))
+
+        self.strainFunction = options.strainParameters.function
+        # Gauss-Lobatto points
+        N = options.strainParameters.chebyshevOrder
+        self._updateStrainFunction()
 
     def __dealloc__(self):
         del self.solver
@@ -266,7 +312,21 @@ cdef class FlameSolver:
         self.solver.finalize()
 
     def step(self):
+        if self.strainFunction is not None:
+            self._updateStrainFunction()
         return self.solver.step()
+
+    def _updateStrainFunction(self):
+        if self.solver.strainfunc == NULL:
+            return
+        cdef int N = self.options.strainParameters.chebyshevOrder
+        cdef np.ndarray[np.double_t, ndim=1] coeffs = np.empty(N+2)
+        cdef double t0 = self.solver.tNow
+        cdef double t1 = self.solver.tNow + self.solver.dt
+        coeffs[0] = t0
+        coeffs[1] = t1
+        coeffs[2:] = getChebyshevCoeffs(self.strainFunction, N, t0, t1)
+        self.solver.strainfunc.setCoefficients(N+2, &coeffs[0])
 
     property x:
         def __get__(self):

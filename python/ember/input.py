@@ -522,6 +522,14 @@ class StrainParameters(Options):
     #:              96, 72, 60, 48, 36, 30, 24, 18, 15, 12]
     rates = Option(None, level=3)
 
+    #: Specify the strain rate as a function of time, using any callable
+    #! Python object.
+    function = Option(None, level=2)
+
+    #: Order of Chebyshev polynomial to use in approximating the strain rate
+    #: function over a single global time step.
+    chebyshevOrder = IntegerOption(5, min=2, level=3)
+
 
 class PositionControl(Options):
     """
@@ -1014,10 +1022,14 @@ class Config(_ember.ConfigOptions):
         Y = YT.T
 
         U = np.zeros(N)
+        if self.strainParameters.function:
+            a0 = self.strainParameters.function(self.times.tStart)
+        else:
+            a0 = self.strainParameters.initial
         for j in range(N):
             gas.set(Y=Y[:,j], T=T[j], P=IC.pressure)
             rho = gas.density()
-            U[j] = self.strainParameters.initial * np.sqrt(rhou/rho)
+            U[j] = a0 * np.sqrt(rhou/rho)
 
         for _ in range(2):
             utils.smooth(U)

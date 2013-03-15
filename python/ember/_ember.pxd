@@ -68,6 +68,7 @@ cdef extern from "readConfig.h":
         double equivalenceRatio, pressure
 
         double Tu, Tfuel, Toxidizer
+        string strainFunctionType
         double strainRateInitial, strainRateFinal, strainRateDt, strainRateT0
 
         cbool haveInitialProfiles
@@ -133,6 +134,13 @@ cdef extern from "grid.h":
         CxxEigenVec x
 
 
+cdef extern from "strainFunction.h":
+    cdef cppclass CxxStrainFunction "StrainFunction":
+        void setCoefficients(int, double*)
+        double a(double)
+        double dadt(double)
+
+
 cdef extern from "flameSolver.h":
     cdef cppclass CxxFlameSolver "FlameSolver":
         void setOptions(CxxConfigOptions&)
@@ -140,6 +148,9 @@ cdef extern from "flameSolver.h":
         void finalize()
         int step() except +
 
+        CxxStrainFunction* strainfunc
+
+        double tNow, dt
         vector[double] timeVector
         vector[double] heatReleaseRate
         vector[double] consumptionSpeed
@@ -181,6 +192,8 @@ cdef class ConfigOptions:
 cdef class FlameSolver:
     cdef ConfigOptions options
     cdef CxxFlameSolver* solver
+    cdef object strainFunction
+    cdef object strainInterpPoints
 
     # usedby the GUI
     cdef public object lock
