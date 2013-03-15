@@ -5,6 +5,7 @@ import textwrap
 import re
 import types
 import shutil
+import subprocess
 
 def quoted(s):
     """ Returns the given string wrapped in double quotes."""
@@ -164,3 +165,18 @@ def ipdb():
     ip = ipapi.get()
     def_colors = ip.colors
     Pdb(def_colors).set_trace(sys._getframe().f_back)
+
+
+def getCommandOutput(cmd, *args):
+    """
+    Run a command with arguments and return its output. Substitute for
+    subprocess.check_output which is only available in Python >= 2.7
+    """
+    proc = subprocess.Popen([cmd] + list(args),
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    data, err = proc.communicate()
+    if proc.returncode:
+        raise OSError(err)
+
+    return data.strip()

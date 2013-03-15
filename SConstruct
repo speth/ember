@@ -16,7 +16,6 @@ import os
 import platform
 from distutils.sysconfig import get_config_var
 import numpy as np
-import subprocess
 from buildutils import *
 
 if not COMMAND_LINE_TARGETS:
@@ -260,7 +259,7 @@ make_setup = env.SubstFile('#python/setup.py',
                            '#python/setup.py.in')
 script = ('from distutils.sysconfig import *\n'
           'print(get_config_var("SO"))')
-env['module_ext'] = subprocess.check_output([env['python_cmd'], '-c', script]).strip()
+env['module_ext'] = getCommandOutput(env['python_cmd'], '-c', script).strip()
 
 setup_cmd = 'cd python && $python_cmd setup.py '
 build_args = '--build-lib=../build/python --build-temp=../build/tmp-python'
