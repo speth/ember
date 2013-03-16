@@ -161,6 +161,7 @@ public:
     double debugSourceTime; //!< Integrator time at which to generate verbose output (then terminate)
     double debugStartTime; //!< Integrator time at which to begin saving output between integrator stages
     double debugStopTime; //!< Integrator time at which to stop saving output between integrator stages
+    bool outputDebugIntegratorStages;
 
     bool terminateForSteadyQdot; // if true, code finishes when integral heat release rate is constant
     double terminationTolerance; // relative tolerance for termination
@@ -185,6 +186,4 @@ public:
     bool xStagControl;
     double xStag;
 
-private:
-    bool outputDebugIntegratorStages;
 };

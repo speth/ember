@@ -99,6 +99,7 @@ cdef extern from "readConfig.h":
 
         int debugSourcePoint
         double debugSourceTime, debugStartTime, debugStopTime
+        cbool outputDebugIntegratorStages
 
         cbool terminateForSteadyQdot
         double terminationTolerance, terminationAbsTol, terminationPeriod

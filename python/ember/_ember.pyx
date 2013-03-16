@@ -234,6 +234,7 @@ cdef class ConfigOptions:
             opts.outputExtraVariables = self.outputFiles.extraVariables
             opts.outputFileNumber, opts.fileNumberOverride = \
                 get(self.outputFiles.firstFileNumber, 0)
+        opts.outputDebugIntegratorStages = self.outputFiles.debugIntegratorStages
 
         # Termination Conditions
         TC = self.terminationCondition
