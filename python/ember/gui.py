@@ -22,7 +22,7 @@ class SolverThread(threading.Thread):
     def __init__(self, *args, **kwargs):
         threading.Thread.__init__(self)
         self.solver = kwargs['solver']
-        self.conf = kwargs['conf']
+        self.conf = kwargs['conf'].evaluate()
         self.solver.lock = threading.Lock()
         self.solver.progress = 0.0
         self._stop = False
@@ -359,7 +359,6 @@ class SolverWidget(QtGui.QWidget):
 
         if self.solver is None:
             self.conf.validate()
-            self.conf.setup()
             self.solver = _ember.FlameSolver(self.conf)
             self.solver.initialize()
 

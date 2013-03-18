@@ -221,7 +221,7 @@ def run(conf):
         return
 
     confString = conf.stringify()
-    conf.evaluate()
+    conf = conf.evaluate()
 
     if not os.path.isdir(conf.paths.outputDir):
         os.makedirs(conf.paths.outputDir, 0755)
@@ -230,7 +230,6 @@ def run(conf):
         os.unlink(confOutPath)
     confOut = file(confOutPath, 'w')
     confOut.write(confString)
-    conf.setup()
 
     solver = _ember.FlameSolver(conf)
     solver.initialize()
@@ -257,7 +256,7 @@ def multirun(conf):
         return
 
     confString = conf.stringify()
-    conf.evaluate()
+    conf = conf.evaluate()
     strainRates = conf.strainParameters.rates
     if not strainRates:
         print 'No strain rate list specified'
@@ -274,7 +273,6 @@ def multirun(conf):
         os.mkdir(conf.paths.outputDir, 0755)
 
     conf.strainParameters.initial = strainRates[0]
-    conf.setup()
 
     Q = []
     Sc = []

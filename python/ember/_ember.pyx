@@ -295,15 +295,13 @@ cdef class FlameSolver:
     def __cinit__(self, *args, **kwargs):
         self.solver = new CxxFlameSolver()
 
-    def __init__(self, ConfigOptions options):
-        self.options = options # keep to prevent garbage collection
-        options.evaluate()
-        options.apply_options()
-        self.solver.setOptions(deref(options.opts))
+    def __init__(self, options):
+        if not isinstance(options, ConfigOptions):
+            options = options.evaluate()
+        self.options = <ConfigOptions?>options # keep to prevent garbage collection
+        self.solver.setOptions(deref(self.options.opts))
 
         self.strainFunction = options.strainParameters.function
-        # Gauss-Lobatto points
-        N = options.strainParameters.chebyshevOrder
         self._updateStrainFunction()
 
     def __dealloc__(self):

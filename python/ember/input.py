@@ -731,7 +731,9 @@ class TerminationCondition(Options):
     steadyPeriod = FloatOption(0.002, min=0, level=1)  #:
 
 
-class Config(_ember.ConfigOptions):
+
+
+class Config(object):
     """
     An object consisting of a set of Options objects which define a
     complete set of configuration options needed to run the flame
@@ -764,35 +766,9 @@ class Config(_ember.ConfigOptions):
         self.debug = get(Debug)
         self.outputFiles = get(OutputFiles)
         self.terminationCondition = get(TerminationCondition)
-        self._evaluated = False
 
     def evaluate(self):
-        """
-        Replace all of the :class:`Option` objects with their values so that
-        they can be used by the C++ extension, in
-        :meth:`Config.generateInitialCondition`, etc.
-        """
-        if self._evaluated:
-            return
-
-        for opts in self.__dict__.itervalues():
-            if not isinstance(opts, Options):
-                continue
-            for name in dir(opts):
-                opt = getattr(opts, name)
-                if isinstance(opt, Option):
-                    setattr(opts, name, opt.value)
-        self._evaluated = True
-
-    def setup(self):
-        """
-        Perform any steps that need to be done before this object can be used
-        to create a FlameSolver, such as generating initial reactant profiles.
-        """
-        self.evaluate()
-        if (not self.initialCondition.restartFile and
-            not self.initialCondition.haveProfiles):
-            self.generateInitialCondition()
+        return ConcreteConfig(self)
 
     def __iter__(self):
         for item in self.__dict__.itervalues():
@@ -888,6 +864,34 @@ class Config(_ember.ConfigOptions):
                 print '    Reverse rate constant: %e' % Rr[i]
 
         return error
+
+
+class ConcreteConfig(_ember.ConfigOptions):
+    """
+    Same structure as class Config, but all the Option objects are replaced
+    with their actual values, and these values are propagated to an underlying
+    C++ object as necessary.
+    """
+    def __init__(self, config):
+        super(ConcreteConfig, self).__init__()
+        self.original = config
+
+        for name, opts in config.__dict__.iteritems():
+            if isinstance(opts, Options):
+                group = opts.__class__()
+                setattr(self, name, group)
+
+                for name in dir(opts):
+                    opt = getattr(opts, name)
+                    if isinstance(opt, Option):
+                        setattr(group, name, opt.value)
+            elif opts is None:
+                setattr(self, name, None)
+
+        if (not self.initialCondition.restartFile and
+            not self.initialCondition.haveProfiles):
+            self.generateInitialCondition()
+        self.apply_options()
 
     def generateInitialCondition(self):
         """
