@@ -23,10 +23,12 @@ setup(name='Ember',
       author='Raymond L. Speth',
       author_email='speth@mit.edu',
       url='http://github.com/speth/ember',
-      packages = ['ember'],
+      packages = ['ember',
+                  'ember.data'],
       ext_modules=exts,
       scripts=['scripts/ember'],
-      package_data = {'ember': dataFiles})
+      package_data = {'ember': dataFiles,
+                      'ember.data': ['*.*']})
 
 # From the directory containing this script:
 # Install locally:
