@@ -36,6 +36,9 @@ cdef extern from "eigen_utils.h":
     cdef CxxEigenMatrix map_matrix(double*, int, int, int, int)
 
 
+cdef extern from "chemistry0d.h":
+    cdef void CxxAddCanteraDirectory "Cantera::addDirectory" (string&)
+
 cdef extern from "readConfig.h":
     cdef cppclass CxxConfigOptions "ConfigOptions":
         void setContinuityBC(string&)

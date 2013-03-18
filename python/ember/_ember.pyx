@@ -46,6 +46,10 @@ cdef np.ndarray[np.double_t, ndim=2] getArray_MatrixMap(CxxEigenMatrixMap& M):
     return v
 
 
+def addCanteraDirectory(dirname):
+    CxxAddCanteraDirectory(dirname)
+
+
 cdef class ConfigOptions:
     def __cinit__(self, *args, **kwargs):
         self.opts = new CxxConfigOptions()
