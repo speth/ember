@@ -300,18 +300,18 @@ class SolverWidget(QtGui.QWidget):
 
         # Buttons
         self.startButton = QtGui.QPushButton('Start')
-        self.pauseButton = QtGui.QPushButton('Pause')
         self.stopButton = QtGui.QPushButton('Stop')
+        self.resetButton = QtGui.QPushButton('Reset')
         self.buttons = QtGui.QWidget()
         self.buttons.setLayout(QtGui.QHBoxLayout())
         self.buttons.layout().addWidget(self.startButton)
-        self.buttons.layout().addWidget(self.pauseButton)
         self.buttons.layout().addWidget(self.stopButton)
+        self.buttons.layout().addWidget(self.resetButton)
         self.layout().addWidget(self.buttons)
 
         self.startButton.pressed.connect(self.run)
-        self.pauseButton.pressed.connect(self.pause)
         self.stopButton.pressed.connect(self.stop)
+        self.resetButton.pressed.connect(self.reset)
 
         # Progress Bar
         self.progressBar = QtGui.QProgressBar()
@@ -352,6 +352,8 @@ class SolverWidget(QtGui.QWidget):
         self.updateTimer = QtCore.QTimer()
         self.updateTimer.setInterval(0.5)
         self.updateTimer.timeout.connect(self.updateStatus)
+        self.running = False
+        self.updateButtons()
 
     def run(self):
         if self.solverThread is not None and self.solverThread.is_alive():
@@ -366,33 +368,44 @@ class SolverWidget(QtGui.QWidget):
                                          conf=self.conf)
         self.solverThread.start()
         self.updateTimer.start()
-
-    def pause(self):
-        if not self.solverThread:
-            return
-
-        if not self.solverThread.is_alive():
-            self.pauseButton.setText('Pause')
-            self.run()
-            self.updateTimer.start()
-        else:
-            self.pauseButton.setText('Continue')
-            self.solverThread.stop()
-            self.updateTimer.stop()
+        self.running = True
+        self.updateButtons()
 
     def stop(self):
         if self.solverThread:
             self.solverThread.stop()
             self.updateTimer.stop()
+        self.running = False
+        self.startButton.setText('Resume')
+        self.updateButtons()
+
+    def reset(self):
+        self.progressBar.setValue(0)
+        self.T_profile.set_data([0], [0])
+        self.hrr_profile.set_data([0], [0])
+        self.Sc_timeseries.set_data([0], [0])
+        self.canvas.draw()
+        self.solver = None
+        self.startButton.setText('Start')
+        self.updateButtons()
+
+    def updateButtons(self):
+        running = self.running and self.solverThread is not None and self.solverThread.is_alive()
+        self.startButton.setEnabled(not running)
+        self.stopButton.setEnabled(running)
+        self.resetButton.setEnabled(self.solver is not None and not running)
 
     def updateStatus(self):
         if not self.solver:
             return
 
         if not self.solverThread.is_alive():
+            self.running = False
             self.updateTimer.stop()
+            self.updateButtons()
 
-        self.progressBar.setValue(1000 * self.solver.progress)
+        if self.solver.progress > 0:
+            self.progressBar.setValue(1000 * self.solver.progress)
         with self.solver.lock:
             t = np.array(self.solver.timeVector)
             Sc = np.array(self.solver.consumptionSpeed)
