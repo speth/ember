@@ -15,63 +15,81 @@
 class CanteraGas;
 class ConvectionTermWrapper;
 
+//! System representing the coupled convection equations for U, T, and Wmx.
+/*!
+ *  Solves equations for the tangential velocity gradient `U`, the temperature
+ *  `T` and the mixture molecular weight `Wmx` which are coupled with the
+ *  continuity equation.
+ */
 class ConvectionSystemUTW : public sdODE, public GridBased
 {
-    // System representing the coupled convection equations for U, T, and Wmx
-    // (tangential velocity, temperature, and mixture molecular weight)
 public:
     ConvectionSystemUTW();
 
-    // The ODE function: ydot = f(t,y)
+    //! The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
 
-    void unroll_y(const sdVector& y); // fill in current state variables from sdvector
-    void roll_y(sdVector& y) const; // fill in sdvector with current state variables
-    void roll_ydot(sdVector& ydot) const; // fill in sdvector with current time derivatives
+    //! Use the contents of *y* to fill in the current state variables
+    void unroll_y(const sdVector& y);
 
+    //! Fill in *y* with the current values of the state variables
+    void roll_y(sdVector& y) const;
+
+    //! Fill in *ydot* with the current time derivatives
+    void roll_ydot(sdVector& ydot) const;
+
+    //! Set the size of the domain to *nPoints*
     void resize(const size_t nPoints);
+
+    //! Set the term in each equation representing contributions from
+    //! diffusion or production terms to zero.
     void resetSplitConstants();
 
+    //! Determine the index of the grid point at which to impose the boundary
+    //! condition for the continuity equation, #jContBC, based on the boundary
+    //! condition type and the current mass flux #V.
     void updateContinuityBoundaryCondition(const dvec& qdot,
                                            ContinuityBoundaryCondition::BC newBC);
 
-    dvec U, dUdt;
-    dvec T, dTdt;
-    dvec Wmx, dWdt;
+    dvec U; //!< Tangential velocity gradient [1/s]. State variable.
+    dvec dUdt; //!< Time derivative of `U`, [1/s^2].
+    dvec T; //!< Temperature [K]. State variable.
+    dvec dTdt; //!< Time derivative of `T` [K/s].
+    dvec Wmx; //!< Mixture molecular weight [kg/kmol]. State variable.
+    dvec dWdt; //!< Time derivative of `Wmx`.
 
-    double Tleft; // Temperature left boundary value
-    double Wleft; // mixture molecular weight left boundary value
-    double rVzero; // mass flux boundary value at j=0
+    double Tleft; //!< Temperature left boundary value
+    double Wleft; //!< mixture molecular weight left boundary value
+    double rVzero; //!< mass flux boundary value at j=0
 
-    dvec drhodt;
+    dvec drhodt; //!< Time derivative of the density [kg/m^3*s]
 
-    // Constant terms introduced by the splitting method
-    dvec splitConstT;
-    dvec splitConstW;
-    dvec splitConstU;
+    dvec splitConstT; //!< Constant in `T` equation introduced by splitting method.
+    dvec splitConstW; //!< Constant in `Wmx` equation introduced by splitting method.
+    dvec splitConstU; //!< Constant in `U` equation introduced by splitting method.
 
-    // Cantera data
+    //! Cantera data
     CanteraGas* gas;
 
     // Auxiliary variables
-    dvec V; // mass flux [kg/m^2*s]
-    dvec rV; // (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
-    dvec rho; // mixture density [kg/m^3]
+    dvec V; //!< mass flux [kg/m^2*s]
+    dvec rV; //!< (radial) mass flux (r*V) [kg/m^2*s or kg/m*rad*s]
+    dvec rho; //!< mixture density [kg/m^3]
 
-    // variables used internally
-    dvec dUdx;
-    dvec dTdx;
-    dvec dWdx;
+    dvec dUdx; //!< Gradient of `U` normal to the flame
+    dvec dTdx; //!< Gradient of `T` normal to the flame
+    dvec dWdx; //!< Gradient of `Wmx` normal to the flame
 
+    //! The method used for determining the continuity boundary condition.
     ContinuityBoundaryCondition::BC continuityBC;
-    size_t jContBC; // The point at which the continuity equation BC is applied
-    double xVzero; // Location of the stagnation point (if using fixedZero BC)
+    size_t jContBC; //!< The point at which the continuity equation BC is applied.
+    double xVzero; //!< Location of the stagnation point (if using fixedZero BC)
 
 private:
-    void V2rV();
-    void rV2V();
+    void V2rV(); //!< compute #rV from #V
+    void rV2V(); //!< compute #V from #rV
 
-    size_t nVars; // == 3
+    size_t nVars; //!< Number of state variables at each grid point (`== 3`)
 };
 
 typedef std::map<double, dvec> vecInterpolator;
