@@ -335,7 +335,7 @@ class SolverWidget(QtGui.QWidget):
         self.ax2b = self.ax2a.twinx()
         self.ax2a.set_xlabel('flame coordinate [mm]')
         self.ax2a.set_ylabel('Temperature [K]')
-        self.ax2b.set_ylabel('Heat Release Rate [MW/m$^2$]')
+        self.ax2b.set_ylabel('Heat Release Rate [MW/m$^3$]')
 
         self.T_profile = self.ax2a.plot([0],[0], 'b', lw=2)[0]
         self.hrr_profile = self.ax2b.plot([0],[0], 'r', lw=2)[0]
