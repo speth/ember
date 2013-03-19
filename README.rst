@@ -111,7 +111,7 @@ Running Ember
 
 * Prepare the input file, based on the one specified in::
 
-    ember/input/example-premixed.py
+    python/ember/examples/example-premixed.py
 
   A complete list of all available input parameters may be found in the `HTML
   documentation. <http://speth.github.com/ember-doc/sphinx/html/input.html>`_
