@@ -94,32 +94,50 @@ private:
 
 typedef std::map<double, dvec> vecInterpolator;
 
+//! System representing the convection equation for a single species.
+//! The species is convected by a prescribed velocity field \f$v(x)\f$.
 class ConvectionSystemY : public sdODE, public GridBased
 {
-    // System representing the convection equation for a single species
-    // with a prescribed velocity field V
 public:
     ConvectionSystemY() : quasi2d(false) {}
 
-    // The ODE function: ydot = f(t,y)
+    //! The ODE function: ydot = f(t,y)
     int f(const realtype t, const sdVector& y, sdVector& ydot);
 
+    //! Set the size of the domain to *nPoints*
     void resize(const size_t nPoints);
+
+    //! Set the term representing contributions from diffusion or production
+    //! terms to zero.
     void resetSplitConstants();
 
+     //! Mass fraction to the left of the domain. Used only in conjuction with
+     //! BoundaryCondition::ControlVolume.
     double Yleft;
-    int k; // species index (only needed for debugging)
-    dvec splitConst; // constant term introduced by splitting
 
-    boost::shared_ptr<vecInterpolator> vInterp; // axial (normal) velocity [m/s] at various times
+    int k; //!< Species index. Used for debugging purposes only.
+    dvec splitConst; //!< constant term introduced by splitting
 
-    //! Interpolators for the quasi-2d problem
+    //! Axial (normal) velocity [m/s] as a function of time. This velocity
+    //! data is computed by ConvectionSystemUTW. The keys are the times [s]
+    //! for which the corresponding velocity field was computed.
+    boost::shared_ptr<vecInterpolator> vInterp;
+
+    //! Interpolator for the *z* velocity in the quasi-2d problem.
     boost::shared_ptr<BilinearInterpolator> vzInterp;
+
+    //! Interpolator for the *r* velocity in the quasi-2d problem.
     boost::shared_ptr<BilinearInterpolator> vrInterp;
+
+    //! `true` when solving the quasi-2d problem; `false` otherwise.
     bool quasi2d;
 
 private:
+    //! Compute the value of #v at time `t` by linearly interpolating between
+    //! the adjacent velocity fields stored in #vInterp.
     void update_v(const double t);
+
+    //! The velocity normal to the flame [m/s].
     dvec v;
 };
 
