@@ -11,10 +11,14 @@ exts[0].libraries += @py_libraries@
 exts[0].library_dirs += @py_libdirs@
 
 if os.name == 'nt':
+    scripts = ['scripts/ember-script.pyw',
+               'scripts/ember.exe']
     for f in os.listdir('ember'):
         # Expect to find: tbb, boost_filesystem, boost_system
         if f.lower().endswith('.dll'):
             dataFiles.append(f)
+else:
+    scripts = ['scripts/ember']
 
 setup(name='Ember',
       version='1.0',
@@ -27,7 +31,7 @@ setup(name='Ember',
                   'ember.data',
                   'ember.examples'],
       ext_modules=exts,
-      scripts=['scripts/ember'],
+      scripts=scripts,
       package_data = {'ember': dataFiles,
                       'ember.data': ['*.*'],
                       'ember.examples': ['*.*']})

@@ -250,6 +250,11 @@ if os.name == 'nt':
                           env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
                           Copy('$TARGET', '$SOURCE'))
     env.Alias('build', tbb)
+    py_gui1 = env.Command('python/scripts/ember-script.pyw', 'python/scripts/ember',
+                          Copy('$TARGET', '$SOURCE'))
+    script = ('''"from pkg_resources import resource_string; open('$TARGET', 'wb').write(resource_string('setuptools', 'gui.exe'))"''')
+    py_gui2 = env.Command('python/scripts/ember.exe', py_gui1, '$python_cmd -c ' + script)
+    env.Alias('build', [py_gui1, py_gui2])
 
 # The Python module
 env['py_include_dirs'] = repr(['../src'] + include_dirs)
@@ -265,6 +270,9 @@ setup_cmd = 'cd python && $python_cmd setup.py '
 build_args = '--build-lib=../build/python --build-temp=../build/tmp-python'
 py_build_ext = env.Command('build/python/ember/_ember${module_ext}', make_setup,
                        setup_cmd + 'build_ext ' + build_args)
+if os.name == 'nt':
+    env.Depends(py_build_ext, [py_gui1, py_gui2])
+
 env.AddPreAction(py_build_ext, Delete('build/python/ember/_ember${module_ext}'))
 env.Depends(py_build_ext, corelib)
 env.Depends(py_build_ext, mglob(env, 'python/ember', 'h', 'pxd', 'pyx'))
