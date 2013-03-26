@@ -19,7 +19,7 @@ public:
     //! for each integrator phase.
     void calculateTimeDerivatives(double dt);
 
-    int takeSplitStep();
+    int step(); //!< Take one global timestep
 
     virtual void setupStep() = 0;
     virtual int finishStep() = 0;

@@ -34,158 +34,105 @@ void FlameSolver::setOptions(const ConfigOptions& _options)
 
 void FlameSolver::initialize(void)
 {
-    try {
-        tbbTaskSched.initialize (options.nThreads);
-        delete strainfunc;
-        strainfunc = newStrainFunction(options);
+    tbbTaskSched.initialize (options.nThreads);
+    delete strainfunc;
+    strainfunc = newStrainFunction(options);
 
-        flamePosIntegralError = 0;
-        terminationCondition = 1e10;
+    flamePosIntegralError = 0;
+    terminationCondition = 1e10;
 
-        // Cantera initialization
-        gas.initialize();
-        nSpec = gas.nSpec;
-        nVars = nSpec + 2;
-        W.resize(nSpec);
-        gas.getMolecularWeights(W);
+    // Cantera initialization
+    gas.initialize();
+    nSpec = gas.nSpec;
+    nVars = nSpec + 2;
+    W.resize(nSpec);
+    gas.getMolecularWeights(W);
 
-        // Get Initial Conditions
-        loadProfile();
+    // Get Initial Conditions
+    loadProfile();
 
-        // Interpolation data for quasi-2d problem
-        if (options.quasi2d) {
-            TInterp.reset(new BilinearInterpolator);
-            vrInterp.reset(new BilinearInterpolator);
-            vzInterp.reset(new BilinearInterpolator);
-            TInterp->open(options.interpFile, "T", "r", "z");
-            vrInterp->open(options.interpFile, "vr", "r", "z");
-            vzInterp->open(options.interpFile, "vz", "r", "z");
-            TInterp->get(0.05, 0.0);
+    // Interpolation data for quasi-2d problem
+    if (options.quasi2d) {
+        TInterp.reset(new BilinearInterpolator);
+        vrInterp.reset(new BilinearInterpolator);
+        vzInterp.reset(new BilinearInterpolator);
+        TInterp->open(options.interpFile, "T", "r", "z");
+        vrInterp->open(options.interpFile, "vr", "r", "z");
+        vzInterp->open(options.interpFile, "vz", "r", "z");
+        TInterp->get(0.05, 0.0);
+    }
+
+    grid.setSize(x.size());
+    convectionSystem.setGas(gas);
+    convectionSystem.setLeftBC(Tleft, Yleft);
+    convectionSystem.setTolerances(options);
+
+    for (size_t k=0; k<nVars; k++) {
+        DiffusionSystem* term = new DiffusionSystem();
+        TridiagonalIntegrator* integrator = new TridiagonalIntegrator(*term);
+        integrator->resize(nPoints);
+        diffusionTerms.push_back(term);
+        diffusionSolvers.push_back(integrator);
+    }
+    if (options.wallFlux) {
+        diffusionTerms[kEnergy].yInf = options.Tinf;
+        diffusionTerms[kEnergy].wallConst = options.Kwall;
+    }
+
+    resizeAuxiliary();
+
+    ddtConv.setZero();
+    ddtDiff.setZero();
+    ddtProd.setZero();
+
+    updateChemicalProperties();
+    // Determine initial condition for V
+    dvec& V(convectionSystem.utwSystem.V);
+    V.resize(nPoints);
+    if ((options.twinFlame || options.curvedFlame) && !options.xFlameControl) {
+        rVzero = 0;
+        V[0] = 0;
+        for (size_t j=1; j<nPoints; j++) {
+            V[j] = V[j-1] - rho[j]*U(j)*(x[j]-x[j-1]);
+        }
+    } else {
+        // Put the stagnation point on the burned side of the flame
+        size_t jz = (grid.ju + 3 * grid.jb) / 4;
+        convectionSystem.utwSystem.xVzero = x[jz];
+        V[jz] = 0;
+
+        for (size_t j=jz+1; j<nPoints; j++) {
+            V[j] = V[j-1] - rho[j]*U(j)*(x[j]-x[j-1]);
         }
 
-        grid.setSize(x.size());
-        convectionSystem.setGas(gas);
-        convectionSystem.setLeftBC(Tleft, Yleft);
-        convectionSystem.setTolerances(options);
-
-        for (size_t k=0; k<nVars; k++) {
-            DiffusionSystem* term = new DiffusionSystem();
-            TridiagonalIntegrator* integrator = new TridiagonalIntegrator(*term);
-            integrator->resize(nPoints);
-            diffusionTerms.push_back(term);
-            diffusionSolvers.push_back(integrator);
-        }
-        if (options.wallFlux) {
-            diffusionTerms[kEnergy].yInf = options.Tinf;
-            diffusionTerms[kEnergy].wallConst = options.Kwall;
-        }
-
-        resizeAuxiliary();
-
-        ddtConv.setZero();
-        ddtDiff.setZero();
-        ddtProd.setZero();
-
-        updateChemicalProperties();
-        // Determine initial condition for V
-        dvec& V(convectionSystem.utwSystem.V);
-        V.resize(nPoints);
-        if ((options.twinFlame || options.curvedFlame) && !options.xFlameControl) {
-            rVzero = 0;
-            V[0] = 0;
-            for (size_t j=1; j<nPoints; j++) {
-                V[j] = V[j-1] - rho[j]*U(j)*(x[j]-x[j-1]);
+        if (jz != 0) {
+            for (size_t j=jz; j>0; j--) {
+                V[j-1] = V[j] + rho[j-1]*U(j-1)*(x[j]-x[j-1]);
             }
-        } else {
-            // Put the stagnation point on the burned side of the flame
-            size_t jz = (grid.ju + 3 * grid.jb) / 4;
-            convectionSystem.utwSystem.xVzero = x[jz];
-            V[jz] = 0;
-
-            for (size_t j=jz+1; j<nPoints; j++) {
-                V[j] = V[j-1] - rho[j]*U(j)*(x[j]-x[j-1]);
-            }
-
-            if (jz != 0) {
-                for (size_t j=jz; j>0; j--) {
-                    V[j-1] = V[j] + rho[j-1]*U(j-1)*(x[j]-x[j-1]);
-                }
-            }
-            rVzero = V[0];
         }
-        calculateQdot();
-        convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
-
-        t = tStart;
-        tOutput = t;
-        tRegrid = t + options.regridTimeInterval;
-        tProfile = t + options.profileTimeInterval;
-        nTotal = 0;
-        nRegrid = 0;
-        nOutput = 0;
-        nProfile = 0;
-        nTerminate = 0;
-        nCurrentState = 0;
-
-        grid.updateValues();
-        resizeAuxiliary();
-
-        tFlamePrev = t;
-        tNow = t;
-
-        totalTimer.start();
+        rVzero = V[0];
     }
-    catch (Cantera::CanteraError& err) {
-        std::cout << err.what() << std::endl;
-        throw;
-    } catch (DebugException& e) {
-        std::cout << e.errorString << std::endl;
-        logFile.write(e.errorString);
-        throw;
-    } catch (std::exception& e) {
-        std::string message(e.what());
-        std::cout << message << std::endl;
-        logFile.write(message);
-        throw;
-    } catch (...) {
-        std::string message = "I have no idea what went wrong!";
-        std::cout << message << std::endl;
-        logFile.write(message);
-        throw;
-    }
-}
+    calculateQdot();
+    convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
 
-int FlameSolver::step(void)
-{
-    try {
-        return takeSplitStep();
-    }
-    catch (Cantera::CanteraError& err) {
-        std::cout << err.what() << std::endl;
-        throw;
-    } catch (DebugException& e) {
-        std::cout << e.errorString << std::endl;
-        logFile.write(e.errorString);
-        throw;
-    } catch (tbb::tbb_exception& e) {
-        std::string message("\nUnhandled TBB exception:\nname:");
-        message.append(e.name());
-        message.append("\nwhat:");
-        message.append(e.what());
-        std::cout << message << std::endl;
-        logFile.write(message);
-        throw;
-    } catch (std::exception& e) {
-        std::string message(e.what());
-        std::cout << message << std::endl;
-        logFile.write(message);
-    } catch (...) {
-        std::string message = "I have no idea what went wrong!";
-        std::cout << message << std::endl;
-        logFile.write(message);
-        throw;
-    }
-    return -1;
+    t = tStart;
+    tOutput = t;
+    tRegrid = t + options.regridTimeInterval;
+    tProfile = t + options.profileTimeInterval;
+    nTotal = 0;
+    nRegrid = 0;
+    nOutput = 0;
+    nProfile = 0;
+    nTerminate = 0;
+    nCurrentState = 0;
+
+    grid.updateValues();
+    resizeAuxiliary();
+
+    tFlamePrev = t;
+    tNow = t;
+
+    totalTimer.start();
 }
 
 void FlameSolver::setupStep()

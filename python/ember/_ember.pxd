@@ -146,9 +146,9 @@ cdef extern from "strainFunction.h":
 
 cdef extern from "flameSolver.h":
     cdef cppclass CxxFlameSolver "FlameSolver":
-        void setOptions(CxxConfigOptions&)
-        void initialize()
-        void finalize()
+        void setOptions(CxxConfigOptions&) except +
+        void initialize() except +
+        void finalize() except +
         int step() nogil except +
 
         CxxStrainFunction* strainfunc

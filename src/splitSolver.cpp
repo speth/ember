@@ -39,7 +39,7 @@ void SplitSolver::calculateTimeDerivatives(double dt)
     ddtProd = deltaProd / dt + split * 0.5 * ddtProd;
 }
 
-int SplitSolver::takeSplitStep()
+int SplitSolver::step()
 {
     setupStep();
 

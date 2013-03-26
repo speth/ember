@@ -38,7 +38,6 @@ public:
 
     void setOptions(const ConfigOptions& options); //!< Set options read from the configuration file
     void initialize(); //!< call to generate profiles and perform one-time setup
-    int step(); //!< Take one global timestep
     void finalize();
 
     //! Load initial temperature, mass fraction and velocity profiles.
