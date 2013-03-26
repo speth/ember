@@ -250,7 +250,7 @@ if os.name == 'nt':
         tbb = env.Command(dest,
                           env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
                           Copy('$TARGET', '$SOURCE'))
-    env.Alias('build', tbb)
+        env.Alias('build', tbb)
     py_gui1 = env.Command('python/scripts/ember-script.pyw', 'python/scripts/ember',
                           Copy('$TARGET', '$SOURCE'))
     script = ('''"from pkg_resources import resource_string; open('$TARGET', 'wb').write(resource_string('setuptools', 'gui.exe'))"''')
