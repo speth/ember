@@ -2,7 +2,6 @@
 #include "dataFile.h"
 #include "strainFunction.h"
 
-#include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 
 #define foreach BOOST_FOREACH
@@ -459,18 +458,13 @@ void FlameSolver::writeStateFile
         logFile.write(format("Writing output file: %s") % filename);
     }
 
-    // Erase the existing file and create a new one
-    if (boost::filesystem::exists(filename)) {
-        boost::filesystem::remove(filename);
-    }
-    DataFile outFile(filename);
-
     if (updateDerivatives) {
         updateChemicalProperties();
         convectionSystem.evaluate();
     }
 
     // Write the state data to the output file:
+    DataFile outFile(filename, std::ios_base::trunc);
     outFile.writeScalar("t", tNow);
     outFile.writeVec("x", x);
     outFile.writeVec("T", T);
@@ -543,11 +537,7 @@ void FlameSolver::writeStateFile
 
 void FlameSolver::writeTimeseriesFile(const std::string& filename)
 {
-    std::string fullfilename = options.outputDir+"/"+filename+".h5";
-    if (boost::filesystem::exists(fullfilename)) {
-        boost::filesystem::remove(fullfilename);
-    }
-    DataFile outFile(fullfilename);
+    DataFile outFile(options.outputDir+"/"+filename+".h5", std::ios_base::trunc);
     outFile.writeVector("t", timeVector);
     outFile.writeVector("dt", timestepVector);
     outFile.writeVector("Q", heatReleaseRate);

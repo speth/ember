@@ -13,7 +13,8 @@ class DataFile
 {
 public:
     DataFile(void);
-    DataFile(const std::string& filename);
+    explicit DataFile(const std::string& filename,
+                      std::ios_base::openmode mode=std::ios_base::app);
     ~DataFile(void);
 
     void writeScalar(const std::string& name, const double x);
@@ -29,7 +30,8 @@ public:
     void writeArray2D(const std::string& name, const dmatrix& y, bool transpose=false);
     dmatrix readArray2D(const std::string& name, bool transpose=false);
 
-    void open(const std::string& filename);
+    void open(const std::string& filename,
+              std::ios_base::openmode mode=std::ios_base::app);
     void close();
 
 private:

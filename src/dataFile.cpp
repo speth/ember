@@ -8,10 +8,10 @@ DataFile::DataFile(void)
 {
 }
 
-DataFile::DataFile(const std::string& in_filename)
+DataFile::DataFile(const std::string& in_filename, std::ios_base::openmode mode)
     : file(0)
 {
-    open(in_filename);
+    open(in_filename, mode);
 }
 
 DataFile::~DataFile(void)
@@ -200,14 +200,14 @@ dmatrix DataFile::readArray2D(const std::string& name, bool transpose)
     return y;
 }
 
-void DataFile::open(const std::string& in_filename)
+void DataFile::open(const std::string& in_filename, std::ios_base::openmode mode)
 {
     if (file) {
         close();
     }
 
     filename = in_filename;
-    if (boost::filesystem::exists(filename)) {
+    if (boost::filesystem::exists(filename) && (mode & std::ios_base::app)) {
         file = H5Fopen(filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
     } else {
         file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC,
