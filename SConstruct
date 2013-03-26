@@ -204,6 +204,8 @@ elif env['CC'] == 'cl':
 
     library_dirs.append(get_config_var('prefix') + '/libs')
     boost_libs = []
+    env['ENV']['MSSdk'] = 1
+    env['ENV']['DISTUTILS_USE_SDK'] = 1
 
 else:
     print 'error: unknown c++ compiler: "%s"' % env['CC']
