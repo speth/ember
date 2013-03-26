@@ -321,9 +321,10 @@ class Chemistry(Options):
     #:
     #:     <phase dim="3" id="gas">
     #:
-    #: in the mechanism file. This is always "gas" for mechanisms
-    #: converted using ck2cti and cti2ctml.
-    phaseID = StringOption("gas")
+    #: in the mechanism file. This is always "gas" for mechanisms converted
+    #: using ck2cti and cti2ctml. This option only needs to be specified if
+    #: the desired phase is not the first phase defined in the input file.
+    phaseID = StringOption("", level=1)
 
     #: Transport model to use. Valid options are ``Mix``, ``Multi``, and ``Approx``
     transportModel = StringOption("Mix", ("Multi", "Approx"), level=1)
