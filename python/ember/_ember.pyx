@@ -316,8 +316,14 @@ cdef class FlameSolver:
     def step(self):
         if self.strainFunction is not None:
             self._updateStrainFunction()
-        with nogil:
-            done = self.solver.step()
+
+        try:
+            with nogil:
+                done = self.solver.step()
+        except Exception as e:
+            CxxSingletonLogfile.write(e.message)
+            raise
+
         return done
 
     def _updateStrainFunction(self):

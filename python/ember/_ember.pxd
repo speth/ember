@@ -129,6 +129,7 @@ cdef extern from "debugUtils.h":
     cdef cbool CxxSetDebugParameters "debugParameters::setParameters" (cbool, cbool, cbool, cbool, cbool)
     cdef cppclass CxxLogFile "LogFile":
         void open(string)
+        void write(string&)
     cdef CxxLogFile CxxSingletonLogfile "logFile"
 
 
