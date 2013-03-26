@@ -23,6 +23,7 @@ def start(phi):
 
     conf.run()
 
-pool = multiprocessing.Pool(8)
-pool.map(start, [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.90, 0.95])
-print 'All done!'
+if __name__ == '__main__':
+    pool = multiprocessing.Pool(8)
+    pool.map(start, [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.90, 0.95])
+    print 'All done!'

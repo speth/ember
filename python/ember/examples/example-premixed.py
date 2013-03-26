@@ -10,4 +10,5 @@ conf = Config(
                      final=400),
     TerminationCondition(tEnd=0.010))
 
-conf.run()
+if __name__ == '__main__':
+    conf.run()

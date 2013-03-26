@@ -8,4 +8,5 @@ conf = Config(
                      equivalenceRatio=0.75),
     StrainParameters(rates=[4800,2400,1200,600,300]))
 
-conf.run()
+if __name__ == '__main__':
+    conf.run()

@@ -18,4 +18,5 @@ conf = Config(
           profileStepInterval=20),
     TerminationCondition(tEnd=0.010))
 
-conf.run()
+if __name__ == '__main__':
+    conf.run()
