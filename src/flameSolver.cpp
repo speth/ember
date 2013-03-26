@@ -1178,9 +1178,6 @@ void FlameSolver::loadProfile(void)
 void FlameSolver::printPerformanceStats(void)
 {
     std::string filename = options.outputDir + "/stats";
-    if (boost::filesystem::exists(filename)) {
-        boost::filesystem::remove(filename);
-    }
     std::ofstream stats(filename.c_str(), std::ios::trunc | std::ios::out);
     stats << "\n   *** Performance Stats ***       time   ( call count )\n";
     printPerfString(stats, "                General Setup: ", setupTimer);
