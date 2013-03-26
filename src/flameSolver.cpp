@@ -527,7 +527,6 @@ void FlameSolver::writeStateFile
         outFile.writeVec("jCorr", jCorr);
     }
 
-    outFile.close();
     if (incrementFileNumber) {
         options.outputFileNumber++;
     }
@@ -541,7 +540,6 @@ void FlameSolver::writeTimeseriesFile(const std::string& filename)
     outFile.writeVector("Q", heatReleaseRate);
     outFile.writeVector("Sc", consumptionSpeed);
     outFile.writeVector("xFlame", flamePosition);
-    outFile.close();
 }
 
 void FlameSolver::resizeAuxiliary()
@@ -1004,8 +1002,6 @@ void FlameSolver::loadProfile(void)
         if (!options.fileNumberOverride) {
             options.outputFileNumber = (int) infile.readScalar("fileNumber");
         }
-
-        infile.close();
     } else if (options.haveInitialProfiles) {
         // Read initial condition specified in the configuration file
         logFile.write("Reading initial condition from configuration file.");
@@ -1183,7 +1179,6 @@ void FlameSolver::printPerformanceStats(void)
     printPerfString(stats, "   Source Jacobian Evaluation: ", jacobianTimer);
     printPerfString(stats, "   UTW Convection Integration: ", convectionSystem.utwTimer);
     printPerfString(stats, "    Yk Convection Integration: ", convectionSystem.speciesTimer);
-    stats.close();
 }
 
 void FlameSolver::printPerfString(std::ostream& stats, const std::string& label,
