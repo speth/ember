@@ -21,7 +21,7 @@ Compiling Ember
   * A C++ compiler (g++ or Visual Studio 2008)
   * Python (2.6 or 2.7)
   * Cython (>= 0.18)
-  * Boost (>= 1.40, including boost-filesystem)
+  * Boost (>= 1.40)
   * SCons (2.1.0 recommended)
   * Eigen (>= 3.0)
   * Cantera (>= 2.0.0)

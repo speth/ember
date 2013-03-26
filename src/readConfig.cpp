@@ -1,5 +1,4 @@
 #include "readConfig.h"
-#include "boost/filesystem.hpp"
 #include "debugUtils.h"
 
 const size_t kMomentum = 0;

@@ -14,7 +14,7 @@ if os.name == 'nt':
     scripts = ['scripts/ember-script.pyw',
                'scripts/ember.exe']
     for f in os.listdir('ember'):
-        # Expect to find: tbb, boost_filesystem, boost_system
+        # Expect to find: tbb
         if f.lower().endswith('.dll'):
             dataFiles.append(f)
 else:

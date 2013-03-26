@@ -72,7 +72,7 @@ opts.AddVariables(
         '', PathVariable.PathAccept),
     PathVariable(
         'boost',
-        'Location of the Boost header and library files.',
+        'Location of the Boost header files.',
         '', PathVariable.PathAccept),
     PathVariable(
         'hdf5',
@@ -185,13 +185,9 @@ if env['CC'] == 'gcc':
         flags.extend(['-O3', '-finline-functions', '-Wno-inline'])
         defines.append('NDEBUG')
 
-    boost_libs = ['boost_%s' % lib
-                  for lib in ('filesystem', 'system')]
-
 elif env['CC'] == 'cl':
     flags = ['/nologo', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc', '/MD']
-    defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS',
-                      'BOOST_ALL_DYN_LINK']
+    defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS']
     if env['debug_symbols']:
         env.Append(LINKFLAGS='/DEBUG')
         flags.append('/Zi')
@@ -203,7 +199,6 @@ elif env['CC'] == 'cl':
         defines.append('NDEBUG')
 
     library_dirs.append(get_config_var('prefix') + '/libs')
-    boost_libs = []
     env['ENV']['MSSdk'] = 1
     env['ENV']['DISTUTILS_USE_SDK'] = 1
 
@@ -215,7 +210,7 @@ env.Append(CPPPATH=include_dirs,
            LIBPATH=library_dirs,
            CXXFLAGS=flags,
            CPPDEFINES=defines,
-           LIBS=sundials + cantera + lastlibs + boost_libs)
+           LIBS=sundials + cantera + lastlibs)
 
 def CheckMemberFunction(context, function, includes=""):
     context.Message('Checking for %s... ' % function)

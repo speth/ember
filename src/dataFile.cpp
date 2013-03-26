@@ -1,6 +1,5 @@
 #include "dataFile.h"
 #include "debugUtils.h"
-#include <boost/filesystem.hpp>
 
 DataFile::DataFile(void)
     : file(0)
@@ -207,7 +206,11 @@ void DataFile::open(const std::string& in_filename, std::ios_base::openmode mode
     }
 
     filename = in_filename;
-    if (boost::filesystem::exists(filename) && (mode & std::ios_base::app)) {
+    std::ifstream test(filename.c_str());
+    bool exists = test.good();
+    test.close();
+
+    if (exists && (mode & std::ios_base::app)) {
         file = H5Fopen(filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
     } else {
         file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC,
