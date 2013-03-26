@@ -242,9 +242,7 @@ void FlameSolver::prepareIntegrators()
 
 int FlameSolver::finishStep()
 {
-    if (debugParameters::veryVerbose) {
-        logFile.write("done!");
-    }
+    logFile.verboseWrite("done!");
 
     // *** End of Strang-split integration step ***
     correctMassFractions();
@@ -1206,9 +1204,7 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
     int err = 0;
     for (size_t j=r.begin(); j<r.end(); j++) {
         SourceSystem& system = parent->sourceTerms[j];
-        if (debugParameters::veryVerbose) {
-            logFile.write(format("%i") % j, false);
-        }
+        logFile.verboseWrite(format("%i") % j, false);
         system.setGas(&gas);
         if (int(j) == parent->options.debugSourcePoint &&
             t >= parent->options.debugSourceTime) {
@@ -1237,10 +1233,7 @@ void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
             parent->writeStateFile((format("prod%i_error_t%.6f_j%03i") %
                     1 % t % j).str(), true, false);
         }
-
-        if (debugParameters::veryVerbose) {
-            logFile.write(format(" [%s]...") % system.getStats(), false);
-        }
+        logFile.verboseWrite(format(" [%s]...") % system.getStats(), false);
     }
 }
 

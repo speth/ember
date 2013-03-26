@@ -7,6 +7,18 @@
 #include <boost/format.hpp>
 using boost::format;
 
+class debugParameters
+{
+public:
+    static void setParameters(bool adapt, bool regrid, bool timesteps,
+                              bool radius, bool verbose);
+    static bool debugAdapt;
+    static bool debugRegrid;
+    static bool debugTimesteps;
+    static bool debugFlameRadiusControl;
+    static bool veryVerbose;
+};
+
 class LogFile
 {
 public:
@@ -36,21 +48,16 @@ public:
         }
     }
 
+    template <class T>
+    void verboseWrite(const T& message, bool newline=true) {
+        if (debugParameters::veryVerbose) {
+            write(message, newline);
+        }
+    }
+
 private:
     bool haveFile;
     std::ofstream file;
-};
-
-class debugParameters
-{
-public:
-    static void setParameters(bool adapt, bool regrid, bool timesteps,
-                              bool radius, bool verbose);
-    static bool debugAdapt;
-    static bool debugRegrid;
-    static bool debugTimesteps;
-    static bool debugFlameRadiusControl;
-    static bool veryVerbose;
 };
 
 extern LogFile logFile;

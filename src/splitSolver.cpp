@@ -85,9 +85,7 @@ void SplitSolver::integrateSplitTerms(double t, double dt)
 void SplitSolver::_integrateDiffusionTerms(double tStart, double tEnd, int stage)
 {
     assert(mathUtils::notnan(state));
-    if (debugParameters::veryVerbose) {
-        logFile.write(format("diffusion terms %i/4...") % stage, false);
-    }
+    logFile.verboseWrite(format("diffusion terms %i/4...") % stage, false);
     startState = state;
     integrateDiffusionTerms(tStart, tEnd);
     assert(mathUtils::notnan(state));
@@ -99,9 +97,7 @@ void SplitSolver::_integrateDiffusionTerms(double tStart, double tEnd, int stage
 
 void SplitSolver::_integrateProductionTerms(double tStart, double tEnd, int stage)
 {
-    if (debugParameters::veryVerbose) {
-        logFile.write("Source term...", false);
-    }
+    logFile.verboseWrite("Source term...", false);
     assert(mathUtils::notnan(state));
     startState = state;
     integrateProductionTerms(tStart, tEnd);
@@ -116,9 +112,7 @@ void SplitSolver::_integrateConvectionTerms(double tStart, double tEnd, int stag
 {
     assert(stage == 1 || stage == 2);
     assert(mathUtils::notnan(state));
-    if (debugParameters::veryVerbose) {
-        logFile.write(format("convection term %i/2...") % stage, false);
-    }
+    logFile.verboseWrite(format("convection term %i/2...") % stage, false);
     startState = state;
     integrateConvectionTerms(tStart, tEnd);
     assert(mathUtils::notnan(state));

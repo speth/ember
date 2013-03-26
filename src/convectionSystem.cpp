@@ -590,10 +590,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
 
         int cvode_flag = CV_SUCCESS;
         int i = 0;
-
-        if (debugParameters::veryVerbose) {
-            logFile.write("UTW...", false);
-        }
+        logFile.verboseWrite("UTW...", false);
 
         // CVODE returns CV_TSTOP_RETURN when the solver has reached tf
         while (cvode_flag != CV_TSTOP_RETURN) {
@@ -662,9 +659,7 @@ void ConvectionSystemSplit::configureSolver(SundialsCvode& solver, const size_t 
 void ConvectionTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
 {
     parent->speciesTimer.start();
-    if (debugParameters::veryVerbose) {
-        logFile.write("Yk...", false);
-    }
+    logFile.verboseWrite("Yk...", false);
     // Integrate the species systems
     for (size_t k=r.begin(); k<r.end(); k++) {
         parent->speciesSystems[k].vInterp = parent->vInterp;
