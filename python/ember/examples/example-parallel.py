@@ -21,7 +21,7 @@ def start(phi):
         Times(profileStepInterval=1000000,
               profileTimeInterval=5e-3))
 
-    run(conf)
+    conf.run()
 
 pool = multiprocessing.Pool(8)
 pool.map(start, [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.90, 0.95])

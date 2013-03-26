@@ -18,4 +18,4 @@ conf = Config(
     TerminationCondition(tolerance=1e-5),
     Times(profileStepInterval=50))
 
-run(conf)
+conf.run()

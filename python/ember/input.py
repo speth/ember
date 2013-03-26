@@ -14,6 +14,7 @@ configuration by passing :class:`.Options` objects to the constructor for
 
 import numbers
 import os
+import sys
 import types
 import Cantera
 import numpy as np
@@ -865,6 +866,30 @@ class Config(object):
 
         return error
 
+    def run(self):
+        """
+        Run the simulation using the parameters set in this Config.
+
+        If a list strain rates is provided by the field
+        :attr:`strainParameters.rates`, a sequence of flame simulations at the
+        given strain rates will be run. Otherwise, a single simulation will be
+        run.
+
+        If the script which calls this function is passed the argument
+        *validate*, then the configuration will be checked for errors and the
+        script will exit without running the simulation.
+        """
+        if len(sys.argv) > 1 and sys.argv[1].lower() == 'validate':
+            # Validate the configuration and exit
+            self.validate()
+            return
+
+        concrete = self.evaluate()
+        if self.strainParameters.rates:
+            concrete.multirun()
+        else:
+            concrete.run()
+
 
 class ConcreteConfig(_ember.ConfigOptions):
     """
@@ -1044,3 +1069,136 @@ class ConcreteConfig(_ember.ConfigOptions):
         IC.U = U
         IC.rVzero = 0.0  # @todo: Better estimate? Is this currently used?
         IC.haveProfiles = True
+
+    def run(self):
+        """
+        Run a single flame simulation using the parameters set in this Config.
+        """
+        confString = self.original.stringify()
+
+        if not os.path.isdir(self.paths.outputDir):
+            os.makedirs(self.paths.outputDir, 0755)
+        confOutPath = os.path.join(self.paths.outputDir, 'config')
+        if (os.path.exists(confOutPath)):
+            os.unlink(confOutPath)
+        confOut = file(confOutPath, 'w')
+        confOut.write(confString)
+
+        solver = _ember.FlameSolver(self)
+        solver.initialize()
+        done = 0
+        while not done:
+            done = solver.step()
+        solver.finalize()
+        return solver
+
+    def multirun(self):
+        """
+        Run a sequence of flame simulations at different strain rates using
+        the parameters set in this Config object. The list of strain rates is
+        defined by the configuration field :attr:`strainParameters.rates`.
+        """
+
+        confString = self.original.stringify()
+        strainRates = self.strainParameters.rates
+        if not strainRates:
+            print 'No strain rate list specified'
+            return
+
+        self.strainParameters.rates = None
+        _logFile = file(self.paths.logFile, 'w')
+        def log(message):
+            _logFile.write(message)
+            _logFile.write('\n')
+            _logFile.flush()
+
+        if not os.path.exists(self.paths.outputDir):
+            os.mkdir(self.paths.outputDir, 0755)
+
+        self.strainParameters.initial = strainRates[0]
+
+        Q = []
+        Sc = []
+        xFlame = []
+
+        for a in strainRates:
+            restartFile = 'prof_eps%04i' % a
+            historyFile = 'out_eps%04i' % a
+            configFile = 'conf_eps%04i' % a
+
+            restartPath = os.path.join(self.paths.outputDir, restartFile)
+            historyPath = os.path.join(self.paths.outputDir, historyFile)
+            configPath = os.path.join(self.paths.outputDir, configFile)
+
+            if os.path.exists(restartPath) and os.path.exists(historyPath):
+                # If the output files already exist, we simply retrieve the
+                # integral flame properties from the existing profiles and
+                # advance to the next strain rate.
+
+                log('Skipping run at strain rate a = %g'
+                    ' because the output file "%s" already exists.' % (a, restartFile))
+
+                # Compute integral properties using points from the last half
+                # of the termination-check period
+                data = HDFStruct(historyPath)
+                mask = data.t > data.t[-1] - 0.5*self.terminationCondition.steadyPeriod
+                if not any(mask):
+                    log('Warning: old data file did not contain data'
+                        ' spanning the requested period.')
+                    mask = data.t > 0.5*data.t[-1]
+
+                Q.append(np.mean(data.Q[mask]))
+                Sc.append(np.mean(data.Sc[mask]))
+                xFlame.append(np.mean(data.xFlame[mask]))
+                del data
+
+            else:
+                # Data is not already present, so run the flame solver for this strain rate
+
+                log('Beginning run at strain rate a = %g s^-1' % a)
+                confOut = file(configPath, 'w')
+                confOut.write(confString)
+
+                self.strainParameters.initial = a
+                self.strainParameters.final = a
+                self.paths.logFile = os.path.join(self.paths.outputDir, 'log-eps%04i.txt' % a)
+                solver = _ember.FlameSolver(self)
+                t1 = time.time()
+                solver.initialize()
+                done = 0
+                while not done:
+                    done = solver.step()
+                solver.finalize()
+                t2 = time.time()
+
+                log('Completed run at strain rate a = %g s^-1' % a)
+                log('Integration took %.1f seconds.' % (t2-t1))
+
+                solver.writeStateFile(restartFile, False, False)
+                solver.writeTimeseriesFile(historyFile)
+                tRun = np.array(solver.timeVector)
+                QRun = np.array(solver.heatReleaseRate)
+                ScRun = np.array(solver.consumptionSpeed)
+                xFlameRun = np.array(solver.flamePosition)
+
+                # Compute integral properties using points from the last half
+                # of the termination-check period
+                mask = tRun > tRun[-1] - 0.5*self.terminationCondition.steadyPeriod
+                Q.append(np.mean(QRun[mask]))
+                Sc.append(np.mean(ScRun[mask]))
+                xFlame.append(np.mean(xFlameRun[mask]))
+
+            self.initialCondition.restartFile = restartPath
+
+            # Sort by strain rate:
+            strainRates, Q, Sc, xFlame = map(list, zip(*sorted(zip(strainRates, Q, Sc, xFlame))))
+
+            integralFile = os.path.join(self.paths.outputDir, "integral.h5")
+            if os.path.exists(integralFile):
+                os.unlink(integralFile)
+            data = h5py.File(integralFile)
+            data['a'] = strainRates
+            data['Q'] = Q
+            data['Sc'] = Sc
+            data['xFlame'] = xFlame
+            data.close()

@@ -5,7 +5,6 @@ from _ember import *
 import _ember
 from input import *
 import utils
-from utils import run, multirun
 
 # Add Ember's data file directory to Cantera's search path. Because the Python
 # module is statically linked to Cantera, this needs to be done separately for

@@ -8,4 +8,4 @@ conf = Config(
                      equivalenceRatio=0.75),
     StrainParameters(rates=[4800,2400,1200,600,300]))
 
-multirun(conf)
+conf.run()

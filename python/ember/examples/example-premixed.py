@@ -10,4 +10,4 @@ conf = Config(
                      final=400),
     TerminationCondition(tEnd=0.010))
 
-run(conf)
+conf.run()
