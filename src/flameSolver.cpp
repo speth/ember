@@ -1,6 +1,5 @@
 #include "flameSolver.h"
 #include "dataFile.h"
-#include "gilReleaser.h"
 #include "strainFunction.h"
 
 #include <boost/filesystem.hpp>
@@ -158,7 +157,6 @@ void FlameSolver::initialize(void)
 
 int FlameSolver::step(void)
 {
-    GILReleaser gil;
     try {
         return takeSplitStep();
     }

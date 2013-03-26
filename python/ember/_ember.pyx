@@ -316,7 +316,9 @@ cdef class FlameSolver:
     def step(self):
         if self.strainFunction is not None:
             self._updateStrainFunction()
-        return self.solver.step()
+        with nogil:
+            done = self.solver.step()
+        return done
 
     def _updateStrainFunction(self):
         if self.solver.strainfunc == NULL:

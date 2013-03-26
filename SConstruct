@@ -142,7 +142,6 @@ else:
     hdf5 = ['hdf5']
     tbbLibDir = env['tbb']+'/lib'
 
-python = ['python%s' % get_config_var('VERSION')]
 lastlibs = ['tbb'] + hdf5 + env['blas_lapack'].split(',')
 
 include_dirs = []
@@ -287,7 +286,7 @@ env.Alias('install', py_install)
 
 # GoogleTest tests
 testenv = env.Clone()
-testenv.Append(LIBS=['gtest', python],
+testenv.Append(LIBS=['gtest'],
                CPPPATH=['ext/gtest/include'],
                LIBPATH=['lib'])
 

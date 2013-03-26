@@ -149,7 +149,7 @@ cdef extern from "flameSolver.h":
         void setOptions(CxxConfigOptions&)
         void initialize()
         void finalize()
-        int step() except +
+        int step() nogil except +
 
         CxxStrainFunction* strainfunc
 
