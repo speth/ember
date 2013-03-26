@@ -20,7 +20,7 @@ def main(boost_dir):
     print 'This is Python %s' % platform.python_version()
     print 'Compiled with %s' % platform.python_compiler()
     print 'Architecture: %s' % platform.architecture()[0]
-    buildlibs = ['python', 'filesystem', 'system', 'thread', 'date_time']
+    buildlibs = ['thread', 'date_time']
 
     pycomp = platform.python_compiler()
     if pycomp.startswith('MSC v.1400'):
@@ -59,36 +59,16 @@ def main(boost_dir):
     if '64 bit' in platform.python_compiler():
         extra_args.append('address-model=64')
 
-    extra_args = ' '.join(extra_args)
-    libstr = ' '.join('--with-%s' % lib for lib in buildlibs)
-    stagedir = join(old_path)
-
-    os.system('bjam.exe %s stage --stagedir=%s runtime-debugging=off variant=release link=shared %s' % (libstr, stagedir, extra_args))
-    os.system('bjam.exe %s stage --stagedir=%s runtime-debugging=on variant=debug link=shared %s' % (libstr, stagedir, extra_args))
-    os.system('bjam.exe %s stage --stagedir=%s runtime-debugging=off variant=release link=static %s' % (libstr, stagedir, extra_args))
-    os.system('bjam.exe %s stage --stagedir=%s runtime-debugging=on variant=debug link=static %s' % (libstr, stagedir, extra_args))
-
+    command = 'bjam.exe {lib} stage --stagedir={stage} runtime-debugging={debug} variant={variant} link={link} {extra}'
+    for variant,debug in (('release', 'off'), ('debug','on')):
+        for link in ('shared','static'):
+            os.system(command.format(lib=' '.join('--with-%s' % lib for lib in buildlibs),
+                                     stage=join(old_path),
+                                     extra=' '.join(extra_args),
+                                     variant=variant,
+                                     debug=debug,
+                                     link=link))
     os.remove(jamConfig.name)
-
-    os.chdir(old_path)
-    for lib in buildlibs:
-        for variant,code in (('debug','mt-gd'),
-                             ('release','mt')):
-            if '64 bit' in platform.python_compiler():
-                srcdir = join(boost_dir, 'bin.v2', 'libs', lib, 'build',
-                              'msvc-%s' % msvc_version,
-                              variant, 'address-model-64', 'threading-multi')
-            else:
-                srcdir = join(boost_dir, 'bin.v2', 'libs', lib, 'build',
-                              'msvc-%s' % msvc_version,
-                              variant, 'threading-multi')
-            substitutions = (lib, msvc_short, code, boost_version_string)
-            libname = 'boost_%s-vc%s-%s-%s.lib' % substitutions
-            dllname = 'boost_%s-vc%s-%s-%s.dll' % substitutions
-    #        shutil.copy(join(srcdir, libname), join('lib', libname))
-    #        print 'successfully copied %s' % libname
-    #        shutil.copy(join(srcdir, dllname), join('lib', dllname))
-    #        print 'successfully copied %s' % dllname
 
 
 def getBoostVersion(boost_dir):
@@ -97,9 +77,8 @@ def getBoostVersion(boost_dir):
             return line.split('"')[-2]
 
 
-
 if __name__ == '__main__':
     if len(sys.argv) == 2:
         main(sys.argv[1])
     else:
-        print r'Usage: setupBoost.py c:\path\to\boost'
+        print r'Usage: python setupBoost.py c:\path\to\boost'

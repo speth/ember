@@ -145,7 +145,7 @@ else:
 lastlibs = ['tbb'] + hdf5 + env['blas_lapack'].split(',')
 
 include_dirs = []
-library_dirs = []
+library_dirs = [env.Dir('lib').abspath]
 
 if env['cantera']:
     include_dirs.append(env['cantera'] + '/include')
@@ -284,8 +284,7 @@ env.Alias('install', py_install)
 # GoogleTest tests
 testenv = env.Clone()
 testenv.Append(LIBS=['gtest'],
-               CPPPATH=['ext/gtest/include'],
-               LIBPATH=['lib'])
+               CPPPATH=['ext/gtest/include'])
 
 if os.name == 'nt':
     testenv.Append(LIBPATH=get_config_var('LIBDEST'))
