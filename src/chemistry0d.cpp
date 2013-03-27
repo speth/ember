@@ -278,7 +278,7 @@ void InterpKinetics::rebuildInterpData(size_t nTemps, double Tmin, double Tmax)
     for (size_t n = 0; n < m_ntemps; n++) {
         thermo().setState_TP(Tmin + ((double) n)/(m_ntemps - 1) * (Tmax - Tmin),
                              thermo().pressure());
-        GasKinetics::_update_rates_T();
+        GasKinetics::update_rates_T();
         m_rfn_const.col(n) = vec_map(&m_rfn[0], m_ii);
         m_rkcn_const.col(n) = vec_map(&m_rkcn[0], m_ii);
         m_rfn_low_const.col(n) = vec_map(&m_rfn_low[0], m_nfall);
@@ -347,6 +347,7 @@ CanteraGas::~CanteraGas()
 void CanteraGas::setOptions(const ConfigOptions& options)
 {
     transportModel = options.transportModel;
+    kineticsModel = options.kineticsModel;
     transportThreshold = options.transportThreshold;
     mechanismFile = options.gasMechanismFile;
     phaseID = options.gasPhaseID;
@@ -372,8 +373,13 @@ void CanteraGas::initialize()
     Cantera::importPhase(*phaseXmlNode, &thermo);
 
     // Initialize the default chemical kinetics object
-    //kinetics = new Cantera::GasKinetics(&thermo);
-    kinetics = new InterpKinetics(&thermo);
+    if (kineticsModel == "standard") {
+        kinetics = new Cantera::GasKinetics(&thermo);
+    } else if (kineticsModel == "interp") {
+        kinetics = new InterpKinetics(&thermo);
+    } else {
+        throw DebugException("Unknown kinetics model specified.");
+    }
     kinetics->init();
     Cantera::installReactionArrays(*phaseXmlNode, *kinetics, phaseID);
     kinetics->finalize();

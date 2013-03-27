@@ -64,7 +64,7 @@ cdef extern from "readConfig.h":
         double qss_abstol, qss_minval
         cbool qss_stabilityCheck
 
-        string gasMechanismFile, gasPhaseID, transportModel
+        string gasMechanismFile, gasPhaseID, transportModel, kineticsModel
         double transportThreshold
 
         string fuel, oxidizer

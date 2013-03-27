@@ -329,6 +329,9 @@ class Chemistry(Options):
     #: Transport model to use. Valid options are ``Mix``, ``Multi``, and ``Approx``
     transportModel = StringOption("Mix", ("Multi", "Approx"), level=1)
 
+    #: Kinetics model to use. Valid options are ``standard`` and ``interp``.
+    kineticsModel = StringOption("standard", ("interp",), level=2)
+
     #: Mole fraction threshold for including species with ``transportModel = "Approx"``
     threshold = FloatOption(1e-5, level=2, label='Approx. transport threshold',
         filter=lambda conf: conf.chemistry.transportModel == 'Approx')

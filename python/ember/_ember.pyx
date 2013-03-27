@@ -95,6 +95,7 @@ cdef class ConfigOptions:
         opts.gasMechanismFile = self.chemistry.mechanismFile
         opts.gasPhaseID = self.chemistry.phaseID
         opts.transportModel = self.chemistry.transportModel
+        opts.kineticsModel = self.chemistry.kineticsModel
         opts.transportThreshold = self.chemistry.threshold
 
         # Initial condition

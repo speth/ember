@@ -97,6 +97,7 @@ public:
 
     std::string gasMechanismFile;
     std::string gasPhaseID;
+    std::string kineticsModel;
     std::string transportModel;
     double transportThreshold;
 

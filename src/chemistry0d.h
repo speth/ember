@@ -160,6 +160,7 @@ private:
     std::string mechanismFile;
     std::string phaseID;
     std::string transportModel;
+    std::string kineticsModel;
     double transportThreshold;
     bool isInitialized;
 
