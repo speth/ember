@@ -2,15 +2,25 @@
 
 #include "mathUtils.h"
 
+//! An %ODE to be solved by QssIntegrator
 class QssOde
 {
 public:
     QssOde() {}
     virtual ~QssOde() {}
+    //! Evaluate the %ODE function. The %ODE should have the form:
+    //! \f[ y' = q(y) - d(y) \f]
+    //! @param t Time [s] at which to evaluate the equations
+    //! @param y State variables at time `t`.
+    //! @param[out] q Rate at which `y` is being produced, where `q[k]` is
+    //!     approximately independendent of `y[k]`.
+    //! @param[out] d Rate at which `y` is being consumed / lost, where `d[k]`
+    //!     is approximately linearly proportional to `y[k]`.
+    //! @param corrector `true` during corrector iterations
     virtual void odefun(double t, const dvec& y, dvec& q, dvec& d, bool corrector=false) = 0;
 };
 
-//! A Quasi-Steady-State ODE Integrator based on CHEMEQ2
+//! A Quasi-Steady-State %ODE %Integrator based on CHEMEQ2
 class QssIntegrator
 {
 public:
@@ -26,33 +36,41 @@ public:
     //! Set state at the start of a global timestep
     void setState(const dvec& yIn, double tStart);
 
-    //! Take as many steps as needed to reach tf.
-    //! Note that tf is relative to tstart, not absolute.
+    //! Take as many steps as needed to reach `tf`.
+    //! Note that `tf` is relative to #tstart, not absolute.
     int integrateToTime(double tf);
-    int integrateOneStep(double tf); //!< Take one step toward tf without stepping past it.
+
+    //! Take one step toward `tf` without stepping past it.
+    int integrateOneStep(double tf);
 
     double tn; //!< Internal integrator time (relative to #tstart)
     dvec y; //!< current state vector
 
-    bool stabilityCheck; //!< Flag to enable convergence-based stability check on timestep
+    //! Flag to enable convergence-based stability check on timestep
+    bool stabilityCheck;
 
     int itermax; //!< Number of corrector iterations to perform
 
     //! Accuracy parameter for determining the next timestep.
     double epsmin;
 
-    //! Repeat timestep if correction is greater than #epsmax * #epsmin * #y[i] for any i.
+    //! Repeat timestep if correction is greater than
+    //! `#epsmax * #epsmin * #y[i]` for any `i`.
     double epsmax;
 
     double dtmin; //!< Minimum timestep allowed.
     double dtmax; //!< Maximum timestep allowed.
     dvec ymin; //!< Minimum value allowed for each component
-    dvec enforce_ymin; //!< Enforce the minimum value specified in #ymin for each component
-    double abstol; //!< Minimum component value to consider when determining stability / step size
+
+    //! Enforce the minimum value specified in #ymin for each component.
+    dvec enforce_ymin;
+
+    //! Minimum component value to consider when determining stability / step
+    //! size.
+    double abstol;
 
     int rcount; //!< Total number of timestep repeats (after failed timesteps)
-    int gcount; //!< Total number of ODE function calls
-
+    int gcount; //!< Total number of %ODE function calls
 
 private:
     void getInitialStepSize(double tf); //!< Estimate the initial step size.
