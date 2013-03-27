@@ -4,22 +4,32 @@
 
 class ConfigOptions;
 
+//! Represents a parameterization of the strain rate as a function of time.
 class StrainFunction
 {
 public:
     StrainFunction() {};
     virtual ~StrainFunction() {}
+
+    //! Set the parameters associated with this strain rate function. The
+    //! meaning of the elements of `coeffs` depends on the parameterization.
     virtual void setCoefficients(int n, const double* coeffs) {}
 
+    //! Compute the strain rate [1/s] at time `t`.
     virtual double a(double t) const = 0;
+
+    //! Compute the time derivative of the strain rate [1/s^2] at time `t`.
     virtual double dadt(double t) const = 0;
 };
 
+//! Represents a strain rate that is constant before and after a linear ramp.
+/*!
+ *  The strain rate is constant at #aInitial until time #T0, then increases
+ *  linearly to #aFinal at time #T0 + #Dt.
+ */
 class LinearStrainFunction : public StrainFunction
 {
 public:
-    // Strain rate is constant at aInitial until time T0,
-    // then increases linearly to aFinal at time T0+Dt
     explicit LinearStrainFunction(const ConfigOptions& options);
     virtual double a(double t) const;
     virtual double dadt(double t) const;
@@ -54,4 +64,5 @@ private:
     dvec coeffs;
 };
 
+//! Create a new strain function of the type specified in `options`.
 StrainFunction* newStrainFunction(const ConfigOptions& options);
