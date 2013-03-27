@@ -959,6 +959,25 @@ div.toc li.level4 {
     margin-left: 45px;
 }
 
+.inherit_header {
+        font-weight: bold;
+        font-size: 110%;
+        cursor: pointer;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.inherit_header td {
+    padding: 6px 0px 2px 5px;
+}
+
+.inherit {
+        display: none;
+}
 
 @media print
 {
