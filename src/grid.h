@@ -2,8 +2,26 @@
 
 #include "readConfig.h"
 
+//! Boundary condition options for each component at the right and left
+//! boundaries of the domain.
 namespace BoundaryCondition {
-    enum BC { FixedValue, ZeroGradient, ControlVolume, WallFlux, Floating };
+    enum BC {
+     //! Fix the value at the boundary by setting dy/dt = 0.
+     FixedValue,
+
+     //! Zero gradient condition by setting y[j] = y[j-1]
+     ZeroGradient,
+
+     //! Treat the boundary value as representing the average value within a
+     //! control volume extending from x[0] to x[1].
+     ControlVolume,
+
+     //! Flux of y at the boundary driven by difference between yLeft and y[0]
+     WallFlux,
+
+     //! Outflow boundary condition
+     Floating
+    };
 }
 
 class OneDimGrid

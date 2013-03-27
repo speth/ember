@@ -210,7 +210,7 @@ public:
     MatrixMap Y; //!< species mass fractions, Y(k,j) [-]
     dvec Wmx; //!< Mixture molecular weight [kg/kmol]
 
-    // Time derivatives and mass flux are updated by evaluate()BoundaryCondition::ControlVolume and BoundaryCondition::WallFlux
+    // Time derivatives and mass flux are updated by evaluate()
     dvec V; //!< mass flux normal to the flame [kg/m^2*s]
     dvec dUdt; //!< Time derivative of #U [1/s^2]
     dvec dTdt; //!< Time derivative of #T [K/s]
