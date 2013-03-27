@@ -53,7 +53,6 @@ public:
     int rcount; //!< Total number of timestep repeats (after failed timesteps)
     int gcount; //!< Total number of ODE function calls
 
-    bool debug;
 
 private:
     void getInitialStepSize(double tf); //!< Estimate the initial step size.

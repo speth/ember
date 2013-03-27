@@ -27,8 +27,6 @@ QssIntegrator::QssIntegrator()
     gcount = 0;
     rcount = 0;
     tn = 0;
-
-    debug = false;
 }
 
 void QssIntegrator::setOde(QssOde* ode)
