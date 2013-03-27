@@ -88,7 +88,12 @@ void FlameSolver::initialize(void)
     // Determine initial condition for V
     dvec& V(convectionSystem.utwSystem.V);
     V.resize(nPoints);
-    if ((options.twinFlame || options.curvedFlame) && !options.xFlameControl) {
+    if (options.haveRestartFile) {
+        V[0] = rVzero;
+        for (size_t j=1; j<nPoints; j++) {
+            V[j] = V[j-1] - rho[j]*U(j)*(x[j]-x[j-1]);
+        }
+    } else if ((options.twinFlame || options.curvedFlame) && !options.xFlameControl) {
         rVzero = 0;
         V[0] = 0;
         for (size_t j=1; j<nPoints; j++) {
