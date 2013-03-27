@@ -269,6 +269,8 @@ int FlameSolver::finishStep()
         heatReleaseRate.push_back(getHeatReleaseRate());
         consumptionSpeed.push_back(getConsumptionSpeed());
         flamePosition.push_back(getFlamePosition());
+        strainRateVector.push_back(strainfunc->a(t));
+        dStrainRateVector.push_back(strainfunc->dadt(t));
 
         tOutput = t + options.outputTimeInterval;
         nOutput = 0;
@@ -540,6 +542,8 @@ void FlameSolver::writeTimeseriesFile(const std::string& filename)
     outFile.writeVector("Q", heatReleaseRate);
     outFile.writeVector("Sc", consumptionSpeed);
     outFile.writeVector("xFlame", flamePosition);
+    outFile.writeVector("a", strainRateVector);
+    outFile.writeVector("dadt", dStrainRateVector);
 }
 
 void FlameSolver::resizeAuxiliary()

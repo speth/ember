@@ -69,6 +69,8 @@ public:
     dvector heatReleaseRate; //!< Integral heat release rate [W/m^2] at the times in #timeVector.
     dvector consumptionSpeed; //!< Consumption speed [m/s] at the times in #timeVector.
     dvector flamePosition; //!< Heat release centroid [m] at the times in #timeVector.
+    dvector strainRateVector; //!< Strain rate [1/s] at the times in #timeVector.
+    dvector dStrainRateVector; //!< Time derivative of strain rate [1/s^2] at the times in #timeVector.
 
     long int nTotal; //!< total number of timesteps taken
     int nRegrid; //!< number of time steps since regridding/adaptation
