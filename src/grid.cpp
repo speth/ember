@@ -436,9 +436,6 @@ bool OneDimGrid::addRight(vector<dvector>& y)
     // Check flatness of temperature, velocity and species
     // profiles at the boundary.
     for (size_t k=0; k<nAdapt; k++) {
-        if (!rightComponents[k]) {
-            continue;
-        }
         int dj = (k == kMomentum) ? djMom : djOther;
         double ymax = maxval(y[k]);
         if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTol && ymax > absvtol ) {
@@ -548,9 +545,6 @@ bool OneDimGrid::addLeft(vector<dvector>& y)
     bool pointAdded = false;
     if (!fixedLeftLoc) {
         for (size_t k=0; k<nAdapt; k++) {
-            if (!leftComponents[k]) {
-                continue;
-            }
             double ymax = maxval(y[k]);
             int dj = (k==kMomentum) ? djMom : djOther;
             if (abs(y[k][dj]-y[k][0])/ymax > boundaryTol && ymax > absvtol) {
@@ -630,9 +624,6 @@ bool OneDimGrid::removeRight(vector<dvector>& y)
 
     bool pointRemoved = true; // assume removal
     for (size_t k=0; k<nAdapt; k++) {
-        if (!rightComponents[k]) {
-            continue;
-        }
         int dj = (k==kMomentum) ? djMom : djOther;
         double ymax = maxval(y[k]);
         if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTolRm && ymax > absvtol) {
@@ -720,9 +711,6 @@ bool OneDimGrid::removeLeft(vector<dvector>& y)
     }
 
     for (size_t k=0; k<nAdapt; k++) {
-        if (!leftComponents[k]) {
-            continue;
-        }
         size_t dj = (k==kMomentum) ? djMom : djOther;
         double ymax = maxval(y[k]);
         if (abs(y[k][dj]-y[k][0])/ymax > boundaryTolRm && ymax > absvtol) {
@@ -756,11 +744,6 @@ void OneDimGrid::regrid(vector<dvector>& y)
     assert(nAdapt <= nVars);
 
     setSize(y[0].size());
-
-    // By default, all components count for regridding
-    leftComponents.resize(nVars, true);
-    rightComponents.resize(nVars, true);
-
 
     bool rightAddition = addRight(y);
     bool leftAddition = addLeft(y);
@@ -840,9 +823,6 @@ void OneDimGrid::regridUnstrained(vector<dvector>& y, dvec& qdot)
         logFile.write(format("Removed %i point%s from the right side.") %
                 rightRemovalCount % suffix);
     }
-
-    // By default, all components count for regridding on the left (unburned) side
-    leftComponents.resize(nVars, true);
 
     bool leftAddition = addLeft(y);
     bool leftRemoval = false;

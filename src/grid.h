@@ -59,10 +59,6 @@ public:
     double unstrainedDownstreamWidth;
     size_t addPointCount; // number of points to add when regridding
 
-    // true for each component that counts for evaluating boundary grid point tolerances
-    // Transport-eliminated species don't get to vote.
-    vector<bool> leftComponents;
-    vector<bool> rightComponents;
 
     // Derived mesh parameters (calculated by updateValues)
     dvec cfm, cf, cfp; // first centered difference
