@@ -861,15 +861,6 @@ void FlameSolver::integrateProductionTerms()
     tbb::parallel_for(tbb::blocked_range<size_t>(0, nPoints,1),
                      TbbWrapper<FlameSolver>(&FlameSolver::integrateProductionTerms, this));
     reactionTimer.stop();
-
-    splitTimer.resume();
-    for (size_t j=0; j<nPoints; j++) {
-        sourceTerms[j].unroll_y();
-        U(j) = sourceTerms[j].U;
-        T(j) = sourceTerms[j].T;
-        Y.col(j) = sourceTerms[j].Y;
-    }
-    splitTimer.stop();
 }
 
 void FlameSolver::integrateProductionTerms(size_t j1, size_t j2)
@@ -914,6 +905,10 @@ void FlameSolver::integrateProductionTerms(size_t j1, size_t j2)
                     1 % tStageEnd % j).str(), true, false);
         }
         logFile.verboseWrite(format(" [%s]...") % system.getStats(), false);
+        sourceTerms[j].unroll_y();
+        U(j) = sourceTerms[j].U;
+        T(j) = sourceTerms[j].T;
+        Y.col(j) = sourceTerms[j].Y;
     }
 }
 
@@ -924,12 +919,6 @@ void FlameSolver::integrateDiffusionTerms()
     tbb::parallel_for(tbb::blocked_range<size_t>(0, nVars, 1),
                       TbbWrapper<FlameSolver>(&FlameSolver::integrateDiffusionTerms, this));
     diffusionTimer.stop();
-
-    splitTimer.resume();
-    for (size_t i=0; i<nVars; i++) {
-        state.row(i) = diffusionSolvers[i].y;
-    }
-    splitTimer.stop();
 }
 
 void FlameSolver::integrateDiffusionTerms(size_t k1, size_t k2)
@@ -937,6 +926,7 @@ void FlameSolver::integrateDiffusionTerms(size_t k1, size_t k2)
     for (size_t k=k1; k<k2; k++) {
         diffusionSolvers[k].integrateToTime(tStageEnd);
         assert(mathUtils::almostEqual(diffusionSolvers[k].t, tStageEnd));
+        state.row(k) = diffusionSolvers[k].y;
     }
 }
 
