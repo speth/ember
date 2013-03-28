@@ -326,7 +326,11 @@ int FlameSolver::finishStep()
         grid.dampVal.resize(grid.x.rows());
         for (size_t j=0; j<nPoints; j++) {
             double num = std::min(mu[j],lambda[j]/cp[j]);
-            num = std::min(num, rhoD.col(j).minCoeff());
+            for (size_t k=0; k<nSpec; k++) {
+                if (rhoD(k,j) > 0) {
+                    num = std::min(num, rhoD(k,j));
+                }
+            }
             double den = std::max(std::abs(rho[j]*strainfunc->a(t)), 1e-100);
             grid.dampVal[j] = sqrt(num/den);
         }

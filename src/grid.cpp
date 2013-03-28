@@ -104,6 +104,7 @@ void OneDimGrid::adapt(vector<dvector>& y)
 
     nVars = y.size();
     assert(nAdapt <= nVars);
+    assert((dampVal > 0).all());
     setSize(y[0].size());
 
     vtol.resize(nAdapt);
@@ -742,6 +743,7 @@ void OneDimGrid::regrid(vector<dvector>& y)
 {
     nVars = y.size();
     assert(nAdapt <= nVars);
+    assert((dampVal > 0).all());
 
     setSize(y[0].size());
 
@@ -800,6 +802,7 @@ void OneDimGrid::regridUnstrained(vector<dvector>& y, dvec& qdot)
 {
     nVars = y.size();
     assert(nAdapt <= nVars);
+    assert((dampVal > 0).all());
 
     setSize(y[0].size());
 
