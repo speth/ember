@@ -48,6 +48,7 @@ double ApproxMixTransport::viscosity()
 
     m_visc_ok = true;
     m_viscmix = vismix;
+    assert(m_viscmix > 0 && m_viscmix < 1e100);
     return vismix;
 }
 
@@ -244,6 +245,7 @@ void ApproxMixTransport::update_C()
             _kMajor.push_back(k);
         }
     }
+    m_viscwt_ok = false;
 }
 
 typedef Eigen::Map<dvec> vec_map;
