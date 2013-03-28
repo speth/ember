@@ -17,7 +17,6 @@
 #include <boost/shared_ptr.hpp>
 
 #include "tbb/parallel_for.h"
-#include "tbb/blocked_range.h"
 #include "tbb/enumerable_thread_specific.h"
 #include "tbb/mutex.h"
 #include "tbb/task_scheduler_init.h"
@@ -105,6 +104,7 @@ public:
     void resizeMappedArrays(); //!< update data that shadows SplitSolver arrays
     void updateCrossTerms(); //!< calculates values of cross-component terms: jSoret, sumcpj, and jCorr
     void updateChemicalProperties(); //!< Update thermodynamic, transport, and kinetic properties
+    void updateChemicalProperties(size_t j1, size_t j2); //!< Update thermodynamic, transport, and kinetic properties
     void updateBC(); //!< Set boundary condition for left edge of domain
     void calculateQdot(); //!< Compute heat release rate using the current temperature and mass fractions
 

@@ -1,6 +1,7 @@
 #include "flameSolver.h"
 #include "dataFile.h"
 #include "strainFunction.h"
+#include "tbb_tools.h"
 
 #include <boost/foreach.hpp>
 
@@ -756,8 +757,21 @@ void FlameSolver::updateBC()
 
 void FlameSolver::updateChemicalProperties()
 {
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, nPoints,1),
+                      TbbWrapper<FlameSolver>(&FlameSolver::updateChemicalProperties, this));
+}
+
+void FlameSolver::updateChemicalProperties(size_t j1, size_t j2)
+{
+    CanteraGas& gas = gases.local();
+    if (!gas.initialized()) {
+        tbb::mutex::scoped_lock lock(gasInitMutex);
+        gas.setOptions(options);
+        gas.initialize();
+    }
+
     // Calculate auxiliary data
-    for (size_t j=0; j<nPoints; j++) {
+    for (size_t j=j1; j<j2; j++) {
         // Thermodynamic properties
         thermoTimer.start();
         gas.setStateMass(&Y(0,j), T(j));
@@ -786,6 +800,7 @@ void FlameSolver::updateChemicalProperties()
         transportTimer.stop();
     }
 }
+
 
 void FlameSolver::setDiffusionSolverState(double tInitial)
 {
