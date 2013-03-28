@@ -215,7 +215,7 @@ int QssIntegrator::integrateOneStep(double tf) {
             }
 
             // Return, indicating an error.
-            return 1;
+            return -1;
         }
 
         // Check for convergence.
