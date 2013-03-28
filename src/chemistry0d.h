@@ -58,7 +58,7 @@ class InterpKinetics : public Cantera::GasKinetics
 public:
     InterpKinetics(Cantera::ThermoPhase* phase);
 
-    virtual void _update_rates_T();
+    virtual void update_rates_T();
     void rebuildInterpData(size_t nTemps, double Tmin, double Tmax);
 
 private:

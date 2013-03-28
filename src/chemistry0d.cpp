@@ -296,7 +296,7 @@ void InterpKinetics::rebuildInterpData(size_t nTemps, double Tmin, double Tmax)
     }
 }
 
-void InterpKinetics::_update_rates_T()
+void InterpKinetics::update_rates_T()
 {
     if (!m_ntemps) {
         rebuildInterpData(200, 250, 3000);
