@@ -101,7 +101,7 @@ Running Ember
   in the Chemkin format, it will need to be converted::
 
     $ source /wherever/cantera/is/installed/setup_cantera
-    $ ck2cti2 -input=<mech> --thermo=<thermo> --transport=<transport>
+    $ ck2cti2 --input=<mech> --thermo=<thermo> --transport=<transport>
 
   This will produce a ``.cti`` file, which needs to be further converted::
 
