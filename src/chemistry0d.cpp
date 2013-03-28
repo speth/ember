@@ -275,9 +275,11 @@ void InterpKinetics::rebuildInterpData(size_t nTemps, double Tmin, double Tmax)
     m_falloff_work_const = dmatrix::Zero(m_nfall, m_ntemps);
     m_falloff_work_slope = dmatrix::Zero(m_nfall, m_ntemps);
 
+    double T_save = thermo().temperature();
+    double rho_save = thermo().density();
     for (size_t n = 0; n < m_ntemps; n++) {
-        thermo().setState_TP(Tmin + ((double) n)/(m_ntemps - 1) * (Tmax - Tmin),
-                             thermo().pressure());
+        thermo().setState_TR(Tmin + ((double) n)/(m_ntemps - 1) * (Tmax - Tmin),
+                             rho_save);
         GasKinetics::update_rates_T();
         m_rfn_const.col(n) = vec_map(&m_rfn[0], m_ii);
         m_rkcn_const.col(n) = vec_map(&m_rkcn[0], m_ii);
@@ -294,6 +296,7 @@ void InterpKinetics::rebuildInterpData(size_t nTemps, double Tmin, double Tmax)
         m_rfn_high_slope.col(n) = (m_rfn_high_const.col(n+1) - m_rfn_high_const.col(n)) / dT;
         m_falloff_work_slope.col(n) = (m_falloff_work_const.col(n+1) - m_falloff_work_const.col(n)) / dT;
     }
+    thermo().setState_TR(T_save, rho_save);
 }
 
 void InterpKinetics::update_rates_T()
