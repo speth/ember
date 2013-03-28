@@ -1,4 +1,5 @@
 #include "tbb/blocked_range.h"
+#include "tbb/parallel_for.h"
 
 //! Wrapper class for calling member functions in a `tbb::parallel_for`.
 template<class T>

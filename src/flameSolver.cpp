@@ -922,7 +922,7 @@ void FlameSolver::integrateDiffusionTerms()
     setDiffusionSolverState(tStageStart);
     diffusionTimer.start();
     tbb::parallel_for(tbb::blocked_range<size_t>(0, nVars, 1),
-                       DiffusionTermWrapper(this, tStageEnd));
+                      TbbWrapper<FlameSolver>(&FlameSolver::integrateDiffusionTerms, this));
     diffusionTimer.stop();
 
     splitTimer.resume();
@@ -932,6 +932,13 @@ void FlameSolver::integrateDiffusionTerms()
     splitTimer.stop();
 }
 
+void FlameSolver::integrateDiffusionTerms(size_t k1, size_t k2)
+{
+    for (size_t k=k1; k<k2; k++) {
+        diffusionSolvers[k].integrateToTime(tStageEnd);
+        assert(mathUtils::almostEqual(diffusionSolvers[k].t, tStageEnd));
+    }
+}
 
 void FlameSolver::rollVectorVector
 (vector<dvector>& vv, const dmatrix& M) const
@@ -1257,12 +1264,4 @@ void FlameSolver::printPerfString(std::ostream& stats, const std::string& label,
                                   const PerfTimer& T)
 {
     stats << format("%s %9.3f (%12i)\n") % label % T.getTime() % T.getCallCount();
-}
-
-void DiffusionTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
-{
-    for (size_t k=r.begin(); k<r.end(); k++) {
-        parent->diffusionSolvers[k].integrateToTime(t);
-        assert(mathUtils::almostEqual(parent->diffusionSolvers[k].t, t));
-    }
 }

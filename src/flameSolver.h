@@ -16,14 +16,11 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "tbb/parallel_for.h"
 #include "tbb/enumerable_thread_specific.h"
 #include "tbb/mutex.h"
 #include "tbb/task_scheduler_init.h"
-#include "tbb/tbb_exception.h"
 
 using std::string;
-class DiffusionTermWrapper;
 class StrainFunction;
 
 //! Class which manages the main integration loop.
@@ -120,6 +117,7 @@ public:
     void integrateDiffusionTerms();
 
     void integrateProductionTerms(size_t j1, size_t j2);
+    void integrateDiffusionTerms(size_t k1, size_t k2);
 
     size_t nSpec; //!< Number of chemical species
     size_t nVars; //!< Number of state variables at each grid point (nSpec + 2)
@@ -194,18 +192,4 @@ public:
     PerfTimer reactionRatesTimer, transportTimer, thermoTimer;
     PerfTimer jacobianTimer;
     PerfTimer conductivityTimer, viscosityTimer, diffusivityTimer;
-
-    friend class DiffusionTermWrapper;
-};
-
-class DiffusionTermWrapper {
-public:
-    DiffusionTermWrapper(FlameSolver* parent_, double t_)
-        : parent(parent_)
-        , t(t_)
-        {}
-    void operator()(const tbb::blocked_range<size_t>& r) const;
-private:
-    FlameSolver* parent;
-    double t;
 };
