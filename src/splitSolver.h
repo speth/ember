@@ -51,9 +51,9 @@ public:
     //! These functions should be overloaded by derived classes to implement the
     //! integration of the split terms.
     //! @{
-    virtual void integrateConvectionTerms(double tStart, double tEnd) = 0;
-    virtual void integrateProductionTerms(double tStart, double tEnd) = 0;
-    virtual void integrateDiffusionTerms(double tStart, double tEnd) = 0;
+    virtual void integrateConvectionTerms() = 0;
+    virtual void integrateProductionTerms() = 0;
+    virtual void integrateDiffusionTerms() = 0;
     //! @}
 
     //! Create prof.h5 file.
@@ -116,6 +116,8 @@ public:
     double tStart; //!< Integrator start time
     double tEnd; //!< Integrator termination time (upper bound)
     double tNow; //!< Current time reached by the integrator
+    double tStageStart; //!< Start time for the active integrator stage
+    double tStageEnd; //!< End time for the active integrator stage
     double t; //!< start time of the current global timestep
     double dt; //!< Global timestep used by the split solver
 

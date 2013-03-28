@@ -84,10 +84,12 @@ void SplitSolver::integrateSplitTerms(double t, double dt)
 
 void SplitSolver::_integrateDiffusionTerms(double tStart, double tEnd, int stage)
 {
+    tStageStart = tStart;
+    tStageEnd = tEnd;
     assert(mathUtils::notnan(state));
     logFile.verboseWrite(format("diffusion terms %i/4...") % stage, false);
     startState = state;
-    integrateDiffusionTerms(tStart, tEnd);
+    integrateDiffusionTerms();
     assert(mathUtils::notnan(state));
     deltaDiff += state - startState;
     if (stage && options.debugIntegratorStages(tNow)) {
@@ -97,10 +99,12 @@ void SplitSolver::_integrateDiffusionTerms(double tStart, double tEnd, int stage
 
 void SplitSolver::_integrateProductionTerms(double tStart, double tEnd, int stage)
 {
+    tStageStart = tStart;
+    tStageEnd = tEnd;
     logFile.verboseWrite("Source term...", false);
     assert(mathUtils::notnan(state));
     startState = state;
-    integrateProductionTerms(tStart, tEnd);
+    integrateProductionTerms();
     assert(mathUtils::notnan(state));
     deltaProd += state - startState;
     if (options.debugIntegratorStages(tNow)) {
@@ -110,11 +114,13 @@ void SplitSolver::_integrateProductionTerms(double tStart, double tEnd, int stag
 
 void SplitSolver::_integrateConvectionTerms(double tStart, double tEnd, int stage)
 {
+    tStageStart = tStart;
+    tStageEnd = tEnd;
     assert(stage == 1 || stage == 2);
     assert(mathUtils::notnan(state));
     logFile.verboseWrite(format("convection term %i/2...") % stage, false);
     startState = state;
-    integrateConvectionTerms(tStart, tEnd);
+    integrateConvectionTerms();
     assert(mathUtils::notnan(state));
     deltaConv += state - startState;
     if (options.debugIntegratorStages(tNow)) {

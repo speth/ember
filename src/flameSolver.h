@@ -23,7 +23,6 @@
 #include "tbb/tbb_exception.h"
 
 using std::string;
-class SourceTermWrapper;
 class DiffusionTermWrapper;
 class StrainFunction;
 
@@ -116,9 +115,11 @@ public:
     void setProductionSolverState(double tInitial);
 
     // Steps in the Strang split integration process
-    void integrateConvectionTerms(double tStart, double tEnd);
-    void integrateProductionTerms(double tStart, double tEnd);
-    void integrateDiffusionTerms(double tStart, double tEnd         );
+    void integrateConvectionTerms();
+    void integrateProductionTerms();
+    void integrateDiffusionTerms();
+
+    void integrateProductionTerms(size_t j1, size_t j2);
 
     size_t nSpec; //!< Number of chemical species
     size_t nVars; //!< Number of state variables at each grid point (nSpec + 2)
@@ -194,21 +195,7 @@ public:
     PerfTimer jacobianTimer;
     PerfTimer conductivityTimer, viscosityTimer, diffusivityTimer;
 
-    friend class SourceTermWrapper;
     friend class DiffusionTermWrapper;
-};
-
-class SourceTermWrapper {
-public:
-    SourceTermWrapper(FlameSolver* parent_, double t_)
-        : parent(parent_)
-        , t(t_)
-        {}
-    void operator()(const tbb::blocked_range<size_t>& r) const;
-private:
-    FlameSolver* parent;
-    int stage;
-    double t;
 };
 
 class DiffusionTermWrapper {

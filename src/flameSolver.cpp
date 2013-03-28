@@ -836,12 +836,12 @@ void FlameSolver::setProductionSolverState(double tInitial)
     splitTimer.stop();
 }
 
-void FlameSolver::integrateConvectionTerms(double tStart, double tEnd)
+void FlameSolver::integrateConvectionTerms()
 {
-    setConvectionSolverState(tStart);
+    setConvectionSolverState(tStageStart);
     convectionTimer.start();
     try {
-        convectionSystem.integrateToTime(tEnd);
+        convectionSystem.integrateToTime(tStageEnd);
     } catch (DebugException& e) {
         logFile.write(e.errorString);
         writeStateFile("err_convectionIntegration", true, false);
@@ -854,12 +854,12 @@ void FlameSolver::integrateConvectionTerms(double tStart, double tEnd)
     splitTimer.stop();
 }
 
-void FlameSolver::integrateProductionTerms(double tStart, double tEnd)
+void FlameSolver::integrateProductionTerms()
 {
-    setProductionSolverState(tStart);
+    setProductionSolverState(tStageStart);
     reactionTimer.start();
     tbb::parallel_for(tbb::blocked_range<size_t>(0, nPoints,1),
-                      SourceTermWrapper(this, tEnd));
+                     TbbWrapper<FlameSolver>(&FlameSolver::integrateProductionTerms, this));
     reactionTimer.stop();
 
     splitTimer.resume();
@@ -872,13 +872,57 @@ void FlameSolver::integrateProductionTerms(double tStart, double tEnd)
     splitTimer.stop();
 }
 
-
-void FlameSolver::integrateDiffusionTerms(double tStart, double tEnd)
+void FlameSolver::integrateProductionTerms(size_t j1, size_t j2)
 {
-    setDiffusionSolverState(tStart);
+    CanteraGas& gas = gases.local();
+    if (!gas.initialized()) {
+        tbb::mutex::scoped_lock lock(gasInitMutex);
+        gas.setOptions(options);
+        gas.initialize();
+    }
+
+    int err = 0;
+    for (size_t j=j1; j<j2; j++) {
+        SourceSystem& system = sourceTerms[j];
+        logFile.verboseWrite(format("%i") % j, false);
+        system.setGas(&gas);
+        if (int(j) == options.debugSourcePoint &&
+            tStageEnd >= options.debugSourceTime) {
+            system.setDebug(true);
+            std::ofstream steps("sourceTermSteps.py");
+            system.writeState(steps, true);
+
+            while (system.time() < tStageEnd - tStageStart && err >= 0) {
+                err = system.integrateOneStep(tStageEnd - tStageStart);
+                system.writeState(steps, false);
+            }
+
+            system.writeJacobian(steps);
+            steps.close();
+            std::terminate();
+
+        } else {
+            err = system.integrateToTime(tStageEnd - tStageStart);
+        }
+        if (err < 0) {
+            logFile.write(format("Error at j = %i") % j);
+            logFile.write(format("T = %s") % system.T);
+            logFile.write(format("U = %s") % system.U);
+            logFile.write("Y = ", false);
+            logFile.write(system.Y);
+            writeStateFile((format("prod%i_error_t%.6f_j%03i") %
+                    1 % tStageEnd % j).str(), true, false);
+        }
+        logFile.verboseWrite(format(" [%s]...") % system.getStats(), false);
+    }
+}
+
+void FlameSolver::integrateDiffusionTerms()
+{
+    setDiffusionSolverState(tStageStart);
     diffusionTimer.start();
     tbb::parallel_for(tbb::blocked_range<size_t>(0, nVars, 1),
-                       DiffusionTermWrapper(this, tEnd));
+                       DiffusionTermWrapper(this, tStageEnd));
     diffusionTimer.stop();
 
     splitTimer.resume();
@@ -1213,51 +1257,6 @@ void FlameSolver::printPerfString(std::ostream& stats, const std::string& label,
                                   const PerfTimer& T)
 {
     stats << format("%s %9.3f (%12i)\n") % label % T.getTime() % T.getCallCount();
-}
-
-void SourceTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
-{
-    CanteraGas& gas = parent->gases.local();
-    if (!gas.initialized()) {
-        tbb::mutex::scoped_lock lock(parent->gasInitMutex);
-        gas.setOptions(parent->options);
-        gas.initialize();
-    }
-
-    int err = 0;
-    for (size_t j=r.begin(); j<r.end(); j++) {
-        SourceSystem& system = parent->sourceTerms[j];
-        logFile.verboseWrite(format("%i") % j, false);
-        system.setGas(&gas);
-        if (int(j) == parent->options.debugSourcePoint &&
-            t >= parent->options.debugSourceTime) {
-            system.setDebug(true);
-            std::ofstream steps("sourceTermSteps.py");
-            system.writeState(steps, true);
-
-            while (system.time() < t - parent->tNow && err >= 0) {
-                err = system.integrateOneStep(t - parent->tNow);
-                system.writeState(steps, false);
-            }
-
-            system.writeJacobian(steps);
-            steps.close();
-            std::terminate();
-
-        } else {
-            err = system.integrateToTime(t - parent->tNow);
-        }
-        if (err < 0) {
-            logFile.write(format("Error at j = %i") % j);
-            logFile.write(format("T = %s") % system.T);
-            logFile.write(format("U = %s") % system.U);
-            logFile.write("Y = ", false);
-            logFile.write(system.Y);
-            parent->writeStateFile((format("prod%i_error_t%.6f_j%03i") %
-                    1 % t % j).str(), true, false);
-        }
-        logFile.verboseWrite(format(" [%s]...") % system.getStats(), false);
-    }
 }
 
 void DiffusionTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
