@@ -1232,12 +1232,16 @@ void FlameSolver::printPerformanceStats(void)
 {
     std::string filename = options.outputDir + "/stats";
     std::ofstream stats(filename.c_str(), std::ios::trunc | std::ios::out);
+    totalTimer.stop();
+    totalTimer.resume();
     stats << "\n   *** Performance Stats ***       time   ( call count )\n";
     printPerfString(stats, "                General Setup: ", setupTimer);
     printPerfString(stats, "             Split Term Setup: ", splitTimer);
+    printPerfString(stats, "              Grid Adaptation: ", regridTimer);
     printPerfString(stats, "    Reaction Term Integration: ", reactionTimer);
     printPerfString(stats, "   Diffusion Term Integration: ", diffusionTimer);
     printPerfString(stats, "  Convection Term Integration: ", convectionTimer);
+    printPerfString(stats, "                        Total: ", totalTimer);
     stats << "\n Subcomponents:\n";
     printPerfString(stats, "               Reaction Rates: ", reactionRatesTimer);
     printPerfString(stats, "         Transport Properties: ", transportTimer);
@@ -1253,5 +1257,7 @@ void FlameSolver::printPerformanceStats(void)
 void FlameSolver::printPerfString(std::ostream& stats, const std::string& label,
                                   const PerfTimer& T)
 {
-    stats << format("%s %9.3f (%12i)\n") % label % T.getTime() % T.getCallCount();
+    if (T.getTime() > 0.0) {
+        stats << format("%s %9.3f (%12i)\n") % label % T.getTime() % T.getCallCount();
+    }
 }
