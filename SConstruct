@@ -32,6 +32,7 @@ VariantDir('build/test','test', duplicate=0)
 #    pass
 
 extraEnvArgs = {}
+class defaults: pass
 
 if os.name == 'nt':
     # On Windows, use the same version of Visual Studio that was used
@@ -53,6 +54,10 @@ if os.name == 'nt':
     else:
         extraEnvArgs['TARGET_ARCH'] = 'x86'
         tbbArch = 'ia32'
+
+    defaults.blas_lapack = ''
+else:
+    defaults.blas_lapack = 'lapack,blas'
 
 env = Environment(tools=['default', 'subst'], **extraEnvArgs)
 
@@ -98,7 +103,7 @@ opts.AddVariables(
         False),
     ('blas_lapack',
      'Comma-separated list of libraries to include for BLAS/LAPACK support',
-     'blas,lapack'),
+     defaults.blas_lapack),
     ('install_args',
      'Command-line arguments passed to "python setup.py install"',
      '--user')
