@@ -1,6 +1,7 @@
 #include "convectionSystem.h"
 #include "debugUtils.h"
 #include "chemistry0d.h"
+#include "tbb_tools.h"
 
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
@@ -579,6 +580,7 @@ void ConvectionSystemSplit::setSplitConstants(const dmatrix& splitConst)
 
 void ConvectionSystemSplit::integrateToTime(const double tf)
 {
+    tStageStop = tf;
     if (!quasi2d) {
         // Integrate the UTW system while storing the value of v after each timestep
         utwTimer.start();
@@ -603,7 +605,20 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
     }
 
     tbb::parallel_for(tbb::blocked_range<size_t>(0, nSpec, 1),
-                      ConvectionTermWrapper(this, tf));
+                      TbbWrapper<ConvectionSystemSplit>(&ConvectionSystemSplit::integrateSpeciesTerms, this));
+}
+
+void ConvectionSystemSplit::integrateSpeciesTerms(size_t k1, size_t k2)
+{
+    speciesTimer.start();
+    logFile.verboseWrite("Yk...", false);
+    // Integrate the species systems
+    for (size_t k=k1; k<k2; k++) {
+        speciesSystems[k].vInterp = vInterp;
+        speciesSolvers[k].integrateToTime(tStageStop);
+    }
+    speciesTimer.stop();
+
 }
 
 int ConvectionSystemSplit::getNumSteps()
@@ -654,16 +669,4 @@ void ConvectionSystemSplit::configureSolver(SundialsCvode& solver, const size_t 
     speciesSystems[k].resize(nPoints);
     speciesSystems[k].Yleft = Yleft[k];
     speciesSystems[k].k = k;
-}
-
-void ConvectionTermWrapper::operator()(const tbb::blocked_range<size_t>& r) const
-{
-    parent->speciesTimer.start();
-    logFile.verboseWrite("Yk...", false);
-    // Integrate the species systems
-    for (size_t k=r.begin(); k<r.end(); k++) {
-        parent->speciesSystems[k].vInterp = parent->vInterp;
-        parent->speciesSolvers[k].integrateToTime(t);
-    }
-    parent->speciesTimer.stop();
 }

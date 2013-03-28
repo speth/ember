@@ -6,14 +6,10 @@
 #include "perfTimer.h"
 #include "quasi2d.h"
 
-#include "tbb/parallel_for.h"
-#include "tbb/blocked_range.h"
-
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 
 class CanteraGas;
-class ConvectionTermWrapper;
 
 //! System representing the coupled convection equations for U, T, and Wmx.
 /*!
@@ -194,6 +190,10 @@ public:
     //! Integrate the the split convection equations to *tf*.
     void integrateToTime(const double tf);
 
+    //! Integrate the species terms in the range [k1, k2)
+    void integrateSpeciesTerms(size_t k1, size_t k2);
+
+
     //! convert the solver's solution vectors to the full *U*, *Y*, and *T*.
     void unroll_y();
 
@@ -259,17 +259,5 @@ private:
     //! `true` when solving the quasi-2d problem; `false` otherwise.
     bool quasi2d;
 
-    friend class ConvectionTermWrapper;
-};
-
-class ConvectionTermWrapper {
-public:
-    ConvectionTermWrapper(ConvectionSystemSplit* parent_, double t_)
-        : parent(parent_)
-        , t(t_)
-        {}
-    void operator()(const tbb::blocked_range<size_t>& r) const;
-private:
-    ConvectionSystemSplit* parent;
-    double t;
+    double tStageStop; //!< end time of the current integration stage
 };
