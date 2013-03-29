@@ -235,8 +235,9 @@ def _usingQss(conf):
 class Paths(Options):
     """ Directories for input and output files """
 
-    #: Relative path to the directory where output files
-    #: (outNNNNNN.h5, profNNNNNN.h5) will be stored.
+    #: Relative path to the directory where output files (outNNNNNN.h5,
+    #: profNNNNNN.h5) will be stored. Automatically created if it doesn't
+    #: already exist.
     outputDir = StringOption("run/test1", label='Output Directory')
 
     #: File to use for log messages. If *None*, write output to stdout
