@@ -614,7 +614,6 @@ int SundialsIda::g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, vo
     return ((sdDAE*) g_data)->g(t, y, ydot, gout);
 }
 
-// Jacobian routine. Compute J(t,y) = df/dy.
 int SundialsIda::Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn,
                      N_Vector resIn, realtype c_j, void *jac_data, DenseMat Jin,
                      N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
