@@ -52,13 +52,27 @@ private:
     vector<size_t> _kMajor; //!< indices of the species where X[k] >= threshold
 };
 
-
+//! Approximate evaluator for kinetics rates at constant pressure using linear
+//! interpolation.
+/*!
+ *  Recomputing the temperature dependent part of the kinetic rate expression
+ *  (which requires evaluating exponentials) is expensive. When many
+ *  evaluations of the same rate expression are required at different
+ *  temperatures, it is efficient to approximate the rate expression over the
+ *  temperature range of interest as being piecewise linear.
+ *
+ *  If rates are requested outside the current tabulated temperature range,
+ *  the bounds are automatically extended and the table is regenerated.
+ */
 class InterpKinetics : public Cantera::GasKinetics
 {
 public:
     InterpKinetics(Cantera::ThermoPhase* phase);
 
     virtual void update_rates_T();
+
+    //! Recompute the tabulated interpolation data using *nTemps* temperature
+    //! intervals spanning the closed interval [*Tmin*, *Tmax*].
     void rebuildInterpData(size_t nTemps, double Tmin, double Tmax);
 
 private:
