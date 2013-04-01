@@ -48,25 +48,52 @@ inline void remap(dmatrix& M, VecMap& A,
 
 extern const double NaN;
 
+//! A collection of general-purpose mathematical functions for working with
+//! vectors.
 namespace mathUtils
 {
+    //! Returns the value of the maximum element of a vector
     double maxval(const dvector& v);
+
+    //! Returns the value of the minimum element of a vector
     double minval(const dvector& v);
+
+    //! Returns the range (maximum - minimum) of a vector
     double range(const dvector& v);
+
+    //! Returns the sum of all the elements in a vector
     double sum(const dvector& v);
+
+    //! Returns the arithemetic mean of the elements in a vector
     double mean(const dvector& v);
 
-    // Find the min/max of a subvector
+    //! Returns the value of the maximum element of the sub-vector of *v* with
+    //! indices on the closed interval `[iStart, iEnd]`
     double maxval(const dvector& v, int iStart, int iEnd);
+
+    //! Returns the value of the minimum element of the sub-vector of *v* with
+    //! indices on the closed interval `[iStart, iEnd]`
     double minval(const dvector& v, int iStart, int iEnd);
+
+    //! Returns the range (maximum - minimum) of the sub-vector of *v* with
+    //! indices on the closed interval `[iStart, iEnd]`
     double range(const dvector& v, int iStart, int iEnd);
+
+    //! Returns the sum of all the elements in the sub-vector of *v* with
+    //! indices on the closed interval `[iStart, iEnd]`
     double sum(const dvector& v, int iStart, int iEnd);
+
+    //! Returns the arithemetic mean of the sub-vector of *v* with indices on
+    //! the closed interval `[iStart, iEnd]`
     double mean(const dvector& v, int iStart, int iEnd);
 
-    // location of the minimum / maximum
+    //! Returns the index of the minimum element of *v*.
     int minloc(const dvector& v);
+
+    //! Returns the index of the maximum element of *v*.
     int maxloc(const dvector& v);
 
+    //! Returns true if `v` does not contain any `NaN`s
     template <typename Derived>
     bool notnan(const Eigen::EigenBase<Derived>& v)
     {
@@ -74,7 +101,7 @@ namespace mathUtils
         return (s > 0 || s <= 0);
     }
 
-    //! Returns true if v does not contain any NaNs
+    //! Returns true if `v` does not contain any `NaN`s
     template <typename T>
     bool notnan(const vector<T>& v) {
         for (size_t i=0; i<v.size(); i++) {
@@ -85,22 +112,30 @@ namespace mathUtils
         return true;
     }
 
+    //! Returns true if `v` is not `NaN`.
     inline bool notnan(const double& v) {
         return (v > 0 || v <= 0);
     }
 
+    //! Returns true if `v` does not contain any `NaN`s
     bool notnan(const sdVector& v);
 
-    int nanloc(const dvector& v); // returns index of first NaN component. Returns -1 if none
+    //! Returns the index of first `NaN` component of `v`. Returns -1 if no
+    //! elements are `NaN`.
+    int nanloc(const dvector& v);
 
+    //! Returns `true` if *a* and *b* are equal to within the specified
+    //! relative (`rtol`) and absolute (`atol`) tolerances.
     inline bool almostEqual(double a, double b, double rtol=1e-10, double atol=1e-18) {
         return (abs(a - b) < rtol * (abs(a) + abs(b)) + atol);
     }
 
+    //! Returns a vector containing the absolute values of the elements of
+    //! *v*.
     dvector abs(const dvector& v);
 
-    // Returns the index of the first element of v which is true
-    // Returns -1 if all elements of v are false.
+    //! Returns the index of the first element of *v* which is `true`. Returns
+    //! `-1` if all elements of *v* are `false`.
     template <class T>
     int findFirst(const T& v) {
         for (long int i=0; i< static_cast<long int>(v.size()); i++) {
@@ -111,8 +146,8 @@ namespace mathUtils
         return -1;
     }
 
-    // Returns the index of the last element of v which is true
-    // Returns -1 if all elements of v are false.
+    //! Returns the index of the last element of *v* which is `true`. Returns `-1` if
+    //! all elements of *v* are `false`.
     template <class T>
     int findLast(const T& v)
     {
@@ -124,9 +159,12 @@ namespace mathUtils
         return -1;
     }
 
-    // Returns the indices of the elements of v which are true
+    //! Returns a vector containing the indices of the elements of *v* which
+    //! are `true`.
     vector<int> find(vector<bool>& v);
 
+    //! Applies a simple smoothing function to *v* which effectively filters
+    //! out high-frequency components.
     template <class T>
     void smooth(T& v)
     {
@@ -140,9 +178,12 @@ namespace mathUtils
         }
     }
 
+    //! Returns a vector of *n* elements linearly spaced along the closed
+    //! interval `[x1, x2]`
     dvector linspace(const double x1, const double x2, const int n);
 
-    // Internal function for splines
+    //! Internal function for calculating cubic splines for a sequence of data
+    //! points.
     template <class T1, class T2>
     vector<T1> computeSplines(const T1& xIn, const T2& yIn)
     {
@@ -194,7 +235,14 @@ namespace mathUtils
         return c;
     }
 
-    // Linear interpolation. T is, e.g. vector<double>.
+    //! Linear interpolation for a vector of desired outputs. `T` is a
+    //! container of doubles, e.g. `vector<double>` or `Eigen::ArrayXd`.
+    //! @param xIn Input x-coordinates, length *N*. Must be monotonically
+    //!     increasing.
+    //! @param yIn Input y-coordinates, length *N*
+    //! @param xOut Target x-coordinates, length *M*
+    //! @returns Computed y-coordinates at the points defined in *xOut*,
+    //!     length *M*
     template <class T>
     T interp1(const T& xIn, const T& yIn, const T& xOut)
     {
@@ -219,7 +267,13 @@ namespace mathUtils
         return yOut;
     }
 
-    // Linear interpolation. T is a container of doubles.
+    //! Linear interpolation for a single output point. `T` is a container of
+    //! dobules, e.g. `vector<double>` or `Eigen::ArrayXd`.
+    //! @param xIn Input x-coordinates, length *N*. Must be monotonically
+    //!     increasing.
+    //! @param yIn Input y-coordinates, length *N*
+    //! @param xOut Target x-coordinate
+    //! @returns Computed y-coordinate at *xOut*
     template <class T>
     double interp1(const T& xIn, const T& yIn, const double xOut)
     {
@@ -238,11 +292,24 @@ namespace mathUtils
         return yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut-xIn[j]);
     }
 
-    // Cubic Spline interpolation
+    //! Cubic spline interpolation for a vector of desired outputs.
+    //! @param xIn Input x-coordinates, length *N*. Must be monotonically
+    //!     increasing.
+    //! @param yIn Input y-coordinates, length *N*
+    //! @param xOut Target x-coordinates, length *M*
+    //! @returns Computed y-coordinates at the points defined in *xOut*,
+    //!     length *M*
     dvec splines(const dvec& xIn, const dvec& yIn, const dvec& xOut);
+
+    //! Cubic spline interpolation for a single output point.
+    //! @param xIn Input x-coordinates, length *N*. Must be monotonically
+    //!     increasing.
+    //! @param yIn Input y-coordinates, length *N*
+    //! @param xOut Target x-coordinate
+    //! @returns Computed y-coordinate at *xOut*
     double splines(const dvec& xIn, const dvec& yIn, const double xOut);
 
-    // Integration of cubic splines
+    //! Numerical integration using the cubic spline fit for the given data.
     template <class T1, class T2>
     double integrate(const T1& x, const T2& y)
     {
@@ -266,7 +333,7 @@ namespace mathUtils
         return I;
     }
 
-    // Trapezoidal rule integration
+    //! Trapezoidal rule integration
     template <class T1, class T2>
     double trapz(const T1& x, const T2& y)
     {
@@ -294,8 +361,8 @@ namespace mathUtils
     int sign(const double x);
     int sign(const int x);
 
-    // Sort & remove duplicate entries from "keys", and perform the same permutation on "values"
-    // Requires that keys.size() == values[i].size()
+    //! Sort & remove duplicate entries from *keys*, and perform the same
+    //! permutation on *values* Requires that `keys.size() == values[i].size()`
     template <class Tx, class Ty>
     void uniqueSort(vector<Tx>& keys, vector< vector<Ty> >& values);
 }
