@@ -73,7 +73,15 @@ public:
     int gcount; //!< Total number of %ODE function calls
 
 private:
-    void getInitialStepSize(double tf); //!< Estimate the initial step size.
+    //! Estimate the initial step size.
+    //!
+    //! Strongly increasing functions(`q >> d` assumed here) use a step- size
+    //! estimate proportional to the step needed for the function to reach
+    //! equilibrium where as functions decreasing or in equilibrium use a
+    //! stepsize estimate directly proportional to the characteristic stepsize
+    //! of the function. convergence of the integration scheme is likely since
+    //! the smallest estimate is chosen for the initial stepsize.
+    void getInitialStepSize(double tf);
 
     QssOde* ode_;
     size_t N; //!< Number of state variables.

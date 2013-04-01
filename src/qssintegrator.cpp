@@ -78,16 +78,6 @@ void QssIntegrator::setState(const dvec& yIn, double tstart_)
 
 void QssIntegrator::getInitialStepSize(double tf)
 {
-    // Estimate the initial stepsize.
-
-    // strongly increasing functions(q >>> d assumed here) use a step-
-    // size estimate proportional to the step needed for the function to
-    // reach equilibrium where as functions decreasing or in equilibrium
-    // use a stepsize estimate directly proportional to the character-
-    // istic stepsize of the function. convergence of the integration
-    // scheme is likely since the smallest estimate is chosen for the
-    // initial stepsize.
-
     firstStep = false;
     double scrtch = 1.0e-25;
 

@@ -17,7 +17,12 @@ class DiffusionSystem : public TridiagonalODE, public GridBased
 {
 public:
     DiffusionSystem();
+
+    //! Build the matrix *A* describing the linear %ODE. `a[j]`, `b[j]`, and
+    //! `c[j]` are respectivley the subdiagonal, diagonal, and superdiagonal
+    //! elements of row `j`.
     void get_A(dvec& a, dvec& b, dvec& c);
+
     void get_k(dvec& k);
     void resize(size_t N);
 

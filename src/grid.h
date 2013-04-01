@@ -137,6 +137,34 @@ public:
     //! Subsequent elements are arrays (such as the time derivative of a state
     //! variable) which needs to be updated to fit on the new grid but are not
     //! required to meet adaptation tolerances.
+    //!
+    //! This function tries to remove unnecessary grid points located in the
+    //! regions of small gradients, insert new grid points in the regions of
+    //! large gradients, and, at the same time maintain relative uniformity of
+    //! the grid.
+    //!
+    //! *Adaptation algorithm*
+    //!
+    //! The insertion of the grid points is performed first. For each
+    //! component of the solution vector:
+    //!
+    //! 1. Find its range and the range of its derivative.
+    //! 2. Apply four criteria and and find where insertions are
+    //!    needed. the criteria for a component f(j) are:
+    //!      - `|f[j+1]-f[j]| < vtol*range(f)`
+    //!      - `|dfdy[j+1]-dfdy[j]| < dvtol*range(dfdy)`
+    //!      - `1/uniformityTol < hh[j]/hh[j-1] < uniformityTol`
+    //! 3. If any of these criteria is not satisfied, a grid point j
+    //!    is inserted.
+    //!
+    //! Next, the unnecessary grid points are removed, and the algorithm is
+    //! applied in reverse. If the criteria:
+    //!   - `|f[j]-f[j-1]| > rmTol*vtol*range(f)`
+    //!   - `|dfdy[j]-dfdy[j-1]| > rmTol*dvtol*range(dfdy)`
+    //!   - `hh[j]+hh[j-1] < uniformityTol*hh[j-2]`
+    //!   - `hh[j]+hh[j-1] < uniformityTol*hh[j+1]`
+    //!
+    //! are satisfied for all components at a point, it is removed.
     void adapt(vector<dvector>& y);
 
     //! Add and remove points at the boundaries of the domain to satisfy

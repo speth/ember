@@ -9,9 +9,6 @@ DiffusionSystem::DiffusionSystem()
 
 void DiffusionSystem::get_A(dvec& a, dvec& b, dvec& c)
 {
-    // Build the matrix A describing the linear ODE.
-    // a[j], b[j], and c[j] are the subdiagonal, diagonal, and superdiagonal
-    // elements of row j
     assert(mathUtils::notnan(D));
     assert(mathUtils::notnan(B));
 
