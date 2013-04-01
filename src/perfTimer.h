@@ -11,16 +11,33 @@
 #include <time.h>
 #endif
 
+//! A high-resolution, thread-aware timer and call counter class. Uses OS-
+//! specific timers to get better precision (typically microsecond or better
+//! resolution) than the cross- platform `clock` function which typically has
+//! a resolution on the order of 10 ms. Multiple threads may independently
+//! start() and stop() the same timer. The reported elapsed time will be the
+//! sum of the elapsed time from each thread.
 class PerfTimer {
 public:
     PerfTimer();
     ~PerfTimer() {};
 
+    //! Start accumulating time, and increment the call counter.
     void start();
+
+    //! Stop accumulating time.
     void stop();
+
+    //! Reset the accumulated time.
     void reset();
-    void resume(); // starts timer without incrementing callCount
-    double getTime() const; // elapsed time in seconds
+
+    //! Starts accumulating time without incrementing callCount.
+    void resume();
+
+    //! Get the elapsed time in seconds.
+    double getTime() const;
+
+    //! Get the total call count.
     unsigned long int getCallCount() const;
 
 private:
