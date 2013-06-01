@@ -436,6 +436,16 @@ class InitialCondition(Options):
     equivalenceRatio = FloatOption(0.75, min=0, label='Equivalence Ratio',
         filter=_isPremixed)
 
+    #: Molar composition of the flow opposite the premixed reactant
+    #: stream, if different from the equilibrium composition
+    counterflow = StringOption(None, label='Composition of counterflow',
+                               filter=_isPremixed, level=1)
+
+    #: Temperature of the flow opposite the premixed reactant stream, if
+    #: different from the equilibrium temperature
+    Tcounterflow = FloatOption(None, label='Temperature of counteflow',
+                               filter=_isPremixed, level=1)
+
     #: Thermodynamic pressure [Pa]
     pressure = FloatOption(101325, min=0)
 
@@ -969,8 +979,15 @@ class ConcreteConfig(_ember.ConfigOptions):
 
             # Products
             gas.equilibrate('HP')
-            Tb = gas.temperature()
-            Yb = gas.massFractions()
+            if IC.Tcounterflow is None:
+                Tb = gas.temperature()
+            else:
+                Tb = IC.Tcounterflow
+            if IC.counterflow is None:
+                Yb = gas.massFractions()
+            else:
+                gas.set(X=IC.counterflow, T=Tb, P=IC.pressure)
+                Yb = gas.massFractions()
 
             # Diluent in the middle
             gas.set(X=IC.oxidizer, T=IC.Tu, P=IC.pressure)
