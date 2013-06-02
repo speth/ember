@@ -475,14 +475,14 @@ class InitialCondition(Options):
     #: filter before starting the simulation.
     smoothCount = IntegerOption(4, level=2)
 
-    #: True if initial profiles for x,T,U and Y (as well as rVzero) are given
+    #: True if initial profiles for x,T,U,V and Y are given
     haveProfiles = BoolOption(False, level=3)
 
     x = Option(None, level=3)
     T = Option(None, level=3)
     U = Option(None, level=3)
     Y = Option(None, level=3)
-    rVzero = FloatOption(None, level=3)
+    V = Option(None, level=3)
 
 
 class WallFlux(Options):
@@ -928,46 +928,37 @@ class ConcreteConfig(_ember.ConfigOptions):
             elif opts is None:
                 setattr(self, name, None)
 
-        if (not self.initialCondition.restartFile and
-            not self.initialCondition.haveProfiles):
+        self.gas = Cantera.IdealGasMix(self.chemistry.mechanismFile,
+                                       self.chemistry.phaseID)
+
+        if self.initialCondition.restartFile:
+            self.readInitialCondition(self.initialCondition.restartFile)
+        elif not self.initialCondition.haveProfiles:
             self.generateInitialCondition()
         self.apply_options()
 
-    def generateInitialCondition(self):
+    def readInitialCondition(self, restartFile):
         """
-        Generate initial profiles for temperature, species mass fractions, and
-        velocity using the specified fuel and oxidizer compositions and flame
-        configuration parameters.
+        Read the initial profiles for temperature, species mass fractions, and
+        velocity from the specified input file.
         """
-        gas = Cantera.IdealGasMix(self.chemistry.mechanismFile,
-                                  self.chemistry.phaseID)
-
         IC = self.initialCondition
-        N = IC.nPoints
+        data = utils.HDFStruct(restartFile)
+        IC.x = data.x
+        IC.Y = data.Y
+        IC.T = data.T
+        IC.U = data.U
+        IC.V = data.V
 
-        xLeft = (0.0 if self.general.twinFlame or self.general.curvedFlame
-                 else IC.xLeft)
+        IC.haveProfiles = True
+        if (IC.fuel or IC.oxidizer or IC.Tfuel or IC.Toxidizer or IC.equivalenceRatio
+            or IC.Tcounterflow or IC.counterflow):
+            self.setBoundaryValues(IC.T, IC.Y)
 
-        x = np.linspace(xLeft, IC.xRight, N)
-        T = np.zeros(N)
-        Y = np.zeros((gas.nSpecies(), N))
-
-        jm = (N-1) // 2
-
-        # make sure the initial profile fits comfortably in the domain
-        scale = 0.8 * (x[-1] - x[0]) / (IC.centerWidth + 2 * IC.slopeWidth)
-        if scale < 1.0:
-            IC.slopeWidth *= scale
-            IC.centerWidth *= scale
-
-        # Determine the grid indices defining each profile segment
-        dx = x[1]-x[0]
-        centerPointCount = int(0.5 + 0.5 * IC.centerWidth / dx)
-        slopePointCount = int(0.5 + IC.slopeWidth / dx)
-        jl2 = jm - centerPointCount
-        jl1 = jl2 - slopePointCount
-        jr1 = jm + centerPointCount
-        jr2 = jr1 + slopePointCount
+    def setBoundaryValues(self, T, Y):
+        IC = self.initialCondition
+        jm = (IC.nPoints-1) // 2
+        gas = self.gas
 
         if IC.flameType == 'premixed':
             # Reactants
@@ -989,36 +980,18 @@ class ConcreteConfig(_ember.ConfigOptions):
                 gas.set(X=IC.counterflow, T=Tb, P=IC.pressure)
                 Yb = gas.massFractions()
 
-            # Diluent in the middle
-            gas.set(X=IC.oxidizer, T=IC.Tu, P=IC.pressure)
-            Y[:,jm] = gas.massFractions()
-
             if self.general.unburnedLeft:
-                Tleft = IC.Tu
-                Yleft = Yu
-                Tright = Tb
-                Yright = Yb
+                T[0] = IC.Tu
+                Y[:,0] = Yu
+                T[-1] = Tb
+                Y[:,-1] = Yb
             else:
-                Tleft = Tb
-                Yleft = Yb
-                Tright = IC.Tu
-                Yright = Yu
-
-            T[0] = Tleft
-            T[-1] = Tright
-            T[jm] = IC.Tu
+                T[0] = Tb
+                Y[:,0] = Yb
+                T[-1] = IC.Tu
+                Y[:,-1] = Yu
 
         elif IC.flameType == 'diffusion':
-            # Stoichiometric mixture at the center
-            IC.equivalenceRatio = 1.0
-            products = utils.calculateReactantMixture(gas, IC.fuel, IC.oxidizer,
-                                                      IC.equivalenceRatio)
-            gas.set(X=products, T=0.5*(IC.Tfuel+IC.Toxidizer), P=IC.pressure)
-            gas.equilibrate('HP')
-            Tb = gas.temperature()
-            Yb = gas.massFractions()
-            Y[:,jm] = Yb
-
             # Fuel
             gas.set(X=IC.fuel, T=IC.Tfuel, P=IC.pressure)
             Yfuel = gas.massFractions()
@@ -1028,25 +1001,74 @@ class ConcreteConfig(_ember.ConfigOptions):
             Yoxidizer = gas.massFractions()
 
             if self.general.fuelLeft:
-                Tleft = IC.Tfuel
-                Yleft = Yfuel
-                Tright = IC.Toxidizer
-                Yright = Yoxidizer
+                T[0] = IC.Tfuel
+                Y[:,0] = Yfuel
+                T[-1] = IC.Toxidizer
+                Y[:,-1] = Yoxidizer
             else:
-                Tleft = IC.Toxidizer
-                Yleft = Yoxidizer
-                Tright = IC.Tfuel
-                Yright = Yfuel
+                T[0] = IC.Toxidizer
+                Y[:,0] = Yoxidizer
+                T[-1] = IC.Tfuel
+                Y[:,-1] = Yfuel
 
-            T[0] = Tleft
-            T[-1] = Tright
-            T[jm] = Tb
-
-            gas.set(Y=Yleft, T=Tleft, P=IC.pressure)
+            gas.set(Y=Y[:,0], T=T[0], P=IC.pressure)
             rhou = gas.density()  # arbitrary for diffusion flame
 
-        Y[:,0] = Yleft
-        Y[:,-1] = Yright
+        return rhou
+
+    def generateInitialCondition(self):
+        """
+        Generate initial profiles for temperature, species mass fractions, and
+        velocity using the specified fuel and oxidizer compositions and flame
+        configuration parameters.
+        """
+        IC = self.initialCondition
+        N = IC.nPoints
+        gas = self.gas
+
+        xLeft = (0.0 if self.general.twinFlame or self.general.curvedFlame
+                 else IC.xLeft)
+
+        x = np.linspace(xLeft, IC.xRight, N)
+        T = np.zeros(N)
+        Y = np.zeros((self.gas.nSpecies(), N))
+        V = np.zeros(N)
+
+        jm = (IC.nPoints-1) // 2
+
+        # make sure the initial profile fits comfortably in the domain
+        scale = 0.8 * (x[-1] - x[0]) / (IC.centerWidth + 2 * IC.slopeWidth)
+        if scale < 1.0:
+            IC.slopeWidth *= scale
+            IC.centerWidth *= scale
+
+        # Determine the grid indices defining each profile segment
+        dx = x[1]-x[0]
+        centerPointCount = int(0.5 + 0.5 * IC.centerWidth / dx)
+        slopePointCount = int(0.5 + IC.slopeWidth / dx)
+        jl2 = jm - centerPointCount
+        jl1 = jl2 - slopePointCount
+        jr1 = jm + centerPointCount
+        jr2 = jr1 + slopePointCount
+
+        rhou = self.setBoundaryValues(T, Y)
+
+        if IC.flameType == 'premixed':
+            T[jm] = IC.Tu
+            # Diluent in the middle
+            gas.set(X=IC.oxidizer, T=IC.Tu, P=IC.pressure)
+            Y[:,jm] = gas.massFractions()
+
+        elif IC.flameType == 'diffusion':
+            # Stoichiometric mixture at the center
+            IC.equivalenceRatio = 1.0
+            products = utils.calculateReactantMixture(gas, IC.fuel, IC.oxidizer,
+                                                      IC.equivalenceRatio)
+            gas.set(X=products, T=0.5*(IC.Tfuel+IC.Toxidizer), P=IC.pressure)
+            gas.equilibrate('HP')
+            T[jm] = gas.temperature()
+            Y[:,jm] = gas.massFractions()
+
 
         newaxis = np.newaxis
         Y[:,1:jl1] = Y[:,0,newaxis]
@@ -1072,6 +1094,7 @@ class ConcreteConfig(_ember.ConfigOptions):
             utils.smooth(T)
         Y = YT.T
 
+        rho = np.zeros(N)
         U = np.zeros(N)
         if self.strainParameters.function:
             a0 = self.strainParameters.function(self.times.tStart)
@@ -1079,17 +1102,34 @@ class ConcreteConfig(_ember.ConfigOptions):
             a0 = self.strainParameters.initial
         for j in range(N):
             gas.set(Y=Y[:,j], T=T[j], P=IC.pressure)
-            rho = gas.density()
-            U[j] = a0 * np.sqrt(rhou/rho)
+            rho[j] = gas.density()
+            U[j] = a0 * np.sqrt(rhou/rho[j])
 
         for _ in range(2):
             utils.smooth(U)
+
+        if self.general.twinFlame or self.general.curvedFlame:
+            # Stagnation point at x = 0
+            V[0] = 0
+            for j in range(N):
+                V[j] = V[j-1] - rho[j]*U[j]*(x[j] - x[j-1])
+        else:
+            # Put the stagnation point on the hot side of the flame
+            if T[-1] > T[0]:
+                jz = 3 * N // 4
+            else:
+                jz = N // 4
+            V[jz] = 0
+            for j in range(jz+1, N):
+                V[j] = V[j-1] - rho[j]*U[j]*(x[j] - x[j-1])
+            for j in range(jz-1, -1, -1):
+                V[j] = V[j] + rho[j-1]*U[j-1]*(x[j] - x[j-1])
 
         IC.x = x
         IC.Y = Y
         IC.T = T
         IC.U = U
-        IC.rVzero = 0.0  # @todo: Better estimate? Is this currently used?
+        IC.V = V
         IC.haveProfiles = True
 
     def run(self):

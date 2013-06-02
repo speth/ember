@@ -86,37 +86,6 @@ void FlameSolver::initialize(void)
     ddtProd.setZero();
 
     updateChemicalProperties();
-    // Determine initial condition for V
-    dvec& V(convectionSystem.utwSystem.V);
-    V.resize(nPoints);
-    if (options.haveRestartFile) {
-        V[0] = rVzero;
-        for (size_t j=1; j<nPoints; j++) {
-            V[j] = V[j-1] - rho[j]*U(j)*(x[j]-x[j-1]);
-        }
-    } else if ((options.twinFlame || options.curvedFlame) && !options.xFlameControl) {
-        rVzero = 0;
-        V[0] = 0;
-        for (size_t j=1; j<nPoints; j++) {
-            V[j] = V[j-1] - rho[j]*U(j)*(x[j]-x[j-1]);
-        }
-    } else {
-        // Put the stagnation point on the burned side of the flame
-        size_t jz = (grid.ju + 3 * grid.jb) / 4;
-        convectionSystem.utwSystem.xVzero = x[jz];
-        V[jz] = 0;
-
-        for (size_t j=jz+1; j<nPoints; j++) {
-            V[j] = V[j-1] - rho[j]*U(j)*(x[j]-x[j-1]);
-        }
-
-        if (jz != 0) {
-            for (size_t j=jz; j>0; j--) {
-                V[j-1] = V[j] + rho[j-1]*U(j-1)*(x[j]-x[j-1]);
-            }
-        }
-        rVzero = V[0];
-    }
     calculateQdot();
     convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
 
@@ -1030,7 +999,7 @@ double FlameSolver::getHeatReleaseRate(void)
 double FlameSolver::getConsumptionSpeed(void)
 {
     double QoverCp = mathUtils::integrate(x, qDot / cp);
-    double rhouDeltaT = rhou*(Tb-Tu);
+    double rhouDeltaT = rhou*(T(grid.jb)-T(grid.ju));
     return QoverCp/rhouDeltaT;
 }
 
@@ -1044,117 +1013,53 @@ void FlameSolver::loadProfile(void)
     grid.alpha = (options.curvedFlame) ? 1 : 0;
     grid.unburnedLeft = options.unburnedLeft;
 
-    if (options.haveRestartFile) {
-        logFile.write(format("Reading initial condition from %s") %
-                      options.restartFile);
-        DataFile infile(options.restartFile);
-        x = infile.readVec("x");
+    // Read initial condition specified in the configuration file
+    x = options.x_initial;
+    nPoints = x.size();
+    resizeMappedArrays();
 
-        grid.setSize(x.size());
-        grid.updateValues();
-        grid.updateBoundaryIndices();
-        nPoints = x.size();
-        resizeMappedArrays();
-
-        U = infile.readVec("U");
-        T = infile.readVec("T");
-        Y = infile.readArray2D("Y", true);
-        tNow = infile.readScalar("t");
-        if (!options.haveTStart) {
-            // If tStart is not in the input file, use the time from the restart file.
-            tStart = tNow;
-        }
-
-        dvec V = infile.readVec("V");
-        rVzero = V[0];
-
-        if (!options.fileNumberOverride) {
-            options.outputFileNumber = (int) infile.readScalar("fileNumber");
-        }
-    } else if (options.haveInitialProfiles) {
-        // Read initial condition specified in the configuration file
-        logFile.write("Reading initial condition from configuration file.");
-        x = options.x_initial;
-        nPoints = x.size();
-        resizeMappedArrays();
-
-        U = options.U_initial;
-        T = options.T_initial;
-        Y = options.Y_initial;
-        if (Y.rows() == static_cast<dmatrix::Index>(x.size())) {
-            Y = Y.transpose().eval();
-        }
-        rVzero = options.rVzero_initial;
-
-        grid.setSize(x.size());
-        grid.updateValues();
-        grid.updateBoundaryIndices();
-
-        tNow = (options.haveTStart) ? options.tStart : 0.0;
-    } else {
-        throw DebugException("Initial profile data required but not provided.");
+    U = options.U_initial;
+    T = options.T_initial;
+    Y = options.Y_initial;
+    if (Y.rows() == static_cast<dmatrix::Index>(x.size())) {
+        Y = Y.transpose().eval();
     }
+    convectionSystem.V = options.V_initial;
+    convectionSystem.utwSystem.V = options.V_initial;
+    rVzero = convectionSystem.utwSystem.V[0];
 
-    Tu = (options.overrideTu) ? options.Tu : T(grid.ju);
+    grid.setSize(x.size());
+    grid.updateValues();
+    grid.updateBoundaryIndices();
+
+    tNow = (options.haveTStart) ? options.tStart : 0.0;
 
     if (options.flameType == "premixed") {
-        // Save the burned gas properties for the case where the burned
-        // values are not fixed.
-        double TbSave = T(grid.jb);
-        dvec YbSave = Y.col(grid.jb);
-
-        if (options.overrideReactants) {
-            dvec reactants = gas.calculateReactantMixture(
-                options.fuel, options.oxidizer, options.equivalenceRatio);
-            gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
-            gas.thermo.getMassFractions(&Y(0,grid.ju));
-            gas.thermo.setState_TPX(Tu,gas.pressure, &reactants[0]);
-            Cantera::equilibrate(gas.thermo,"HP");
-            gas.thermo.getMassFractions(&Y(0,grid.jb));
-            T(grid.jb) = gas.thermo.temperature();
-        }
-        Tb = T(grid.jb);
-
         gas.setStateMass(&Y(0,grid.ju), T(grid.ju));
         rhou = gas.getDensity();
         gas.setStateMass(&Y(0,grid.jb), T(grid.ju));
         rhob = gas.getDensity();
-        Yu = Y.col(grid.ju);
-        Yb = Y.col(grid.jb);
 
         if (options.unburnedLeft) {
             rhoLeft = rhou;
-            Tleft = Tu;
-            Yleft = Yu;
+            Tleft = T(grid.ju);
+            Yleft = Y.col(grid.ju);
             rhoRight = rhob;
-            Tright = Tb;
-            Yright = Yb;
+            Tright = T(grid.jb);
+            Yright = Y.col(grid.jb);
         } else {
             rhoLeft = rhob;
-            Tleft = Tb;
-            Yleft = Yb;
+            Tleft = T(grid.jb);
+            Yleft = Y.col(grid.jb);
             rhoRight = rhou;
-            Tright = Tu;
-            Yright = Yu;
-        }
-
-        if (!options.fixedBurnedVal) {
-            T(grid.jb) = TbSave;
-            Y.col(grid.jb) = YbSave;
-        }
-
-        if (options.overrideTu) {
-            T(grid.ju) = Tu;
+            Tright = T(grid.ju);
+            Yright = Y.col(grid.ju);
         }
 
     } else if (options.flameType == "diffusion") {
         // Fuel composition
         size_t jFuel = (options.fuelLeft) ? 0 : jj;
-        if (options.overrideReactants) {
-            gas.thermo.setState_TPX(options.Tfuel, options.pressure, options.fuel);
-        } else {
-            gas.thermo.setState_TPY(T(jFuel), options.pressure, &Y(0,jFuel));
-        }
+        gas.thermo.setState_TPY(T(jFuel), options.pressure, &Y(0,jFuel));
         double rhoFuel = gas.getDensity();
         dvec Yfuel(nSpec);
         gas.getMassFractions(Yfuel);
@@ -1162,15 +1067,9 @@ void FlameSolver::loadProfile(void)
 
         // Oxidizer composition
         size_t jOxidizer = (options.fuelLeft) ? jj : 0;
-        if (options.overrideReactants) {
-            gas.thermo.setState_TPX(options.Toxidizer,
-                                    options.pressure,
-                                    options.oxidizer);
-        } else {
-            gas.thermo.setState_TPY(T(jOxidizer),
-                                    options.pressure,
-                                    &Y(0,jOxidizer));
-        }
+        gas.thermo.setState_TPY(T(jOxidizer),
+                                options.pressure,
+                                &Y(0,jOxidizer));
         double rhoOxidizer = gas.getDensity();
         dvec Yoxidizer(nSpec);
         gas.getMassFractions(Yoxidizer);

@@ -90,8 +90,8 @@ public:
 
     // Boundary values
     double rhou, rhob, rhoLeft, rhoRight;
-    double Tu, Tb, Tleft, Tright;
-    dvec Yu, Yb, Yleft, Yright;
+    double Tleft, Tright;
+    dvec Yleft, Yright;
 
     void setupStep();
     void prepareIntegrators();

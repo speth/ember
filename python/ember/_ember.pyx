@@ -100,36 +100,27 @@ cdef class ConfigOptions:
 
         # Initial condition
         IC = self.initialCondition
-        opts.restartFile, opts.haveRestartFile = get(IC.restartFile, '')
-
-        opts.haveInitialProfiles = IC.haveProfiles
         cdef np.ndarray[np.double_t, ndim=1] data
         cdef np.ndarray[np.double_t, ndim=2] Y
-        if opts.haveInitialProfiles:
-            data = np.ascontiguousarray(IC.x)
-            opts.x_initial = map_vector(&data[0], len(data), 1)
 
-            data = np.ascontiguousarray(IC.T)
-            opts.T_initial = map_vector(&data[0], len(data), 1)
+        data = np.ascontiguousarray(IC.x)
+        opts.x_initial = map_vector(&data[0], len(data), 1)
 
-            data = np.ascontiguousarray(IC.U)
-            opts.U_initial = map_vector(&data[0], len(data), 1)
+        data = np.ascontiguousarray(IC.T)
+        opts.T_initial = map_vector(&data[0], len(data), 1)
 
-            # Numpy defaults to row major; Eigen is column major
-            Y = np.ascontiguousarray(IC.Y.T)
-            w, h = Y.shape[0], Y.shape[1]
-            opts.Y_initial = map_matrix(&Y[0,0], h, w, h, 1)
+        data = np.ascontiguousarray(IC.U)
+        opts.U_initial = map_vector(&data[0], len(data), 1)
 
-            opts.rVzero_initial = IC.rVzero
+        data = np.ascontiguousarray(IC.V)
+        opts.V_initial = map_vector(&data[0], len(data), 1)
 
-        # Inlet mixture conditions
-        opts.Tu, opts.overrideTu = get(IC.Tu, 0)
-        opts.fuel, opts.overrideReactants = get(IC.fuel, '')
+        # Numpy defaults to row major; Eigen is column major
+        Y = np.ascontiguousarray(IC.Y.T)
+        w, h = Y.shape[0], Y.shape[1]
+        opts.Y_initial = map_matrix(&Y[0,0], h, w, h, 1)
+
         opts.flameType = IC.flameType
-        opts.oxidizer = IC.oxidizer
-        opts.Tfuel = IC.Tfuel
-        opts.Toxidizer = IC.Toxidizer
-        opts.equivalenceRatio = IC.equivalenceRatio
         opts.pressure = IC.pressure
         opts.quasi2d = IC.flameType == 'quasi2d'
 
@@ -140,7 +131,7 @@ cdef class ConfigOptions:
             opts.Kwall = self.wallFlux.Kwall
         else:
             opts.wallFlux = 0
-            opts.Tinf = opts.Tu
+            opts.Tinf = IC.Tu
             opts.Kwall = 0
 
         # ignition parameters

@@ -39,17 +39,6 @@ public:
     void setContinuityBC(const std::string& condition);
 
     std::string outputDir; //!< [paths.outputDir]
-    std::string restartFile; //!< [initialCondition.file]
-
-    //! Set a new temperature boundary value. Automatically set to 'true' if
-    //! initialCondition.Tu is specified in the config file.
-    bool overrideTu;
-
-    //! Set new species boundary values. Automatically set to 'true' if
-    //! initialCondition.fuel is specified in the config file.
-    bool overrideReactants;
-
-    bool haveRestartFile; //!< True if a restart file has been specified.
 
     //! [general.fixedBurnedVal] True if burned gas state is fixed at
     //! equilibrium conditions.
@@ -109,21 +98,7 @@ public:
     std::string transportModel; //!< [chemistry.transportModel]
     double transportThreshold; //!< [chemistry.threshold]
 
-    std::string fuel; //!< molar composition of the fuel [initialCondition.fuel]
-    std::string oxidizer; //!< molar composition of the oxidizer [initialCondition.oxidizer]
-    double equivalenceRatio; //!< [initialCondition.oxidizer]
     double pressure; //!< [initialConditoin.pressure]
-
-    //! Temperature of the unburned mixture for premixed flames
-    //! [initialCondition.Tu]
-    double Tu;
-
-    //!< Temperature of the fuel for diffusion flames [initialCondition.Tfuel]
-    double Tfuel;
-
-     //! Temperature of the oxidizer for diffusion flames
-     //! [initialCondition.Toxidizer]
-    double Toxidizer;
 
     std::string strainFunctionType;
     double strainRateInitial; //!< [strainParameters.initial]
@@ -132,12 +107,11 @@ public:
     double strainRateT0; //!< [strainParameters.tStart]
 
     // Initial profiles specified in configuration file
-    bool haveInitialProfiles;
     dvec x_initial; //!< [initialCondition.x]
     dvec T_initial; //!< [initialCondition.T]
     dvec U_initial; //!< [initialCondition.U]
+    dvec V_initial; //!< [initialCondition.V]
     dmatrix Y_initial; //!< [initialCondition.Y]
-    double rVzero_initial; //!< [initialCondition.rVzero]
 
     //! If false, energy, continuity, and momentum equations are integrated
     //! normally. If true, then time is actually a surrogate for a spatial

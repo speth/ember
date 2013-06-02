@@ -44,8 +44,7 @@ cdef extern from "readConfig.h":
         void setContinuityBC(string&)
         void setLogFile(string&)
 
-        string outputDir, restartFile
-        cbool overrideTu, overrideReactants, haveRestartFile
+        string outputDir
         cbool fixedBurnedVal, fixedLeftLoc, twinFlame
         int continuityBC
         cbool curvedFlame, unburnedLeft, fuelLeft
@@ -67,17 +66,13 @@ cdef extern from "readConfig.h":
         string gasMechanismFile, gasPhaseID, transportModel, kineticsModel
         double transportThreshold
 
-        string fuel, oxidizer
-        double equivalenceRatio, pressure
+        double pressure
 
-        double Tu, Tfuel, Toxidizer
         string strainFunctionType
         double strainRateInitial, strainRateFinal, strainRateDt, strainRateT0
 
-        cbool haveInitialProfiles
-        CxxEigenVec x_initial, T_initial, U_initial
+        CxxEigenVec x_initial, T_initial, U_initial, V_initial
         CxxEigenMatrix Y_initial
-        double rVzero_initial
 
         cbool quasi2d
         string interpFile
