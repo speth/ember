@@ -446,6 +446,12 @@ class InitialCondition(Options):
     Tcounterflow = FloatOption(None, label='Temperature of counteflow',
                                filter=_isPremixed, level=1)
 
+    #: Adjust the composition of the counterflow stream so that the components
+    #: are at equilibrium. The boundary condition is not consistent if this mixture
+    #: has reactions that are proceeding at finite rates.
+    equilibrateCounterflow = BoolOption(True, label='Equilibrate specified counterflow mixture',
+                                        filter=_isPremixed, level=1)
+
     #: Thermodynamic pressure [Pa]
     pressure = FloatOption(101325, min=0)
 
@@ -978,6 +984,11 @@ class ConcreteConfig(_ember.ConfigOptions):
                 Yb = gas.massFractions()
             else:
                 gas.set(X=IC.counterflow, T=Tb, P=IC.pressure)
+                Yb = gas.massFractions()
+
+            if IC.equilibrateCounterflow:
+                gas.set(Y=Yb, T=Tb, P=IC.pressure)
+                gas.equilibrate('TP')
                 Yb = gas.massFractions()
 
             if self.general.unburnedLeft:
