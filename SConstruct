@@ -238,7 +238,8 @@ tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
     includes='#include "cantera/transport.h"')
 
 if not tests['CanteraExtendedTransport']:
-    raise EnvironmentError("Missing required Cantera method 'getMixDiffCoeffsMass'.")
+    raise EnvironmentError("Missing required Cantera method 'getMixDiffCoeffsMass'. "
+                           "See 'config.log' for details.")
 
 common_objects = env.SharedObject(Glob('build/core/*.cpp'))
 
