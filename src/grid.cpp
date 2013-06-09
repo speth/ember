@@ -211,8 +211,8 @@ void OneDimGrid::adapt(vector<dvector>& y)
 
         if (insert) {
             // Insert a new point
-            insertionIndicies.push_back(j);
-            addPoint(j, y);
+            insertionIndicies.push_back(static_cast<int>(j));
+            addPoint(static_cast<int>(j), y);
             updated = true;
             setSize(nPoints+1);
             j+=2;
@@ -334,8 +334,8 @@ void OneDimGrid::adapt(vector<dvector>& y)
         }
 
         if (remove) {
-            removalIndices.push_back(j);
-            removePoint(j, y);
+            removalIndices.push_back(static_cast<int>(j));
+            removePoint(static_cast<int>(j), y);
             setSize(nPoints-1);
             updated = true;
         } else {
@@ -400,7 +400,7 @@ bool OneDimGrid::addRight(vector<dvector>& y)
 
     // djMom is for momentum equation, which always uses a special
     // zero-gradient condition.
-    int djMom = 1;
+    size_t djMom = 1;
 
     // All other variables use fixed or zero gradient conditions
     // depending on fixedBurnedVal
@@ -411,7 +411,7 @@ bool OneDimGrid::addRight(vector<dvector>& y)
     // Check flatness of temperature, velocity and species
     // profiles at the boundary.
     for (size_t k=0; k<nAdapt; k++) {
-        int dj = (k == kMomentum) ? djMom : djOther;
+        size_t dj = (k == kMomentum) ? djMom : djOther;
         double ymax = maxval(y[k]);
         if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTol && ymax > absvtol ) {
             if (!pointAdded && debugParameters::debugRegrid) {
@@ -594,12 +594,12 @@ bool OneDimGrid::removeRight(vector<dvector>& y)
 
     // Comparison point for flatness criteria, depending on
     // zero-gradient or fixed value boundary condition
-    int djMom = 2;
+    size_t djMom = 2;
     size_t djOther = (jb==jj && !fixedBurnedVal) ? 3 : 2;
 
     bool pointRemoved = true; // assume removal
     for (size_t k=0; k<nAdapt; k++) {
-        int dj = (k==kMomentum) ? djMom : djOther;
+        size_t dj = (k==kMomentum) ? djMom : djOther;
         double ymax = maxval(y[k]);
         if (abs(y[k][jj]-y[k][jj-dj])/ymax > boundaryTolRm && ymax > absvtol) {
             if (pointRemoved && debugParameters::debugRegrid) {
@@ -618,7 +618,7 @@ bool OneDimGrid::removeRight(vector<dvector>& y)
     }
 
     if (pointRemoved) {
-        removePoint(jj,y);
+        removePoint(static_cast<int>(jj), y);
         setSize(nPoints-1);
         updateBoundaryIndices();
     }
@@ -661,7 +661,7 @@ bool OneDimGrid::removeRightUnstrained(vector<dvector>& y, dvec& qdot)
     }
 
     if (pointRemoved) {
-        removePoint(jj,y);
+        removePoint(static_cast<int>(jj), y);
         qdot.conservativeResize(nPoints-1);
         setSize(nPoints-1);
         updateBoundaryIndices();

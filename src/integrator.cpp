@@ -84,7 +84,7 @@ TridiagonalIntegrator::TridiagonalIntegrator(TridiagonalODE& ode)
 
 void TridiagonalIntegrator::resize(size_t N_in)
 {
-    N = N_in;
+    N = static_cast<int>(N_in);
 
     y.resize(N);
     yprev.resize(N);

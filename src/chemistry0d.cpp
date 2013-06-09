@@ -416,9 +416,9 @@ dvec CanteraGas::calculateReactantMixture(const std::string& fuel,
                                              const std::string& oxidizer,
                                              double equivalenceRatio)
 {
-    int mC = thermo.elementIndex("C");
-    int mO = thermo.elementIndex("O");
-    int mH = thermo.elementIndex("H");
+    size_t mC = thermo.elementIndex("C");
+    size_t mO = thermo.elementIndex("O");
+    size_t mH = thermo.elementIndex("H");
 
     double Cf(0), Hf(0), Of(0); // moles of C/H/O in fuel
     double Co(0), Ho(0), Oo(0); // moles of C/H/O in oxidizer
@@ -433,15 +433,15 @@ dvec CanteraGas::calculateReactantMixture(const std::string& fuel,
     dvec a(thermo.nElements());
     for (size_t k=0; k<nSpec; k++) {
         thermo.getAtoms(k, &a[0]);
-        if (mC != -1) {
+        if (mC != npos) {
             Cf += a[mC]*Xf[k];
             Co += a[mC]*Xo[k];
         }
-        if (mH != -1) {
+        if (mH != npos) {
             Hf += a[mH]*Xf[k];
             Ho += a[mH]*Xo[k];
         }
-        if (mO != -1) {
+        if (mO != npos) {
             Of += a[mO]*Xf[k];
             Oo += a[mO]*Xo[k];
         }

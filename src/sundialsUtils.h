@@ -33,14 +33,16 @@ public:
     sdVector(const sdVector& other);
     ~sdVector();
 
-    realtype& operator[](unsigned int i)
+    template <class T>
+    realtype& operator[](T i)
     {
-        return NV_Ith_S(v,i);
+        return NV_Ith_S(v, static_cast<long int>(i));
     }
 
-    realtype& operator[](unsigned int i) const
+    template <class T>
+    realtype& operator[](T i) const
     {
-        return NV_Ith_S(v,i);
+        return NV_Ith_S(v, static_cast<long int>(i));
     }
 
     //! Return the underlying `N_Vector` object needed by Sundials functions.
@@ -69,14 +71,16 @@ public:
     sdMatrix();
     ~sdMatrix();
 
-    realtype& operator()(unsigned int i, unsigned int j)
+    template <class T>
+    realtype& operator()(T i, T j)
     {
-        return DENSE_ELEM(M,i,j);
+        return DENSE_ELEM(M, static_cast<long int>(i), static_cast<long int>(j));
     }
 
-    realtype& operator()(unsigned int i, unsigned int j) const
+    template <class T>
+    realtype& operator()(T i, T j) const
     {
-        return DENSE_ELEM(M,i,j);
+        return DENSE_ELEM(M, static_cast<long int>(i), static_cast<long int>(j));
     }
 
     //! Return a pointer to the underlying data, needed by Sundials functions.

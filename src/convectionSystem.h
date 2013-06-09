@@ -111,7 +111,7 @@ public:
      //! BoundaryCondition::ControlVolume.
     double Yleft;
 
-    int k; //!< Species index. Used for debugging purposes only.
+    size_t k; //!< Species index. Used for debugging purposes only.
     dvec splitConst; //!< constant term introduced by splitting
 
     //! Axial (normal) velocity [m/s] as a function of time. This velocity

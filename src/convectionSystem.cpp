@@ -454,18 +454,18 @@ void ConvectionSystemSplit::resize
         // Create speciesSolvers from scratch if the number of species has changed
         speciesSolvers.clear();
         for (size_t k=0; k<nSpec; k++) {
-            speciesSolvers.push_back(new SundialsCvode(nPoints));
+            speciesSolvers.push_back(new SundialsCvode(static_cast<int>(nPoints)));
             configureSolver(speciesSolvers[k], k);
         }
     } else {
         // Replace the solvers where the number of points has changed
         for (size_t k=0; k<nSpec; k++) {
-            speciesSolvers.replace(k, new SundialsCvode(nPointsNew));
+            speciesSolvers.replace(k, new SundialsCvode(static_cast<int>(nPointsNew)));
             configureSolver(speciesSolvers[k], k);
         }
     }
 
-    utwSolver.reset(new SundialsCvode(3*nPoints));
+    utwSolver.reset(new SundialsCvode(static_cast<int>(3*nPoints)));
     utwSolver->setODE(&utwSystem);
     utwSolver->setBandwidth(0,0);
     utwSolver->reltol = reltol;
@@ -526,7 +526,7 @@ void ConvectionSystemSplit::set_rVzero(const double rVzero)
 
 void ConvectionSystemSplit::evaluate()
 {
-    sdVector ydotUTW(nVars*nPoints);
+    sdVector ydotUTW(static_cast<int>(nVars*nPoints));
     utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
 
     vInterp->clear();
@@ -539,7 +539,7 @@ void ConvectionSystemSplit::evaluate()
 
     dYdt.resize(nSpec, nPoints);
     dYdt.setZero();
-    sdVector ydotk(nPoints);
+    sdVector ydotk(static_cast<int>(nPoints));
     for (size_t k=0; k<nSpec; k++) {
         speciesSystems[k].vInterp = vInterp;
         speciesSystems[k].f(speciesSolvers[k].tInt, speciesSolvers[k].y, ydotk);
@@ -586,7 +586,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
         utwTimer.start();
         vInterp->clear();
 
-        sdVector ydotUTW(nVars*nPoints);
+        sdVector ydotUTW(static_cast<int>(nVars*nPoints));
         utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
         vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
 

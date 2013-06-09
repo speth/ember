@@ -6,10 +6,10 @@ const double NaN = std::numeric_limits<double>::quiet_NaN();
 
 double mathUtils::maxval(const dvector& v)
 {
-    int n = v.size();
+    size_t n = v.size();
     if (n==0) { return 0; }
     double val = v[0];
-    for (int i=0; i<n; i++) {
+    for (size_t i=0; i<n; i++) {
         if (v[i] > val) {
             val = v[i];
         }
@@ -34,10 +34,10 @@ double mathUtils::range(const dvector& v)
 
 double mathUtils::sum(const dvector& v)
 {
-    int n = v.size();
+    size_t n = v.size();
     if (n==0) { return 0; }
     double val = 0;
-    for (int i=0; i<n; i++) {
+    for (size_t i=0; i<n; i++) {
         val += v[i];
     }
     return val;
@@ -45,24 +45,24 @@ double mathUtils::sum(const dvector& v)
 
 double mathUtils::mean(const dvector& v)
 {
-    int n = v.size();
+    size_t n = v.size();
     if (n==0) { return 0; }
     double val = 0;
-    for (int i=0; i<n; i++) {
+    for (size_t i=0; i<n; i++) {
         val += v[i];
     }
     return val/n;
 }
 
-double mathUtils::maxval(const dvector& v, int iStart, int iEnd)
+double mathUtils::maxval(const dvector& v, size_t iStart, size_t iEnd)
 {
-    int n = v.size();
+    size_t n = v.size();
     if (n==0) { return 0; }
-    if (iStart < 0 || iEnd > n)
+    if (iEnd > n)
         throw DebugException("mathUtils::maxval: bad range specified");
 
     double val = v[iStart];
-    for (int i=iStart; i<=iEnd; i++) {
+    for (size_t i=iStart; i<=iEnd; i++) {
         if (v[i] > val) {
             val = v[i];
         }
@@ -70,15 +70,15 @@ double mathUtils::maxval(const dvector& v, int iStart, int iEnd)
     return val;
 }
 
-double mathUtils::minval(const dvector& v, int iStart, int iEnd)
+double mathUtils::minval(const dvector& v, size_t iStart, size_t iEnd)
 {
-    int n = v.size();
+    size_t n = v.size();
     if (n==0) { return 0; }
-    if (iStart < 0 || iEnd > n)
+    if (iEnd > n)
         throw DebugException("mathUtils::minval: bad range specified");
 
     double val = v[iStart];
-    for (int i=iStart; i<=iEnd; i++) {
+    for (size_t i=iStart; i<=iEnd; i++) {
         if (v[i] < val) {
             val = v[i];
         }
@@ -86,41 +86,41 @@ double mathUtils::minval(const dvector& v, int iStart, int iEnd)
     return val;
 }
 
-double mathUtils::sum(const dvector& v, int iStart, int iEnd)
+double mathUtils::sum(const dvector& v, size_t iStart, size_t iEnd)
 {
-    int n = v.size();
+    size_t n = v.size();
     if (n==0) { return 0; }
-    if (iStart < 0 || iEnd > n)
+    if (iEnd > n)
         throw DebugException("mathUtils::sum: bad range specified");
 
     double val = 0;
-    for (int i=iStart; i<=iEnd; i++) {
+    for (size_t i=iStart; i<=iEnd; i++) {
         val += v[i];
     }
     return val;
 }
 
-double mathUtils::mean(const dvector& v, int iStart, int iEnd)
+double mathUtils::mean(const dvector& v, size_t iStart, size_t iEnd)
 {
-    int n = v.size();
+    size_t n = v.size();
     if (n==0) { return 0; }
-    if (iStart < 0 || iEnd > n)
+    if (iEnd > n)
         throw DebugException("mathUtils::mean: bad range specified");
 
     double val = 0;
-    for (int i=iStart; i<=iEnd; i++) {
+    for (size_t i=iStart; i<=iEnd; i++) {
         val += v[i];
     }
     return val/(iEnd-iStart+1);
 }
 
-int mathUtils::maxloc(const dvector& v)
+size_t mathUtils::maxloc(const dvector& v)
 {
-    int n = v.size();
+    size_t n = v.size();
     if (n==0) { return 0; }
     double val = v[0];
-    int loc = 0;
-    for (int i=0; i<n; i++) {
+    size_t loc = 0;
+    for (size_t i=0; i<n; i++) {
         if (v[i] > val) {
             val = v[i];
             loc = i;
@@ -129,13 +129,13 @@ int mathUtils::maxloc(const dvector& v)
     return loc;
 }
 
-int mathUtils::minloc(const dvector& v)
+size_t mathUtils::minloc(const dvector& v)
 {
-    int n = v.size();
+    size_t n = v.size();
     if (n==0) { return 0; }
     double val = v[0];
-    int loc = 0;
-    for (int i=0; i<n; i++) {
+    size_t loc = 0;
+    for (size_t i=0; i<n; i++) {
         if (v[i] < val) {
             val = v[i];
             loc = i;
@@ -144,7 +144,7 @@ int mathUtils::minloc(const dvector& v)
     return loc;
 }
 
-double mathUtils::range(const dvector& v, int iStart, int iEnd)
+double mathUtils::range(const dvector& v, size_t iStart, size_t iEnd)
 {
     return maxval(v,iStart,iEnd) - minval(v,iStart,iEnd);
 }
@@ -158,13 +158,13 @@ bool mathUtils::notnan(const sdVector& v) {
     return true;
 }
 
-int mathUtils::nanloc(const dvector& v) {
+size_t mathUtils::nanloc(const dvector& v) {
     for (size_t i=0; i<v.size(); i++) {
         if (!(v[i] > 0) && !(v[i] <= 0)) {
             return i;
         }
     }
-    return -1;
+    return npos;
 }
 
 dvector mathUtils::abs(const dvector& v)
@@ -183,7 +183,7 @@ vector<int> mathUtils::find(vector<bool>& v)
     vector<int> out;
     for (vector<bool>::size_type i=0; i<v.size(); i++) {
         if (v[i]) {
-            out.push_back(i);
+            out.push_back(static_cast<int>(i));
         }
     }
     return out;
@@ -207,8 +207,8 @@ dvec mathUtils::splines(const dvec& xIn, const dvec& yIn, const dvec& xOut)
             xIn.rows() % yIn.rows()).str());
     }
 
-    int nOut = xOut.rows();
-    int nIn = xIn.rows();
+    size_t nOut = xOut.rows();
+    size_t nIn = xIn.rows();
 
     vector<dvec> c = computeSplines(xIn, yIn);
 
@@ -216,9 +216,9 @@ dvec mathUtils::splines(const dvec& xIn, const dvec& yIn, const dvec& xOut)
     double dx;
     dvec yOut(nOut);
 
-    for (int i=0; i<nOut; i++) {
-        int j = findFirst(xIn >= xOut[i]) - 1;
-        if (j == -1) {
+    for (size_t i=0; i<nOut; i++) {
+        size_t j = findFirst(xIn >= xOut[i]) - 1;
+        if (j == npos) {
             j = 0;
         } else if (j == -2) {
             j = nIn-1;
@@ -238,13 +238,13 @@ double mathUtils::splines(const dvec& xIn, const dvec& yIn, const double xOut)
             xIn.rows() % yIn.rows()).str());
     }
 
-    int nIn = xIn.rows();
+    size_t nIn = xIn.rows();
 
     vector<dvec> c = computeSplines(xIn, yIn);
 
     // Evaluate the spline at the selected point
-    int j = findFirst(xIn >= xOut) - 1;
-    if (j == -1) {
+    size_t j = findFirst(xIn >= xOut) - 1;
+    if (j == npos) {
         j = 0;
     } else if (j == -2) {
         j = nIn-1;
@@ -256,8 +256,8 @@ double mathUtils::splines(const dvec& xIn, const dvec& yIn, const double xOut)
 
 void mathUtils::vectorVectorToArray2D(const vector<dvector>& v, dmatrix& a)
 {
-    int m = v.size();
-    int n = v.begin()->size();
+    int m = static_cast<int>(v.size());
+    int n = static_cast<int>(v.begin()->size());
     a.resize(m,n);
     for (int i=0; i<m; i++) {
         for (int j=0; j<n; j++) {
@@ -268,8 +268,8 @@ void mathUtils::vectorVectorToArray2D(const vector<dvector>& v, dmatrix& a)
 
 void mathUtils::array2DToVectorVector(const dmatrix& a, vector<dvector>& v)
 {
-    int n = a.rows();
-    int m = a.cols();
+    int n = static_cast<int>(a.rows());
+    int m = static_cast<int>(a.cols());
     v.resize(n);
     for (int i=0; i<n; i++) {
         v[i].resize(m);
@@ -354,9 +354,9 @@ dvector& operator+=(dvector& v1, const dvector& v2)
     if (v1.size() != v2.size())
         throw DebugException("mathUtils::operator+=: cannot add vectors of different sizes.");
 
-    unsigned int n = v1.size();
+    size_t n = v1.size();
 
-    for (unsigned int i=0; i<n; i++) {
+    for (size_t i=0; i<n; i++) {
         v1[i] += v2[i];
     }
 
@@ -374,9 +374,9 @@ dvector& operator-=(dvector& v1, const dvector& v2)
     if (v1.size() != v2.size())
         throw DebugException("mathUtils::operator-=: cannot subtract vectors of different sizes.");
 
-    unsigned int n = v1.size();
+    size_t n = v1.size();
 
-    for (unsigned int i=0; i<n; i++) {
+    for (size_t i=0; i<n; i++) {
         v1[i] -= v2[i];
     }
     return v1;
@@ -390,8 +390,8 @@ dvector operator-(const dvector& v1, const dvector& v2)
 
 dvector& operator+=(dvector& v1, const double s)
 {
-    unsigned int n = v1.size();
-    for (unsigned int i=0; i<n; i++) {
+    size_t n = v1.size();
+    for (size_t i=0; i<n; i++) {
         v1[i] += s;
     }
     return v1;
@@ -405,8 +405,8 @@ dvector operator+(const dvector& v1, const double s)
 
 dvector& operator-=(dvector& v1, const double s)
 {
-    unsigned int n = v1.size();
-    for (unsigned int i=0; i<n; i++) {
+    size_t n = v1.size();
+    for (size_t i=0; i<n; i++) {
         v1[i] -= s;
     }
     return v1;
@@ -420,8 +420,8 @@ dvector operator-(const dvector& v1, const double s)
 
 dvector& operator*=(dvector& v1, const double s)
 {
-    unsigned int n = v1.size();
-    for (unsigned int i=0; i<n; i++) {
+    size_t n = v1.size();
+    for (size_t i=0; i<n; i++) {
         v1[i] *= s;
     }
     return v1;
@@ -432,8 +432,8 @@ dvector& operator*=(dvector& v1, const dvector& v2)
     if (v1.size() != v2.size()) {
         throw DebugException("mathUtils::operator*=: cannot multiply vectors of different sizes.");
     }
-    unsigned int n = v1.size();
-    for (unsigned int i=0; i<n; i++) {
+    size_t n = v1.size();
+    for (size_t i=0; i<n; i++) {
         v1[i] *= v2[i];
     }
     return v1;
@@ -462,8 +462,8 @@ dvector& operator/=(dvector& v1, const dvector& v2)
     if (v1.size() != v2.size()) {
         throw DebugException("mathUtils::operator/=: cannot divide vectors of different sizes.");
     }
-    unsigned int n = v1.size();
-    for (unsigned int i=0; i<n; i++) {
+    size_t n = v1.size();
+    for (size_t i=0; i<n; i++) {
         v1[i] /= v2[i];
     }
     return v1;
@@ -477,8 +477,8 @@ dvector operator/(const dvector& v1, const dvector& v2)
 
 dvector& operator/=(dvector& v1, const double s)
 {
-    unsigned int n = v1.size();
-    for (unsigned int i=0; i<n; i++) {
+    size_t n = v1.size();
+    for (size_t i=0; i<n; i++) {
         v1[i] /= s;
     }
     return v1;

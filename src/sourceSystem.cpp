@@ -64,7 +64,7 @@ void SourceSystem::setTimers
 
 void SourceSystem::setPosition(size_t _j, double _x)
 {
-    j = _j;
+    j = static_cast<int>(_j);
     x = _x;
 }
 
@@ -99,7 +99,7 @@ void SourceSystemCVODE::initialize(size_t new_nSpec)
     dYdt.resize(nSpec);
     wDot.resize(nSpec);
 
-    integrator.reset(new SundialsCvode(nSpec+2));
+    integrator.reset(new SundialsCvode(static_cast<int>(nSpec+2)));
     integrator->setODE(this);
     integrator->linearMultistepMethod = CV_BDF;
     integrator->nonlinearSolverMethod = CV_NEWTON;
@@ -353,7 +353,7 @@ void SourceSystemCVODE::writeState(std::ostream& out, bool init)
 
 void SourceSystemCVODE::writeJacobian(std::ostream& out)
 {
-    size_t N = integrator->y.length();
+    int N = integrator->y.length();
     double t = integrator->tInt;
     sdMatrix J(N,N);
     sdVector ydot(N);
@@ -361,9 +361,9 @@ void SourceSystemCVODE::writeJacobian(std::ostream& out)
     denseJacobian(t, integrator->y, ydot, J);
 
     out << "J = []" << std::endl;
-    for (size_t i=0; i<N; i++) {
+    for (int i=0; i<N; i++) {
         out << "J.append([";
-        for (size_t k=0; k<N; k++) {
+        for (int k=0; k<N; k++) {
             out << boost::format("%.5e, ") % J(i,k);
         }
         out << "])" << std::endl;

@@ -15,6 +15,7 @@
 
 using std::abs;
 using std::size_t;
+const size_t npos = -1;
 
 typedef Eigen::ArrayXXd dmatrix;
 typedef Eigen::ArrayXd dvec;
@@ -69,29 +70,29 @@ namespace mathUtils
 
     //! Returns the value of the maximum element of the sub-vector of *v* with
     //! indices on the closed interval `[iStart, iEnd]`
-    double maxval(const dvector& v, int iStart, int iEnd);
+    double maxval(const dvector& v, size_t iStart, size_t iEnd);
 
     //! Returns the value of the minimum element of the sub-vector of *v* with
     //! indices on the closed interval `[iStart, iEnd]`
-    double minval(const dvector& v, int iStart, int iEnd);
+    double minval(const dvector& v, size_t iStart, size_t iEnd);
 
     //! Returns the range (maximum - minimum) of the sub-vector of *v* with
     //! indices on the closed interval `[iStart, iEnd]`
-    double range(const dvector& v, int iStart, int iEnd);
+    double range(const dvector& v, size_t iStart, size_t iEnd);
 
     //! Returns the sum of all the elements in the sub-vector of *v* with
     //! indices on the closed interval `[iStart, iEnd]`
-    double sum(const dvector& v, int iStart, int iEnd);
+    double sum(const dvector& v, size_t iStart, size_t iEnd);
 
     //! Returns the arithemetic mean of the sub-vector of *v* with indices on
     //! the closed interval `[iStart, iEnd]`
-    double mean(const dvector& v, int iStart, int iEnd);
+    double mean(const dvector& v, size_t iStart, size_t iEnd);
 
     //! Returns the index of the minimum element of *v*.
-    int minloc(const dvector& v);
+    size_t minloc(const dvector& v);
 
     //! Returns the index of the maximum element of *v*.
-    int maxloc(const dvector& v);
+    size_t maxloc(const dvector& v);
 
     //! Returns true if `v` does not contain any `NaN`s
     template <typename Derived>
@@ -122,7 +123,7 @@ namespace mathUtils
 
     //! Returns the index of first `NaN` component of `v`. Returns -1 if no
     //! elements are `NaN`.
-    int nanloc(const dvector& v);
+    size_t nanloc(const dvector& v);
 
     //! Returns `true` if *a* and *b* are equal to within the specified
     //! relative (`rtol`) and absolute (`atol`) tolerances.
@@ -191,7 +192,7 @@ namespace mathUtils
             throw DebugException("mathUtils::ComputeSplines: error: xIn and yIn must be the same size.");
         }
 
-        int nIn = xIn.size();
+        int nIn = static_cast<int>(xIn.size());
 
         // Compute spacing of x and derivative of y
         T1 h(nIn-1), b(nIn-1);
@@ -249,8 +250,8 @@ namespace mathUtils
         if (xIn.size() != yIn.size()) {
             throw DebugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
         }
-        int nOut = xOut.size();
-        int nIn = xIn.size();
+        int nOut = static_cast<int>(xOut.size());
+        int nIn = static_cast<int>(xIn.size());
 
         T yOut(nOut);
 
@@ -281,7 +282,7 @@ namespace mathUtils
             throw DebugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
         }
 
-        int nIn = xIn.size();
+        int nIn = static_cast<int>(xIn.size());
 
         int j = findFirst(xIn >= xOut) - 1;
         if (j == -1) {
@@ -319,7 +320,7 @@ namespace mathUtils
 
         assert(notnan(x));
         assert(notnan(y));
-        int n = x.size();
+        int n = static_cast<int>(x.size());
         vector<T1> c = computeSplines(x, y);
         double I = 0;
 
@@ -342,7 +343,7 @@ namespace mathUtils
         }
 
         double I = 0;
-        int n = x.size();
+        int n = static_cast<int>(x.size());
         for (int i=0; i<n-1; i++) {
             I += 0.5*(y[i+1]+y[i])*(x[i+1]-x[i]);
         }

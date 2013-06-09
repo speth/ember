@@ -378,7 +378,7 @@ void FlameSolver::finalize()
 bool FlameSolver::checkTerminationCondition(void)
 {
     if (options.terminateForSteadyQdot) {
-        int j1 = mathUtils::findLast(timeVector < (tNow - options.terminationPeriod));
+        size_t j1 = mathUtils::findLast(timeVector < (tNow - options.terminationPeriod));
         if (j1 == -1) {
             logFile.write(format(
                     "Continuing integration: t (%8.6f) < terminationPeriod (%8.6f)") %
@@ -386,10 +386,10 @@ bool FlameSolver::checkTerminationCondition(void)
             return false;
         }
 
-        int j2 = timeVector.size()-1;
+        size_t j2 = timeVector.size()-1;
         double qMean = mathUtils::mean(heatReleaseRate,j1,j2);
         double hrrError = 0;
-        for (int j=j1; j<=j2; j++) {
+        for (size_t j=j1; j<=j2; j++) {
             hrrError += pow(heatReleaseRate[j]-qMean, 2);
         }
         hrrError = sqrt(hrrError) / (j2-j1+1);

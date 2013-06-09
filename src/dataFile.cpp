@@ -258,7 +258,7 @@ void dataFileTest()
 
     dvector v(10);
     for (size_t i=0; i<v.size(); i++) {
-        v[i] = i*i;
+        v[i] = static_cast<double>(i*i);
     }
 
     f.writeVector("v", v);
@@ -266,7 +266,7 @@ void dataFileTest()
     dmatrix A(3,7);
     for (dmatrix::Index i=0; i<A.rows(); i++) {
         for (dmatrix::Index j=0; j<A.cols(); j++) {
-            A(i,j) = 10*i + j;
+            A(i,j) = static_cast<double>(10*i + j);
         }
     }
 
