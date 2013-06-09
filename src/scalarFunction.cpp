@@ -1,4 +1,4 @@
-#include "strainFunction.h"
+#include "scalarFunction.h"
 #include "readConfig.h"
 
 LinearStrainFunction::LinearStrainFunction(const ConfigOptions& options)

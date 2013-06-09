@@ -133,7 +133,7 @@ cdef extern from "grid.h":
         CxxEigenVec x
 
 
-cdef extern from "strainFunction.h":
+cdef extern from "scalarFunction.h":
     cdef cppclass CxxStrainFunction "StrainFunction":
         void setCoefficients(int, double*)
         double a(double)

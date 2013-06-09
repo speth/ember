@@ -1,6 +1,6 @@
 #include "flameSolver.h"
 #include "dataFile.h"
-#include "strainFunction.h"
+#include "scalarFunction.h"
 #include "tbb_tools.h"
 
 #include <boost/foreach.hpp>

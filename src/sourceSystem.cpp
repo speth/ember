@@ -3,7 +3,7 @@
 #include "perfTimer.h"
 #include "sundialsUtils.h"
 #include "chemistry0d.h"
-#include "strainFunction.h"
+#include "scalarFunction.h"
 
 #include <boost/format.hpp>
 
