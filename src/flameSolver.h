@@ -21,7 +21,7 @@
 #include "tbb/task_scheduler_init.h"
 
 using std::string;
-class StrainFunction;
+class ScalarFunction;
 
 //! Class which manages the main integration loop.
 //! Contains the split solvers and is responsible for the large-scale time integration.
@@ -153,7 +153,7 @@ public:
     TridiagonalIntegrator jCorrSolver;
 
     //! Function which describes strain rate a(t) and its derivative
-    StrainFunction* strainfunc;
+    ScalarFunction* strainfunc;
 
     double rVcenter; //!< mass flux at centerline [kg/m^2 or kg/m*rad*s]
     double rVzero; //!< mass flux at j=0

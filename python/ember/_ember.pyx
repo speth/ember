@@ -321,7 +321,7 @@ cdef class FlameSolver:
     def _updateStrainFunction(self):
         if self.solver.strainfunc == NULL:
             return
-        cdef int N = self.options.strainParameters.chebyshevOrder
+        cdef int N = self.options.general.chebyshevOrder
         cdef np.ndarray[np.double_t, ndim=1] coeffs = np.empty(N+2)
         cdef double t0 = self.solver.tNow
         cdef double t1 = self.solver.tNow + self.solver.dt

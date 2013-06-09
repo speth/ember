@@ -134,7 +134,7 @@ cdef extern from "grid.h":
 
 
 cdef extern from "scalarFunction.h":
-    cdef cppclass CxxStrainFunction "StrainFunction":
+    cdef cppclass CxxScalarFunction "ScalarFunction":
         void setCoefficients(int, double*)
         double a(double)
         double dadt(double)
@@ -147,7 +147,7 @@ cdef extern from "flameSolver.h":
         void finalize() except +
         int step() nogil except +
 
-        CxxStrainFunction* strainfunc
+        CxxScalarFunction* strainfunc
 
         double tNow, dt
         vector[double] timeVector

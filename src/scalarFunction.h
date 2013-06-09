@@ -4,33 +4,33 @@
 
 class ConfigOptions;
 
-//! Represents a parameterization of the strain rate as a function of time.
-class StrainFunction
+//! Represents a parameterization of a scalar function of one variable, a(t).
+class ScalarFunction
 {
 public:
-    StrainFunction() {};
-    virtual ~StrainFunction() {}
+    ScalarFunction() {};
+    virtual ~ScalarFunction() {}
 
-    //! Set the parameters associated with this strain rate function. The
-    //! meaning of the elements of `coeffs` depends on the parameterization.
+    //! Set the parameters associated with this function. The meaning of the
+    //! elements of `coeffs` depends on the parameterization.
     virtual void setCoefficients(int n, const double* coeffs) {}
 
-    //! Compute the strain rate [1/s] at time `t`.
+    //! Compute the value of the function at time `t`.
     virtual double a(double t) const = 0;
 
-    //! Compute the time derivative of the strain rate [1/s^2] at time `t`.
+    //! Compute the time derivative of the function at time `t`.
     virtual double dadt(double t) const = 0;
 };
 
-//! Represents a strain rate that is constant before and after a linear ramp.
+//! Represents a function that is constant before and after a linear ramp.
 /*!
- *  The strain rate is constant at #aInitial until time #T0, then increases
+ *  The value is constant at #aInitial until time #T0, then increases
  *  linearly to #aFinal at time #T0 + #Dt.
  */
-class LinearStrainFunction : public StrainFunction
+class LinearFunction : public ScalarFunction
 {
 public:
-    explicit LinearStrainFunction(const ConfigOptions& options);
+    explicit LinearFunction(const ConfigOptions& options);
     virtual double a(double t) const;
     virtual double dadt(double t) const;
 
@@ -39,17 +39,17 @@ private:
     double T0, Dt;
 };
 
-//! Strain rate calculated as a Chebyshev polynomial representation of a(t).
+//! Chebyshev polynomial representation of a(t).
 /*! \f[
  *      a(t) = \sum_{n=0}^N a_n T_n(x)
  *  \f]
  *  where \f$ T_n(x) \f$ are Chebyshev polynomials of the first kind and
  * \f$ x = 2 * (t-t_o)/(t_1-t_0) - 1 \f$ maps *t* onto the interval [-1,1].
  */
-class ChebyshevStrainFunction: public StrainFunction
+class ChebyshevFunction: public ScalarFunction
 {
 public:
-    explicit ChebyshevStrainFunction(const ConfigOptions& options);
+    explicit ChebyshevFunction(const ConfigOptions& options);
 
     virtual double a(double t) const;
     virtual double dadt(double t) const;
@@ -64,5 +64,5 @@ private:
     dvec coeffs;
 };
 
-//! Create a new strain function of the type specified in `options`.
-StrainFunction* newStrainFunction(const ConfigOptions& options);
+//! Create a new function of the type specified in `options`.
+ScalarFunction* newScalarFunction(const ConfigOptions& options);

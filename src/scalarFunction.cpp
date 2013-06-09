@@ -1,7 +1,7 @@
 #include "scalarFunction.h"
 #include "readConfig.h"
 
-LinearStrainFunction::LinearStrainFunction(const ConfigOptions& options)
+LinearFunction::LinearFunction(const ConfigOptions& options)
     : aInitial(options.strainRateInitial)
     , aFinal(options.strainRateFinal)
     , T0(options.strainRateT0)
@@ -9,19 +9,19 @@ LinearStrainFunction::LinearStrainFunction(const ConfigOptions& options)
 {
 }
 
-double LinearStrainFunction::a(double t) const
+double LinearFunction::a(double t) const
 {
     return (t <= T0) ? aInitial
         :  (t >= T0+Dt) ? aFinal
         : aInitial + (aFinal-aInitial)*(t-T0)/Dt;
 }
 
-double LinearStrainFunction::dadt(double t) const
+double LinearFunction::dadt(double t) const
 {
     return (t >= T0 && t < T0 + Dt) ? (aFinal-aInitial) / Dt : 0;
 }
 
-ChebyshevStrainFunction::ChebyshevStrainFunction(const ConfigOptions& options)
+ChebyshevFunction::ChebyshevFunction(const ConfigOptions& options)
     : T0(options.strainRateT0)
     , T1(options.strainRateDt)
 {
@@ -29,7 +29,7 @@ ChebyshevStrainFunction::ChebyshevStrainFunction(const ConfigOptions& options)
     coeffs << options.strainRateInitial, 0.0;
 }
 
-void ChebyshevStrainFunction::setCoefficients(int n, const double* data)
+void ChebyshevFunction::setCoefficients(int n, const double* data)
 {
     assert(n >= 2);
     T0 = data[0];
@@ -48,7 +48,7 @@ void ChebyshevStrainFunction::setCoefficients(int n, const double* data)
     }
 }
 
-double ChebyshevStrainFunction::a(double t) const
+double ChebyshevFunction::a(double t) const
 {
     // Map t onto the interval [-1,1] used to define the Chebyshev polynomial
     double x = 2 * (t - T0) / (T1 - T0) - 1;
@@ -68,7 +68,7 @@ double ChebyshevStrainFunction::a(double t) const
     return y;
 }
 
-double ChebyshevStrainFunction::dadt(double t) const
+double ChebyshevFunction::dadt(double t) const
 {
     double x = 2 * (t - T0) / (T1 - T0) - 1;
     assert(x > -1.001 && x < 1.001);
@@ -88,14 +88,14 @@ double ChebyshevStrainFunction::dadt(double t) const
     return dydx * dxdt;
 }
 
-StrainFunction* newStrainFunction(const ConfigOptions& options)
+ScalarFunction* newScalarFunction(const std::string& type,
+                                  const ConfigOptions& options)
 {
-    if (options.strainFunctionType == "linear") {
-        return new LinearStrainFunction(options);
-    } else if (options.strainFunctionType == "chebyshev") {
-        return new ChebyshevStrainFunction(options);
+    if (type == "linear") {
+        return new LinearFunction(options);
+    } else if (type == "chebyshev") {
+        return new ChebyshevFunction(options);
     } else {
-        throw DebugException("No such StrainFunction type: '" +
-                             options.strainFunctionType + "'.");
+        throw DebugException("No such ScalarFunction type: '" + type + "'.");
     }
 }

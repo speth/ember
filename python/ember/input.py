@@ -310,6 +310,10 @@ class General(Options):
     nThreads = IntegerOption(1, min=1, level=1,
                              label='Number of Processors')
 
+    #: Order of Chebyshev polynomial to use in approximating input
+    #: functions over a single global time step.
+    chebyshevOrder = IntegerOption(5, min=2, level=3)
+
 
 class Chemistry(Options):
     """ Settings pertaining to the Cantera mechanism file """
@@ -547,10 +551,6 @@ class StrainParameters(Options):
     #: Specify the strain rate as a function of time, using any callable
     #! Python object.
     function = Option(None, level=2)
-
-    #: Order of Chebyshev polynomial to use in approximating the strain rate
-    #: function over a single global time step.
-    chebyshevOrder = IntegerOption(5, min=2, level=3)
 
 
 class PositionControl(Options):

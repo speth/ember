@@ -36,7 +36,7 @@ void FlameSolver::initialize(void)
 {
     tbbTaskSched.initialize (options.nThreads);
     delete strainfunc;
-    strainfunc = newStrainFunction(options);
+    strainfunc = newScalarFunction(options.strainFunctionType, options);
 
     flamePosIntegralError = 0;
     terminationCondition = 1e10;

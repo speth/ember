@@ -9,7 +9,7 @@
 
 class PerfTimer;
 class CanteraGas;
-class StrainFunction;
+class ScalarFunction;
 class ConfigOptions;
 
 //! Base class used to integrate the chemical source term at a single point.
@@ -71,7 +71,7 @@ public:
     void setPosition(size_t j, double x);
 
     //! Set the function used to compute the strain rate as a function of time
-    void setStrainFunction(StrainFunction* f) { strainFunction = f; }
+    void setStrainFunction(ScalarFunction* f) { strainFunction = f; }
 
     //! Set the density of the unburned mixture.
     //! This value appears in the source term of the momentum equation.
@@ -115,7 +115,7 @@ protected:
     PerfTimer* jacobianTimer;
 
     //! A class that provides the strain rate and its time derivative
-    StrainFunction* strainFunction;
+    ScalarFunction* strainFunction;
 
     size_t nSpec; //!< number of species
     int j; //!< grid index for this system
