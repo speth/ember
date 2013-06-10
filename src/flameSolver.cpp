@@ -13,6 +13,7 @@ FlameSolver::FlameSolver()
     , Y(0, 0, 0, StrideXX(1 ,1))
     , jCorrSolver(jCorrSystem)
     , strainfunc(NULL)
+    , rateMultiplierFunction(NULL)
     , tbbTaskSched(tbb::task_scheduler_init::deferred)
 {
 }
@@ -20,6 +21,7 @@ FlameSolver::FlameSolver()
 FlameSolver::~FlameSolver()
 {
     delete strainfunc;
+    delete rateMultiplierFunction;
 }
 
 void FlameSolver::setOptions(const ConfigOptions& _options)
@@ -37,6 +39,14 @@ void FlameSolver::initialize(void)
     tbbTaskSched.initialize (options.nThreads);
     delete strainfunc;
     strainfunc = newScalarFunction(options.strainFunctionType, options);
+
+    delete rateMultiplierFunction;
+    if (options.rateMultiplierFunctionType != "") {
+        rateMultiplierFunction = newScalarFunction(options.rateMultiplierFunctionType,
+                                                   options);
+    } else {
+        rateMultiplierFunction = NULL;
+    }
 
     flamePosIntegralError = 0;
     terminationCondition = 1e10;
@@ -575,6 +585,7 @@ void FlameSolver::resizeAuxiliary()
             system->setOptions(options);
             system->setTimers(&reactionRatesTimer, &thermoTimer, &jacobianTimer);
             system->setStrainFunction(strainfunc);
+            system->setRateMultiplierFunction(rateMultiplierFunction);
             system->setRhou(rhou);
             system->setPosition(j, x[j]);
             if (options.quasi2d) {
@@ -972,6 +983,9 @@ double FlameSolver::targetFlamePosition(double t)
 void FlameSolver::calculateQdot()
 {
     reactionRatesTimer.start();
+    if (rateMultiplierFunction) {
+        gas.setRateMultiplier(rateMultiplierFunction->a(tNow));
+    }
     for (size_t j=0; j<nPoints; j++) {
         gas.setStateMass(&Y(0,j), T(j));
         gas.getEnthalpies(&hk(0,j));

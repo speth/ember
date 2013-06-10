@@ -335,6 +335,7 @@ CanteraGas::CanteraGas()
     , phaseXmlNode(NULL)
     , kinetics(NULL)
     , transport(NULL)
+    , lastRateMultiplier(1.0)
 {
 }
 
@@ -598,6 +599,16 @@ void CanteraGas::getEnthalpies(dvec& hk) const
 void CanteraGas::getEnthalpies(double* hk) const
 {
     thermo.getPartialMolarEnthalpies(&hk[0]);
+}
+
+void CanteraGas::setRateMultiplier(double m)
+{
+    if (m == lastRateMultiplier) {
+        return;
+    }
+    for (size_t k = 0; k < kinetics->nReactions(); k++) {
+        kinetics->setMultiplier(k, m);
+    }
 }
 
 void CanteraGas::getReactionRates(dvec& wDot) const

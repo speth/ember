@@ -97,6 +97,7 @@ public:
     std::string kineticsModel; //!< [chemistry.kineticsModel]
     std::string transportModel; //!< [chemistry.transportModel]
     double transportThreshold; //!< [chemistry.threshold]
+    std::string rateMultiplierFunctionType; //!< [see chemistry.rateMultiplierFunction]
 
     double pressure; //!< [initialConditoin.pressure]
 

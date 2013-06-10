@@ -97,6 +97,8 @@ cdef class ConfigOptions:
         opts.transportModel = self.chemistry.transportModel
         opts.kineticsModel = self.chemistry.kineticsModel
         opts.transportThreshold = self.chemistry.threshold
+        if self.chemistry.rateMultiplierFunction is not None:
+            opts.rateMultiplierFunctionType = 'chebyshev'
 
         # Initial condition
         IC = self.initialCondition
@@ -294,6 +296,7 @@ cdef class FlameSolver:
         self.solver.setOptions(deref(self.options.opts))
 
         self.strainFunction = options.strainParameters.function
+        self.rateMultiplierFunction = options.chemistry.rateMultiplierFunction
         self._updateStrainFunction()
 
     def __dealloc__(self):
@@ -308,6 +311,8 @@ cdef class FlameSolver:
     def step(self):
         if self.strainFunction is not None:
             self._updateStrainFunction()
+        if self.rateMultiplierFunction is not None:
+            self._updateRateMultiplierFunction()
 
         try:
             with nogil:
@@ -329,6 +334,18 @@ cdef class FlameSolver:
         coeffs[1] = t1
         coeffs[2:] = getChebyshevCoeffs(self.strainFunction, N, t0, t1)
         self.solver.strainfunc.setCoefficients(N+2, &coeffs[0])
+
+    def _updateRateMultiplierFunction(self):
+        if self.solver.rateMultiplierFunction == NULL:
+            return
+        cdef int N = self.options.general.chebyshevOrder
+        cdef np.ndarray[np.double_t, ndim=1] coeffs = np.empty(N+2)
+        cdef double t0 = self.solver.tNow
+        cdef double t1 = self.solver.tNow + self.solver.dt
+        coeffs[0] = t0
+        coeffs[1] = t1
+        coeffs[2:] = getChebyshevCoeffs(self.rateMultiplierFunction, N, t0, t1)
+        self.solver.rateMultiplierFunction.setCoefficients(N+2, &coeffs[0])
 
     property x:
         def __get__(self):

@@ -73,6 +73,9 @@ public:
     //! Set the function used to compute the strain rate as a function of time
     void setStrainFunction(ScalarFunction* f) { strainFunction = f; }
 
+    //! Set the function used to compute the reaction rate multiplier
+    void setRateMultiplierFunction(ScalarFunction* f) { rateMultiplierFunction = f; }
+
     //! Set the density of the unburned mixture.
     //! This value appears in the source term of the momentum equation.
     void setRhou(double _rhou) { rhou = _rhou; }
@@ -116,6 +119,9 @@ protected:
 
     //! A class that provides the strain rate and its time derivative
     ScalarFunction* strainFunction;
+
+    //! Provides a multiplier (optional) for the production terms
+    ScalarFunction* rateMultiplierFunction;
 
     size_t nSpec; //!< number of species
     int j; //!< grid index for this system

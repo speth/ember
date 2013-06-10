@@ -155,6 +155,9 @@ public:
     //! Function which describes strain rate a(t) and its derivative
     ScalarFunction* strainfunc;
 
+    //! Function which describes a multiplier for the chemical reaction rates
+    ScalarFunction* rateMultiplierFunction;
+
     double rVcenter; //!< mass flux at centerline [kg/m^2 or kg/m*rad*s]
     double rVzero; //!< mass flux at j=0
     double tFlamePrev, tFlameNext;

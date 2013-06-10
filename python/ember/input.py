@@ -341,6 +341,9 @@ class Chemistry(Options):
     threshold = FloatOption(1e-5, level=2, label='Approx. transport threshold',
         filter=lambda conf: conf.chemistry.transportModel == 'Approx')
 
+    #: Set a scalar multiplier for the reaction rate term as a function time
+    rateMultiplierFunction = Option(None, level=3)
+
 
 class Grid(Options):
     """ Parameters controlling the adaptive grid """

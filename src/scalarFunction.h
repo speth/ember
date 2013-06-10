@@ -64,5 +64,7 @@ private:
     dvec coeffs;
 };
 
-//! Create a new function of the type specified in `options`.
-ScalarFunction* newScalarFunction(const ConfigOptions& options);
+//! Create a new function of `type` with additional options specified in
+//! `options`.
+ScalarFunction* newScalarFunction(const std::string& type,
+                                  const ConfigOptions& options);

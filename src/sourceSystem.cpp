@@ -14,6 +14,7 @@ SourceSystem::SourceSystem()
     , options(NULL)
     , gas(NULL)
     , strainFunction(NULL)
+    , rateMultiplierFunction(NULL)
     , quasi2d(false)
 {
 }
@@ -123,6 +124,9 @@ int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
     unroll_y(y, t);
 
     reactionRatesTimer->start();
+    if (rateMultiplierFunction) {
+        gas->setRateMultiplier(rateMultiplierFunction->a(t));
+    }
     gas->setStateMass(Y, T);
     gas->getReactionRates(wDot);
     reactionRatesTimer->stop();
@@ -424,6 +428,9 @@ void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d,
 
     // *** Update auxiliary data ***
     reactionRatesTimer->start();
+    if (rateMultiplierFunction) {
+        gas->setRateMultiplier(rateMultiplierFunction->a(t));
+    }
     gas->setStateMass(Y, T);
     gas->getCreationRates(wDotQ);
     gas->getDestructionRates(wDotD);

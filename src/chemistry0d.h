@@ -158,6 +158,9 @@ public:
     void getEnthalpies(dvec& hk) const;
     void getEnthalpies(double* hk) const;
 
+    //! Multiply the rate constant for all reactions by *m*.
+    void setRateMultiplier(double m);
+
     //! Get net molar reaction rates for each species
     void getReactionRates(dvec& wDot) const;
     void getReactionRates(double* wDot) const;
@@ -185,4 +188,7 @@ private:
     Cantera::GasTransport* transport;
 
     dmatrix Dbin; //!< binary diffusion coefficients for species k
+
+    //! Value of the rate multiplier the last time it was set
+    double lastRateMultiplier;
 };

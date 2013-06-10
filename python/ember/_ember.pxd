@@ -54,7 +54,7 @@ cdef extern from "readConfig.h":
         double regridTimeInterval, outputTimeInterval, profileTimeInterval
         double globalTimestep, diffusionTimestepMultiplier
 
-        string splittingMethod, chemistryIntegrator
+        string splittingMethod, chemistryIntegrator, rateMultiplierFunctionType
         double integratorRelTol, integratorMomentumAbsTol, integratorEnergyAbsTol
         double integratorSpeciesAbsTol, integratorMinTimestep
 
@@ -148,6 +148,7 @@ cdef extern from "flameSolver.h":
         int step() nogil except +
 
         CxxScalarFunction* strainfunc
+        CxxScalarFunction* rateMultiplierFunction
 
         double tNow, dt
         vector[double] timeVector
@@ -192,6 +193,7 @@ cdef class FlameSolver:
     cdef ConfigOptions options
     cdef CxxFlameSolver* solver
     cdef object strainFunction
+    cdef object rateMultiplierFunction
     cdef object strainInterpPoints
 
     # usedby the GUI
