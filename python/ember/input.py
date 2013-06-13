@@ -434,10 +434,10 @@ class InitialCondition(Options):
     Toxidizer = FloatOption(300, label='Oxidizer Temperature', filter=_isDiffusion)
 
     #: Molar composition of the fuel mixture.
-    fuel = StringOption("CH4:1.0", label='Molar Fuel Composition')
+    fuel = Option("CH4:1.0", label='Molar Fuel Composition')
 
     #: Molar composition of the oxidizer mixture.
-    oxidizer = StringOption("N2:3.76, O2:1.0", label='Molar Oxidizer Composition')
+    oxidizer = Option("N2:3.76, O2:1.0", label='Molar Oxidizer Composition')
 
     #: Equivalence ratio of the fuel/air mixture for premixed flames.
     equivalenceRatio = FloatOption(0.75, min=0, label='Equivalence Ratio',
