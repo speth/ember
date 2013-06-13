@@ -14,7 +14,8 @@ conf = Config(
                      slopeWidth=0.001),
     StrainParameters(initial=100,
                      final=100),
-    Times(globalTimestep=2e-6,
+    General(nThreads=4),
+    Times(globalTimestep=1e-5,
           profileStepInterval=20),
     TerminationCondition(tEnd=0.010))
 

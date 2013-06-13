@@ -242,11 +242,12 @@ cdef class ConfigOptions:
         TC = self.terminationCondition
         opts.tEnd = TC.tEnd
         opts.tEndMin = TC.tMin
-        opts.terminateForSteadyQdot = TC.measurement == 'Q'
-        if opts.terminateForSteadyQdot:
+        opts.terminationMeasurement = TC.measurement if TC.measurement is not None else ''
+        if TC.measurement:
             opts.terminationPeriod = TC.steadyPeriod
             opts.terminationTolerance = TC.tolerance
             opts.terminationAbsTol = TC.abstol
+            opts.termination_dTdtTol = TC.dTdtTol
 
 
 cdef np.ndarray[np.double_t, ndim=1] chebyshev1(double x, int N):

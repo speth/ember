@@ -180,14 +180,20 @@ public:
     double debugStopTime;
     bool outputDebugIntegratorStages; //!< [outputFiles.debugIntegratorStages]
 
-    //! if true, code finishes when integral heat release rate is constant
-    bool terminateForSteadyQdot;
+    //! If non-empty, code finishes when the specified property is constant to
+    //! within some tolerance [terminationCondition.measurement]
+    std::string terminationMeasurement;
 
     //! relative tolerance for termination [terminationCondition.tolerance]
     double terminationTolerance;
 
-    //! absolute tolerance [terminationCondition.abstol]
+    //! absolute tolerance for termination using measurement == 'Q'
+    //! [terminationCondition.abstol]
     double terminationAbsTol;
+
+    //! tolerance for termination when measurement == `dTdt`
+    //! [terminationCondition.dTdtTol]
+    double termination_dTdtTol;
 
     //! period over which to require constant heat release rate
     //! [terminationCondition.steadyPeriod]

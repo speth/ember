@@ -100,8 +100,9 @@ cdef extern from "readConfig.h":
         double debugSourceTime, debugStartTime, debugStopTime
         cbool outputDebugIntegratorStages
 
-        cbool terminateForSteadyQdot
+        string terminationMeasurement
         double terminationTolerance, terminationAbsTol, terminationPeriod
+        double termination_dTdtTol
 
         int errorStopCount
         cbool stopIfError

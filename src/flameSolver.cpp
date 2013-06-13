@@ -387,9 +387,12 @@ void FlameSolver::finalize()
 
 bool FlameSolver::checkTerminationCondition(void)
 {
-    if (options.terminateForSteadyQdot && tNow > options.tEndMin) {
+    if (tNow < options.tEndMin) {
+        return false;
+    }
+    if (options.terminationMeasurement == "Q") {
         size_t j1 = mathUtils::findLast(timeVector < (tNow - options.terminationPeriod));
-        if (j1 == -1) {
+        if (j1 == npos) {
             logFile.write(format(
                     "Continuing integration: t (%8.6f) < terminationPeriod (%8.6f)") %
                     (tNow-timeVector[0]) % options.terminationPeriod);
@@ -417,11 +420,21 @@ bool FlameSolver::checkTerminationCondition(void)
             logFile.write("Terminating integration: "
                     "Heat release rate RMS variation less than absolute tolerance.");
             return true;
-        } else {
-            logFile.write(format(
-                "Continuing integration. t = %8.6f") % (tNow-timeVector[0]));
+        }
+    } else if (options.terminationMeasurement == "dTdt") {
+        dvec dTdt = (ddtDiff + ddtConv + ddtProd + ddtCross).row(kEnergy);
+        double value = (dTdt / T).matrix().norm() / sqrt(static_cast<double>(nPoints));
+        logFile.write(format(
+            "||1/T * dT/dt|| = %7.3f. Termination threshold = %7.2f") %
+            value % options.termination_dTdtTol);
+        if (value < options.termination_dTdtTol) {
+            logFile.write("Terminating integration: "
+                    "dTdt variation less than specified threshold.");
+            return true;
         }
     }
+    logFile.write(format(
+        "Continuing integration. t = %8.6f") % (tNow-timeVector[0]));
     return false;
 }
 
