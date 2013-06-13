@@ -454,10 +454,13 @@ class InitialCondition(Options):
                                filter=_isPremixed, level=1)
 
     #: Adjust the composition of the counterflow stream so that the components
-    #: are at equilibrium. The boundary condition is not consistent if this mixture
-    #: has reactions that are proceeding at finite rates.
-    equilibrateCounterflow = BoolOption(True, label='Equilibrate specified counterflow mixture',
-                                        filter=_isPremixed, level=1)
+    #: are at equilibrium. This option specifies the property pair to hold
+    #: constant during equilibration, or *False* to skip equilibration. The
+    #: boundary condition is not consistent if this mixture has reactions that
+    #: are proceeding at finite rates.
+    equilibrateCounterflow = Option('TP', ('HP','UV','SV','TV','SP',False),
+                                    label='Equilibrate specified counterflow mixture',
+                                    filter=_isPremixed, level=1)
 
     #: Thermodynamic pressure [Pa]
     pressure = FloatOption(101325, min=0)
@@ -991,8 +994,9 @@ class ConcreteConfig(_ember.ConfigOptions):
 
             if IC.equilibrateCounterflow:
                 gas.set(Y=Yb, T=Tb, P=IC.pressure)
-                gas.equilibrate('TP')
+                gas.equilibrate(IC.equilibrateCounterflow)
                 Yb = gas.massFractions()
+                Tb = gas.temperature()
 
             if self.general.unburnedLeft:
                 T[0] = IC.Tu
