@@ -151,6 +151,7 @@ public:
 
     double tStart; //!< [times.tStart]
     double tEnd; //!< [terminationCondition.tEnd]
+    double tEndMin; //!< [terminationCondition.tMin]
     bool haveTStart;
 
     int gridAlpha; //!< 1 for curved flames, 0 for planar flames

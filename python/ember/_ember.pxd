@@ -88,7 +88,7 @@ cdef extern from "readConfig.h":
         double boundaryTol, boundaryTolRm, unstrainedDownstreamWidth
         int addPointCount
 
-        double tStart, tEnd
+        double tStart, tEnd, tEndMin
         cbool haveTStart
 
         int gridAlpha

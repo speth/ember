@@ -742,7 +742,8 @@ class TerminationCondition(Options):
     (2) The heat release rate ( *measurement* ) reaches a steady-state
         value to within *tolerance* (RMS) over a time period of
         *steadyPeriod*, or the mean heat release rate over *steadyPeriod*
-        is less than *abstol*.
+        is less than *abstol*. The steady-state check is not enabled until
+        *tMin* is reached.
 
     To disable steady-state check, set ``measurement = None``, and give a
     sane value for *tEnd*.
@@ -754,8 +755,7 @@ class TerminationCondition(Options):
     tolerance = FloatOption(1e-4, level=2)  #:
     abstol = FloatOption(0.5, min=0, level=2)  #:
     steadyPeriod = FloatOption(0.002, min=0, level=1)  #:
-
-
+    tMin = FloatOption(0.0, level=1)
 
 
 class Config(object):

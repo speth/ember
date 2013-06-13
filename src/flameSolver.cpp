@@ -387,7 +387,7 @@ void FlameSolver::finalize()
 
 bool FlameSolver::checkTerminationCondition(void)
 {
-    if (options.terminateForSteadyQdot) {
+    if (options.terminateForSteadyQdot && tNow > options.tEndMin) {
         size_t j1 = mathUtils::findLast(timeVector < (tNow - options.terminationPeriod));
         if (j1 == -1) {
             logFile.write(format(

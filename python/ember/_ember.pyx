@@ -241,6 +241,7 @@ cdef class ConfigOptions:
         # Termination Conditions
         TC = self.terminationCondition
         opts.tEnd = TC.tEnd
+        opts.tEndMin = TC.tMin
         opts.terminateForSteadyQdot = TC.measurement == 'Q'
         if opts.terminateForSteadyQdot:
             opts.terminationPeriod = TC.steadyPeriod
