@@ -10,6 +10,8 @@ Basic usage:
     'scons test' - Run the test suite
 
     'scons install' - Install the Ember Python module
+
+    'scons msi' - Create a MSI installer for Windows
 """
 
 import os
@@ -286,6 +288,10 @@ env.Depends(py_build, mglob(env, 'python/ember', 'py'))
 
 py_install = env.Command('dummy_target', py_build, setup_cmd + 'install $install_args')
 env.Alias('install', py_install)
+
+py_msi = env.Command('dummy_target2', py_build,
+                     setup_cmd + 'bdist_msi --dist-dir=..')
+env.Alias('msi', py_msi)
 
 # GoogleTest tests
 testenv = env.Clone()
