@@ -457,10 +457,11 @@ class InitialCondition(Options):
     #: are at equilibrium. This option specifies the property pair to hold
     #: constant during equilibration, or *False* to skip equilibration. The
     #: boundary condition is not consistent if this mixture has reactions that
-    #: are proceeding at finite rates.
+    #: are proceeding at finite rates. For diffusion flames, this option is applied
+    #: to the state oxidizer stream.
     equilibrateCounterflow = Option('TP', ('HP','UV','SV','TV','SP',False),
                                     label='Equilibrate specified counterflow mixture',
-                                    filter=_isPremixed, level=1)
+                                    level=1)
 
     #: Thermodynamic pressure [Pa]
     pressure = FloatOption(101325, min=0)
@@ -1019,15 +1020,19 @@ class ConcreteConfig(_ember.ConfigOptions):
 
             # Oxidizer
             gas.set(X=IC.oxidizer, T=IC.Toxidizer, P=IC.pressure)
+            if IC.equilibrateCounterflow:
+                gas.equilibrate(IC.equilibrateCounterflow)
+
             Yoxidizer = gas.massFractions()
+            Toxidizer = gas.temperature()
 
             if self.general.fuelLeft:
                 T[0] = IC.Tfuel
                 Y[:,0] = Yfuel
-                T[-1] = IC.Toxidizer
+                T[-1] = Toxidizer
                 Y[:,-1] = Yoxidizer
             else:
-                T[0] = IC.Toxidizer
+                T[0] = Toxidizer
                 Y[:,0] = Yoxidizer
                 T[-1] = IC.Tfuel
                 Y[:,-1] = Yfuel
