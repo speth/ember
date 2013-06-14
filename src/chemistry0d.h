@@ -52,6 +52,16 @@ private:
     vector<size_t> _kMajor; //!< indices of the species where X[k] >= threshold
 };
 
+//! Same as Cantera's usual MultiTransport, but using Eigen to factorize the
+//! L-matrix.
+class MultiTransportEigen : public Cantera::MultiTransport
+{
+public:
+    explicit MultiTransportEigen(Cantera::ThermoPhase& thermo,
+                                 Cantera::TransportFactory& factory);
+    virtual void solveLMatrixEquation();
+};
+
 //! Approximate evaluator for kinetics rates at constant pressure using linear
 //! interpolation.
 /*!

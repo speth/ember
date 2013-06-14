@@ -250,6 +250,79 @@ void ApproxMixTransport::update_C()
 
 typedef Eigen::Map<dvec> vec_map;
 
+MultiTransportEigen::MultiTransportEigen(Cantera::ThermoPhase& thermo,
+                                         Cantera::TransportFactory& factory)
+{
+    dvector state;
+    thermo.saveState(state);
+    factory.initTransport(this, &thermo, 0, 0);
+    thermo.restoreState(state);
+}
+
+void MultiTransportEigen::solveLMatrixEquation()
+{
+    // if T has changed, update the temperature-dependent properties.
+    updateThermal_T();
+    update_C();
+    if (m_lmatrix_soln_ok) {
+        return;
+    }
+
+    // Copy the mole fractions twice into the last two blocks of
+    // the right-hand-side vector m_b. The first block of m_b was
+    // set to zero when it was created, and is not modified so
+    // doesn't need to be reset to zero.
+    for (size_t k = 0; k < m_nsp; k++) {
+        m_b[k] = 0.0;
+        m_b[k + m_nsp] = m_molefracs[k];
+        m_b[k + 2*m_nsp] = m_molefracs[k];
+    }
+
+    // Set the right-hand side vector to zero in the 3rd block for
+    // all species with no internal energy modes.  The
+    // corresponding third-block rows and columns will be set to
+    // zero, except on the diagonal of L01,01, where they are set
+    // to 1.0. This has the effect of eliminating these equations
+    // from the system, since the equation becomes: m_a[2*m_nsp +
+    // k] = 0.0.
+
+    // Note that this differs from the Chemkin procedure, where
+    // all *monatomic* species are excluded. Since monatomic
+    // radicals can have non-zero internal heat capacities due to
+    // electronic excitation, they should be retained.
+
+    for (size_t k = 0; k < m_nsp; k++) {
+        if (!hasInternalModes(k)) {
+            m_b[2*m_nsp + k] = 0.0;
+        }
+    }
+
+    // evaluate the submatrices of the L matrix
+    m_Lmatrix.resize(3*m_nsp, 3*m_nsp, 0.0);
+
+    //! Evaluate the upper-left block of the L matrix.
+    eval_L0000(DATA_PTR(m_molefracs));
+    eval_L0010(DATA_PTR(m_molefracs));
+    eval_L0001();
+    eval_L1000();
+    eval_L1010(DATA_PTR(m_molefracs));
+    eval_L1001(DATA_PTR(m_molefracs));
+    eval_L0100();
+    eval_L0110();
+    eval_L0101(DATA_PTR(m_molefracs));
+
+    // Solve it using LU decomposition.
+    Eigen::Map<Eigen::MatrixXd> L(m_Lmatrix.colPts()[0], 3*m_nsp , 3*m_nsp);
+    Eigen::Map<Eigen::MatrixXd> a(&m_a[0], 3*m_nsp, 1);
+    Eigen::Map<Eigen::MatrixXd> b(&m_b[0], 3*m_nsp, 1);
+    a = L.partialPivLu().solve(b);
+
+    m_lmatrix_soln_ok = true;
+    m_molefracs_last = m_molefracs;
+    // L matrix is overwritten with LU decomposition
+    m_l0000_ok = false;
+}
+
 InterpKinetics::InterpKinetics(Cantera::ThermoPhase* phase)
     : GasKinetics(phase)
     , m_ntemps(0)
@@ -393,8 +466,7 @@ void CanteraGas::initialize()
     // Initialize the default transport properties object
     Cantera::TransportFactory* transFac = Cantera::TransportFactory::factory();
     if (transportModel == "Multi") {
-        transport = dynamic_cast<Cantera::GasTransport*>(
-            transFac->newTransport("Multi",&thermo));
+        transport = new MultiTransportEigen(thermo, *transFac);
     } else if (transportModel == "Mix") {
         transport = dynamic_cast<Cantera::GasTransport*>(
             transFac->newTransport("Mix",&thermo));
