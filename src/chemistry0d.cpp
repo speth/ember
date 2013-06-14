@@ -250,6 +250,8 @@ void ApproxMixTransport::update_C()
 
 typedef Eigen::Map<dvec> vec_map;
 
+#ifdef EMBER_EXTENDED_MULTITRANSPORT
+
 MultiTransportEigen::MultiTransportEigen(Cantera::ThermoPhase& thermo,
                                          Cantera::TransportFactory& factory)
 {
@@ -322,6 +324,8 @@ void MultiTransportEigen::solveLMatrixEquation()
     // L matrix is overwritten with LU decomposition
     m_l0000_ok = false;
 }
+
+#endif
 
 InterpKinetics::InterpKinetics(Cantera::ThermoPhase* phase)
     : GasKinetics(phase)
@@ -466,7 +470,12 @@ void CanteraGas::initialize()
     // Initialize the default transport properties object
     Cantera::TransportFactory* transFac = Cantera::TransportFactory::factory();
     if (transportModel == "Multi") {
-        transport = new MultiTransportEigen(thermo, *transFac);
+        #ifdef EMBER_EXTENDED_MULTITRANSPORT
+            transport = new MultiTransportEigen(thermo, *transFac);
+        #else
+            transport = dynamic_cast<Cantera::GasTransport*>(
+            transFac->newTransport("Multi",&thermo));
+        #endif
     } else if (transportModel == "Mix") {
         transport = dynamic_cast<Cantera::GasTransport*>(
             transFac->newTransport("Mix",&thermo));

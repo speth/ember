@@ -27,3 +27,4 @@ doc/sphinx/html
 doc/ember-cxx.tag
 python/setup.py
 python/ember/*.cpp
+src/config.h

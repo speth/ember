@@ -13,6 +13,7 @@
 #include "cantera/kinetics/GasKinetics.h"
 #include "cantera/base/ctml.h"
 
+#include "config.h"
 #include "mathUtils.h"
 
 class ConfigOptions;
@@ -52,6 +53,8 @@ private:
     vector<size_t> _kMajor; //!< indices of the species where X[k] >= threshold
 };
 
+#ifdef EMBER_EXTENDED_MULTITRANSPORT
+
 //! Same as Cantera's usual MultiTransport, but using Eigen to factorize the
 //! L-matrix.
 class MultiTransportEigen : public Cantera::MultiTransport
@@ -61,6 +64,8 @@ public:
                                  Cantera::TransportFactory& factory);
     virtual void solveLMatrixEquation();
 };
+
+#endif
 
 //! Approximate evaluator for kinetics rates at constant pressure using linear
 //! interpolation.

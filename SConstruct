@@ -233,15 +233,39 @@ int main(int argc, char** argv) {
     context.Result(result)
     return result
 
+configInfo = {}
+
 tests = {}
 conf = Configure(env, custom_tests={'CheckMemberFunction': CheckMemberFunction})
+
 tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
     "Cantera::MixTransport::getMixDiffCoeffsMass",
     includes='#include "cantera/transport.h"')
 
+src = """
+#include "cantera/transport/MultiTransport.h"
+class Foo : public Cantera::MultiTransport {
+    virtual void solveLMatrixEquation() {
+        m_Lmatrix; // must not be declared private
+    }
+};
+"""
+tests['CanteraExtendedMultiTransport'] = conf.TryCompile(src, '.cpp')
+
 if not tests['CanteraExtendedTransport']:
     raise EnvironmentError("Missing required Cantera method 'getMixDiffCoeffsMass'. "
                            "See 'config.log' for details.")
+
+if tests['CanteraExtendedMultiTransport']:
+    configInfo['EMBER_EXTENDED_MULTITRANSPORT'] = 1
+else:
+    print ('WARNING: Extended MultiTransport class unavailable. Multicomponent'
+           'transport model may not work correctly with multiple threads')
+
+config_h = env.Command('src/config.h',
+                       'src/config.h.in',
+                       ConfigBuilder(configInfo))
+env.AlwaysBuild(config_h)
 
 common_objects = env.SharedObject(Glob('build/core/*.cpp'))
 
