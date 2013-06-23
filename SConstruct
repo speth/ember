@@ -69,6 +69,12 @@ opts.AddVariables(
         'cantera',
         'Location of the Cantera header and library files.',
         '', PathVariable.PathAccept),
+    ('cantera_libs',
+     """Comma-separated list of extra libraries required to link with
+        Cantera. If Cantera was not built with the "single_library=y" option,
+        this may include some of 'execstream', 'ctmath', 'ctlapack', 'ctblas',
+        and 'ctf2c'""",
+     ''),
     PathVariable(
         'sundials',
         'Location of the Sundials header and library files.',
@@ -140,7 +146,7 @@ running 'scons build'. The format of this file is:
         print '\n'.join(formatOption(env, opt))
     sys.exit(0)
 
-cantera = ['cantera']
+cantera = ['cantera'] + env['cantera_libs'].split(',')
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
 if os.name == 'nt':
     hdf5 = ['hdf5','libzlib', 'libszip']
