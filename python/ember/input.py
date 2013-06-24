@@ -20,6 +20,7 @@ import Cantera
 import numpy as np
 import utils
 import copy
+import time
 
 import _ember
 
