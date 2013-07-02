@@ -247,6 +247,9 @@ conf = Configure(env, custom_tests={'CheckMemberFunction': CheckMemberFunction})
 tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
     "Cantera::MixTransport::getMixDiffCoeffsMass",
     includes='#include "cantera/transport.h"')
+tests['CanteraThreadSafe'] = conf.CheckDeclaration('THREAD_SAFE_CANTERA',
+                                                   '#include "cantera/base/config.h"',
+                                                   'C++')
 
 src = """
 #include "cantera/transport/MultiTransport.h"
@@ -257,6 +260,10 @@ class Foo : public Cantera::MultiTransport {
 };
 """
 tests['CanteraExtendedMultiTransport'] = conf.TryCompile(src, '.cpp')
+
+if not tests['CanteraThreadSafe']:
+    raise EnvironmentError("Ember requires a thread-safe version of Cantera. "
+                           "See 'config.log' for details.")
 
 if not tests['CanteraExtendedTransport']:
     raise EnvironmentError("Missing required Cantera method 'getMixDiffCoeffsMass'. "
