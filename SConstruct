@@ -244,6 +244,28 @@ configInfo = {}
 tests = {}
 conf = Configure(env, custom_tests={'CheckMemberFunction': CheckMemberFunction})
 
+# Figure out what needs to be linked for Boost Thread support (used by Cantera)
+import SCons.Conftest, SCons.SConf
+boost_ok = False
+for bt in [[''], ['boost_system'], ['boost_thread', 'boost_system']]:
+    header= "#define BOOST_ALL_NO_LIB\n#include <boost/thread/thread.hpp>"
+    call = "boost::mutex foo; boost::mutex::scoped_lock bar(foo);"
+
+    ans = SCons.Conftest.CheckLib(SCons.SConf.CheckContext(conf),
+                                  bt,
+                                  header=header,
+                                  language='C++',
+                                  call=call,
+                                  autoadd=False)
+    if not ans:
+        boost_ok = True
+        if bt[0] and os.name != 'nt':
+            env.Append(LIBS=bt)
+        break
+
+if not boost_ok:
+    raise EnvironmentError("Couldn't determine correct libraries to link for Boost Thread.")
+
 tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
     "Cantera::MixTransport::getMixDiffCoeffsMass",
     includes='#include "cantera/transport.h"')
