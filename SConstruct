@@ -58,6 +58,8 @@ if os.name == 'nt':
         tbbArch = 'ia32'
 
     defaults.blas_lapack = ''
+elif platform.system() == 'Darwin':
+    defaults.blas_lapack = ''
 else:
     defaults.blas_lapack = 'lapack,blas'
 
@@ -154,6 +156,9 @@ if os.name == 'nt':
 else:
     hdf5 = ['hdf5']
     tbbLibDir = env['tbb']+'/lib'
+
+if platform.system() == 'Darwin':
+    env.Append(FRAMEWORKS=['Accelerate'])
 
 lastlibs = ['tbb'] + hdf5 + env['blas_lapack'].split(',')
 
