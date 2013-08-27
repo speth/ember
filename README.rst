@@ -57,7 +57,7 @@ Compiling Ember
   Otherwise, specify the necessary paths using the corresponding command-line
   options: "cantera", "sundials", "eigen", "boost", "hdf5", "tbb". For example::
 
-    $ scons cantera=/home/$USER/.local sundials=/opt/sundials-2.4.0
+    $ scons build cantera=/home/$USER/.local sundials=/opt/sundials-2.4.0
 
   This produces the Python extension module ``build/python/ember/_ember.so``.
 
