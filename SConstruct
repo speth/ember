@@ -89,6 +89,12 @@ opts.AddVariables(
         'boost',
         'Location of the Boost header files.',
         '', PathVariable.PathAccept),
+    ('boost_libs',
+     """Comma-separated list of extra libraries required to link using Boost
+        Thread. If unspecified, SCons will attempt to automatically determine
+        the correct libraries. This option should be set if that fails.
+     """,
+     ''),
     PathVariable(
         'hdf5',
         'Location of the HDF5 header and library files.',
@@ -252,7 +258,11 @@ conf = Configure(env, custom_tests={'CheckMemberFunction': CheckMemberFunction})
 # Figure out what needs to be linked for Boost Thread support (used by Cantera)
 import SCons.Conftest, SCons.SConf
 boost_ok = False
-for bt in [[''], ['boost_system'], ['boost_thread', 'boost_system']]:
+if env['boost_libs']:
+    boost_lib_choices = env['boost_libs'].split(',')
+else:
+    boost_lib_choices = [[''], ['boost_system'], ['boost_thread', 'boost_system']]
+for bt in boost_lib_choices:
     header= "#define BOOST_ALL_NO_LIB\n#include <boost/thread/thread.hpp>"
     call = "boost::mutex foo; boost::mutex::scoped_lock bar(foo);"
 
@@ -264,6 +274,8 @@ for bt in [[''], ['boost_system'], ['boost_thread', 'boost_system']]:
                                   autoadd=False)
     if not ans:
         boost_ok = True
+        print 'Linking Boost thread with the following libraries: {0}'.format(
+            ', '.join(bt) or '<none>')
         if bt[0] and os.name != 'nt':
             env.Append(LIBS=bt)
         break
