@@ -28,7 +28,7 @@ where `u` and `v` are the velocity components in the `z` and `x` directions,
 respectively, and `a(t)` is the time varying strain rate parameter. If we take
 the mixture coming from `x=-\infty` to be premixed reactants and the mixture
 coming from `x=+\infty` to be the reaction products, a flame will be established
-at some point `$x<0` where the consumption speed balances the local fluid
+at some point `x<0` where the consumption speed balances the local fluid
 velocity. Note that a flame in this configuration can never be completely
 extinguished because there will always be a region of contact between reactants
 and products.
