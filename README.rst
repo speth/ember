@@ -25,7 +25,7 @@ Compiling Ember
   * SCons (2.1.0 recommended)
   * Eigen (>= 3.0)
   * Cantera (>= 2.0.0)
-  * Sundials (== 2.4)
+  * Sundials (2.4 or 2.5)
   * HDF5 (>= 1.8.0)
   * Intel Threading Building Blocks (>= 4.0)
   * numpy (>= 1.3.0)

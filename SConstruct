@@ -250,6 +250,15 @@ int main(int argc, char** argv) {
     context.Result(result)
     return result
 
+def get_expression_value(includes, expression):
+    s = ['#include ' + i for i in includes]
+    s.extend(('#include <iostream>',
+              'int main(int argc, char** argv) {',
+              '    std::cout << %s << std::endl;' % expression,
+              '    return 0;',
+              '}\n'))
+    return '\n'.join(s)
+
 configInfo = {}
 
 tests = {}
@@ -282,6 +291,17 @@ for bt in boost_lib_choices:
 
 if not boost_ok:
     raise EnvironmentError("Couldn't determine correct libraries to link for Boost Thread.")
+
+# Determine Sundials version
+sundials_version_source = get_expression_value(['"sundials/sundials_config.h"'],
+                                                   'SUNDIALS_PACKAGE_VERSION')
+retcode, sundials_version = conf.TryRun(sundials_version_source, '.cpp')
+if retcode == 0:
+    config_error("Failed to determine Sundials version.")
+
+# Ignore the minor version and convert to integer, e.g. 2.4.x -> 24
+configInfo['SUNDIALS_VERSION'] = ''.join(sundials_version.strip().split('.')[:2])
+print """INFO: Using Sundials version %s""" % sundials_version.strip()
 
 tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
     "Cantera::MixTransport::getMixDiffCoeffsMass",

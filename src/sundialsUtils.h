@@ -17,8 +17,16 @@
 #include <vector>
 #include <time.h>
 
+#include "config.h"
+
 typedef DlsMat DenseMat;
 typedef DlsMat BandMat;
+
+#if SUNDIALS_VERSION >= 25
+typedef long int sd_size_t;
+#else
+typedef int sd_size_t;
+#endif
 
 //! wrapper class for Sundials "N_Vector"
 class sdVector
@@ -266,10 +274,10 @@ public:
 private:
     static int f(realtype t, N_Vector yIn, N_Vector ydotIn, void* f_data);
     static int g(realtype t, N_Vector yIn, realtype *gout, void* g_data);
-    static int denseJac(int N, realtype t, N_Vector yIn,
+    static int denseJac(sd_size_t N, realtype t, N_Vector yIn,
                         N_Vector fy, DenseMat Jin, void* jac_data,
                         N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-    static int bandJac(int N, int mupper, int mLower, realtype t,
+    static int bandJac(sd_size_t N, sd_size_t mupper, sd_size_t mLower, realtype t,
                        N_Vector y, N_Vector fy, DlsMat Jac, void* user_data,
                        N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 

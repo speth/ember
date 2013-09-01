@@ -245,7 +245,7 @@ int SundialsCvode::g(realtype t, N_Vector yIn, realtype *gout, void *g_data)
 }
 
 // Jacobian routine. Compute J(t,y) = df/dy. *
-int SundialsCvode::denseJac(int N, realtype t, N_Vector yIn,
+int SundialsCvode::denseJac(sd_size_t N, realtype t, N_Vector yIn,
                             N_Vector fyIn, DenseMat JIn, void *user_data,
                             N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
@@ -256,8 +256,8 @@ int SundialsCvode::denseJac(int N, realtype t, N_Vector yIn,
     return ((sdODE*) user_data)->denseJacobian(t, y, fy, J);
 }
 
-int SundialsCvode::bandJac(int N, int mupper, int mLower, realtype t,
-        N_Vector yIn, N_Vector fyIn, DlsMat JIn, void* user_data,
+int SundialsCvode::bandJac(sd_size_t N, sd_size_t mupper, sd_size_t mLower,
+	realtype t, N_Vector yIn, N_Vector fyIn, DlsMat JIn, void* user_data,
         N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
     sdVector y(yIn);
