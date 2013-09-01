@@ -1138,7 +1138,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         if self.general.twinFlame or self.general.curvedFlame:
             # Stagnation point at x = 0
             V[0] = 0
-            for j in range(N):
+            for j in range(1, N):
                 V[j] = V[j-1] - rho[j]*U[j]*(x[j] - x[j-1])
         else:
             # Put the stagnation point on the hot side of the flame
