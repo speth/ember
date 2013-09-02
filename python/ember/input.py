@@ -250,8 +250,9 @@ class General(Options):
 
     #: True if the temperature and mass fractions on the burned gas
     #: side of the flame should be held constant. Applicable only to
-    #: premixed flames.
-    fixedBurnedVal = BoolOption(True, level=1, filter=_isPremixed)
+    #: premixed flames. The default is *True* for twin or curved flames with
+    #: burned gas at x=0, and *False* otherwise.
+    fixedBurnedVal = BoolOption(None, level=1, filter=_isPremixed)
 
     #: True if the position of the leftmost grid point should be held
     #: constant. Should usually be True for Twin and Curved flame
@@ -947,6 +948,13 @@ class ConcreteConfig(_ember.ConfigOptions):
 
         self.gas = Cantera.IdealGasMix(self.chemistry.mechanismFile,
                                        self.chemistry.phaseID)
+
+        if self.general.fixedBurnedVal is None:
+            if ((self.general.twinFlame or self.general.curvedFlame)
+                and not self.general.unburnedLeft):
+                self.general.fixedBurnedVal = False
+            else:
+                self.general.fixedBurnedVal = True
 
         if self.initialCondition.restartFile:
             self.readInitialCondition(self.initialCondition.restartFile)
