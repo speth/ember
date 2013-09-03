@@ -297,7 +297,9 @@ sundials_version_source = get_expression_value(['"sundials/sundials_config.h"'],
                                                    'SUNDIALS_PACKAGE_VERSION')
 retcode, sundials_version = conf.TryRun(sundials_version_source, '.cpp')
 if retcode == 0:
-    config_error("Failed to determine Sundials version.")
+    print "Failed to determine Sundials version."
+    print "See 'config.log' for details."
+    sys.exit(1)
 
 # Ignore the minor version and convert to integer, e.g. 2.4.x -> 24
 configInfo['SUNDIALS_VERSION'] = ''.join(sundials_version.strip().split('.')[:2])
