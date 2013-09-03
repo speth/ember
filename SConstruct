@@ -268,7 +268,7 @@ conf = Configure(env, custom_tests={'CheckMemberFunction': CheckMemberFunction})
 import SCons.Conftest, SCons.SConf
 boost_ok = False
 if env['boost_libs']:
-    boost_lib_choices = env['boost_libs'].split(',')
+    boost_lib_choices = [env['boost_libs'].split(',')]
 else:
     boost_lib_choices = [[''], ['boost_system'], ['boost_thread', 'boost_system']]
 for bt in boost_lib_choices:
