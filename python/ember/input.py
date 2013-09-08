@@ -1301,7 +1301,7 @@ class ConcreteConfig(_ember.ConfigOptions):
                 Sc.append(np.mean(ScRun[mask]))
                 xFlame.append(np.mean(xFlameRun[mask]))
 
-            self.initialCondition.restartFile = restartPath
+            self.readInitialCondition(restartPath + '.h5')
 
             # Sort by strain rate:
             aSave, Q, Sc, xFlame = map(list, zip(*sorted(zip(aSave, Q, Sc, xFlame))))
