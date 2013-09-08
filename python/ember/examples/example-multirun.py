@@ -1,7 +1,11 @@
 #!/usr/bin/python
 from ember import *
+import multiprocessing
 
 conf = Config(
+    General(nThreads=multiprocessing.cpu_count()),
+    Chemistry(kineticsModel='interp',
+              transportModel='Approx'),
     Grid(addPointCount=6),
     Paths(outputDir='run/multirunTest',
           logFile='out-multirunTest.txt'),
