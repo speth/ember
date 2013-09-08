@@ -148,6 +148,9 @@ cdef extern from "flameSolver.h":
         void finalize() except +
         int step() nogil except +
 
+        void writeStateFile(string) except +
+        void writeTimeseriesFile(string) except +
+
         CxxScalarFunction* strainfunc
         CxxScalarFunction* rateMultiplierFunction
 

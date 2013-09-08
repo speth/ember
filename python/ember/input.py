@@ -16,6 +16,7 @@ import numbers
 import os
 import sys
 import types
+import h5py
 import Cantera
 import numpy as np
 import utils
@@ -1270,6 +1271,7 @@ class ConcreteConfig(_ember.ConfigOptions):
                 self.strainParameters.initial = a
                 self.strainParameters.final = a
                 self.paths.logFile = os.path.join(self.paths.outputDir, 'log-eps%04i.txt' % a)
+                self.apply_options()
                 solver = _ember.FlameSolver(self)
                 t1 = time.time()
                 solver.initialize()
@@ -1282,7 +1284,7 @@ class ConcreteConfig(_ember.ConfigOptions):
                 log('Completed run at strain rate a = %g s^-1' % a)
                 log('Integration took %.1f seconds.' % (t2-t1))
 
-                solver.writeStateFile(restartFile, False, False)
+                solver.writeStateFile(restartFile)
                 solver.writeTimeseriesFile(historyFile)
                 tRun = np.array(solver.timeVector)
                 QRun = np.array(solver.heatReleaseRate)

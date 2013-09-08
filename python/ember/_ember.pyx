@@ -325,6 +325,22 @@ cdef class FlameSolver:
 
         return done
 
+    def writeStateFile(self, filename):
+        """
+        Create an HDF5 output file named *filename* containing the spatial
+        profiles of flame at the current time.
+        """
+        self.solver.writeStateFile(filename)
+
+    def writeTimeseriesFile(self, filename):
+        """
+        Create an HDF5 output file named *filename* containing integral flame
+        properties (flame speed, total heat release, flame position, etc.) as
+        a function of time, from the start of the simulation up to the current
+        time.
+        """
+        self.solver.writeTimeseriesFile(filename)
+
     def _updateStrainFunction(self):
         if self.solver.strainfunc == NULL:
             return
