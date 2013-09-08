@@ -2,6 +2,7 @@
 from ember import *
 
 conf = Config(
+    Grid(addPointCount=6),
     Paths(outputDir='run/multirunTest',
           logFile='out-multirunTest.txt'),
     InitialCondition(fuel='CH4:1.0',
