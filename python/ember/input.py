@@ -1226,11 +1226,14 @@ class ConcreteConfig(_ember.ConfigOptions):
 
         self.strainParameters.initial = strainRates[0]
 
+        aSave = []
         Q = []
         Sc = []
         xFlame = []
 
         for a in strainRates:
+            aSave.append(a)
+
             restartFile = 'prof_eps%04i' % a
             historyFile = 'out_eps%04i' % a
             configFile = 'conf_eps%04i' % a
@@ -1301,13 +1304,13 @@ class ConcreteConfig(_ember.ConfigOptions):
             self.initialCondition.restartFile = restartPath
 
             # Sort by strain rate:
-            strainRates, Q, Sc, xFlame = map(list, zip(*sorted(zip(strainRates, Q, Sc, xFlame))))
+            aSave, Q, Sc, xFlame = map(list, zip(*sorted(zip(aSave, Q, Sc, xFlame))))
 
             integralFile = os.path.join(self.paths.outputDir, "integral.h5")
             if os.path.exists(integralFile):
                 os.unlink(integralFile)
             data = h5py.File(integralFile)
-            data['a'] = strainRates
+            data['a'] = aSave
             data['Q'] = Q
             data['Sc'] = Sc
             data['xFlame'] = xFlame
