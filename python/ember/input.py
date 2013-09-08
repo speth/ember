@@ -1242,7 +1242,7 @@ class ConcreteConfig(_ember.ConfigOptions):
             historyPath = os.path.join(self.paths.outputDir, historyFile)
             configPath = os.path.join(self.paths.outputDir, configFile)
 
-            if os.path.exists(restartPath) and os.path.exists(historyPath):
+            if os.path.exists(restartPath + '.h5') and os.path.exists(historyPath + '.h5'):
                 # If the output files already exist, we simply retrieve the
                 # integral flame properties from the existing profiles and
                 # advance to the next strain rate.
@@ -1252,7 +1252,7 @@ class ConcreteConfig(_ember.ConfigOptions):
 
                 # Compute integral properties using points from the last half
                 # of the termination-check period
-                data = HDFStruct(historyPath)
+                data = utils.HDFStruct(historyPath + '.h5')
                 mask = data.t > data.t[-1] - 0.5*self.terminationCondition.steadyPeriod
                 if not any(mask):
                     log('Warning: old data file did not contain data'
