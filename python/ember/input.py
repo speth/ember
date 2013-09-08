@@ -445,6 +445,10 @@ class InitialCondition(Options):
     equivalenceRatio = FloatOption(0.75, min=0, label='Equivalence Ratio',
         filter=_isPremixed)
 
+    #: Molar composition of the fuel + oxidizer mixture. Specify as an alternative
+    #: to providing fuel and oxidizer compositions and equivalence ratio.
+    reactants = Option(None, label='Molar Reactant Composition')
+
     #: Molar composition of the flow opposite the premixed reactant
     #: stream, if different from the equilibrium composition
     counterflow = StringOption(None, label='Composition of counterflow',
@@ -850,8 +854,11 @@ class Config(object):
         # specified fuel and oxidizer species
         gas = Cantera.IdealGasMix(self.chemistry.mechanismFile.value,
                                   id=self.chemistry.phaseID.value)
-        gas.set(X=self.initialCondition.fuel.value)
-        gas.set(X=self.initialCondition.oxidizer.value)
+        if self.initialCondition.reactants.value is not None:
+            gas.set(X=self.initialCondition.reactants.value)
+        else:
+            gas.set(X=self.initialCondition.fuel.value)
+            gas.set(X=self.initialCondition.oxidizer.value)
 
         # Make sure that the mechanism file has sane rate coefficients
         if self.initialCondition.flameType == 'premixed':
@@ -977,7 +984,7 @@ class ConcreteConfig(_ember.ConfigOptions):
 
         IC.haveProfiles = True
         if (IC.fuel or IC.oxidizer or IC.Tfuel or IC.Toxidizer or IC.equivalenceRatio
-            or IC.Tcounterflow or IC.counterflow):
+            or IC.reactants or IC.Tcounterflow or IC.counterflow):
             self.setBoundaryValues(IC.T, IC.Y)
 
     def setBoundaryValues(self, T, Y):
@@ -987,8 +994,12 @@ class ConcreteConfig(_ember.ConfigOptions):
 
         if IC.flameType == 'premixed':
             # Reactants
-            reactants = utils.calculateReactantMixture(gas, IC.fuel, IC.oxidizer,
-                                                       IC.equivalenceRatio)
+            if IC.reactants:
+                reactants = IC.reactants
+            else:
+                reactants = utils.calculateReactantMixture(gas, IC.fuel, IC.oxidizer,
+                                                           IC.equivalenceRatio)
+
             gas.set(X=reactants, T=IC.Tu, P=IC.pressure)
             rhou = gas.density()
             Yu = gas.massFractions()
