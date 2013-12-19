@@ -261,11 +261,32 @@ def get_expression_value(includes, expression):
 
 configInfo = {}
 
+import SCons.Conftest, SCons.SConf
 tests = {}
 conf = Configure(env, custom_tests={'CheckMemberFunction': CheckMemberFunction})
+context = SCons.SConf.CheckContext(conf)
+
+# Check for required headers
+fail = False
+for header, quotes in [('cantera/thermo/IdealGasPhase.h', '""'),
+                       ('cvode/cvode.h', '<>'),
+                       ('Eigen/Dense', '<>'),
+                       ('tbb/parallel_for.h', '""'),
+                       ('hdf5.h', '<>')]:
+    fail |= SCons.Conftest.CheckHeader(context, header, language='C++',
+                                     include_quotes=quotes)
+if fail:
+    raise EnvironmentError("Failed to a required header file. "
+                           "See config.log for details.")
+
+# Check for required libraries
+src = get_expression_value(["<cmath>"], "sin(3.14)")
+retcode, retval = conf.TryRun(src, '.cpp')
+if not retcode:
+    raise EnvironmentError("Failed to a required library."
+                           "See config.log for details.")
 
 # Figure out what needs to be linked for Boost Thread support (used by Cantera)
-import SCons.Conftest, SCons.SConf
 boost_ok = False
 if env['boost_libs']:
     boost_lib_choices = [env['boost_libs'].split(',')]
@@ -275,7 +296,7 @@ for bt in boost_lib_choices:
     header= "#define BOOST_ALL_NO_LIB\n#include <boost/thread/thread.hpp>"
     call = "boost::mutex foo; boost::mutex::scoped_lock bar(foo);"
 
-    ans = SCons.Conftest.CheckLib(SCons.SConf.CheckContext(conf),
+    ans = SCons.Conftest.CheckLib(context,
                                   bt,
                                   header=header,
                                   language='C++',
