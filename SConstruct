@@ -198,7 +198,8 @@ include_dirs.extend([get_config_var('INCLUDEPY'),
                      np.get_include()])
 
 if env['CC'] == 'gcc':
-    flags = ['-ftemplate-depth-128', '-fPIC', '-g', '-Wall']
+    flags = ['-ftemplate-depth-128', '-fPIC', '-g', '-Wall', '-pthread']
+    linkflags = ['-pthread']
     defines = []
     if env['debug_symbols']:
         flags.append('-g')
@@ -211,6 +212,7 @@ if env['CC'] == 'gcc':
 
 elif env['CC'] == 'cl':
     flags = ['/nologo', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc', '/MD']
+    linkflags=[]
     defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS']
     if env['debug_symbols']:
         env.Append(LINKFLAGS='/DEBUG')
@@ -234,6 +236,7 @@ env.Append(CPPPATH=include_dirs,
            LIBPATH=library_dirs,
            CXXFLAGS=flags,
            CPPDEFINES=defines,
+           LINKFLAGS=linkflags,
            LIBS=sundials + cantera + lastlibs)
 
 def CheckMemberFunction(context, function, includes=""):
