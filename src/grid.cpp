@@ -435,7 +435,7 @@ bool OneDimGrid::addRight(vector<dvector>& y)
         x.conservativeResize(nPoints + addPointCount);
         dampVal.conservativeResize(nPoints + addPointCount);
         for (size_t i=0; i<addPointCount; i++) {
-            x[jj+1] = x[jj] + (x[jj]-x[jj-1]);
+            x[jj+1] = x[jj] + sqrt(uniformityTol) * (x[jj]-x[jj-1]);
             dampVal[jj+1] = dampVal[jj];
             for (size_t k=0; k<nVars; k++) {
                 // keep constant boundary value
@@ -494,7 +494,7 @@ bool OneDimGrid::addRightUnstrained(vector<dvector>& y, dvec& qdot)
         qdot.conservativeResize(nPoints + addPointCount);
         dampVal.conservativeResize(nPoints + addPointCount);
         for (size_t i=0; i<addPointCount; i++) {
-            x[jj+1] = x[jj] + (x[jj]-x[jj-1]);
+            x[jj+1] = x[jj] + sqrt(uniformityTol) * (x[jj]-x[jj-1]);
             qdot[jj+1] = qdot[jj];
             dampVal[jj+1] = dampVal[jj];
             for (size_t k=0; k<nVars; k++) {
@@ -554,7 +554,7 @@ bool OneDimGrid::addLeft(vector<dvector>& y)
         logFile.write("Regrid: Adding points to left side.");
         // Add point to the left.
         for (size_t i=0; i<addPointCount; i++) {
-            double xLeft = x[0]-hh[0];
+            double xLeft = x[0] - sqrt(uniformityTol) * (x[1]-x[0]);
             if (twinFlame || curvedFlame) {
                 if (x[0] == 0) {
                     break;
