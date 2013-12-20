@@ -17,7 +17,7 @@ import os
 import sys
 import types
 import h5py
-import Cantera
+import cantera
 import numpy as np
 import utils
 import copy
@@ -853,13 +853,13 @@ class Config(object):
 
         # Make sure that the mechanism file actually works and contains the
         # specified fuel and oxidizer species
-        gas = Cantera.IdealGasMix(self.chemistry.mechanismFile.value,
-                                  id=self.chemistry.phaseID.value)
+        gas = cantera.Solution(self.chemistry.mechanismFile.value,
+                               self.chemistry.phaseID.value)
         if self.initialCondition.reactants.value is not None:
-            gas.set(X=self.initialCondition.reactants.value)
+            gas.X = self.initialCondition.reactants.value
         else:
-            gas.set(X=self.initialCondition.fuel.value)
-            gas.set(X=self.initialCondition.oxidizer.value)
+            gas.X = self.initialCondition.fuel.value
+            gas.X = self.initialCondition.oxidizer.value
 
         # Make sure that the mechanism file has sane rate coefficients
         if self.initialCondition.flameType == 'premixed':
@@ -886,23 +886,23 @@ class Config(object):
         A function for finding reactions with suspiciously high
         rate constants at low temperatures.
         """
-        gas.set(T=300, P=101325, Y=np.ones(gas.nSpecies()))
-        Rf = gas.fwdRateConstants()
-        Rr = gas.revRateConstants()
+        gas.TPY = 300, 101325, np.ones(gas.nSpecies())
+        Rf = gas.forward_rate_constants
+        Rr = gas.reverse_rate_constants
         error = False
         for i in range(len(Rf)):
             if Rf[i] > 1e30:
                 error = True
                 print ('WARNING: Excessively high forward rate constant'
                        ' for reaction %i at T = %6.2f K' % (i+1,T))
-                print '    Reaction equation: %s' % gas.reactionEqn(i)
+                print '    Reaction equation: %s' % gas.reaction_equation(i)
                 print '    Forward rate constant: %e' % Rf[i]
 
             if Rr[i] > 1e30:
                 error = True
                 print ('WARNING: Excessively high reverse rate constant'
                        ' for reaction %i at T = %6.2f K' % (i+1,T))
-                print '    Reaction equation: %s' % gas.reactionEqn(i)
+                print '    Reaction equation: %s' % gas.reaction_equation(i)
                 print '    Reverse rate constant: %e' % Rr[i]
 
         return error
@@ -954,8 +954,8 @@ class ConcreteConfig(_ember.ConfigOptions):
             elif opts is None:
                 setattr(self, name, None)
 
-        self.gas = Cantera.IdealGasMix(self.chemistry.mechanismFile,
-                                       self.chemistry.phaseID)
+        self.gas = cantera.Solution(self.chemistry.mechanismFile,
+                                    self.chemistry.phaseID)
 
         if self.general.fixedBurnedVal is None:
             if ((self.general.twinFlame or self.general.curvedFlame)
@@ -1001,27 +1001,27 @@ class ConcreteConfig(_ember.ConfigOptions):
                 reactants = utils.calculateReactantMixture(gas, IC.fuel, IC.oxidizer,
                                                            IC.equivalenceRatio)
 
-            gas.set(X=reactants, T=IC.Tu, P=IC.pressure)
-            rhou = gas.density()
-            Yu = gas.massFractions()
+            gas.TPX = IC.Tu, IC.pressure, reactants
+            rhou = gas.density
+            Yu = gas.Y
 
             # Products
             gas.equilibrate('HP')
             if IC.Tcounterflow is None:
-                Tb = gas.temperature()
+                Tb = gas.T
             else:
                 Tb = IC.Tcounterflow
             if IC.counterflow is None:
-                Yb = gas.massFractions()
+                Yb = gas.Y
             else:
-                gas.set(X=IC.counterflow, T=Tb, P=IC.pressure)
-                Yb = gas.massFractions()
+                gas.TPX = Tb, IC.pressure, IC.counterflow
+                Yb = gas.Y
 
             if IC.equilibrateCounterflow:
-                gas.set(Y=Yb, T=Tb, P=IC.pressure)
+                gas.TPY = Tb, IC.pressure, Yb
                 gas.equilibrate(IC.equilibrateCounterflow)
-                Yb = gas.massFractions()
-                Tb = gas.temperature()
+                Yb = gas.Y
+                Tb = gas.T
 
             if self.general.unburnedLeft:
                 T[0] = IC.Tu
@@ -1036,16 +1036,16 @@ class ConcreteConfig(_ember.ConfigOptions):
 
         elif IC.flameType == 'diffusion':
             # Fuel
-            gas.set(X=IC.fuel, T=IC.Tfuel, P=IC.pressure)
-            Yfuel = gas.massFractions()
+            gas.TPX = IC.Tfuel, P=IC.pressure, IC.fuel
+            Yfuel = gas.Y
 
             # Oxidizer
-            gas.set(X=IC.oxidizer, T=IC.Toxidizer, P=IC.pressure)
+            gas.TPX = IC.Toxidizer, IC.pressure, IC.oxidizer
             if IC.equilibrateCounterflow:
                 gas.equilibrate(IC.equilibrateCounterflow)
 
-            Yoxidizer = gas.massFractions()
-            Toxidizer = gas.temperature()
+            Yoxidizer = gas.Y
+            Toxidizer = gas.T
 
             if self.general.fuelLeft:
                 T[0] = IC.Tfuel
@@ -1058,8 +1058,8 @@ class ConcreteConfig(_ember.ConfigOptions):
                 T[-1] = IC.Tfuel
                 Y[:,-1] = Yfuel
 
-            gas.set(Y=Y[:,0], T=T[0], P=IC.pressure)
-            rhou = gas.density()  # arbitrary for diffusion flame
+            gas.TPY = T[0], IC.pressure, Y[:,0]
+            rhou = gas.density  # arbitrary for diffusion flame
 
         return rhou
 
@@ -1078,7 +1078,7 @@ class ConcreteConfig(_ember.ConfigOptions):
 
         x = np.linspace(xLeft, IC.xRight, N)
         T = np.zeros(N)
-        Y = np.zeros((self.gas.nSpecies(), N))
+        Y = np.zeros((self.gas.n_species, N))
         V = np.zeros(N)
 
         jm = (IC.nPoints-1) // 2
@@ -1103,18 +1103,18 @@ class ConcreteConfig(_ember.ConfigOptions):
         if IC.flameType == 'premixed':
             T[jm] = IC.Tu
             # Diluent in the middle
-            gas.set(X=IC.oxidizer, T=IC.Tu, P=IC.pressure)
-            Y[:,jm] = gas.massFractions()
+            gas.TPX = IC.Tu, IC.pressure, IC.oxidizer
+            Y[:,jm] = gas.Y
 
         elif IC.flameType == 'diffusion':
             # Stoichiometric mixture at the center
             IC.equivalenceRatio = 1.0
             products = utils.calculateReactantMixture(gas, IC.fuel, IC.oxidizer,
                                                       IC.equivalenceRatio)
-            gas.set(X=products, T=0.5*(IC.Tfuel+IC.Toxidizer), P=IC.pressure)
+            gas.TPX = 0.5*(IC.Tfuel+IC.Toxidizer), IC.pressure, products
             gas.equilibrate('HP')
-            T[jm] = gas.temperature()
-            Y[:,jm] = gas.massFractions()
+            T[jm] = gas.T
+            Y[:,jm] = gas.Y
 
 
         newaxis = np.newaxis
@@ -1148,8 +1148,8 @@ class ConcreteConfig(_ember.ConfigOptions):
         else:
             a0 = self.strainParameters.initial
         for j in range(N):
-            gas.set(Y=Y[:,j], T=T[j], P=IC.pressure)
-            rho[j] = gas.density()
+            gas.TPY = T[j], IC.pressure, Y[:,j]
+            rho[j] = gas.density
             U[j] = a0 * np.sqrt(rhou/rho[j])
 
         for _ in range(2):

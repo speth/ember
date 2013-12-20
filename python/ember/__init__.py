@@ -1,6 +1,6 @@
 import os.path as _path
-import Cantera
 
+import cantera
 from _ember import *
 import _ember
 from input import *
@@ -13,4 +13,4 @@ __version__ = '1.3.dev'
 # each of the two copies of the Cantera library that have been loaded.
 _datapath = _path.join(_path.dirname(_path.abspath(__file__)), 'data')
 _ember.addCanteraDirectory(_datapath)
-Cantera.addDirectory(_datapath)
+cantera.add_directory(_datapath)

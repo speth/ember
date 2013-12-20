@@ -1,5 +1,5 @@
 import numpy as np
-import Cantera as ct
+import cantera as ct
 import h5py
 import os
 import sys
@@ -97,10 +97,8 @@ def get_qdot(gas, profile, pressure=101325):
     """
     q = []
     for i in range(len(profile.T)):
-        gas.set(P=pressure, T=profile.T[i], Y=profile.Y[:,i])
-        hk = gas.enthalpies_RT() * profile.T[i] * ct.GasConstant
-        wDot = gas.netProductionRates()
-        q.append(-np.dot(wDot,hk))
+        gas.TPY = profile.T[i], pressure, profile.Y[:,i]
+        q.append(-np.dot(gas.net_production_rates, gas.partial_molar_enthalpies))
 
     return np.array(q)
 
@@ -150,7 +148,7 @@ def expandProfile(prof, gas):
         prof.dlj[j] = 0.5 * (prof.x[j+1] - prof.x[j-1])
 
     # Thermodynamic / Transport / Kinetic properties
-    K = gas.nSpecies()
+    K = gas.n_species
 
     try:
         P = prof.P
@@ -172,29 +170,28 @@ def expandProfile(prof, gas):
     prof.X = np.zeros((K,N))
 
     for j in range(N):
-        gas.set(T=prof.T[j], Y=prof.Y[:,j], P=P)
-        prof.rho[j] = gas.density()
-        hk = gas.enthalpies_RT() * prof.T[j] * ct.GasConstant
-        wdot = gas.netProductionRates()
+        gas.TPY = prof.T[j], P, prof.Y[:,j]
+        prof.rho[j] = gas.density
+        wdot = gas.net_production_rates
         prof.wdot[:,j] = wdot
-        prof.q[j] = -np.dot(wdot,hk)
-        prof.X[:,j] = gas.moleFractions()
+        prof.q[j] = -np.dot(wdot, gas.partial_molar_enthalpies)
+        prof.X[:,j] = gas.X
 
-        Dbin = gas.binaryDiffCoeffs()
-        prof.Dkt[:,j] = gas.thermalDiffCoeffs()
+        Dbin = gas.binary_diff_coeffs
+        prof.Dkt[:,j] = gas.thermal_diff_coeffs
 
         eps = 1e-15;
         for k in range(K):
-            X = gas.moleFractions()
-            Y = gas.massFractions()
+            X = gas.X
+            Y = gas.Y
             sum1 = sum(X[i]/Dbin[k,i] for i in range(K) if i != k)
             sum2 = sum((Y[i]+eps/K)/Dbin[k,i] for i in range(K) if i != k)
             prof.rhoD[k,j] = prof.rho[j]/(sum1 + X[k]/(1+eps-Y[k])*sum2)
 
-        prof.k[j] = gas.thermalConductivity()
-        prof.cp[j] = gas.cp_mass()
-        prof.mu[j] = gas.viscosity()
-        prof.Wmx[j] = gas.meanMolecularWeight()
+        prof.k[j] = gas.thermal_conductivity
+        prof.cp[j] = gas.cp_mass
+        prof.mu[j] = gas.viscosity
+        prof.Wmx[j] = gas.mean_molecular_weight
 
     for j in range(1, N-1):
         for k in range(K):
@@ -205,18 +202,18 @@ def expandProfile(prof, gas):
                                         (prof.T[j+1]-prof.T[j])/prof.hh[j])
             prof.jCorr[j] -= prof.jFick[k,j] + prof.jSoret[k,j]
 
-    prof.W = gas.molecularWeights()
+    prof.W = gas.molecular_weights
 
 
 def calculateReactantMixture(gas, fuel, oxidizer, equivalenceRatio):
-    gas.set(X=fuel, T=300.0, P=101325)
-    Xf = gas.moleFractions()
-    gas.set(X=oxidizer, T=300.0, P=101325)
-    Xo = gas.moleFractions()
+    gas.TPX = 300.0, 101325, fuel
+    Xf = gas.X
+    gas.TPX = 300.0, 101325, oxidizer
+    Xo = gas.X
 
-    nC = np.array([gas.nAtoms(k, 'C') for k in range(gas.nSpecies())])
-    nO = np.array([gas.nAtoms(k, 'O') for k in range(gas.nSpecies())])
-    nH = np.array([gas.nAtoms(k, 'H') for k in range(gas.nSpecies())])
+    nC = np.array([gas.n_atoms(k, 'C') for k in range(gas.n_species)])
+    nO = np.array([gas.n_atoms(k, 'O') for k in range(gas.n_species)])
+    nH = np.array([gas.n_atoms(k, 'H') for k in range(gas.n_species)])
 
     Cf = (nC * Xf).sum()
     Co = (nC * Xo).sum()
