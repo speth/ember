@@ -64,6 +64,8 @@ elif platform.system() == 'Darwin':
 else:
     defaults.blas_lapack = 'lapack,blas'
 
+defaults.env_vars = 'LD_LIBRARY_PATH,PYTHONPATH,CANTERA_DATA'
+
 env = Environment(tools=['default', 'subst'], **extraEnvArgs)
 env['OS'] = platform.system()
 
@@ -97,6 +99,11 @@ opts.AddVariables(
         the correct libraries. This option should be set if that fails.
      """,
      ''),
+    ('env_vars',
+     """Environment variables to propagate through to SCons. Either the
+        string "all" or a comma separated list of variable names, e.g.
+        'LD_LIBRARY_PATH,HOME'.""",
+     defaults.env_vars),
     PathVariable(
         'hdf5',
         'Location of the HDF5 header and library files.',
@@ -155,6 +162,18 @@ running 'scons build'. The format of this file is:
     for opt in opts.options:
         print '\n'.join(formatOption(env, opt))
     sys.exit(0)
+
+# Copy in external environment variables
+if env['env_vars'] == 'all':
+    env['ENV'].update(os.environ)
+    if 'PYTHONHOME' in env['ENV']:
+        del env['ENV']['PYTHONHOME']
+elif env['env_vars']:
+    for name in env['env_vars'].split(','):
+        if name in os.environ:
+            env['ENV'][name] = os.environ[name]
+        elif name not in defaults.env_vars:
+            print 'WARNING: failed to propagate environment variable', name
 
 cantera = ['cantera'] + env['cantera_libs'].split(',')
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
