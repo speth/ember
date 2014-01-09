@@ -383,9 +383,10 @@ if os.name == 'nt':
     env.Alias('build', [py_gui1, py_gui2])
 
 # The Python module
-env['py_include_dirs'] = repr(['../src'] + include_dirs)
+env['py_include_dirs'] = repr(['../src'] + [Dir(D).abspath for D in include_dirs])
 env['py_libraries'] = repr([L for L in (['ember'] + env['LIBS']) if L])
-env['py_libdirs'] = repr(['../build/core'] + env['LIBPATH'])
+env['py_libdirs'] = repr(['../build/core'] +
+                         [Dir(D).abspath for D in env['LIBPATH']])
 make_setup = env.SubstFile('#python/setup.py',
                            '#python/setup.py.in')
 script = ('from distutils.sysconfig import *\n'
