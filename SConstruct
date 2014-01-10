@@ -17,6 +17,7 @@ Basic usage:
 import os
 import platform
 from distutils.sysconfig import get_config_var
+from Cython.Build import cythonize
 import numpy as np
 from buildutils import *
 
@@ -64,6 +65,7 @@ else:
     defaults.blas_lapack = 'lapack,blas'
 
 env = Environment(tools=['default', 'subst'], **extraEnvArgs)
+env['OS'] = platform.system()
 
 opts = Variables('ember.conf')
 opts.AddVariables(
@@ -386,36 +388,48 @@ if os.name == 'nt':
     env.Alias('build', [py_gui1, py_gui2])
 
 # The Python module
-env['py_include_dirs'] = repr(['../src'] + include_dirs)
-env['py_libraries'] = repr([L for L in (['ember'] + env['LIBS']) if L])
-env['py_libdirs'] = repr(['../build/core'] + env['LIBPATH'])
-make_setup = env.SubstFile('#python/setup.py',
-                           '#python/setup.py.in')
+make_setup = env.SubstFile('#python/setup.py', '#python/setup.py.in')
 script = ('from distutils.sysconfig import *\n'
-          'print(get_config_var("SO"))')
-env['module_ext'] = getCommandOutput(env['python_cmd'], '-c', script).strip()
+          'print(get_config_var("INCLUDEPY"))\n'
+          'print(get_config_var("LIBDIR"))\n'
+          'print(get_python_version())\n')
+
+includepy, libpy, target_py_version = [s.strip()
+    for s in getCommandOutput(env['python_cmd'], '-c', script).split()]
+
+def compile_cython(target, source, env):
+    cythonize([f.abspath for f in source])
+
+env.Command('python/ember/_ember.cpp', ['python/ember/_ember.pyx'], compile_cython)
+
+cyenv = env.Clone() # environment for compiling the Cython module
+cyenv.Prepend(CPPPATH='src', LIBPATH='build/core', LIBS=corelib)
+cyenv.Append(CPPPATH=includepy, LIBPATH=libpy)
+
+if env['OS'] == 'Darwin':
+    cyenv.Append(LIBS=['python'+target_py_version])
+
+py_ext = cyenv.LoadableModule('#build/python/ember/_ember', '#python/ember/_ember.cpp',
+                              LIBPREFIX='')
 
 setup_cmd = 'cd python && $python_cmd setup.py '
-build_args = '--build-lib=../build/python --build-temp=../build/tmp-python'
-py_build_ext = env.Command('build/python/ember/_ember${module_ext}', make_setup,
-                       setup_cmd + 'build_ext ' + build_args)
+
 if os.name == 'nt':
-    env.Depends(py_build_ext, [py_gui1, py_gui2])
+    env.Depends(make_setup, [py_gui1, py_gui2])
 
-env.AddPreAction(py_build_ext, Delete('build/python/ember/_ember${module_ext}'))
-env.Depends(py_build_ext, corelib)
-env.Depends(py_build_ext, mglob(env, 'python/ember', 'h', 'pxd', 'pyx'))
-
-py_build = env.Command('build/python/ember/__init__.py', py_build_ext,
-                       setup_cmd + 'build ' + build_args)
+build_args = ' build --build-lib=../build/python '
+py_build = env.Command('build/python/ember/__init__.py', py_ext,
+                       setup_cmd + build_args)
 env.Alias('build', py_build)
+env.Depends(py_build, [py_ext, make_setup])
 env.Depends(py_build, mglob(env, 'python/ember', 'py'))
 
-py_install = env.Command('dummy_target', py_build, setup_cmd + 'install $install_args')
+py_install = env.Command('dummy_target', py_build, setup_cmd + build_args + 'install $install_args')
 env.Alias('install', py_install)
 
 py_msi = env.Command('dummy_target2', py_build,
-                     setup_cmd + 'bdist_msi --dist-dir=..')
+                     setup_cmd + build_args + 'bdist_msi --dist-dir=..' +
+                     ' --target-version=' + target_py_version)
 env.Alias('msi', py_msi)
 
 # GoogleTest tests

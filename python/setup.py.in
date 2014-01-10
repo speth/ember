@@ -1,14 +1,8 @@
-from distutils.core import setup, Extension
+from distutils.core import setup
 from distutils.sysconfig import get_config_var
-from Cython.Build import cythonize
 import os
 
-dataFiles = []
-
-exts = cythonize("ember/_ember.pyx")
-exts[0].include_dirs += @py_include_dirs@
-exts[0].libraries += @py_libraries@
-exts[0].library_dirs += @py_libdirs@
+dataFiles = ['_ember%s' % get_config_var('SO')]
 
 if os.name == 'nt':
     scripts = ['scripts/ember-script.pyw',
@@ -30,7 +24,6 @@ setup(name='Ember',
       packages = ['ember',
                   'ember.data',
                   'ember.examples'],
-      ext_modules=exts,
       scripts=scripts,
       package_data = {'ember': dataFiles,
                       'ember.data': ['*.*'],
