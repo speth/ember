@@ -312,6 +312,9 @@ if not retcode:
     raise EnvironmentError("Failed to a required library."
                            "See config.log for details.")
 
+# Header optionally used by gtest
+env['HAS_TR1_TUPLE'] = conf.CheckCXXHeader('tr1/tuple', '<>')
+
 # Figure out what needs to be linked for Boost Thread support (used by Cantera)
 boost_ok = False
 if env['boost_libs']:
@@ -458,6 +461,9 @@ testenv.Append(LIBS=['gtest'],
 if os.name == 'nt':
     testenv.Append(LIBPATH=get_config_var('LIBDEST'))
     testenv['ENV']['PATH'] += ';' + Dir('lib').abspath
+
+if not env['HAS_TR1_TUPLE']:
+    testenv.Append(CPPDEFINES='GTEST_USE_OWN_TR1_TUPLE')
 
 test_program = testenv.Program('bin/unittest',
                                Glob('build/test/*.cpp') + common_objects)
