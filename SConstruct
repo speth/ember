@@ -36,6 +36,8 @@ VariantDir('build/test','test', duplicate=0)
 extraEnvArgs = {}
 class defaults: pass
 
+defaults.env_vars = 'PYTHONPATH,CANTERA_DATA'
+
 if os.name == 'nt':
     # On Windows, use the same version of Visual Studio that was used
     # to compile Python, and target the same architecture.
@@ -60,10 +62,10 @@ if os.name == 'nt':
     defaults.blas_lapack = ''
 elif platform.system() == 'Darwin':
     defaults.blas_lapack = ''
+    defaults.env_vars += ',DYLD_LIBRARY_PATH'
 else:
+    defaults.env_vars += ',LD_LIBRARY_PATH'
     defaults.blas_lapack = 'lapack,blas'
-
-defaults.env_vars = 'LD_LIBRARY_PATH,PYTHONPATH,CANTERA_DATA'
 
 env = Environment(tools=['default', 'subst'], **extraEnvArgs)
 
