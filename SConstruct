@@ -73,6 +73,9 @@ env['OS'] = platform.system()
 
 opts = Variables('ember.conf')
 opts.AddVariables(
+    ('CXX',
+     'The C++ compiler to use.',
+     env['CXX']),
     PathVariable(
         'cantera',
         'Location of the Cantera header and library files.',
@@ -226,7 +229,7 @@ if env['tbb']:
 include_dirs.extend([get_config_var('INCLUDEPY'),
                      np.get_include()])
 
-if env['CC'] == 'gcc':
+if 'g++' in env.subst('$CXX') or 'clang++' in env.subst('$CXX'):
     flags = ['-ftemplate-depth-128', '-fPIC', '-g', '-Wall', '-pthread']
     linkflags = ['-pthread']
     defines = []
@@ -239,7 +242,7 @@ if env['CC'] == 'gcc':
         flags.extend(['-O3', '-finline-functions', '-Wno-inline'])
         defines.append('NDEBUG')
 
-elif env['CC'] == 'cl':
+elif env.subst('$CXX') == 'cl':
     flags = ['/nologo', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc', '/MD']
     linkflags=[]
     defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS']
@@ -258,7 +261,7 @@ elif env['CC'] == 'cl':
     env['ENV']['DISTUTILS_USE_SDK'] = 1
 
 else:
-    print 'error: unknown c++ compiler: "%s"' % env['CC']
+    print 'error: unknown c++ compiler: "%s"' % env['CXX']
     sys.exit(0)
 
 env.Append(CPPPATH=include_dirs,
@@ -419,10 +422,9 @@ make_setup = env.SubstFile('#python/setup.py', '#python/setup.py.in')
 script = ('from distutils.sysconfig import *\n'
           'print(get_config_var("EXT_SUFFIX") or get_config_var("SO"))\n'
           'print(get_config_var("INCLUDEPY"))\n'
-          'print(get_config_var("LIBDIR"))\n'
           'print(get_python_version())\n')
 
-suffix, includepy, libpy, target_py_version = [s.strip()
+suffix, includepy, target_py_version = [s.strip()
     for s in getCommandOutput(env['python_cmd'], '-c', script).split()]
 
 def compile_cython(target, source, env):
@@ -432,7 +434,7 @@ env.Command('python/ember/_ember.cpp', ['python/ember/_ember.pyx'], compile_cyth
 
 cyenv = env.Clone() # environment for compiling the Cython module
 cyenv.Prepend(CPPPATH='src', LIBPATH='build/core', LIBS=corelib)
-cyenv.Append(CPPPATH=includepy, LIBPATH=libpy)
+cyenv.Append(CPPPATH=includepy)
 
 if env['OS'] == 'Darwin':
     cyenv.Append(LINKFLAGS='-undefined dynamic_lookup')
