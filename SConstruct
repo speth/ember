@@ -95,6 +95,12 @@ opts.AddVariables(
         'boost',
         'Location of the Boost header files.',
         '', PathVariable.PathAccept),
+    ('include',
+     'Comma-separated List of additional include directories',
+     ''),
+    ('libdirs',
+     'Comma-separated List of additional library directories',
+     ''),
     ('boost_libs',
      """Comma-separated list of extra libraries required to link using Boost
         Thread. If unspecified, SCons will attempt to automatically determine
@@ -191,8 +197,8 @@ if platform.system() == 'Darwin':
 
 lastlibs = ['tbb'] + hdf5 + env['blas_lapack'].split(',')
 
-include_dirs = []
-library_dirs = [env.Dir('lib').abspath]
+include_dirs = env['include'].split(',')
+library_dirs = [env.Dir('lib').abspath] + env['libdirs'].split(',')
 
 if env['cantera']:
     include_dirs.append(env['cantera'] + '/include')
