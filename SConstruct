@@ -409,11 +409,12 @@ if os.name == 'nt':
 # The Python module
 make_setup = env.SubstFile('#python/setup.py', '#python/setup.py.in')
 script = ('from distutils.sysconfig import *\n'
+          'print(get_config_var("EXT_SUFFIX") or get_config_var("SO"))\n'
           'print(get_config_var("INCLUDEPY"))\n'
           'print(get_config_var("LIBDIR"))\n'
           'print(get_python_version())\n')
 
-includepy, libpy, target_py_version = [s.strip()
+suffix, includepy, libpy, target_py_version = [s.strip()
     for s in getCommandOutput(env['python_cmd'], '-c', script).split()]
 
 def compile_cython(target, source, env):
@@ -426,10 +427,10 @@ cyenv.Prepend(CPPPATH='src', LIBPATH='build/core', LIBS=corelib)
 cyenv.Append(CPPPATH=includepy, LIBPATH=libpy)
 
 if env['OS'] == 'Darwin':
-    cyenv.Append(LIBS=['python'+target_py_version])
+    cyenv.Append(LINKFLAGS='-undefined dynamic_lookup')
 
-py_ext = cyenv.LoadableModule('#build/python/ember/_ember', '#python/ember/_ember.cpp',
-                              LIBPREFIX='')
+py_ext = cyenv.LoadableModule('#build/python/ember/_ember%s' % suffix, '#python/ember/_ember.cpp',
+                              LIBPREFIX='', SHLIBSUFFIX=suffix, LIBSUFFIXES=[suffix])
 
 setup_cmd = 'cd python && $python_cmd setup.py '
 
