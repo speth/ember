@@ -37,7 +37,7 @@ VariantDir('build/test','test', duplicate=0)
 extraEnvArgs = {}
 class defaults: pass
 
-defaults.env_vars = 'PYTHONPATH,CANTERA_DATA'
+defaults.env_vars = 'PYTHONPATH,CANTERA_DATA,PATH'
 
 if os.name == 'nt':
     # On Windows, use the same version of Visual Studio that was used
