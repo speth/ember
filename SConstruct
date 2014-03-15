@@ -69,7 +69,6 @@ else:
     defaults.blas_lapack = 'lapack,blas'
 
 env = Environment(tools=['default', 'subst'], **extraEnvArgs)
-env['OS'] = platform.system()
 
 opts = Variables('ember.conf')
 opts.AddVariables(
@@ -148,6 +147,12 @@ opts.AddVariables(
 opts.Update(env)
 opts.Save('ember.conf', env)
 
+if os.name == 'nt' and 'g++' in env.subst('$CXX'):
+    # Compile using mingw
+    env = Environment(tools=['mingw', 'subst'], **extraEnvArgs)
+    env['LIBPREFIX'] = '' # prevent SCons from stripping 'lib' from library names
+    opts.Update(env)
+
 if 'help' in COMMAND_LINE_TARGETS:
     # Print help about configuration options and exit
     print """
@@ -174,6 +179,8 @@ running 'scons build'. The format of this file is:
         print '\n'.join(formatOption(env, opt))
     sys.exit(0)
 
+env['OS'] = platform.system()
+
 # Copy in external environment variables
 if env['env_vars'] == 'all':
     env['ENV'].update(os.environ)
@@ -188,8 +195,19 @@ elif env['env_vars']:
 
 cantera = ['cantera'] + env['cantera_libs'].split(',')
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
+lastlibs = ['tbb']
+
 if os.name == 'nt':
-    hdf5 = ['hdf5','libzlib', 'libszip']
+    if 'g++' in env.subst('$CXX'):
+        hdf5 = ['libhdf5', 'libzlib', 'libszip']
+        lastlibs += ['python27']
+        tbbCompiler = 'mingw'
+        if '64 bit' in pycomp:
+            env.Append(CPPDEFINES='MS_WIN64')
+
+    else:
+        # These are correct for static linking
+        hdf5 = ['libhdf5','libzlib', 'libszip']
     tbbLibDir = env['tbb']+'/lib/%s/%s' % (tbbArch, tbbCompiler)
 else:
     hdf5 = ['hdf5']
@@ -198,10 +216,12 @@ else:
 if platform.system() == 'Darwin':
     env.Append(FRAMEWORKS=['Accelerate'])
 
-lastlibs = ['tbb'] + hdf5 + env['blas_lapack'].split(',')
-
+lastlibs += hdf5 + env['blas_lapack'].split(',')
 include_dirs = env['include'].split(',')
 library_dirs = [env.Dir('lib').abspath] + env['libdirs'].split(',')
+
+if os.name == 'nt':
+    library_dirs.append(get_config_var('prefix') + '/libs')
 
 if env['cantera']:
     include_dirs.append(env['cantera'] + '/include')
@@ -256,7 +276,6 @@ elif env.subst('$CXX') == 'cl':
         flags.append('/O2')
         defines.append('NDEBUG')
 
-    library_dirs.append(get_config_var('prefix') + '/libs')
     env['ENV']['MSSdk'] = 1
     env['ENV']['DISTUTILS_USE_SDK'] = 1
 
@@ -344,7 +363,7 @@ for bt in boost_lib_choices:
         boost_ok = True
         print 'Linking Boost thread with the following libraries: {0}'.format(
             ', '.join(bt) or '<none>')
-        if bt[0] and os.name != 'nt':
+        if bt[0] and env.subst('$CXX') != 'cl':
             env.Append(LIBS=bt)
         break
 
