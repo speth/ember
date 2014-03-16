@@ -354,10 +354,11 @@ for bt in boost_lib_choices:
     call = "boost::mutex foo; boost::mutex::scoped_lock bar(foo);"
 
     ans = SCons.Conftest.CheckLib(context,
-                                  bt,
+                                  [bt[0]],
                                   header=header,
                                   language='C++',
                                   call=call,
+                                  extra_libs=bt[1:] if len(bt)>1 else None,
                                   autoadd=False)
     if not ans:
         boost_ok = True
