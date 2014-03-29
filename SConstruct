@@ -459,6 +459,12 @@ cyenv.Append(CPPPATH=includepy)
 if env['OS'] == 'Darwin':
     cyenv.Append(LINKFLAGS='-undefined dynamic_lookup')
 
+# Suppress warnings from Cython-generated code
+if 'g++' in env.subst('$CXX'):
+    cyenv.Append(CXXFLAGS=['-w'])
+elif os.name == 'nt' and env.subst('$CXX') == 'cl':
+    cyenv.Append(CXXFLAGS=['/w'])
+
 py_ext = cyenv.LoadableModule('#build/python/ember/_ember%s' % suffix, '#python/ember/_ember.cpp',
                               LIBPREFIX='', SHLIBSUFFIX=suffix, LIBSUFFIXES=[suffix])
 
