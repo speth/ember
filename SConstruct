@@ -499,6 +499,10 @@ testenv.Append(LIBS=['gtest'],
 if os.name == 'nt':
     testenv.Append(LIBPATH=get_config_var('LIBDEST'))
     testenv['ENV']['PATH'] += ';' + Dir('lib').abspath
+    if env.subst('CXX') != 'cl':
+        testenv.Append(LIBS=['python' + target_py_version.replace('.','')])
+else:
+    testenv.Append(LIBS=['python' + target_py_version])
 
 if not env['HAS_TR1_TUPLE']:
     testenv.Append(CPPDEFINES='GTEST_USE_OWN_TR1_TUPLE')

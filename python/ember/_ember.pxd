@@ -141,18 +141,30 @@ cdef extern from "scalarFunction.h":
         double dadt(double)
 
 
+cdef extern from "callback.h":
+    ctypedef void (*callback_wrapper)(string&, void*, void**)
+    cdef int translate_callback_exception()
+
+    cdef cppclass CxxCallback "Callback":
+        CxxCallback(callback_wrapper, void*)
+        void eval(string&) except +translate_callback_exception with gil
+
+
 cdef extern from "flameSolver.h":
     cdef cppclass CxxFlameSolver "FlameSolver":
         void setOptions(CxxConfigOptions&) except +
         void initialize() except +
         void finalize() except +
-        int step() nogil except +
+        int step() nogil except +translate_callback_exception
 
         void writeStateFile(string) except +
         void writeTimeseriesFile(string) except +
 
         CxxScalarFunction* strainfunc
         CxxScalarFunction* rateMultiplierFunction
+
+        CxxCallback* stateWriter
+        CxxCallback* timeseriesWriter
 
         double tNow, dt
         vector[double] timeVector
@@ -190,6 +202,12 @@ cdef extern from "flameSolver.h":
         CxxEigenMatrix jSoret
 
 
+cdef class Callback:
+    cdef CxxCallback* callback
+    cdef object exception
+    cdef object solver
+    cdef object func
+
 cdef class ConfigOptions:
     cdef CxxConfigOptions* opts
 
@@ -199,6 +217,8 @@ cdef class FlameSolver:
     cdef object strainFunction
     cdef object rateMultiplierFunction
     cdef object strainInterpPoints
+    cdef Callback _stateWriter
+    cdef Callback _timeseriesWriter
 
     # usedby the GUI
     cdef public object lock

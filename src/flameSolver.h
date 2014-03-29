@@ -11,6 +11,7 @@
 #include "diffusionSystem.h"
 #include "convectionSystem.h"
 #include "quasi2d.h"
+#include "callback.h"
 
 #include <iostream>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -157,6 +158,9 @@ public:
 
     //! Function which describes a multiplier for the chemical reaction rates
     ScalarFunction* rateMultiplierFunction;
+
+    Callback* stateWriter;
+    Callback* timeseriesWriter;
 
     double rVcenter; //!< mass flux at centerline [kg/m^2 or kg/m*rad*s]
     double rVzero; //!< mass flux at j=0

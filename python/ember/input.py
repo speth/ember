@@ -744,6 +744,12 @@ class OutputFiles(Options):
     #: Write profiles after each stage of the split integrator.
     debugIntegratorStages = BoolOption(False, level=2)
 
+    #: Class used to write periodic output files (e.g. profNNNNNN.h5)
+    stateWriter = Option(None, level=2)
+
+    #: Class used to write time-series files (e.g. out.h5)
+    timeSeriesWriter = Option(None, level=2)
+
 
 class TerminationCondition(Options):
     r"""

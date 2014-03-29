@@ -14,6 +14,8 @@ FlameSolver::FlameSolver()
     , jCorrSolver(jCorrSystem)
     , strainfunc(NULL)
     , rateMultiplierFunction(NULL)
+    , stateWriter(NULL)
+    , timeseriesWriter(NULL)
     , tbbTaskSched(tbb::task_scheduler_init::deferred)
 {
 }
@@ -441,6 +443,9 @@ bool FlameSolver::checkTerminationCondition(void)
 void FlameSolver::writeStateFile
 (const std::string& fileNameStr, bool errorFile, bool updateDerivatives)
 {
+    if (stateWriter) {
+        stateWriter->eval(fileNameStr);
+    }
     std::string filename;
     bool incrementFileNumber = false;
 
@@ -538,6 +543,9 @@ void FlameSolver::writeStateFile
 
 void FlameSolver::writeTimeseriesFile(const std::string& filename)
 {
+    if (timeseriesWriter) {
+        timeseriesWriter->eval(filename);
+    }
     DataFile outFile(options.outputDir+"/"+filename+".h5", std::ios_base::trunc);
     outFile.writeVector("t", timeVector);
     outFile.writeVector("dt", timestepVector);

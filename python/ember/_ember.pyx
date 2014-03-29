@@ -4,6 +4,7 @@
 import numpy as np
 cimport numpy as np
 import os
+import sys
 
 from cython.operator cimport dereference as deref
 from _ember cimport *
@@ -44,6 +45,47 @@ cdef np.ndarray[np.double_t, ndim=2] getArray_MatrixMap(CxxEigenMatrixMap& M):
         for j in range(M.cols()):
             v[i,j] = M.item(i,j)
     return v
+
+
+cdef class Callback:
+    """
+    A wrapper for functions that are used to extract information a FlameSolver
+    object at specific points during the integration, e.g. to save periodic
+    output files.
+    """
+    def __cinit__(self, func):
+        """
+        :param func:
+            A callable object that takes the default output file name as an
+            argument.
+        """
+        self.callback = new CxxCallback(func_callback, <void*>self)
+        self.func = func
+        self.exception = None
+
+    def __dealloc__(self):
+        del self.callback
+
+    def eval(self, name):
+        self.func(name)
+
+
+cdef void func_callback(const string& name, void* obj, void** err) nogil:
+    """
+    This function is called from C/C++ to evaluate a `Callback` object *obj*.
+    If an exception occurs while evaluating the function, the Python exception
+    info is saved in the two-element array *err*.
+    """
+    with gil:
+        try:
+            (<Callback>obj).eval(name)
+        except BaseException as e:
+            exc_type, exc_value = sys.exc_info()[:2]
+
+            # Stash the exception info to prevent it from being garbage collected
+            (<Callback>obj).exception = exc_type, exc_value
+            err[0] = <void*>exc_type
+            err[1] = <void*>exc_value
 
 
 def addCanteraDirectory(dirname):
@@ -301,6 +343,9 @@ cdef class FlameSolver:
         self.rateMultiplierFunction = options.chemistry.rateMultiplierFunction
         self._updateStrainFunction()
 
+        self.timeseriesWriter = options.outputFiles.timeSeriesWriter
+        self.stateWriter = options.outputFiles.stateWriter
+
     def __dealloc__(self):
         del self.solver
 
@@ -324,6 +369,24 @@ cdef class FlameSolver:
             raise
 
         return done
+
+    property timeseriesWriter:
+        def __set__(self, writer):
+            if writer is not None:
+                self._timeseriesWriter = Callback(writer(self, self.options))
+                self.solver.timeseriesWriter = self._timeseriesWriter.callback
+            else:
+                self._timeseriesWriter = None
+                self.solver.timeseriesWriter = NULL
+
+    property stateWriter:
+        def __set__(self, writer):
+            if writer is not None:
+                self._stateWriter = Callback(writer(self, self.options))
+                self.solver.stateWriter = self._stateWriter.callback
+            else:
+                self._stateWriter = None
+                self.solver.stateWriter = NULL
 
     def writeStateFile(self, filename):
         """

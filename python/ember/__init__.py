@@ -4,6 +4,7 @@ import cantera
 from _ember import *
 import _ember
 from input import *
+from output import *
 import utils
 
 __version__ = '1.3.dev'
