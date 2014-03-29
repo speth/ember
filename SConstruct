@@ -451,6 +451,7 @@ def compile_cython(target, source, env):
     cythonize([f.abspath for f in source])
 
 env.Command('python/ember/_ember.cpp', ['python/ember/_ember.pyx'], compile_cython)
+env.Depends('python/ember/_ember.cpp', 'python/ember/_ember.pxd')
 
 cyenv = env.Clone() # environment for compiling the Cython module
 cyenv.Prepend(CPPPATH='src', LIBPATH='build/core', LIBS=corelib)
