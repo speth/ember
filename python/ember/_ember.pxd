@@ -93,8 +93,7 @@ cdef extern from "readConfig.h":
 
         int gridAlpha
 
-        cbool outputAuxiliaryVariables, outputTimeDerivatives,
-        cbool outputHeatReleaseRate, outputExtraVariables, outputProfiles
+        cbool outputProfiles
 
         int debugSourcePoint
         double debugSourceTime, debugStartTime, debugStopTime
@@ -132,6 +131,8 @@ cdef extern from "debugUtils.h":
 cdef extern from "grid.h":
     cdef cppclass CxxOneDimGrid "OneDimGrid":
         CxxEigenVec x
+        int alpha
+        CxxEigenVec cfp, cf, cfm, hh, rphalf
 
 
 cdef extern from "scalarFunction.h":
@@ -148,6 +149,17 @@ cdef extern from "callback.h":
     cdef cppclass CxxCallback "Callback":
         CxxCallback(callback_wrapper, void*)
         void eval(string&) except +translate_callback_exception with gil
+
+
+cdef extern from "convectionSystem.h":
+    cdef cppclass CxxConvectionSystemUTW "ConvectionSystemUTW":
+        CxxEigenVec dWdx
+        CxxEigenVec dTdx
+
+    cdef cppclass CxxConvectionSystem "ConvectionSystemSplit":
+        CxxEigenVec V
+        CxxEigenVec dWdt
+        CxxConvectionSystemUTW utwSystem
 
 
 cdef extern from "flameSolver.h":
@@ -174,10 +186,14 @@ cdef extern from "flameSolver.h":
         double terminationCondition
 
         CxxOneDimGrid grid
+        CxxConvectionSystem convectionSystem
 
         CxxEigenVecMap T
         CxxEigenVecMap U
         CxxEigenMatrixMap Y
+
+        double Tleft
+        CxxEigenVec Yleft
 
         CxxEigenMatrix ddtDiff
         CxxEigenMatrix ddtConv

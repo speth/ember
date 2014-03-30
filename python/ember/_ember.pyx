@@ -31,6 +31,13 @@ cdef np.ndarray[np.double_t, ndim=2] getArray_Matrix(CxxEigenMatrix& M):
             v[i,j] = M.item(i,j)
     return v
 
+cdef np.ndarray[np.double_t, ndim=1] getArray_MatrixRow(CxxEigenMatrix& M, int i):
+    cdef np.ndarray[np.double_t, ndim=1] v = np.empty(M.cols())
+    cdef int j
+    for j in range(M.cols()):
+        v[j] = M.item(i,j)
+    return v
+
 cdef np.ndarray[np.double_t, ndim=1] getArray_VecMap(CxxEigenVecMap& vec):
     cdef np.ndarray[np.double_t, ndim=1] v = np.empty(vec.size())
     cdef int i
@@ -91,6 +98,10 @@ cdef void func_callback(const string& name, int flag, void* obj, void** err) nog
 
 def addCanteraDirectory(dirname):
     CxxAddCanteraDirectory(dirname)
+
+
+def writelog(text):
+    CxxSingletonLogfile.write(text)
 
 
 cdef class ConfigOptions:
@@ -272,13 +283,6 @@ cdef class ConfigOptions:
 
         # Output files
         opts.outputProfiles = self.outputFiles.saveProfiles
-        if self.outputFiles.saveProfiles:
-            opts.outputHeatReleaseRate = self.outputFiles.heatReleaseRate
-            opts.outputAuxiliaryVariables = self.outputFiles.auxiliaryVariables
-            opts.outputTimeDerivatives = self.outputFiles.timeDerivatives
-            opts.outputExtraVariables = self.outputFiles.extraVariables
-            opts.outputFileNumber, opts.fileNumberOverride = \
-                get(self.outputFiles.firstFileNumber, 0)
         opts.outputDebugIntegratorStages = self.outputFiles.debugIntegratorStages
 
         # Termination Conditions
@@ -366,7 +370,7 @@ cdef class FlameSolver:
             with nogil:
                 done = self.solver.step()
         except Exception as e:
-            CxxSingletonLogfile.write(e.message)
+            writelog(e.message)
             raise
 
         return done
@@ -429,9 +433,17 @@ cdef class FlameSolver:
         coeffs[2:] = getChebyshevCoeffs(self.rateMultiplierFunction, N, t0, t1)
         self.solver.rateMultiplierFunction.setCoefficients(N+2, &coeffs[0])
 
+    property tNow:
+        def __get__(self):
+            return self.solver.tNow
+
     property x:
         def __get__(self):
             return getArray_Vec(self.solver.grid.x)
+
+    property gridAlpha:
+        def __get__(self):
+            return self.solver.grid.alpha
 
     property T:
         def __get__(self):
@@ -445,9 +457,21 @@ cdef class FlameSolver:
         def __get__(self):
             return getArray_MatrixMap(self.solver.Y)
 
+    property V:
+        def __get__(self):
+            return getArray_Vec(self.solver.convectionSystem.V)
+
     property timeVector:
         def __get__(self):
             return getArray_vector(self.solver.timeVector)
+
+    property a:
+        def __get__(self):
+            return self.solver.strainfunc.a(self.solver.tNow)
+
+    property dadt:
+        def __get__(self):
+            return self.solver.strainfunc.dadt(self.solver.tNow)
 
     property heatReleaseRate:
         def __get__(self):
@@ -468,3 +492,139 @@ cdef class FlameSolver:
     property qDot:
         def __get__(self):
             return getArray_Vec(self.solver.qDot)
+
+    property rho:
+        def __get__(self):
+            return getArray_Vec(self.solver.rho)
+
+    property dUdtDiff:
+        def __get__(self):
+            return getArray_MatrixRow(self.solver.ddtDiff, 0)
+
+    property dUdtConv:
+        def __get__(self):
+            return getArray_MatrixRow(self.solver.ddtConv, 0)
+
+    property dUdtProd:
+        def __get__(self):
+            return getArray_MatrixRow(self.solver.ddtProd, 0)
+
+    property dTdtDiff:
+        def __get__(self):
+            return getArray_MatrixRow(self.solver.ddtDiff, 1)
+
+    property dTdtConv:
+        def __get__(self):
+            return getArray_MatrixRow(self.solver.ddtConv, 1)
+
+    property dTdtProd:
+        def __get__(self):
+            return getArray_MatrixRow(self.solver.ddtProd, 1)
+
+    property dTdtCross:
+        def __get__(self):
+            return getArray_MatrixRow(self.solver.ddtCross, 1)
+
+    property dYdtDiff:
+        def __get__(self):
+            return getArray_Matrix(self.solver.ddtDiff)[2:]
+
+    property dYdtConv:
+        def __get__(self):
+            return getArray_Matrix(self.solver.ddtConv)[2:]
+
+    property dYdtProd:
+        def __get__(self):
+            return getArray_Matrix(self.solver.ddtProd)[2:]
+
+    property dYdtCross:
+        def __get__(self):
+            return getArray_Matrix(self.solver.ddtCross)[2:]
+
+    property dWdt:
+        def __get__(self):
+            return getArray_Vec(self.solver.convectionSystem.dWdt)
+
+    property drhodt:
+        def __get__(self):
+            return getArray_Vec(self.solver.drhodt)
+
+    property sumcpj:
+        def __get__(self):
+            return getArray_Vec(self.solver.sumcpj)
+
+    property Tleft:
+        def __get__(self):
+            return self.solver.Tleft
+
+    property Yleft:
+        def __get__(self):
+            return getArray_Vec(self.solver.Yleft)
+
+    property dWdx:
+        def __get__(self):
+            return getArray_Vec(self.solver.convectionSystem.utwSystem.dWdx)
+
+    property dTdx:
+        def __get__(self):
+            return getArray_Vec(self.solver.convectionSystem.utwSystem.dTdx)
+
+    property wdot:
+        def __get__(self):
+            return getArray_Matrix(self.solver.wDot)
+
+    property rhoD:
+        def __get__(self):
+            return getArray_Matrix(self.solver.rhoD)
+
+    property cp:
+        def __get__(self):
+            return getArray_Vec(self.solver.cp)
+
+    property mu:
+        def __get__(self):
+            return getArray_Vec(self.solver.mu)
+
+    property k:
+        def __get__(self):
+            return getArray_Vec(self.solver.k)
+
+    property W:
+        def __get__(self):
+            return getArray_Vec(self.solver.W)
+
+    property Wmx:
+        def __get__(self):
+            return getArray_Vec(self.solver.Wmx)
+
+    property cfp:
+        def __get__(self):
+            return getArray_Vec(self.solver.grid.cfp)
+
+    property cf:
+        def __get__(self):
+            return getArray_Vec(self.solver.grid.cf)
+
+    property cfm:
+        def __get__(self):
+            return getArray_Vec(self.solver.grid.cfm)
+
+    property hh:
+        def __get__(self):
+            return getArray_Vec(self.solver.grid.hh)
+
+    property rphalf:
+        def __get__(self):
+            return getArray_Vec(self.solver.grid.rphalf)
+
+    property jFick:
+        def __get__(self):
+            return getArray_Matrix(self.solver.jFick)
+
+    property jSoret:
+        def __get__(self):
+            return getArray_Matrix(self.solver.jSoret)
+
+    property jCorr:
+        def __get__(self):
+            return getArray_Vec(self.solver.jCorr)

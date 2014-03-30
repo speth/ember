@@ -24,6 +24,7 @@ import copy
 import time
 
 import _ember
+from . import output
 
 class Option(object):
     """
@@ -745,7 +746,7 @@ class OutputFiles(Options):
     debugIntegratorStages = BoolOption(False, level=2)
 
     #: Class used to write periodic output files (e.g. profNNNNNN.h5)
-    stateWriter = Option(None, level=2)
+    stateWriter = Option(output.StateWriter, level=2)
 
     #: Class used to write time-series files (e.g. out.h5)
     timeSeriesWriter = Option(None, level=2)

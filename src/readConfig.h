@@ -157,10 +157,6 @@ public:
     int gridAlpha; //!< 1 for curved flames, 0 for planar flames
 
     // Controls which variables are included in the outXXXXXX.h5 files
-    bool outputAuxiliaryVariables; //!< [outputFiles.auxiliaryVariables]
-    bool outputTimeDerivatives; //!< [outputFiles.timeDerivatives]
-    bool outputHeatReleaseRate; //!< [outputFiles.heatReleaseRate]
-    bool outputExtraVariables; //!< [outputFiles.extraVariables]
     bool outputProfiles; //!< [outputFiles.saveProfiles]
 
     //! Grid point index marked for verbose output (cvodeSteps.py)
@@ -202,13 +198,6 @@ public:
     int errorStopCount; //!< [general.errorStopCount]
     bool stopIfError;
     int nThreads; //!< [general.nThreads]
-
-    //! number of output files written. Initialized with
-    //! [outputFiles.firstFileNumber].
-    int outputFileNumber;
-
-    //! true if [outputFiles.firstFileNumber] was given in the input file
-    bool fileNumberOverride;
 
     double centerGridMin; //!< [grid.centerGridMin]
 

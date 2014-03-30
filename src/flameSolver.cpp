@@ -444,100 +444,11 @@ void FlameSolver::writeStateFile
 (const std::string& fileNameStr, bool errorFile, bool updateDerivatives)
 {
     if (stateWriter) {
+        if (updateDerivatives) {
+            updateChemicalProperties();
+            convectionSystem.evaluate();
+        }
         stateWriter->eval(fileNameStr, errorFile);
-    }
-    std::string filename;
-    bool incrementFileNumber = false;
-
-    if (fileNameStr.length() == 0) {
-        // Determine the name of the output file (profXXXXXX.h5)
-        incrementFileNumber = true;
-        std::string prefix = (errorFile) ? "error" : "prof";
-        filename = (format("%s/%s%06i.h5") %
-            options.outputDir % prefix % options.outputFileNumber).str();
-    } else {
-        filename = (format("%s/%s.h5") % options.outputDir % fileNameStr).str();
-    }
-
-    if (errorFile) {
-        logFile.write(format("Writing error output file: %s") % filename);
-    } else {
-        logFile.write(format("Writing output file: %s") % filename);
-    }
-
-    if (updateDerivatives) {
-        updateChemicalProperties();
-        convectionSystem.evaluate();
-    }
-
-    // Write the state data to the output file:
-    DataFile outFile(filename, std::ios_base::trunc);
-    outFile.writeScalar("t", tNow);
-    outFile.writeVec("x", x);
-    outFile.writeVec("T", T);
-    outFile.writeVec("U", U);
-    outFile.writeArray2D("Y", Y, true);
-    outFile.writeVec("V", convectionSystem.V);
-    outFile.writeScalar("P", options.pressure);
-    outFile.writeScalar("gridAlpha", grid.alpha);
-    outFile.writeScalar("a", strainfunc->a(tNow));
-    outFile.writeScalar("dadt", strainfunc->dadt(tNow));
-    outFile.writeScalar("fileNumber", options.outputFileNumber);
-
-    if (options.outputHeatReleaseRate || errorFile) {
-        outFile.writeVec("q", qDot);
-        outFile.writeVec("rho", rho);
-    }
-
-    if (options.outputTimeDerivatives || errorFile) {
-        outFile.writeVec("dUdtDiff", ddtDiff.row(kMomentum));
-        outFile.writeVec("dUdtConv", ddtConv.row(kMomentum));
-        outFile.writeVec("dUdtProd", ddtProd.row(kMomentum));
-
-        outFile.writeVec("dTdtDiff", ddtDiff.row(kEnergy));
-        outFile.writeVec("dTdtConv", ddtConv.row(kEnergy));
-        outFile.writeVec("dTdtProd", ddtProd.row(kEnergy));
-        outFile.writeVec("dTdtCross", ddtCross.row(kEnergy));
-
-        outFile.writeArray2D("dYdtConv", ddtConv.bottomRows(nSpec), true);
-        outFile.writeArray2D("dYdtDiff", ddtDiff.bottomRows(nSpec), true);
-        outFile.writeArray2D("dYdtProd", ddtProd.bottomRows(nSpec), true);
-        outFile.writeArray2D("dYdtCross", ddtCross.bottomRows(nSpec), true);
-
-        outFile.writeVec("dWdt", convectionSystem.dWdt);
-        outFile.writeVec("drhodt", drhodt);
-    }
-
-    if (options.outputAuxiliaryVariables || errorFile) {
-        outFile.writeVec("sumcpj", sumcpj);
-        outFile.writeScalar("Tleft", Tleft);
-        outFile.writeVec("Yleft", Yleft);
-
-        outFile.writeVec("dWdx", convectionSystem.utwSystem.dWdx);
-        outFile.writeVec("dTdx", convectionSystem.utwSystem.dTdx);
-    }
-
-    if (options.outputExtraVariables || errorFile) {
-        // These variables can be recomputed from the state variables
-        outFile.writeArray2D("wdot", wDot, true);
-        outFile.writeArray2D("rhoD", rhoD, true);
-        outFile.writeVec("lambda", lambda);
-        outFile.writeVec("cp", cp);
-        outFile.writeVec("mu", mu);
-        outFile.writeVec("Wmx", Wmx);
-        outFile.writeVec("W", W);
-        outFile.writeVec("cfp", grid.cfp);
-        outFile.writeVec("cf", grid.cf);
-        outFile.writeVec("cfm", grid.cfm);
-        outFile.writeVec("hh", hh);
-        outFile.writeVec("rphalf", grid.rphalf);
-        outFile.writeArray2D("jFick", jFick, true);
-        outFile.writeArray2D("jSoret", jSoret, true);
-        outFile.writeVec("jCorr", jCorr);
-    }
-
-    if (incrementFileNumber) {
-        options.outputFileNumber++;
     }
 }
 
