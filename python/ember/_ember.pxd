@@ -169,8 +169,9 @@ cdef extern from "flameSolver.h":
         void finalize() except +
         int step() nogil except +translate_callback_exception
 
-        void writeStateFile(string) except +
-        void writeTimeseriesFile(string) except +
+        double getHeatReleaseRate() except +
+        double getConsumptionSpeed() except +
+        double getFlamePosition() except +
 
         CxxScalarFunction* strainfunc
         CxxScalarFunction* rateMultiplierFunction
@@ -179,10 +180,6 @@ cdef extern from "flameSolver.h":
         CxxCallback* timeseriesWriter
 
         double tNow, dt
-        vector[double] timeVector
-        vector[double] heatReleaseRate
-        vector[double] consumptionSpeed
-        vector[double] flamePosition
         double terminationCondition
 
         CxxOneDimGrid grid

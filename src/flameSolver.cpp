@@ -1,5 +1,4 @@
 #include "flameSolver.h"
-#include "dataFile.h"
 #include "scalarFunction.h"
 #include "tbb_tools.h"
 
@@ -252,13 +251,8 @@ int FlameSolver::finishStep()
     if (t + 0.5 * dt > tOutput || nOutput >= options.outputStepInterval) {
         calculateQdot();
         timeVector.push_back(t);
-        timestepVector.push_back(dt);
         heatReleaseRate.push_back(getHeatReleaseRate());
-        consumptionSpeed.push_back(getConsumptionSpeed());
-        flamePosition.push_back(getFlamePosition());
-        strainRateVector.push_back(strainfunc->a(t));
-        dStrainRateVector.push_back(strainfunc->dadt(t));
-
+        saveTimeSeriesData("out", false);
         tOutput = t + options.outputTimeInterval;
         nOutput = 0;
     }
@@ -279,7 +273,7 @@ int FlameSolver::finishStep()
     if (nCurrentState >= options.currentStateStepInterval) {
         calculateQdot();
         nCurrentState = 0;
-        writeTimeseriesFile("out");
+        saveTimeSeriesData("out", true);
         writeStateFile("profNow");
     }
 
@@ -375,7 +369,7 @@ int FlameSolver::finishStep()
 void FlameSolver::finalize()
 {
     calculateQdot();
-    writeTimeseriesFile("out");
+    saveTimeSeriesData("out", true);
 
     // *** Integration has reached the termination condition
     if (options.outputProfiles) {
@@ -452,19 +446,11 @@ void FlameSolver::writeStateFile
     }
 }
 
-void FlameSolver::writeTimeseriesFile(const std::string& filename)
+void FlameSolver::saveTimeSeriesData(const std::string& filename, bool write)
 {
     if (timeseriesWriter) {
-        timeseriesWriter->eval(filename, 0);
+        timeseriesWriter->eval(filename, write);
     }
-    DataFile outFile(options.outputDir+"/"+filename+".h5", std::ios_base::trunc);
-    outFile.writeVector("t", timeVector);
-    outFile.writeVector("dt", timestepVector);
-    outFile.writeVector("Q", heatReleaseRate);
-    outFile.writeVector("Sc", consumptionSpeed);
-    outFile.writeVector("xFlame", flamePosition);
-    outFile.writeVector("a", strainRateVector);
-    outFile.writeVector("dadt", dStrainRateVector);
 }
 
 void FlameSolver::resizeAuxiliary()

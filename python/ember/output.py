@@ -9,8 +9,37 @@ class TimeSeriesWriter(object):
         self.solver = solver
         self.options = options
 
-    def __call__(self, name, flag):
-        pass
+        self.t = []
+        self.dt = []
+        self.Q = []
+        self.Sc = []
+        self.xFlame = []
+        self.a = []
+        self.dadt = []
+
+    def __call__(self, name, flag=1):
+        if not self.t or self.solver.tNow != self.t[-1]:
+            self.t.append(self.solver.tNow)
+            self.dt.append(self.solver.dt)
+            self.Q.append(self.solver.heatReleaseRate)
+            self.Sc.append(self.solver.consumptionSpeed)
+            self.xFlame.append(self.solver.flamePosition)
+            self.a.append(self.solver.a)
+            self.dadt.append(self.solver.dadt)
+
+        if flag:
+            filename = '{}/{}.h5'.format(self.options.paths.outputDir, name)
+            if os.path.exists(filename):
+                os.remove(filename)
+
+            with h5py.File(filename) as data:
+                data['t'] = self.t
+                data['dt'] = self.dt
+                data['Q'] = self.Q
+                data['Sc'] = self.Sc
+                data['xFlame'] = self.xFlame
+                data['a'] = self.a
+                data['dadt'] = self.dadt
 
 
 class StateWriter(object):
@@ -23,7 +52,7 @@ class StateWriter(object):
         for k in keys:
             datafile[k] = getattr(self.solver, k)
 
-    def __call__(self, name, errorFile):
+    def __call__(self, name, errorFile=False):
         if not name:
             # Determine the name of the output file (e.g. profXXXXXX.h5)
             self.fileNumber += 1

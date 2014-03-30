@@ -383,6 +383,8 @@ cdef class FlameSolver:
             else:
                 self._timeseriesWriter = None
                 self.solver.timeseriesWriter = NULL
+        def __get__(self):
+            return self._timeseriesWriter.func
 
     property stateWriter:
         def __set__(self, writer):
@@ -392,13 +394,15 @@ cdef class FlameSolver:
             else:
                 self._stateWriter = None
                 self.solver.stateWriter = NULL
+        def __get__(self):
+            return self._stateWriter.func
 
     def writeStateFile(self, filename):
         """
         Create an HDF5 output file named *filename* containing the spatial
         profiles of flame at the current time.
         """
-        self.solver.writeStateFile(filename)
+        self.stateWriter(filename)
 
     def writeTimeseriesFile(self, filename):
         """
@@ -407,7 +411,7 @@ cdef class FlameSolver:
         a function of time, from the start of the simulation up to the current
         time.
         """
-        self.solver.writeTimeseriesFile(filename)
+        self.timeseriesWriter(filename)
 
     def _updateStrainFunction(self):
         if self.solver.strainfunc == NULL:
@@ -437,6 +441,22 @@ cdef class FlameSolver:
         def __get__(self):
             return self.solver.tNow
 
+    property dt:
+        def __get__(self):
+            return self.solver.dt
+
+    property heatReleaseRate:
+        def __get__(self):
+            return self.solver.getHeatReleaseRate()
+
+    property consumptionSpeed:
+        def __get__(self):
+            return self.solver.getConsumptionSpeed()
+
+    property flamePosition:
+        def __get__(self):
+            return self.solver.getFlamePosition()
+
     property x:
         def __get__(self):
             return getArray_Vec(self.solver.grid.x)
@@ -461,10 +481,6 @@ cdef class FlameSolver:
         def __get__(self):
             return getArray_Vec(self.solver.convectionSystem.V)
 
-    property timeVector:
-        def __get__(self):
-            return getArray_vector(self.solver.timeVector)
-
     property a:
         def __get__(self):
             return self.solver.strainfunc.a(self.solver.tNow)
@@ -472,18 +488,6 @@ cdef class FlameSolver:
     property dadt:
         def __get__(self):
             return self.solver.strainfunc.dadt(self.solver.tNow)
-
-    property heatReleaseRate:
-        def __get__(self):
-            return getArray_vector(self.solver.heatReleaseRate)
-
-    property consumptionSpeed:
-        def __get__(self):
-            return getArray_vector(self.solver.consumptionSpeed)
-
-    property flamePosition:
-        def __get__(self):
-            return getArray_vector(self.solver.flamePosition)
 
     property terminationCondition:
         def __get__(self):

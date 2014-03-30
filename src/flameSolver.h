@@ -45,7 +45,7 @@ public:
     bool checkTerminationCondition(void);
 
     void writeStateFile(const std::string& fileName="", bool errorFile=false, bool updateDerivatives=true);
-    void writeTimeseriesFile(const std::string& filename); //!< create out.h5 file
+    void saveTimeSeriesData(const std::string& filename, bool write); //!< Collect info for out.h5 file
 
     //! Compute integral heat release rate [W/m^2].
     //! Assumes that #qDot has already been updated.
@@ -61,12 +61,7 @@ public:
 
     // Time-series data
     dvector timeVector; //!< Time [s] at the end of every ConfigOptions::outputStepInterval timesteps.
-    dvector timestepVector; //!< Global integrator timesteps [s] used to get to the times in #timeVector.
     dvector heatReleaseRate; //!< Integral heat release rate [W/m^2] at the times in #timeVector.
-    dvector consumptionSpeed; //!< Consumption speed [m/s] at the times in #timeVector.
-    dvector flamePosition; //!< Heat release centroid [m] at the times in #timeVector.
-    dvector strainRateVector; //!< Strain rate [1/s] at the times in #timeVector.
-    dvector dStrainRateVector; //!< Time derivative of strain rate [1/s^2] at the times in #timeVector.
 
     long int nTotal; //!< total number of timesteps taken
     int nRegrid; //!< number of time steps since regridding/adaptation

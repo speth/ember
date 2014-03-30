@@ -749,7 +749,7 @@ class OutputFiles(Options):
     stateWriter = Option(output.StateWriter, level=2)
 
     #: Class used to write time-series files (e.g. out.h5)
-    timeSeriesWriter = Option(None, level=2)
+    timeSeriesWriter = Option(output.TimeSeriesWriter, level=2)
 
 
 class TerminationCondition(Options):
@@ -1308,10 +1308,10 @@ class ConcreteConfig(_ember.ConfigOptions):
 
                 solver.writeStateFile(restartFile)
                 solver.writeTimeseriesFile(historyFile)
-                tRun = np.array(solver.timeVector)
-                QRun = np.array(solver.heatReleaseRate)
-                ScRun = np.array(solver.consumptionSpeed)
-                xFlameRun = np.array(solver.flamePosition)
+                tRun = np.array(solver.timeseriesWriter.t)
+                QRun = np.array(solver.timeseriesWriter.Q)
+                ScRun = np.array(solver.timeseriesWriter.Sc)
+                xFlameRun = np.array(solver.timeseriesWriter.xFlame)
 
                 # Compute integral properties using points from the last half
                 # of the termination-check period
