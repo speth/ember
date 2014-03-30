@@ -444,7 +444,7 @@ void FlameSolver::writeStateFile
 (const std::string& fileNameStr, bool errorFile, bool updateDerivatives)
 {
     if (stateWriter) {
-        stateWriter->eval(fileNameStr);
+        stateWriter->eval(fileNameStr, errorFile);
     }
     std::string filename;
     bool incrementFileNumber = false;
@@ -544,7 +544,7 @@ void FlameSolver::writeStateFile
 void FlameSolver::writeTimeseriesFile(const std::string& filename)
 {
     if (timeseriesWriter) {
-        timeseriesWriter->eval(filename);
+        timeseriesWriter->eval(filename, 0);
     }
     DataFile outFile(options.outputDir+"/"+filename+".h5", std::ios_base::trunc);
     outFile.writeVector("t", timeVector);

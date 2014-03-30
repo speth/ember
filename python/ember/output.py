@@ -3,5 +3,5 @@ class TimeSeriesWriter(object):
         self.solver = solver
         self.options = options
 
-    def __call__(self, name):
+    def __call__(self, name, flag):
         print 'TimeSeriesWriter:', dir(self.solver)

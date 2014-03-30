@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 
-typedef void(*callback_wrapper)(const std::string&, void*, void**);
+typedef void(*callback_wrapper)(const std::string&, int, void*, void**);
 
 // A function implemented as a callable Python object
 class Callback
@@ -14,7 +14,7 @@ public:
         m_pyobj(pyobj) {
     }
 
-    void eval(const std::string& name) const;
+    void eval(const std::string& name, int flag) const;
 
 private:
     callback_wrapper m_func;

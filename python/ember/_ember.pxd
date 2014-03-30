@@ -142,7 +142,7 @@ cdef extern from "scalarFunction.h":
 
 
 cdef extern from "callback.h":
-    ctypedef void (*callback_wrapper)(string&, void*, void**)
+    ctypedef void (*callback_wrapper)(string&, int, void*, void**)
     cdef int translate_callback_exception()
 
     cdef cppclass CxxCallback "Callback":

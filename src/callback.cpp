@@ -17,7 +17,7 @@ public:
     PyObject* m_traceback;
 };
 
-void Callback::eval(const std::string& name) const
+void Callback::eval(const std::string& name, int flag) const
 {
     void* err[3] = {0, 0, 0};
     m_func(name, flag, m_pyobj, err);

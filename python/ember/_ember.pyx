@@ -66,11 +66,11 @@ cdef class Callback:
     def __dealloc__(self):
         del self.callback
 
-    def eval(self, name):
-        self.func(name)
+    def eval(self, name, flag):
+        self.func(name, flag)
 
 
-cdef void func_callback(const string& name, void* obj, void** err) nogil:
+cdef void func_callback(const string& name, int flag, void* obj, void** err) nogil:
     """
     This function is called from C/C++ to evaluate a `Callback` object *obj*.
     If an exception occurs while evaluating the function, the Python exception
@@ -78,7 +78,7 @@ cdef void func_callback(const string& name, void* obj, void** err) nogil:
     """
     with gil:
         try:
-            (<Callback>obj).eval(name)
+            (<Callback>obj).eval(name, flag)
         except BaseException as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
 
