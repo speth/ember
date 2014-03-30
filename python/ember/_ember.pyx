@@ -80,12 +80,13 @@ cdef void func_callback(const string& name, void* obj, void** err) nogil:
         try:
             (<Callback>obj).eval(name)
         except BaseException as e:
-            exc_type, exc_value = sys.exc_info()[:2]
+            exc_type, exc_value, exc_traceback = sys.exc_info()
 
             # Stash the exception info to prevent it from being garbage collected
-            (<Callback>obj).exception = exc_type, exc_value
+            (<Callback>obj).exception = exc_type, exc_value, exc_traceback
             err[0] = <void*>exc_type
             err[1] = <void*>exc_value
+            err[2] = <void*>exc_traceback
 
 
 def addCanteraDirectory(dirname):
