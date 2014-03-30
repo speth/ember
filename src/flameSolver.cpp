@@ -1047,9 +1047,10 @@ void FlameSolver::loadProfile(void)
 
     U = options.U_initial;
     T = options.T_initial;
-    Y = options.Y_initial;
-    if (Y.rows() == static_cast<dmatrix::Index>(x.size())) {
-        Y = Y.transpose().eval();
+    if (options.Y_initial.rows() == static_cast<dmatrix::Index>(x.size())) {
+        Y = options.Y_initial.transpose();
+    } else {
+        Y = options.Y_initial;
     }
     convectionSystem.V = options.V_initial;
     convectionSystem.utwSystem.V = options.V_initial;
