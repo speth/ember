@@ -964,7 +964,9 @@ class ConcreteConfig(_ember.ConfigOptions):
             else:
                 self.general.fixedBurnedVal = True
 
-        if self.initialCondition.restartFile:
+        if self.initialCondition.flameType == 'quasi2d':
+            self.setupQuasi2d()
+        elif self.initialCondition.restartFile:
             self.readInitialCondition(self.initialCondition.restartFile)
         elif not self.initialCondition.haveProfiles:
             self.generateInitialCondition()
@@ -1177,6 +1179,16 @@ class ConcreteConfig(_ember.ConfigOptions):
         IC.T = T
         IC.U = U
         IC.V = V
+        IC.haveProfiles = True
+
+    def setupQuasi2d(self):
+        IC = self.initialCondition
+        data = utils.HDFStruct(self.general.interpFile)
+        IC.x = data.r
+        IC.Y = data.Y0
+        IC.T = data.T[0]
+        IC.U = data.U
+        IC.V = data.vz[0]
         IC.haveProfiles = True
 
     def run(self):
