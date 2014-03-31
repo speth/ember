@@ -249,7 +249,9 @@ if env['tbb']:
 include_dirs.extend([get_config_var('INCLUDEPY'),
                      np.get_include()])
 
-if 'g++' in env.subst('$CXX') or 'clang++' in env.subst('$CXX'):
+if ('g++' in env.subst('$CXX')
+    or 'clang++' in env.subst('$CXX')
+    or 'icpc' in env.subst('$CXX')):
     flags = ['-ftemplate-depth-128', '-fPIC', '-g', '-Wall', '-pthread']
     linkflags = ['-pthread']
     defines = []
