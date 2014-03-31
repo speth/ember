@@ -146,6 +146,7 @@ opts.Save('ember.conf', env)
 if os.name == 'nt' and 'g++' in env.subst('$CXX'):
     # Compile using mingw
     env = Environment(tools=['mingw', 'subst'], **extraEnvArgs)
+    env.Append(LINKFLAGS=['-static-libgcc', '-static-libstdc++'])
     env['LIBPREFIX'] = '' # prevent SCons from stripping 'lib' from library names
     opts.Update(env)
 
