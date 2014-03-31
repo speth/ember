@@ -176,6 +176,12 @@ running 'scons build'. The format of this file is:
         print '\n'.join(formatOption(env, opt))
     sys.exit(0)
 
+# Print values of all build options:
+print "Configuration variables read from 'ember.conf' and command line:"
+for line in open('ember.conf'):
+    print '   ', line.strip()
+print
+
 env['OS'] = platform.system()
 
 # Copy in external environment variables
