@@ -212,6 +212,13 @@ class Options(object):
         allOpts.sort(key=lambda item: item[1].sortValue)
         return allOpts.__iter__()
 
+    def isSet(self, option):
+        """ Returns True if the named option has a user-specified value """
+        try:
+            return getattr(self.original, option).isSet
+        except AttributeError:
+            return getattr(self, option).isSet
+
 
 # frequently-used filter predicates
 def _isPremixed(conf):
@@ -945,6 +952,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         for name, opts in config.__dict__.iteritems():
             if isinstance(opts, Options):
                 group = opts.__class__()
+                group.original = opts
                 setattr(self, name, group)
 
                 for name in dir(opts):
@@ -986,8 +994,8 @@ class ConcreteConfig(_ember.ConfigOptions):
         IC.V = data.V
 
         IC.haveProfiles = True
-        if (IC.fuel or IC.oxidizer or IC.Tfuel or IC.Toxidizer or IC.equivalenceRatio
-            or IC.reactants or IC.Tcounterflow or IC.counterflow):
+        if any(map(IC.isSet, ('fuel', 'oxidizer', 'Tfuel', 'Toxidizer', 'reactants',
+                              'equivalenceRatio', 'Tcounterflow', 'counterflow'))):
             self.setBoundaryValues(IC.T, IC.Y, IC.V)
 
     def setBoundaryValues(self, T, Y, V=None):
