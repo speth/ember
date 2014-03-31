@@ -2,7 +2,6 @@
 
 #include "mathUtils.h"
 
-#include <string>
 #include <map>
 
 //! Bilinear interpolation from data on a rectangular mesh.

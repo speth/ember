@@ -32,7 +32,6 @@ void BilinearInterpolator::initialize()
 
 double BilinearInterpolator::get(double x, double y) const
 {
-    typedef std::map<double, size_t>::const_iterator iter_t;
     size_t i = xi_.upper_bound(x)->second;
     size_t j = yi_.upper_bound(y)->second;
     double x1 = x_[i-1];
