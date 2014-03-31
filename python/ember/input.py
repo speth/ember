@@ -988,9 +988,9 @@ class ConcreteConfig(_ember.ConfigOptions):
         IC.haveProfiles = True
         if (IC.fuel or IC.oxidizer or IC.Tfuel or IC.Toxidizer or IC.equivalenceRatio
             or IC.reactants or IC.Tcounterflow or IC.counterflow):
-            self.setBoundaryValues(IC.T, IC.Y)
+            self.setBoundaryValues(IC.T, IC.Y, IC.V)
 
-    def setBoundaryValues(self, T, Y):
+    def setBoundaryValues(self, T, Y, V=None):
         IC = self.initialCondition
         jm = (IC.nPoints-1) // 2
         gas = self.gas
@@ -1028,11 +1028,13 @@ class ConcreteConfig(_ember.ConfigOptions):
             if self.general.unburnedLeft:
                 T[0] = IC.Tu
                 Y[:,0] = Yu
-                T[-1] = Tb
-                Y[:,-1] = Yb
+                if V is None or V[-1] < 0:
+                    T[-1] = Tb
+                    Y[:,-1] = Yb
             else:
-                T[0] = Tb
-                Y[:,0] = Yb
+                if V is None or V[0] > 0:
+                    T[0] = Tb
+                    Y[:,0] = Yb
                 T[-1] = IC.Tu
                 Y[:,-1] = Yu
 
