@@ -182,9 +182,8 @@ dmatrix DataFile::readArray2D(const std::string& name, bool transpose)
             H5Sget_simple_extent_ndims(dataspace)).str());
     }
 
-    hsize_t ndim = 2;
-    vector<hsize_t> dimensions(2);
-    H5Sget_simple_extent_dims(dataspace, &dimensions[0], &ndim);
+    hsize_t dimensions[2];
+    H5Sget_simple_extent_dims(dataspace, dimensions, NULL);
 
     dmatrix y(dimensions[1], dimensions[0]);
 
