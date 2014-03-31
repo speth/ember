@@ -18,13 +18,13 @@ Compiling Ember
 * Build Dependencies: These directions assume you are using a Linux or Windows
   system with the following installed:
 
-  * A C++ compiler (g++ or Visual Studio 2008)
+  * A C++ compiler (g++, Clang, Intel C++, Visual Studio 2008)
   * Python (2.6 or 2.7)
   * Cython (>= 0.18)
   * Boost (>= 1.40)
-  * SCons (2.1.0 recommended)
+  * SCons (>= 2.1.0 recommended)
   * Eigen (>= 3.0)
-  * Cantera (>= 2.0.0)
+  * Cantera (>= 2.1.0, with the "new" Python interface)
   * Sundials (2.4 or 2.5)
   * Intel Threading Building Blocks (>= 4.0)
   * numpy (>= 1.3.0)
@@ -56,7 +56,7 @@ Compiling Ember
   Otherwise, specify the necessary paths using the corresponding command-line
   options: "cantera", "sundials", "eigen", "boost", "tbb". For example::
 
-    $ scons build cantera=/home/$USER/.local sundials=/opt/sundials-2.4.0
+    $ scons build cantera=/home/$USER/.local sundials=/opt/sundials-2.5.0
 
   This produces the Python extension module ``build/python/ember/_ember.so``.
 
@@ -79,7 +79,7 @@ Compiling Ember
 
   And similarly for Cantera, if it is not already on the Python path::
 
-    $ ln -s /path/to/cantera/lib/pythonX.Y/site-packages/Cantera ~/.local/lib/pythonX.Y/site-packages/
+    $ ln -s /path/to/cantera/lib/pythonX.Y/site-packages/cantera ~/.local/lib/pythonX.Y/site-packages/
 
   Or add parent directories of each of these modules to your ``PYTHONPATH``::
 
@@ -100,13 +100,9 @@ Running Ember
   in the Chemkin format, it will need to be converted::
 
     $ source /wherever/cantera/is/installed/setup_cantera
-    $ ck2cti2 --input=<mech> --thermo=<thermo> --transport=<transport>
+    $ ck2cti --input=<mech> --thermo=<thermo> --transport=<transport>
 
-  This will produce a ``.cti`` file, which needs to be further converted::
-
-    $ cti2ctml <mechname>.cti
-
-  to produce ``<mechname>.xml``.
+  This will produce a``<mech>.cti`` file that can be used by Cantera and Ember.
 
 * Prepare the input file, based on the one specified in::
 
@@ -115,11 +111,9 @@ Running Ember
   A complete list of all available input parameters may be found in the `HTML
   documentation. <http://speth.github.com/ember-doc/sphinx/html/input.html>`_
   Alternatively, you look at the definitions in
-  ``python/ember/input.py``. Specify the path to your mechanism file (which
-  needs to be in whatever directory is specified as the "input" directory in
-  input file) as the ``mechanismFile`` and ``"gas"`` as the ``phaseID``. The
-  other parameters you may want to change are in the ``Paths``,
-  ``InitialCondition``, and ``StrainParameters`` sections.
+  ``python/ember/input.py``. Specify the path to your mechanism file as the
+  ``mechanismFile``. Other parameters you may want to change are in the
+  ``Paths``, ``InitialCondition``, and ``StrainParameters`` sections.
 
 * Check the configuration for errors::
 
