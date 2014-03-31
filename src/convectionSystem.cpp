@@ -478,6 +478,7 @@ void ConvectionSystemSplit::resize
     }
     utwSystem.resize(nPoints);
     Wmx.resize(nPoints);
+    dWdt.resize(nPoints);
 }
 
 void ConvectionSystemSplit::setState(double tInitial)
