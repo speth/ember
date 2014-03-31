@@ -1,23 +1,9 @@
 #include "quasi2d.h"
 
-#include "dataFile.h"
-
-void BilinearInterpolator::open(const std::string& filename,
-                                const std::string& path,
-                                const std::string& xcoords,
-                                const std::string& ycoords)
-{
-    DataFile file(filename);
-    data_ = file.readArray2D(path);
-    x_ = file.readVec(xcoords);
-    y_ = file.readVec(ycoords);
-    initialize();
-}
-
 void BilinearInterpolator::setup(const dmatrix& data,
                                  const dvec& x, const dvec& y)
 {
-    data_ = data.transpose().eval();
+    data_ = data;
     x_ = x;
     y_ = y;
     initialize();

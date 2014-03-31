@@ -16,6 +16,9 @@ FlameSolver::FlameSolver()
     , stateWriter(NULL)
     , timeseriesWriter(NULL)
     , tbbTaskSched(tbb::task_scheduler_init::deferred)
+    , vzInterp(new BilinearInterpolator)
+    , vrInterp(new BilinearInterpolator)
+    , TInterp(new BilinearInterpolator)
 {
 }
 
@@ -61,17 +64,6 @@ void FlameSolver::initialize(void)
 
     // Get Initial Conditions
     loadProfile();
-
-    // Interpolation data for quasi-2d problem
-    if (options.quasi2d) {
-        TInterp.reset(new BilinearInterpolator);
-        vrInterp.reset(new BilinearInterpolator);
-        vzInterp.reset(new BilinearInterpolator);
-        TInterp->open(options.interpFile, "T", "r", "z");
-        vrInterp->open(options.interpFile, "vr", "r", "z");
-        vzInterp->open(options.interpFile, "vz", "r", "z");
-        TInterp->get(0.05, 0.0);
-    }
 
     grid.setSize(x.size());
     convectionSystem.setGas(gas);

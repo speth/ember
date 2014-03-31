@@ -137,8 +137,6 @@ cdef class ConfigOptions:
         opts.curvedFlame = G.curvedFlame
         opts.gridAlpha = 1 if opts.curvedFlame else 0
         opts.twinFlame = G.twinFlame
-        if G.interpFile is not None:
-            opts.interpFile = G.interpFile
         opts.chemistryIntegrator = G.chemistryIntegrator
         opts.splittingMethod = G.splittingMethod
         opts.setContinuityBC(G.continuityBC)
@@ -351,6 +349,9 @@ cdef class FlameSolver:
         self.timeseriesWriter = options.outputFiles.timeSeriesWriter
         self.stateWriter = options.outputFiles.stateWriter
 
+        if self.options.general.interpFile is not None:
+            self._setup_interp_data(self.options.initialCondition.interpData)
+
     def __dealloc__(self):
         del self.solver
 
@@ -374,6 +375,28 @@ cdef class FlameSolver:
             raise
 
         return done
+
+    def _setup_interp_data(self, data):
+        cdef np.ndarray[np.double_t, ndim=1] r = np.ascontiguousarray(data.r)
+        cdef np.ndarray[np.double_t, ndim=1] z = np.ascontiguousarray(data.z)
+
+        cdef np.ndarray[np.double_t, ndim=2] T = np.ascontiguousarray(data.T)
+        cdef np.ndarray[np.double_t, ndim=2] vr = np.ascontiguousarray(data.vr)
+        cdef np.ndarray[np.double_t, ndim=2] vz = np.ascontiguousarray(data.vz)
+
+        nz, nr = vz.shape[0], vz.shape[1]
+        assert T.shape[0] == vr.shape[0] == vz.shape[0] == len(z)
+        assert T.shape[1] == vr.shape[1] == vz.shape[1] == len(r)
+
+        self.solver.vzInterp.setup(map_matrix(&vz[0,0], nr, nz, nr, 1),
+                                   map_vector(&r[0], nr, 1),
+                                   map_vector(&z[0], nz, 1))
+        self.solver.vrInterp.setup(map_matrix(&vr[0,0], nr, nz, nr, 1),
+                                   map_vector(&r[0], nr, 1),
+                                   map_vector(&z[0], nz, 1))
+        self.solver.TInterp.setup(map_matrix(&T[0,0], nr, nz, nr, 1),
+                                  map_vector(&r[0], nr, 1),
+                                  map_vector(&z[0], nz, 1))
 
     property timeseriesWriter:
         def __set__(self, writer):

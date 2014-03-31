@@ -10,11 +10,6 @@
 class BilinearInterpolator
 {
 public:
-    //! Read the data from a variable saved in an HDF5 file
-    void open(const std::string& filename, const std::string& path,
-              const std::string& xcoords="x",
-              const std::string& ycoords="y");
-
     //! Use the supplied data to set up the interpolation
     void setup(const dmatrix& data, const dvec& x, const dvec& y);
 

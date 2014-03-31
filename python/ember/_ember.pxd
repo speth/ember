@@ -135,6 +135,11 @@ cdef extern from "grid.h":
         CxxEigenVec cfp, cf, cfm, hh, rphalf
 
 
+cdef extern from "quasi2d.h":
+    cdef cppclass CxxBilinearInterpolator "BilinearInterpolator":
+        void setup(CxxEigenMatrix data, CxxEigenVec, CxxEigenVec)
+
+
 cdef extern from "scalarFunction.h":
     cdef cppclass CxxScalarFunction "ScalarFunction":
         void setCoefficients(int, double*)
@@ -178,6 +183,10 @@ cdef extern from "flameSolver.h":
 
         CxxCallback* stateWriter
         CxxCallback* timeseriesWriter
+
+        CxxBilinearInterpolator* vzInterp
+        CxxBilinearInterpolator* vrInterp
+        CxxBilinearInterpolator* TInterp
 
         double tNow, dt
         double terminationCondition

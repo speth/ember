@@ -1197,6 +1197,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         IC.U = data.U
         IC.V = data.vz[0]
         IC.haveProfiles = True
+        IC.interpData = data
 
     def run(self):
         """
