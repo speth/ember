@@ -217,11 +217,11 @@ dvec mathUtils::splines(const dvec& xIn, const dvec& yIn, const dvec& xOut)
     dvec yOut(nOut);
 
     for (size_t i=0; i<nOut; i++) {
-        size_t j = findFirst(xIn >= xOut[i]) - 1;
+        size_t j = findFirst(xIn >= xOut[i]);
         if (j == npos) {
-            j = 0;
-        } else if (j == -2) {
-            j = nIn-1;
+            j = nIn - 1;
+        } else if (j > 0) {
+            j -= 1;
         }
         dx = xOut[i]-xIn[j];
         yOut[i] = c[0][j] + dx*(c[1][j] + dx*(c[2][j] + dx*c[3][j]));
@@ -243,11 +243,11 @@ double mathUtils::splines(const dvec& xIn, const dvec& yIn, const double xOut)
     vector<dvec> c = computeSplines(xIn, yIn);
 
     // Evaluate the spline at the selected point
-    size_t j = findFirst(xIn >= xOut) - 1;
+    size_t j = findFirst(xIn >= xOut);
     if (j == npos) {
-        j = 0;
-    } else if (j == -2) {
-        j = nIn-1;
+        j = nIn - 1;
+    } else if (j > 0) {
+        j -= 1;
     }
     double dx = xOut-xIn[j];
     return c[0][j] + dx*(c[1][j] + dx*(c[2][j] + dx*c[3][j]));
