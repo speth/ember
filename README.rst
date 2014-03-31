@@ -26,7 +26,6 @@ Compiling Ember
   * Eigen (>= 3.0)
   * Cantera (>= 2.0.0)
   * Sundials (2.4 or 2.5)
-  * HDF5 (>= 1.8.0)
   * Intel Threading Building Blocks (>= 4.0)
   * numpy (>= 1.3.0)
   * h5py (>= 1.2.1)
@@ -55,7 +54,7 @@ Compiling Ember
     $ scons build
 
   Otherwise, specify the necessary paths using the corresponding command-line
-  options: "cantera", "sundials", "eigen", "boost", "hdf5", "tbb". For example::
+  options: "cantera", "sundials", "eigen", "boost", "tbb". For example::
 
     $ scons build cantera=/home/$USER/.local sundials=/opt/sundials-2.4.0
 

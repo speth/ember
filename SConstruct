@@ -115,10 +115,6 @@ opts.AddVariables(
         'LD_LIBRARY_PATH,HOME'.""",
      defaults.env_vars),
     PathVariable(
-        'hdf5',
-        'Location of the HDF5 header and library files.',
-        '', PathVariable.PathAccept),
-    PathVariable(
         'tbb',
         'Location of the Thread Building Blocks (TBB) header and library files',
         '', PathVariable.PathAccept),
@@ -199,24 +195,18 @@ lastlibs = ['tbb']
 
 if os.name == 'nt':
     if 'g++' in env.subst('$CXX'):
-        hdf5 = ['libhdf5', 'libzlib', 'libszip']
         lastlibs += ['python27']
         tbbCompiler = 'mingw'
         if '64 bit' in pycomp:
             env.Append(CPPDEFINES='MS_WIN64')
-
-    else:
-        # These are correct for static linking
-        hdf5 = ['libhdf5','libzlib', 'libszip']
     tbbLibDir = env['tbb']+'/lib/%s/%s' % (tbbArch, tbbCompiler)
 else:
-    hdf5 = ['hdf5']
     tbbLibDir = env['tbb']+'/lib'
 
 if platform.system() == 'Darwin':
     env.Append(FRAMEWORKS=['Accelerate'])
 
-lastlibs += hdf5 + env['blas_lapack'].split(',')
+lastlibs += env['blas_lapack'].split(',')
 include_dirs = env['include'].split(',')
 library_dirs = [env.Dir('lib').abspath] + env['libdirs'].split(',')
 
@@ -237,10 +227,6 @@ if env['eigen']:
 if env['boost']:
     include_dirs.append(env['boost'] + '/include')
     library_dirs.append(env['boost'] + '/lib')
-
-if env['hdf5']:
-    include_dirs.append(env['hdf5'] + '/include')
-    library_dirs.append(env['hdf5'] + '/lib')
 
 if env['tbb']:
     include_dirs.append(env['tbb'] + '/include')
@@ -327,8 +313,7 @@ fail = False
 for header, quotes in [('cantera/thermo/IdealGasPhase.h', '""'),
                        ('cvode/cvode.h', '<>'),
                        ('Eigen/Dense', '<>'),
-                       ('tbb/parallel_for.h', '""'),
-                       ('hdf5.h', '<>')]:
+                       ('tbb/parallel_for.h', '""')]:
     fail |= SCons.Conftest.CheckHeader(context, header, language='C++',
                                      include_quotes=quotes)
 if fail:
