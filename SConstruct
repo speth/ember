@@ -281,7 +281,7 @@ elif env.subst('$CXX') == 'cl':
 
 else:
     print 'error: unknown c++ compiler: "%s"' % env['CXX']
-    sys.exit(0)
+    sys.exit(1)
 
 env.Append(CPPPATH=include_dirs,
            LIBPATH=library_dirs,
