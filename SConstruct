@@ -28,12 +28,6 @@ if not COMMAND_LINE_TARGETS:
 VariantDir('build/core','src', duplicate=0)
 VariantDir('build/test','test', duplicate=0)
 
-#try:
-#    import multiprocessing
-#    SetOption('num_jobs', multiprocessing.cpu_count())
-#except:
-#    pass
-
 extraEnvArgs = {}
 class defaults: pass
 
@@ -271,9 +265,6 @@ elif env.subst('$CXX') == 'cl':
         flags.append('/O2')
         defines.append('NDEBUG')
 
-    env['ENV']['MSSdk'] = 1
-    env['ENV']['DISTUTILS_USE_SDK'] = 1
-
 else:
     print 'error: unknown c++ compiler: "%s"' % env['CXX']
     sys.exit(1)
@@ -463,24 +454,22 @@ elif os.name == 'nt' and env.subst('$CXX') == 'cl':
 py_ext = cyenv.LoadableModule('#build/python/ember/_ember%s' % suffix, '#python/ember/_ember.cpp',
                               LIBPREFIX='', SHLIBSUFFIX=suffix, LIBSUFFIXES=[suffix])
 
-setup_cmd = 'cd python && $python_cmd setup.py '
+setup_cmd = 'cd python && $python_cmd setup.py build --build-lib=../build/python '
 
 if os.name == 'nt':
     env.Depends(make_setup, [py_gui1, py_gui2])
 
-build_args = ' build --build-lib=../build/python '
-py_build = env.Command('build/python/ember/__init__.py', py_ext,
-                       setup_cmd + build_args)
+py_build = env.Command('build/python/ember/__init__.py', py_ext, setup_cmd)
 env.Alias('build', py_build)
 env.Depends(py_build, [py_ext, make_setup])
 env.Depends(py_build, mglob(env, 'python/ember', 'py'))
 env.Depends(py_build, mglob(env, 'python/ember/test', 'py'))
 
-py_install = env.Command('dummy_target', py_build, setup_cmd + build_args + 'install $install_args')
+py_install = env.Command('dummy_target', py_build, setup_cmd + 'install $install_args')
 env.Alias('install', py_install)
 
 py_msi = env.Command('dummy_target2', py_build,
-                     setup_cmd + build_args + 'bdist_msi --dist-dir=..' +
+                     setup_cmd + 'bdist_msi --dist-dir=..' +
                      ' --target-version=' + target_py_version)
 env.Alias('msi', py_msi)
 
@@ -504,12 +493,9 @@ test_program = testenv.Program('bin/unittest',
                                Glob('build/test/*.cpp') + common_objects)
 run_test = testenv.Command('test_dummy', test_program[0].abspath, '$SOURCE $TARGET')
 test_alias = Alias('test', run_test)
-# AlwaysBuild(test_alias)
 
 # Google Test
-buildTargets = ['build', test_alias]
-
-Export('env', 'buildTargets')
+Export('env')
 VariantDir('ext/build', 'ext', duplicate=0)
 SConscript('ext/build/SConscript')
 

@@ -1,6 +1,6 @@
 from buildutils import *
 
-Import('env', 'buildTargets')
+Import('env')
 localenv = env.Clone()
 
 def prep_gtest(env):
@@ -20,4 +20,3 @@ for subdir, libname, extensions, prepFunction in libs:
     localenv = prepFunction(env)
     lib = localenv.Library(pjoin('../../lib', libname),
                            source=mglob(localenv, subdir, *extensions))
-    buildTargets.extend(lib)
