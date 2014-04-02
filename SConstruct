@@ -511,7 +511,7 @@ def unittestRunner(target, source, env):
     else:
         environ['PYTHONPATH'] = Dir('build/python').abspath
     return subprocess.call([env.subst('$python_cmd'), '-m','unittest',
-                            'discover', '-v', '-s', 'build/python'],
+                            'discover', '-b', '-v', '-s', 'build/python'],
                            env=environ)
 
 py_tests = testenv.Command('pytest_dummy', py_build, unittestRunner)

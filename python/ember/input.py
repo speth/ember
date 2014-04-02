@@ -895,6 +895,8 @@ class Config(object):
         else:
             print 'Validation completed successfully.'
 
+        return not error
+
     def checkRateConstants(self, gas, T):
         """
         A function for finding reactions with suspiciously high
