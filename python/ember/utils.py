@@ -211,9 +211,17 @@ def calculateReactantMixture(gas, fuel, oxidizer, equivalenceRatio):
     gas.TPX = 300.0, 101325, oxidizer
     Xo = gas.X
 
-    nC = np.array([gas.n_atoms(k, 'C') for k in range(gas.n_species)])
     nO = np.array([gas.n_atoms(k, 'O') for k in range(gas.n_species)])
-    nH = np.array([gas.n_atoms(k, 'H') for k in range(gas.n_species)])
+
+    if 'C' in gas.element_names:
+        nC = np.array([gas.n_atoms(k, 'C') for k in range(gas.n_species)])
+    else:
+        nC = np.zeros(gas.n_species)
+
+    if 'H' in gas.element_names:
+        nH = np.array([gas.n_atoms(k, 'H') for k in range(gas.n_species)])
+    else:
+        nH = np.zeros(gas.n_species)
 
     Cf = (nC * Xf).sum()
     Co = (nC * Xo).sum()
