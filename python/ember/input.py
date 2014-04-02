@@ -902,7 +902,7 @@ class Config(object):
         A function for finding reactions with suspiciously high
         rate constants at low temperatures.
         """
-        gas.TPY = 300, 101325, np.ones(gas.n_species)
+        gas.TPY = T, 101325, np.ones(gas.n_species)
         Rf = gas.forward_rate_constants
         Rr = gas.reverse_rate_constants
         error = False
