@@ -280,6 +280,9 @@ int FlameSolver::finishStep()
     setupTimer.stop();
 
     if (t > tRegrid || nRegrid >= options.regridStepInterval) {
+        if (debugParameters::debugAdapt || debugParameters::debugRegrid) {
+            writeStateFile("preAdapt", false, false);
+        }
         regridTimer.start();
         tRegrid = t + options.regridTimeInterval;
         nRegrid = 0;

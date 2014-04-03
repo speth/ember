@@ -436,6 +436,10 @@ bool OneDimGrid::addRight(vector<dvector>& y)
         dampVal.conservativeResize(nPoints + addPointCount);
         for (size_t i=0; i<addPointCount; i++) {
             x[jj+1] = x[jj] + sqrt(uniformityTol) * (x[jj]-x[jj-1]);
+            if (debugParameters::debugRegrid) {
+                logFile.write(format("Regrid: point added at %g (hh = %g)") %
+                    x[jj+1] % (x[jj+1]-x[jj]));
+            }
             dampVal[jj+1] = dampVal[jj];
             for (size_t k=0; k<nVars; k++) {
                 // keep constant boundary value
@@ -568,7 +572,8 @@ bool OneDimGrid::addLeft(vector<dvector>& y)
                 }
             }
             if (debugParameters::debugRegrid) {
-                logFile.write(format("adding point at %i") % xLeft);
+                logFile.write(format("Regrid: adding point at %i (hh = %g)") %
+                    xLeft % (x[0]-xLeft));
             }
             dvec tmp(x.rows() + 1);
             tmp << xLeft, x;
