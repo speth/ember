@@ -473,7 +473,7 @@ class InitialCondition(Options):
     #: constant during equilibration, or *False* to skip equilibration. The
     #: boundary condition is not consistent if this mixture has reactions that
     #: are proceeding at finite rates. For diffusion flames, this option is applied
-    #: to the state oxidizer stream.
+    #: to the state of the oxidizer stream.
     equilibrateCounterflow = Option('TP', ('HP','UV','SV','TV','SP',False),
                                     label='Equilibrate specified counterflow mixture',
                                     level=1)
