@@ -33,6 +33,7 @@ Contents
 
    installation
    flame-model
+   examples/index
    input
    run-sim
    postprocessing
