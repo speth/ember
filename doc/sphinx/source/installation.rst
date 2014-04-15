@@ -51,6 +51,12 @@ The following software needs to be installed in order to compile Ember:
     * Python 2.6 or higher (2.7 recommended)
     * Cython (>= 0.18)
     * Boost (>= 1.40, including the compiled ``boost_thread`` library)
+
+      .. warning::
+
+        Be sure to use the same version of Boost as the one that was used to
+        compile Cantera.
+
     * SCons (>= 2.1.0 recommended)
     * Eigen (>= 3.0)
     * Cantera (>= 2.1.0)
