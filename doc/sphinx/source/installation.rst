@@ -31,15 +31,14 @@ Binary releases of Ember are currently available for 64-bit Python 2.7 on
 Windows. To use the binary version of Ember, you must have the following
 installed:
 
-    * `Python 2.7 (64-bit) <https://www.python.org/downloads/>`_
-    * `Numpy <http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy>`_ - version 1.8 or higher
-    * `Cantera 2.1 Python module <https://sourceforge.net/projects/cantera/files/cantera/>`_
+* `Python 2.7 (64-bit) <https://www.python.org/downloads/>`_
+* `Numpy <http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy>`_ - version 1.8 or higher
+* `Cantera 2.1 Python module <https://sourceforge.net/projects/cantera/files/cantera/>`_
 
-        - For Ember 1.2.x, install Cantera 2.1 and the "Legacy" Cantera Python
-          module
-        - For Ember 1.3 and higher, install the new Python module
+  - For Ember 1.2.x, install Cantera 2.1 and the "Legacy" Cantera Python module
+  - For Ember 1.3 and higher, install the new Python module
 
-    * `h5py <http://www.lfd.uci.edu/~gohlke/pythonlibs/#h5py>`_
+* `h5py <http://www.lfd.uci.edu/~gohlke/pythonlibs/#h5py>`_
 
 
 Build Dependencies
@@ -47,46 +46,47 @@ Build Dependencies
 
 The following software needs to be installed in order to compile Ember:
 
-    * A C++ compiler (g++, Clang, Intel C++, Visual Studio 2008)
-    * Python 2.6 or higher (2.7 recommended)
-    * Cython (>= 0.18)
-    * Boost (>= 1.40, including the compiled ``boost_thread`` library)
+* A C++ compiler (g++, Clang, Intel C++, Visual Studio 2008)
+* Python 2.6 or higher (2.7 recommended)
+* Cython (>= 0.18)
+* Boost (>= 1.40, including the compiled ``boost_thread`` library)
 
-      .. warning::
+  .. warning::
 
-        Be sure to use the same version of Boost as the one that was used to
-        compile Cantera.
+     Be sure to use the same version of Boost as the one that was used to
+     compile Cantera.
 
-    * SCons (>= 2.1.0 recommended)
-    * Eigen (>= 3.0)
-    * Cantera (>= 2.1.0)
+* SCons (>= 2.1.0 recommended)
+* Eigen (>= 3.0)
+* Cantera (>= 2.1.0)
 
-        - For Ember 1.2.x, install Cantera with the 'legacy' Python module
-        - For Ember 1.3 and higher, install the 'new' Python module
+  - For Ember 1.2.x, install Cantera with the 'legacy' Python module
+  - For Ember 1.3 and higher, install the 'new' Python module
 
-        .. note::
+  .. note::
 
-          Cantera must be compiled using the option ``build_thread_safe=y``
-          (passed as a command line arguement to ``scons build ...``)
+     Cantera must be compiled using the option ``build_thread_safe=y``
+     (passed as a command line arguement to ``scons build ...``)
 
-    * Sundials (2.4.0 or 2.5.0)
+* Sundials (2.4.0 or 2.5.0)
 
-        .. note::
-          On Linux, Sundials must be compiled to use "position independent
-          code". For most compilers, this can be specified by using the option
-          ``--with-cflags=-fPIC`` when running ``configure``.
+  .. note::
 
-    * Intel Threading Building Blocks (>= 4.0)
-    * numpy (>= 1.3.0)
-    * h5py (>= 1.2.1)
+     On Linux, Sundials must be compiled to use "position independent
+     code". For most compilers, this can be specified by using the option
+     ``--with-cflags=-fPIC`` when running ``configure``.
+
+* Intel Threading Building Blocks (>= 4.0)
+* numpy (>= 1.3.0)
+* h5py (>= 1.2.1)
 
 In order to process the documentation, the following are also required:
 
-    * Doxygen (>= 1.8.0)
-    * Sphinx
-    * Pygments
-    * pyparsing
-    * doxylink (see http://pypi.python.org/pypi/sphinxcontrib-doxylink)
+* Doxygen (>= 1.8.0)
+* Sphinx
+* Pygments
+* pyparsing
+* doxylink (see http://pypi.python.org/pypi/sphinxcontrib-doxylink)
 
 
 Compilation
