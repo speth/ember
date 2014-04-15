@@ -58,7 +58,18 @@ The following software needs to be installed in order to compile Ember:
         - For Ember 1.2.x, install Cantera with the 'legacy' Python module
         - For Ember 1.3 and higher, install the 'new' Python module
 
+        .. note::
+
+          Cantera must be compiled using the option ``build_thread_safe=y``
+          (passed as a command line arguement to ``scons build ...``)
+
     * Sundials (2.4.0 or 2.5.0)
+
+        .. note::
+          On Linux, Sundials must be compiled to use "position independent
+          code". For most compilers, this can be specified by using the option
+          ``--with-cflags=-fPIC`` when running ``configure``.
+
     * Intel Threading Building Blocks (>= 4.0)
     * numpy (>= 1.3.0)
     * h5py (>= 1.2.1)
