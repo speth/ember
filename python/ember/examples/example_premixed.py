@@ -2,8 +2,7 @@
 from ember import *
 
 conf = Config(
-    Paths(outputDir='run/premixedTest',
-          logFile='out-premixedTest.txt'),
+    Paths(outputDir='run/premixedTest'),
     InitialCondition(fuel='CH4:1.0',
                      equivalenceRatio=0.70),
     StrainParameters(initial=400,

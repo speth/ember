@@ -7,6 +7,8 @@ Input Files
 
 .. currentmodule:: ember.input
 
+.. _sec-conf-options:
+
 Configuration Options
 ---------------------
 

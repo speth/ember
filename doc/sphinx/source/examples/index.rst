@@ -4,4 +4,5 @@ Examples
 
 .. toctree::
 
+   premixed
    laminar
