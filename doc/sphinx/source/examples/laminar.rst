@@ -7,7 +7,7 @@ Laminar Flame
 This example shows how to simulate a freely-propagating, unstrained laminar
 flame.
 
-.. literalinclude:: ../../../../python/ember/examples/example-laminar.py
+.. literalinclude:: ../../../../python/ember/examples/example_laminar.py
 
 The following configuration parameters are particularly important for unstrained
 flames:
