@@ -7,3 +7,4 @@ Examples
    premixed
    diffusion
    laminar
+   multirun
