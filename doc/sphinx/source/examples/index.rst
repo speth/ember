@@ -8,3 +8,4 @@ Examples
    diffusion
    laminar
    multirun
+   batch
