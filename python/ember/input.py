@@ -1247,11 +1247,15 @@ class ConcreteConfig(_ember.ConfigOptions):
             return
 
         self.strainParameters.rates = None
-        _logFile = file(self.paths.logFile, 'w')
-        def log(message):
-            _logFile.write(message)
-            _logFile.write('\n')
-            _logFile.flush()
+        if self.paths.logFile:
+            _logFile = file(self.paths.logFile, 'w')
+            def log(message):
+                _logFile.write(message)
+                _logFile.write('\n')
+                _logFile.flush()
+        else:
+            def log(message):
+                print message
 
         if not os.path.exists(self.paths.outputDir):
             os.mkdir(self.paths.outputDir, 0755)
@@ -1306,6 +1310,7 @@ class ConcreteConfig(_ember.ConfigOptions):
                 self.strainParameters.initial = a
                 self.strainParameters.final = a
                 self.paths.logFile = os.path.join(self.paths.outputDir, 'log-eps%04i.txt' % a)
+                log("Writing output file for run to '%s'" % self.paths.logFile)
                 self.apply_options()
                 solver = _ember.FlameSolver(self)
                 t1 = time.time()
