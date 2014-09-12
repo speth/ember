@@ -16,10 +16,7 @@
 #include <iostream>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
-
-#include "tbb/enumerable_thread_specific.h"
-#include "tbb/mutex.h"
-#include "tbb/task_scheduler_init.h"
+#include "tbb_tools.h"
 
 using std::string;
 class ScalarFunction;

@@ -1,5 +1,12 @@
-#include "tbb/blocked_range.h"
-#include "tbb/parallel_for.h"
+#pragma once
+
+#include "config.h"
+
+#ifdef EMBER_USE_TBB
+#include "tbb_real.h"
+#else
+#include "tbb_fake.h"
+#endif
 
 //! Wrapper class for calling member functions in a `tbb::parallel_for`.
 template<class T>

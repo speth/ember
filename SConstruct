@@ -112,6 +112,12 @@ opts.AddVariables(
         'tbb',
         'Location of the Thread Building Blocks (TBB) header and library files',
         '', PathVariable.PathAccept),
+    BoolVariable(
+      'use_tbb',
+      """Enable or disable use of the TBB library. Setting this to "False"
+         will prevent Ember from utilizing multiple processors.
+      """,
+      True),
     PathVariable(
         'python_cmd',
         """Path to the Python interpreter to be used for building the Python module,
@@ -192,7 +198,7 @@ elif env['env_vars']:
 
 cantera = ['cantera'] + env['cantera_libs'].split(',')
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
-lastlibs = ['tbb']
+lastlibs = ['tbb'] if env['use_tbb'] else []
 
 if os.name == 'nt':
     if 'g++' in env.subst('$CXX'):
@@ -229,7 +235,7 @@ if env['boost']:
     include_dirs.append(env['boost'] + '/include')
     library_dirs.append(env['boost'] + '/lib')
 
-if env['tbb']:
+if env['use_tbb'] and env['tbb']:
     include_dirs.append(env['tbb'] + '/include')
     library_dirs.append(tbbLibDir)
 
@@ -300,6 +306,8 @@ def get_expression_value(includes, expression):
     return '\n'.join(s)
 
 configInfo = {}
+if env['use_tbb']:
+    configInfo['EMBER_USE_TBB'] = 1
 
 import SCons.Conftest, SCons.SConf
 tests = {}
@@ -308,10 +316,12 @@ context = SCons.SConf.CheckContext(conf)
 
 # Check for required headers
 fail = False
-for header, quotes in [('cantera/thermo/IdealGasPhase.h', '""'),
-                       ('cvode/cvode.h', '<>'),
-                       ('Eigen/Dense', '<>'),
-                       ('tbb/parallel_for.h', '""')]:
+required_headers = [('cantera/thermo/IdealGasPhase.h', '""'),
+                    ('cvode/cvode.h', '<>'),
+                    ('Eigen/Dense', '<>')]
+if env['use_tbb']:
+    required_headers.append(('tbb/parallel_for.h', '""'))
+for header, quotes in required_headers:
     fail |= SCons.Conftest.CheckHeader(context, header, language='C++',
                                      include_quotes=quotes)
 if fail:
@@ -411,11 +421,12 @@ corelib = env.Library('build/core/ember', common_objects)
 env.Alias('build', corelib)
 
 if os.name == 'nt':
-    for dest in ['python/ember/TBB.dll', 'bin/TBB.dll']:
-        tbb = env.Command(dest,
-                          env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
-                          Copy('$TARGET', '$SOURCE'))
-        env.Alias('build', tbb)
+    if env['use_tbb']:
+        for dest in ['python/ember/TBB.dll', 'bin/TBB.dll']:
+            tbb = env.Command(dest,
+                              env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
+                              Copy('$TARGET', '$SOURCE'))
+            env.Alias('build', tbb)
     py_gui1 = env.Command('python/scripts/ember-script.pyw', 'python/scripts/ember',
                           Copy('$TARGET', '$SOURCE'))
     script = ('''"from pkg_resources import resource_string; open('$TARGET', 'wb').write(resource_string('setuptools', 'gui.exe'))"''')

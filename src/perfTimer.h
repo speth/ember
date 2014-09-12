@@ -1,7 +1,6 @@
 #pragma once
 
-#include "tbb/combinable.h"
-#include "tbb/enumerable_thread_specific.h"
+#include "tbb_tools.h"
 
 #ifdef _WIN32
 #define NOMINMAX

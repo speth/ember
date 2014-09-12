@@ -1,7 +1,5 @@
 #include "flameSolver.h"
 #include "scalarFunction.h"
-#include "tbb_tools.h"
-
 #include <boost/foreach.hpp>
 
 #define foreach BOOST_FOREACH
