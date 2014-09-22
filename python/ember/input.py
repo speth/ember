@@ -1057,7 +1057,7 @@ class ConcreteConfig(_ember.ConfigOptions):
 
         elif IC.flameType == 'diffusion':
             # Fuel
-            gas.TPX = IC.Tfuel, P=IC.pressure, IC.fuel
+            gas.TPX = IC.Tfuel, IC.pressure, IC.fuel
             Yfuel = gas.Y
 
             # Oxidizer
