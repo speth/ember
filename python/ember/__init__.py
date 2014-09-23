@@ -7,7 +7,7 @@ from input import *
 from output import *
 import utils
 
-__version__ = '1.3.0b1'
+__version__ = '1.3.0'
 
 # Add Ember's data file directory to Cantera's search path. Because the Python
 # module is statically linked to Cantera, this needs to be done separately for
