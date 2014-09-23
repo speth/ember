@@ -76,8 +76,12 @@ The following software needs to be installed in order to compile Ember:
      code". For most compilers, this can be specified by using the option
      ``--with-cflags=-fPIC`` when running ``configure``.
 
-* Intel Threading Building Blocks (>= 4.0)
+* Intel Threading Building Blocks (>= 4.0). TBB is optional, but strongly
+  recommended. Without TBB, Ember will only run on a single processor. To
+  compile Ember without TBB use the SCons option ``use_tbb=n``.
+
 * numpy (>= 1.3.0)
+
 * h5py (>= 1.2.1)
 
 In order to process the documentation, the following are also required:
