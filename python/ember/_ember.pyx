@@ -56,9 +56,9 @@ cdef np.ndarray[np.double_t, ndim=2] getArray_MatrixMap(CxxEigenMatrixMap& M):
 
 cdef class Callback:
     """
-    A wrapper for functions that are used to extract information a FlameSolver
-    object at specific points during the integration, e.g. to save periodic
-    output files.
+    A wrapper for functions that are used to extract information from a
+    FlameSolver object at specific points during the integration, e.g. to save
+    periodic output files.
     """
     def __cinit__(self, func):
         """
