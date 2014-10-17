@@ -2,22 +2,43 @@
 #define CT_CYTHON_FUNC_WRAPPER
 
 #include <stdexcept>
+#include "mathUtils.h"
 
-typedef void(*callback_wrapper)(const std::string&, int, void*, void**);
+typedef void(*logger_callback_wrapper)(const std::string&, int, void*, void**);
+typedef double(*integrator_callback_wrapper)(double, double, double, double, dvec&, void*, void**);
 
-// A function implemented as a callable Python object
-class Callback
+// A function implemented as a callable Python object with the signature
+// f(string, int)
+class LoggerCallback
 {
 public:
-    Callback(callback_wrapper callback, void* pyobj) :
+    LoggerCallback(logger_callback_wrapper callback, void* pyobj) :
         m_func(callback),
         m_pyobj(pyobj) {
     }
 
     void eval(const std::string& name, int flag) const;
 
+
 private:
-    callback_wrapper m_func;
+    logger_callback_wrapper m_func;
+    void* m_pyobj;
+};
+
+// A function implemented as a callable Python object with the signature
+// double = f(double, double, double, double, dvec)
+class IntegratorCallback
+{
+public:
+    IntegratorCallback(integrator_callback_wrapper callback, void* pyobj) :
+        m_func(callback),
+        m_pyobj(pyobj) {
+    }
+
+    double eval(double x, double t, double U, double T, dvec& y) const;
+
+private:
+    integrator_callback_wrapper m_func;
     void* m_pyobj;
 };
 

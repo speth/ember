@@ -15,6 +15,8 @@ SourceSystem::SourceSystem()
     , gas(NULL)
     , strainFunction(NULL)
     , rateMultiplierFunction(NULL)
+    , heatLoss(NULL)
+    , qLoss(0.0)
     , quasi2d(false)
 {
 }
@@ -142,6 +144,11 @@ int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
         scale = 1.0;
         dUdt = - U*U + rhou/rho*(dadt + a*a) + splitConst[kMomentum];
         qDot = - (wDot * hk).sum() + getQdotIgniter(t);
+        if (heatLoss && options->alwaysUpdateHeatFlux) {
+            qDot -= heatLoss->eval(x, t, U, T, Y);
+        } else {
+            qDot -= qLoss;
+        }
         dTdt = qDot/(rho*cp) + splitConst[kEnergy];
     } else {
         scale = 1.0/vzInterp->get(x, t);
@@ -289,6 +296,9 @@ void SourceSystemCVODE::setState
     integrator->y[kEnergy] = tt;
     Eigen::Map<dvec>(&integrator->y[kSpecies], nSpec) = yy;
     integrator->initialize();
+    if (heatLoss && !options->alwaysUpdateHeatFlux) {
+        qLoss = heatLoss->eval(x, tInitial, uu, tt, const_cast<dvec&>(yy));
+    }
 }
 
 int SourceSystemCVODE::integrateToTime(double tf)
@@ -418,6 +428,9 @@ void SourceSystemQSS::setState
     dvec yIn(nSpec + 2);
     yIn << uu, tt, yy;
     integrator.setState(yIn, tStart);
+    if (heatLoss && !options->alwaysUpdateHeatFlux) {
+        qLoss = heatLoss->eval(x, tStart, uu, tt, const_cast<dvec&>(yy));
+    }
 }
 
 void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d,
@@ -457,6 +470,12 @@ void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d,
         dUdtQ = 0;
         dUdtD = 0;
         dTdtQ = 0;
+    }
+
+    if (heatLoss && options->alwaysUpdateHeatFlux) {
+        dTdtD = heatLoss->eval(x, t, U, T, const_cast<dvec&>(Y)) / (rho*cp);
+    } else {
+        dTdtD = qLoss / (rho*cp);
     }
 
     dYdtQ = scale * wDotQ * W / rho + splitConst.tail(nSpec);

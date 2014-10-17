@@ -4,6 +4,7 @@
 #include "sundialsUtils.h"
 #include "qssintegrator.h"
 #include "quasi2d.h"
+#include "callback.h"
 
 #include <boost/shared_ptr.hpp>
 
@@ -76,6 +77,9 @@ public:
     //! Set the function used to compute the reaction rate multiplier
     void setRateMultiplierFunction(ScalarFunction* f) { rateMultiplierFunction = f; }
 
+    //! Set the function used to compute the heat loss rate to the environment
+    void setHeatLossFunction(IntegratorCallback* f) { heatLoss = f; }
+
     //! Set the density of the unburned mixture.
     //! This value appears in the source term of the momentum equation.
     void setRhou(double _rhou) { rhou = _rhou; }
@@ -123,11 +127,15 @@ protected:
     //! Provides a multiplier (optional) for the production terms
     ScalarFunction* rateMultiplierFunction;
 
+    //! Heat loss rate
+    IntegratorCallback* heatLoss;
+
     size_t nSpec; //!< number of species
     int j; //!< grid index for this system
     double x; //!< grid position for this system
     double rhou; //!< density of the unburned gas
     double qDot; //!< heat release rate per unit volume [W/m^3]
+    double qLoss; //!< heat loss to the environment [W/m^3]
 
     // Physical properties
     double rho; //!< density [kg/m^3]

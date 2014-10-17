@@ -17,13 +17,23 @@ public:
     PyObject* m_traceback;
 };
 
-void Callback::eval(const std::string& name, int flag) const
+void LoggerCallback::eval(const std::string& name, int flag) const
 {
     void* err[3] = {0, 0, 0};
     m_func(name, flag, m_pyobj, err);
     if (err[0]) {
         throw CallbackError(err[0], err[1], err[2]);
     }
+}
+
+double IntegratorCallback::eval(double x, double t, double U, double T, dvec& y) const
+{
+    void* err[3] = {0, 0, 0};
+    double z = m_func(x, t, U, T, y, m_pyobj, err);
+    if (err[0]) {
+        throw CallbackError(err[0], err[1], err[2]);
+    }
+    return z;
 }
 
 int translate_callback_exception()

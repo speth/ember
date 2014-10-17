@@ -151,8 +151,10 @@ public:
     //! Function which describes a multiplier for the chemical reaction rates
     ScalarFunction* rateMultiplierFunction;
 
-    Callback* stateWriter;
-    Callback* timeseriesWriter;
+    LoggerCallback* stateWriter;
+    LoggerCallback* timeseriesWriter;
+
+    IntegratorCallback* heatLossFunction;
 
     double rVcenter; //!< mass flux at centerline [kg/m^2 or kg/m*rad*s]
     double rVzero; //!< mass flux at j=0

@@ -82,6 +82,7 @@ cdef extern from "readConfig.h":
 
         double ignition_tStart, ignition_duration, ignition_energy
         double ignition_center, ignition_stddev
+        cbool alwaysUpdateHeatFlux
 
         double vtol, dvtol, rmTol, dampConst, gridMin, gridMax
         double uniformityTol, absvtol
@@ -148,13 +149,17 @@ cdef extern from "scalarFunction.h":
 
 
 cdef extern from "callback.h":
-    ctypedef void (*callback_wrapper)(string&, int, void*, void**)
+    ctypedef void (*logger_callback_wrapper)(string&, int, void*, void**)
+    ctypedef double (*integrator_callback_wrapper)(double, double, double, double, CxxEigenVec&, void*, void**)
     cdef int translate_callback_exception()
 
-    cdef cppclass CxxCallback "Callback":
-        CxxCallback(callback_wrapper, void*)
+    cdef cppclass CxxLoggerCallback "LoggerCallback":
+        CxxLoggerCallback(logger_callback_wrapper, void*)
         void eval(string&) except +translate_callback_exception with gil
 
+    cdef cppclass CxxIntegratorCallback "IntegratorCallback":
+        CxxIntegratorCallback(integrator_callback_wrapper, void*)
+        double eval(double, double, double, double, CxxEigenVec&) except +translate_callback_exception with gil
 
 cdef extern from "convectionSystem.h":
     cdef cppclass CxxConvectionSystemUTW "ConvectionSystemUTW":
@@ -181,8 +186,9 @@ cdef extern from "flameSolver.h":
         CxxScalarFunction* strainfunc
         CxxScalarFunction* rateMultiplierFunction
 
-        CxxCallback* stateWriter
-        CxxCallback* timeseriesWriter
+        CxxLoggerCallback* stateWriter
+        CxxLoggerCallback* timeseriesWriter
+        CxxIntegratorCallback* heatLossFunction
 
         CxxBilinearInterpolator* vzInterp
         CxxBilinearInterpolator* vrInterp
@@ -224,8 +230,14 @@ cdef extern from "flameSolver.h":
         CxxEigenMatrix jSoret
 
 
-cdef class Callback:
-    cdef CxxCallback* callback
+cdef class LoggerCallback:
+    cdef CxxLoggerCallback* callback
+    cdef object exception
+    cdef object solver
+    cdef object func
+
+cdef class IntegratorCallback:
+    cdef CxxIntegratorCallback* callback
     cdef object exception
     cdef object solver
     cdef object func
@@ -239,8 +251,10 @@ cdef class FlameSolver:
     cdef object strainFunction
     cdef object rateMultiplierFunction
     cdef object strainInterpPoints
-    cdef Callback _stateWriter
-    cdef Callback _timeseriesWriter
+    cdef LoggerCallback _stateWriter
+    cdef LoggerCallback _timeseriesWriter
+    cdef IntegratorCallback _heatLossFunction
+
 
     # usedby the GUI
     cdef public object lock

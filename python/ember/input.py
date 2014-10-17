@@ -548,6 +548,25 @@ class Ignition(Options):
     stddev = FloatOption(1e-4, level=2)
 
 
+class ExternalHeatFlux(Options):
+    """
+    User-specified function describing heat loss to the environment, e.g.
+    through radiation.
+    """
+    #: Heat loss function, which must be of the form `qdot = f(x, t, U, T, Y)`
+    #: where `qdot` is the heat loss rate in W/m^3, `x` is the local position,
+    #: `t` is the time, `U` is the tangential velocity gradient `T`  is the
+    #: temperature and `Y` is the array of species mass fractions.
+    heatLoss = Option(None, level=3)
+
+    #: Update the value of this function based on the current state vector of
+    #: the source term integrator, rather than only at the start of each split
+    #: timestep. Enabling this option incurs a significant performance penalty,
+    #: and should only be done if the heat flux function is too stiff to be
+    #: integrated otherwise.
+    alwaysUpdate = BoolOption(False, level=3)
+
+
 class StrainParameters(Options):
     """
     Parameters defining the strain rate as a function of time.
@@ -811,6 +830,7 @@ class Config(object):
         self.initialCondition = get(InitialCondition)
         self.wallFlux = opts.get('WallFlux')
         self.ignition = get(Ignition)
+        self.externalHeatFlux = get(ExternalHeatFlux)
         self.strainParameters = get(StrainParameters)
         self.positionControl = opts.get('PositionControl')
         self.times = get(Times)

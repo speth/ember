@@ -54,7 +54,7 @@ cdef np.ndarray[np.double_t, ndim=2] getArray_MatrixMap(CxxEigenMatrixMap& M):
     return v
 
 
-cdef class Callback:
+cdef class LoggerCallback:
     """
     A wrapper for functions that are used to extract information from a
     FlameSolver object at specific points during the integration, e.g. to save
@@ -66,7 +66,7 @@ cdef class Callback:
             A callable object that takes the default output file name as an
             argument.
         """
-        self.callback = new CxxCallback(func_callback, <void*>self)
+        self.callback = new CxxLoggerCallback(logger_func_callback, <void*>self)
         self.func = func
         self.exception = None
 
@@ -77,24 +77,68 @@ cdef class Callback:
         self.func(name, flag)
 
 
-cdef void func_callback(const string& name, int flag, void* obj, void** err) nogil:
+cdef void logger_func_callback(const string& name, int flag,
+                               void* obj, void** err) nogil:
     """
-    This function is called from C/C++ to evaluate a `Callback` object *obj*.
-    If an exception occurs while evaluating the function, the Python exception
-    info is saved in the two-element array *err*.
+    This function is called from C/C++ to evaluate a `LoggerCallback` object
+    *obj*. If an exception occurs while evaluating the function, the Python
+    exception info is saved in the two-element array *err*.
     """
     with gil:
         try:
-            (<Callback>obj).eval(name, flag)
+            (<LoggerCallback>obj).eval(name, flag)
         except BaseException as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
 
             # Stash the exception info to prevent it from being garbage collected
-            (<Callback>obj).exception = exc_type, exc_value, exc_traceback
+            (<LoggerCallback>obj).exception = exc_type, exc_value, exc_traceback
             err[0] = <void*>exc_type
             err[1] = <void*>exc_value
             err[2] = <void*>exc_traceback
 
+
+cdef class IntegratorCallback:
+    """
+    A wrapper for functions that are evaluate a function of the form
+    z = f(x, t, U, T, Y) where x, t, U, T and z are scalars, and Y is a vector.
+    """
+    def __cinit__(self, func):
+        """
+        :param func:
+            A callable object with the signature
+            `float = f(float, float, ndarray)`
+        """
+        self.callback = new CxxIntegratorCallback(integrator_func_callback,
+                                                  <void*>self)
+        self.func = func
+        self.exception = None
+
+    def __dealloc__(self):
+        del self.callback
+
+    def eval(self, x, t, U, T, Y):
+        return self.func(x, t, U, T, Y)
+
+
+cdef double integrator_func_callback(double x, double t, double U, double T,
+                                     CxxEigenVec& y, void* obj, void** err) nogil:
+    """
+    This function is called from C/C++ to evaluate a `IntegratorCallback` object
+    *obj*. If an exception occurs while evaluating the function, the Python
+    exception info is saved in the two-element array *err*.
+    """
+    with gil:
+        try:
+            return (<IntegratorCallback>obj).eval(x, t, U, T, getArray_Vec(y))
+        except BaseException as e:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+
+            # Stash the exception info to prevent it from being garbage collected
+            (<IntegratorCallback>obj).exception = exc_type, exc_value, exc_traceback
+            err[0] = <void*>exc_type
+            err[1] = <void*>exc_value
+            err[2] = <void*>exc_traceback
+            return np.nan
 
 def addCanteraDirectory(dirname):
     CxxAddCanteraDirectory(dirname)
@@ -194,6 +238,9 @@ cdef class ConfigOptions:
         opts.ignition_energy = self.ignition.energy
         opts.ignition_center = self.ignition.center
         opts.ignition_stddev = self.ignition.stddev
+
+        # external heat flux
+        opts.alwaysUpdateHeatFlux = self.externalHeatFlux.alwaysUpdate
 
         # strain rate parameters
         if self.strainParameters.function is not None:
@@ -346,6 +393,8 @@ cdef class FlameSolver:
         self.rateMultiplierFunction = options.chemistry.rateMultiplierFunction
         self._updateStrainFunction()
 
+        self.heatLossFunction = options.externalHeatFlux.heatLoss
+
         self.timeseriesWriter = options.outputFiles.timeSeriesWriter
         self.stateWriter = options.outputFiles.stateWriter
 
@@ -398,10 +447,21 @@ cdef class FlameSolver:
                                   map_vector(&r[0], nr, 1),
                                   map_vector(&z[0], nz, 1))
 
+    property heatLossFunction:
+        def __set__(self, func):
+            if func is not None:
+                self._heatLossFunction = IntegratorCallback(func)
+                self.solver.heatLossFunction = self._heatLossFunction.callback
+            else:
+                self._heatLossFunction = None
+                self.solver.heatLossFunction = NULL
+        def __get__(self):
+            return self._heatLossFunction.func
+
     property timeseriesWriter:
         def __set__(self, writer):
             if writer is not None:
-                self._timeseriesWriter = Callback(writer(self, self.options))
+                self._timeseriesWriter = LoggerCallback(writer(self, self.options))
                 self.solver.timeseriesWriter = self._timeseriesWriter.callback
             else:
                 self._timeseriesWriter = None
@@ -412,7 +472,7 @@ cdef class FlameSolver:
     property stateWriter:
         def __set__(self, writer):
             if writer is not None:
-                self._stateWriter = Callback(writer(self, self.options))
+                self._stateWriter = LoggerCallback(writer(self, self.options))
                 self.solver.stateWriter = self._stateWriter.callback
             else:
                 self._stateWriter = None

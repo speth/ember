@@ -13,6 +13,7 @@ FlameSolver::FlameSolver()
     , rateMultiplierFunction(NULL)
     , stateWriter(NULL)
     , timeseriesWriter(NULL)
+    , heatLossFunction(NULL)
     , tbbTaskSched(tbb::task_scheduler_init::deferred)
     , vzInterp(new BilinearInterpolator)
     , vrInterp(new BilinearInterpolator)
@@ -497,6 +498,7 @@ void FlameSolver::resizeAuxiliary()
             system->setTimers(&reactionRatesTimer, &thermoTimer, &jacobianTimer);
             system->setStrainFunction(strainfunc);
             system->setRateMultiplierFunction(rateMultiplierFunction);
+            system->setHeatLossFunction(heatLossFunction);
             system->setRhou(rhou);
             system->setPosition(j, x[j]);
             if (options.quasi2d) {

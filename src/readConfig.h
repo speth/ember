@@ -135,6 +135,8 @@ public:
     double ignition_center; //!< [ignition.center]
     double ignition_stddev; //!< [ignition.stddev]
 
+    bool alwaysUpdateHeatFlux; //!< [externalHeatFlux.alwaysUpdate]
+
     // Tolerances for adaptation and regridding
     double vtol; //!< [grid.vtol]
     double dvtol; //!< [grid.dvtol]
