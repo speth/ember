@@ -965,9 +965,9 @@ class Config(object):
 
         concrete = self.evaluate()
         if self.strainParameters.rates:
-            concrete.multirun()
+            return concrete.multirun()
         else:
-            concrete.run()
+            return concrete.run()
 
 
 class ConcreteConfig(_ember.ConfigOptions):
@@ -1374,3 +1374,4 @@ class ConcreteConfig(_ember.ConfigOptions):
             data['Sc'] = Sc
             data['xFlame'] = xFlame
             data.close()
+            return _ember.FlameSolver(self)
