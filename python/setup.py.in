@@ -15,7 +15,7 @@ else:
     scripts = ['scripts/ember']
 
 setup(name='Ember',
-      version='1.3.0',
+      version='1.4.0a1',
       description='Multipurpose 1D Flame Solver',
       long_description='',
       author='Raymond L. Speth',
