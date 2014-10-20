@@ -180,25 +180,27 @@ class Options(object):
         ans = []
         spaces = None
         for attr in dir(self):
-            if not attr.startswith('_'):
-                value = getattr(self, attr)
-                if isinstance(value, Option):
-                    if value.value == value.default:
-                        continue
-                    else:
-                        value = value.value
+            if attr.startswith('_') or attr == 'isSet':
+                continue
 
-                if not isinstance(value, numbers.Number):
-                    value = repr(value)
-
-                if not spaces:
-                    header = ' '*indent + self.__class__.__name__ + '('
-                    spaces = ' '*len(header)
-
+            value = getattr(self, attr)
+            if isinstance(value, Option):
+                if value.value == value.default:
+                    continue
                 else:
-                    header = spaces
+                    value = value.value
 
-                ans.append('%s%s=%s,' % (header, attr, value))
+            if not isinstance(value, numbers.Number):
+                value = repr(value)
+
+            if not spaces:
+                header = ' '*indent + self.__class__.__name__ + '('
+                spaces = ' '*len(header)
+
+            else:
+                header = spaces
+
+            ans.append('%s%s=%s,' % (header, attr, value))
 
         if ans:
             ans[-1] = ans[-1][:-1] + ')'
