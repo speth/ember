@@ -9,7 +9,7 @@ class TestPremixedStrained(CanteraTest):
         self.conf = Config(
             Paths(outputDir='build/test/work/premixedStrained',
                   logFile='build/test/work/premixedStrained.txt'),
-            General(nThreads=2),
+            General(nThreads=1),
             Chemistry(mechanismFile='h2o2.cti'),
             InitialCondition(fuel='H2:1.0',
                              oxidizer='O2:1.0, AR:4.0',
@@ -53,7 +53,7 @@ class TestTwinPremixedStrained(CanteraTest):
                              oxidizer='O2:1.0, AR:4.0',
                              xRight=0.003,
                              equivalenceRatio=0.3),
-            General(nThreads=2, twinFlame=True, unburnedLeft=False),
+            General(nThreads=1, twinFlame=True, unburnedLeft=False),
             StrainParameters(initial=800, final=800),
             Grid(vtol=0.2, dvtol=0.3),
             Times(regridStepInterval=10),
@@ -90,7 +90,7 @@ class TestDiffusion(CanteraTest):
         self.conf = Config(
             Paths(outputDir='build/test/work/h2Diffusion',
                   logFile='build/test/work/h2Diffusion.txt'),
-            General(nThreads=2),
+            General(nThreads=1),
             Chemistry(mechanismFile='h2o2.cti'),
             InitialCondition(flameType='diffusion',
                              fuel='H2:1.0, AR:1.0',
