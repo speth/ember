@@ -442,9 +442,10 @@ make_setup = env.SubstFile('#python/setup.py', '#python/setup.py.in')
 script = ('from distutils.sysconfig import *\n'
           'print(get_config_var("EXT_SUFFIX") or get_config_var("SO"))\n'
           'print(get_config_var("INCLUDEPY"))\n'
+          'print(get_config_var("LDLIBRARY"))\n'
           'print(get_python_version())\n')
 
-suffix, includepy, target_py_version = [s.strip()
+suffix, includepy, pylib, target_py_version = [s.strip()
     for s in getCommandOutput(env['python_cmd'], '-c', script).split()]
 
 def compile_cython(target, source, env):
@@ -459,6 +460,9 @@ cyenv.Append(CPPPATH=includepy)
 
 if env['OS'] == 'Darwin':
     cyenv.Append(LINKFLAGS='-undefined dynamic_lookup')
+elif 'cygwin' in platform.system().lower():
+    # extract 'pythonX.Y' from 'libpythonX.Y.dll.a'
+    cyenv.Append(LIBS=[pylib[3:-6]])
 
 # Suppress warnings from Cython-generated code
 if 'g++' in env.subst('$CXX'):
