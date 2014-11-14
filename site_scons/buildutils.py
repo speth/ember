@@ -6,6 +6,8 @@ import re
 import types
 import shutil
 import subprocess
+import platform
+import SCons.Node.FS
 
 def quoted(s):
     """ Returns the given string wrapped in double quotes."""
@@ -227,3 +229,9 @@ class ConfigBuilder(object):
                 print "    %-35s %s" % (key, val)
         for key in sorted(self.defines.undefined):
             print "    %-35s %s" % (key, '*undefined*')
+
+
+# Monkey patch for SCons Cygwin bug
+# See http://scons.tigris.org/issues/show_bug.cgi?id=2664
+if 'cygwin' in platform.system().lower():
+    SCons.Node.FS._my_normcase = lambda x: x
