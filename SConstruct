@@ -338,6 +338,16 @@ if not retcode:
 # Header optionally used by gtest
 env['HAS_TR1_TUPLE'] = conf.CheckCXXHeader('tr1/tuple', '<>')
 
+tests['CanteraThreadSafe'] = conf.CheckDeclaration('THREAD_SAFE_CANTERA',
+                                                   '#include "cantera/base/config.h"',
+                                                   'C++')
+
+if env['use_tbb'] and not tests['CanteraThreadSafe']:
+    raise EnvironmentError("Ember requires a thread-safe version of Cantera in"
+                           "order to use multiple threads. See 'config.log' for"
+                           "details, or set 'use_tbb=n' to disable"
+                           "multiple-processor support.")
+
 # Figure out what needs to be linked for Boost Thread support (used by Cantera)
 boost_ok = False
 if env['boost_libs']:
@@ -363,7 +373,8 @@ for bt in boost_lib_choices:
             env.Append(LIBS=bt)
         break
 
-if not boost_ok:
+# We only need Boost.Thread because Cantera uses it
+if tests['CanteraThreadSafe'] and not boost_ok:
     raise EnvironmentError("Couldn't determine correct libraries to link for Boost Thread.")
 
 # Determine Sundials version
@@ -382,9 +393,6 @@ print """INFO: Using Sundials version %s""" % sundials_version.strip()
 tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
     "Cantera::MixTransport::getMixDiffCoeffsMass",
     includes='#include "cantera/transport.h"')
-tests['CanteraThreadSafe'] = conf.CheckDeclaration('THREAD_SAFE_CANTERA',
-                                                   '#include "cantera/base/config.h"',
-                                                   'C++')
 
 src = """
 #include "cantera/transport/MultiTransport.h"
@@ -395,10 +403,6 @@ class Foo : public Cantera::MultiTransport {
 };
 """
 tests['CanteraExtendedMultiTransport'] = conf.TryCompile(src, '.cpp')
-
-if not tests['CanteraThreadSafe']:
-    raise EnvironmentError("Ember requires a thread-safe version of Cantera. "
-                           "See 'config.log' for details.")
 
 if not tests['CanteraExtendedTransport']:
     raise EnvironmentError("Missing required Cantera method 'getMixDiffCoeffsMass'. "
