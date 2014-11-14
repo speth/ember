@@ -38,6 +38,8 @@ installed:
   - For Ember 1.2.x, install Cantera 2.1 and the "Legacy" Cantera Python module
   - For Ember 1.3 and higher, install the new Python module
 
+And optionally, for generating portable output files:
+
 * `h5py <http://www.lfd.uci.edu/~gohlke/pythonlibs/#h5py>`_
 
 
@@ -82,7 +84,7 @@ The following software needs to be installed in order to compile Ember:
 
 * numpy (>= 1.3.0)
 
-* h5py (>= 1.2.1)
+* h5py (>= 1.2.1, optional)
 
 In order to process the documentation, the following are also required:
 

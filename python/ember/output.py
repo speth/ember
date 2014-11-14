@@ -1,8 +1,31 @@
 import os
 
-import h5py
-
 from _ember import writelog
+from ember import utils
+import numpy as np
+
+class OutputFile(object):
+    def __init__(self, filename):
+        self.filename = filename
+
+    def __enter__(self):
+        if self.filename.endswith('.h5'):
+            import h5py
+            self.data = h5py.File(self.filename)
+            return self.data
+        elif self.filename.endswith('.npz'):
+            self.data = {}
+            return self.data
+        else:
+            raise Exception("Unknown output file format for file '{0}'."
+                " Expected one of: ('h5', 'npz')".format(filename))
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.filename.endswith('h5'):
+            self.data.close()
+        elif self.filename.endswith('npz'):
+            np.savez_compressed(self.filename, **self.data)
+
 
 class TimeSeriesWriter(object):
     def __init__(self, solver, options):
@@ -28,11 +51,12 @@ class TimeSeriesWriter(object):
             self.dadt.append(self.solver.dadt)
 
         if flag:
-            filename = '{}/{}.h5'.format(self.options.paths.outputDir, name)
+            filename = '{}/{}.{}'.format(self.options.paths.outputDir, name,
+                                         self.options.outputFiles.fileExtension)
             if os.path.exists(filename):
                 os.remove(filename)
 
-            with h5py.File(filename) as data:
+            with OutputFile(filename) as data:
                 data['t'] = self.t
                 data['dt'] = self.dt
                 data['Q'] = self.Q
@@ -56,12 +80,14 @@ class StateWriter(object):
         if not name:
             # Determine the name of the output file (e.g. profXXXXXX.h5)
             self.fileNumber += 1
-            filename = '{}/{}{:06d}.h5'.format(
+            filename = '{}/{}{:06d}.{}'.format(
                 self.options.paths.outputDir,
                 'prof' if not errorFile else 'error',
-                self.fileNumber)
+                self.fileNumber,
+                self.options.outputFiles.fileExtension)
         else:
-            filename = '{}/{}.h5'.format(self.options.paths.outputDir, name)
+            filename = '{}/{}.{}'.format(self.options.paths.outputDir, name,
+                                         self.options.outputFiles.fileExtension)
 
         if errorFile:
             writelog('Writing error output file: {}'.format(filename))
@@ -71,7 +97,7 @@ class StateWriter(object):
         if os.path.exists(filename):
             os.remove(filename)
 
-        with h5py.File(filename) as data:
+        with OutputFile(filename) as data:
             # Basic state information
             data['t'] = self.solver.tNow
             data['P'] = float(self.options.initialCondition.pressure)

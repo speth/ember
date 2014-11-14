@@ -50,17 +50,20 @@ Running Ember
   This may take a while. You can watch the solver's progress as it is written to
   the file specified by ``Paths.logFile`` in the input file.
 
-* Examine the output files. The files are HDF5 data files, which can be read
-  using the Python ``h5py`` module or Matlab.
+* Examine the output files. The files are HDF5 data files (file extension
+  ``.h5``), which can be read using the Python ``h5py`` module or Matlab, or
+  compressed NumPy data files (file extension ``.npz``), which can be read using
+  NumPy.
 
-  * ``out.h5`` contains integral flame properties (e.g. flame speed) as a
-    function of time
-  * ``profNNNNNN.h5`` contain the temperature & species profiles output
-    periodically.
-  * ``profNow.h5`` contains the most recently saved profiles.
+  * ``out.h5`` or ``out.npz`` contains integral flame properties (e.g. flame
+    speed) as a function of time
+  * ``profNNNNNN.h5`` or ``profNNNNNN.npz`` contain the temperature & species
+    profiles output periodically.
+  * ``profNow.h5`` or ``profNow.npz`` contains the most recently saved profiles.
 
-  Using the ``ember.utils`` module (and assuming you have IPython and
-  matplotlib installed)::
+  Using the ``ember.utils`` module (and assuming you have IPython and matplotlib
+  installed), either of these file types can be read using the ``load``
+  function::
 
     $ ipython --pylab
     In [1]: import ember

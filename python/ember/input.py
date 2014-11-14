@@ -16,10 +16,10 @@ import numbers
 import os
 import sys
 import types
-import h5py
 import cantera
 import numpy as np
 import utils
+import output
 import copy
 import time
 
@@ -242,6 +242,15 @@ def _usingCvode(conf):
 
 def _usingQss(conf):
     return conf.general.chemistryIntegrator == 'qss'
+
+
+# Dynamically decide on the default file extension: Use HDF5 if h5py is
+# available, otherwise default to npz
+try:
+    import h5py
+    dynamicDefaultFileExtension = StringOption('h5', ('npz',))
+except ImportError:
+    dynamicDefaultFileExtension = StringOption('npz', ('h5',))
 
 
 class Paths(Options):
@@ -748,6 +757,10 @@ class Debug(Options):
 
 class OutputFiles(Options):
     """ Control the contents of the periodic output files """
+    #: File extension of the output files. 'h5' for HDF5 files, which require
+    #: the 'h5py' Python module and can be read by other programs, or 'npz' for
+    #: a compressed NumPy data structure.
+    fileExtension = dynamicDefaultFileExtension
 
     #: Include the heat release rate as a function of space
     heatReleaseRate = BoolOption(True, level=2)
@@ -1289,18 +1302,19 @@ class ConcreteConfig(_ember.ConfigOptions):
         Sc = []
         xFlame = []
 
+        fileExt = self.outputFiles.fileExtension
         for a in strainRates:
             aSave.append(a)
 
-            restartFile = 'prof_eps%04i' % a
-            historyFile = 'out_eps%04i' % a
-            configFile = 'conf_eps%04i' % a
+            restartFile = 'prof_eps{:04i}.{}'.format(a, fileExt)
+            historyFile = 'out_eps{:04i}.{}'.format(a, fileExt)
+            configFile = 'conf_eps{:04i}.{}'.format(a, fileExt)
 
             restartPath = os.path.join(self.paths.outputDir, restartFile)
             historyPath = os.path.join(self.paths.outputDir, historyFile)
             configPath = os.path.join(self.paths.outputDir, configFile)
 
-            if os.path.exists(restartPath + '.h5') and os.path.exists(historyPath + '.h5'):
+            if os.path.exists(restartPath) and os.path.exists(historyPath):
                 # If the output files already exist, we simply retrieve the
                 # integral flame properties from the existing profiles and
                 # advance to the next strain rate.
@@ -1310,7 +1324,7 @@ class ConcreteConfig(_ember.ConfigOptions):
 
                 # Compute integral properties using points from the last half
                 # of the termination-check period
-                data = utils.HDFStruct(historyPath + '.h5')
+                data = utils.HDFStruct(historyPath)
                 mask = data.t > data.t[-1] - 0.5*self.terminationCondition.steadyPeriod
                 if not any(mask):
                     log('Warning: old data file did not contain data'
@@ -1360,18 +1374,18 @@ class ConcreteConfig(_ember.ConfigOptions):
                 Sc.append(np.mean(ScRun[mask]))
                 xFlame.append(np.mean(xFlameRun[mask]))
 
-            self.readInitialCondition(restartPath + '.h5')
+            self.readInitialCondition(restartPath)
 
             # Sort by strain rate:
             aSave, Q, Sc, xFlame = map(list, zip(*sorted(zip(aSave, Q, Sc, xFlame))))
 
-            integralFile = os.path.join(self.paths.outputDir, "integral.h5")
+            integralFile = os.path.join(self.paths.outputDir,
+                "integral.{}".format(self.outputFiles.fileExtension))
             if os.path.exists(integralFile):
                 os.unlink(integralFile)
-            data = h5py.File(integralFile)
-            data['a'] = aSave
-            data['Q'] = Q
-            data['Sc'] = Sc
-            data['xFlame'] = xFlame
-            data.close()
+            with output.OutputFile(integralFile) as data:
+                data['a'] = aSave
+                data['Q'] = Q
+                data['Sc'] = Sc
+                data['xFlame'] = xFlame
             return _ember.FlameSolver(self)

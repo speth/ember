@@ -1,6 +1,5 @@
 import numpy as np
 import cantera as ct
-import h5py
 import os
 import sys
 import _ember
@@ -68,6 +67,7 @@ class HDFStruct(Struct):
     Like :class:`Struct`, but converts HDF5 structs to numpy arrays.
     """
     def __init__(self, filename):
+        import h5py
         if not os.path.exists(filename):
             raise Exception("File not found: " + filename)
         data = h5py.File(filename, mode='r') # We don't need to write to the file
@@ -76,11 +76,26 @@ class HDFStruct(Struct):
         data.close() # I don't know if this is necessary, but it can't hurt
 
 
+class NpzStruct(Struct):
+    """
+    Like :class:`Struct`, but loads data from NumPy 'npz' data files
+    """
+    def __init__(self, filename):
+        if not os.path.exists(filename):
+            raise Exception("File not found: " + filename)
+        data = np.load(filename)
+        for k,v in data.items():
+            self[k] = v
+
+
 def load(filename):
     """
-    Generate an :class:`HDFStruct` object from a saved profile.
+    Generate an :class:`Struct` object from a saved profile.
     """
-    return HDFStruct(filename)
+    if filename.endswith('h5'):
+        return HDFStruct(filename)
+    elif filename.endswith('npz'):
+        return NpzStruct(filename)
 
 
 def get_qdot(gas, profile, pressure=101325):
