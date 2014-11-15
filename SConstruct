@@ -29,32 +29,81 @@ VariantDir('build/core','src', duplicate=0)
 VariantDir('build/test','test', duplicate=0)
 
 extraEnvArgs = {}
+opts = Variables('ember.conf')
 class defaults: pass
 
 defaults.env_vars = 'PYTHONPATH,CANTERA_DATA,PATH'
 
 if os.name == 'nt':
-    # On Windows, use the same version of Visual Studio that was used
-    # to compile Python, and target the same architecture.
-    pycomp = platform.python_compiler()
-    if pycomp.startswith('MSC v.1400'):
-        extraEnvArgs['MSVC_VERSION'] = '8.0' # Visual Studio 2005
-        tbbCompiler = 'vc8'
-    elif pycomp.startswith('MSC v.1500'):
-        extraEnvArgs['MSVC_VERSION'] = '9.0' # Visual Studio 2008
-        tbbCompiler = 'vc9'
-    elif pycomp.startswith('MSC v.1600'):
-        extraEnvArgs['MSVC_VERSION'] = '10.0' # Visual Studio 2010
-        tbbCompiler = 'vc10'
-
-    if '64 bit' in pycomp:
-        extraEnvArgs['TARGET_ARCH'] = 'amd64'
-        tbbArch = 'intel64'
+    windows_compiler_options = []
+    # On Windows, target the same architecture as the current copy of Python,
+    # unless the user specified another option.
+    if '64 bit' in sys.version:
+        target_arch = 'amd64'
     else:
-        extraEnvArgs['TARGET_ARCH'] = 'x86'
+        target_arch = 'x86'
+
+    # Make an educated guess about the right default compiler
+    if which('g++') and not which('cl.exe'):
+        defaultToolchain = 'mingw'
+    else:
+        defaultToolchain = 'msvc'
+
+    windows_compiler_options.extend([
+        ('msvc_version',
+         """Version of Visual Studio to use. The default is the newest
+            installed version. Specify '9.0' for VS2008, '10.0' for VS2010,
+            '11.0' for VS2012, '12.0' for VS2013, etc. This must be the same
+            version of Visual Studio used to compile Cantera.""",
+         ''),
+        ('target_arch',
+         """Target architecture. The default is the same
+            architecture as the installed version of Python. Should be one of
+            'amd64' or 'x86'.""",
+         target_arch)])
+    opts.AddVariables(*windows_compiler_options)
+
+    pickCompilerEnv = Environment()
+    opts.Update(pickCompilerEnv)
+
+    if pickCompilerEnv['msvc_version']:
+        defaultToolchain = 'msvc'
+
+    windows_compiler_options.append(EnumVariable(
+        'toolchain',
+        """The preferred compiler toolchain. This must be the same toolchain
+           used to compile Cantera.""",
+        defaultToolchain, ('msvc', 'mingw', 'intel')))
+    opts.AddVariables(windows_compiler_options[-1])
+    opts.Update(pickCompilerEnv)
+
+    if pickCompilerEnv['toolchain'] == 'msvc':
+        toolchain = ['default']
+        msvc = pickCompilerEnv['msvc_version'] or pickCompilerEnv['MSVC_VERSION']
+        extraEnvArgs['MSVC_VERSION'] = msvc
+        tbbCompiler = 'vc' + msvc.split('.')[0] # e.g. vc9
+        print 'INFO: Compiling with MSVC', msvc
+
+    elif pickCompilerEnv['toolchain'] == 'mingw':
+        toolchain = ['mingw', 'f90']
+        extraEnvArgs['F77'] = None
+        # Next line fixes http://scons.tigris.org/issues/show_bug.cgi?id=2683
+        extraEnvArgs['WINDOWS_INSERT_DEF'] = 1
+
+    elif pickCompilerEnv['toolchain'] == 'intel':
+        toolchain = ['intelc'] # note: untested
+
+    target_arch = pickCompilerEnv['target_arch']
+    extraEnvArgs['TARGET_ARCH'] = target_arch
+    if target_arch == 'amd64':
+        tbbArch = 'intel64'
+    elif target_arch == 'x86':
         tbbArch = 'ia32'
 
     defaults.blas_lapack = ''
+    print 'INFO: Compiling for architecture:', pickCompilerEnv['target_arch']
+    print 'INFO: Compiling using the following toolchain(s):', repr(toolchain)
+
 elif platform.system() == 'Darwin':
     defaults.blas_lapack = ''
     defaults.env_vars += ',DYLD_LIBRARY_PATH'
@@ -64,7 +113,6 @@ else:
 
 env = Environment(tools=['default', 'subst'], **extraEnvArgs)
 
-opts = Variables('ember.conf')
 opts.AddVariables(
     ('CXX',
      'The C++ compiler to use.',
@@ -204,7 +252,7 @@ if os.name == 'nt':
     if 'g++' in env.subst('$CXX'):
         lastlibs += ['python27']
         tbbCompiler = 'mingw'
-        if '64 bit' in pycomp:
+        if target_arch == 'amd64':
             env.Append(CPPDEFINES='MS_WIN64')
     tbbLibDir = env['tbb']+'/lib/%s/%s' % (tbbArch, tbbCompiler)
 else:
