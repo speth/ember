@@ -168,8 +168,6 @@ public:
     virtual int bandedJacobian(const realtype t, const sdVector& y,
                                const sdVector& ydot, sdBandMatrix& J) { return -1; }
 
-    //! Called at the start of integration to perform any required initialization.
-    virtual void initialize() {}
     virtual ~sdODE() {}
 };
 

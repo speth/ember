@@ -29,8 +29,6 @@ SundialsCvode::~SundialsCvode()
 
 void SundialsCvode::initialize()
 {
-    theODE->initialize();
-
     int flag = 0;
     if (_initialized) {
         // Starting over with a new IC, but the same ODE
