@@ -806,8 +806,8 @@ class TerminationCondition(Options):
       over a time period of *steadyPeriod*, or the mean heat release rate over
       *steadyPeriod* is less than *abstol*.
 
-    - If `measurement == 'dTdt', integration will terminate when
-      `||1/T * dT/dt|| / sqrt(nPoints)`  is less than `dTdt_tol`.
+    - If `measurement == 'dTdt'`, integration will terminate when
+      `||1/T * dT/dt|| / sqrt(nPoints)`  is less than *dTdtTol*.
     """
 
     tEnd = FloatOption(0.8)  #:
@@ -816,8 +816,8 @@ class TerminationCondition(Options):
     tolerance = FloatOption(1e-4, level=2)  #:
     abstol = FloatOption(0.5, min=0, level=2)  #:
     steadyPeriod = FloatOption(0.002, min=0, level=1)  #:
-    tMin = FloatOption(0.0, level=1)
-    dTdtTol = FloatOption(10.0)
+    tMin = FloatOption(0.0, level=1) #:
+    dTdtTol = FloatOption(10.0) #:
 
 
 class Config(object):
