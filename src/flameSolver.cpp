@@ -323,7 +323,7 @@ int FlameSolver::finishStep()
         }
 
         // Interpolate dampVal onto the modified grid
-        grid.dampVal = mathUtils::interp1(x_prev, dampVal_prev, grid.x);
+        grid.dampVal = mathUtils::interp1(x_prev, dampVal_prev, grid.x, false);
 
         grid.adapt(currentSolution);
 

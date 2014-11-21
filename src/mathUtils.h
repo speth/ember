@@ -242,10 +242,12 @@ namespace mathUtils
     //!     increasing.
     //! @param yIn Input y-coordinates, length *N*
     //! @param xOut Target x-coordinates, length *M*
+    //! @param extrap Linearly extrapolate outside the input interval. If false,
+    //!     clip to the nearest value.
     //! @returns Computed y-coordinates at the points defined in *xOut*,
     //!     length *M*
     template <class T>
-    T interp1(const T& xIn, const T& yIn, const T& xOut)
+    T interp1(const T& xIn, const T& yIn, const T& xOut, bool extrap=true)
     {
         if (xIn.size() != yIn.size()) {
             throw DebugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
@@ -255,14 +257,27 @@ namespace mathUtils
 
         T yOut(nOut);
 
-        for (int i=0; i<nOut; i++) {
-            int j = findFirst(xIn >= xOut[i]) - 1;
-            if (j == -1) {
-                j = 0;
-            } else if (j == -2) {
-                j = nIn-2;
+        if (extrap) {
+            for (int i=0; i<nOut; i++) {
+                int j = findFirst(xIn >= xOut[i]) - 1;
+                if (j == -1) {
+                    j = 0;
+                } else if (j == -2) {
+                    j = nIn-2;
+                }
+                yOut[i] = yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut[i]-xIn[j]);
             }
-            yOut[i] = yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut[i]-xIn[j]);
+        } else {
+            for (int i=0; i<nOut; i++) {
+                int j = findFirst(xIn >= xOut[i]) - 1;
+                if (j == -1) {
+                    yOut[i] = yIn[0];
+                } else if (j == -2) {
+                    yOut[i] = yIn[nIn-1];
+                } else {
+                    yOut[i] = yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut[i]-xIn[j]);
+                }
+            }
         }
 
         return yOut;
@@ -274,9 +289,12 @@ namespace mathUtils
     //!     increasing.
     //! @param yIn Input y-coordinates, length *N*
     //! @param xOut Target x-coordinate
+    //! @param extrap Linearly extrapolate outside the input interval. If false,
+    //!     clip to the nearest value.
     //! @returns Computed y-coordinate at *xOut*
     template <class T>
-    double interp1(const T& xIn, const T& yIn, const double xOut)
+    double interp1(const T& xIn, const T& yIn, const double xOut,
+                   bool extrap=true)
     {
         if (xIn.size() != yIn.size()) {
             throw DebugException("mathUtils::interp1: error: xIn and yIn must be the same size.");
@@ -286,8 +304,14 @@ namespace mathUtils
 
         int j = findFirst(xIn >= xOut) - 1;
         if (j == -1) {
+            if (!extrap) {
+                return yIn[0];
+            }
             j = 0;
         } else if (j == -2) {
+            if (!extrap) {
+                return yIn[nIn-1];
+            }
             j = nIn-2;
         }
         return yIn[j] + (yIn[j+1]-yIn[j])/(xIn[j+1]-xIn[j])*(xOut-xIn[j]);
