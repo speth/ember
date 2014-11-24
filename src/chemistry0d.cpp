@@ -2,6 +2,9 @@
 #include "debugUtils.h"
 #include "readConfig.h"
 
+#include "cantera/thermo/ThermoFactory.h"
+#include "cantera/kinetics/importKinetics.h"
+
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
 

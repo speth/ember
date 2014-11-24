@@ -1,4 +1,7 @@
 #include "../src/chemistry0d.h"
+#include "cantera/thermo/ThermoFactory.h"
+#include "cantera/equilibrium.h"
+
 #include "gtest/gtest.h"
 
 #ifdef EMBER_EXTENDED_MULTITRANSPORT

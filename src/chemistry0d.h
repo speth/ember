@@ -2,19 +2,14 @@
 
 #undef NO_ERROR // fix for interaction between reaction_defs.h and winerror.h
 
-#include "cantera/IdealGasMix.h"    // defines class IdealGasMix
-
-#include "cantera/equilibrium.h"    // chemical equilibrium
-#include "cantera/thermo.h"
-#include "cantera/transport.h"      // transport properties
-#include "cantera/kinetics.h"
-
-#include "cantera/thermo/IdealGasPhase.h"
-#include "cantera/kinetics/GasKinetics.h"
-#include "cantera/base/ctml.h"
-
 #include "config.h"
 #include "mathUtils.h"
+
+#include "cantera/transport/MixTransport.h"
+#include "cantera/transport/MultiTransport.h"
+#include "cantera/transport/TransportFactory.h"
+#include "cantera/thermo/IdealGasPhase.h"
+#include "cantera/kinetics/GasKinetics.h"
 
 class ConfigOptions;
 
