@@ -126,7 +126,7 @@ void FlameSolver::setupStep()
             }
         }
         if (error) {
-            writeStateFile();
+            writeStateFile("err_setupStep", true, false);
         }
     #endif
 
