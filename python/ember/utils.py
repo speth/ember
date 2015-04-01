@@ -118,7 +118,7 @@ def get_qdot(gas, profile, pressure=101325):
     return np.array(q)
 
 
-def expandProfile(prof, gas):
+def expandProfile(prof, gas, diffusion=True):
     """
     Reconstruct derived data associated with a flame profile.
 
@@ -127,6 +127,9 @@ def expandProfile(prof, gas):
     :param gas:
         A Cantera `Solution` object made using the same mechanism file used
         for the simulation.
+    :param diffusion:
+        Set to `False` to disable calculating diffusion properties (which can
+        be slow for large mechanisms)
 
     Arrays which are reconstructed:
 
@@ -170,18 +173,20 @@ def expandProfile(prof, gas):
     except AttributeError:
         P = 101325
 
+    if diffusion:
+        prof.rhoD = np.zeros((K,N))
+        prof.Dkt = np.zeros((K,N))
+        prof.jFick = np.zeros((K,N))
+        prof.jSoret = np.zeros((K,N))
+        prof.jCorr = np.zeros(N)
+
     prof.rho = np.zeros(N)
     prof.wdot = np.zeros((K,N))
     prof.q = np.zeros(N)
-    prof.rhoD = np.zeros((K,N))
     prof.k = np.zeros(N)
     prof.cp = np.zeros(N)
     prof.mu = np.zeros(N)
     prof.Wmx = np.zeros(N)
-    prof.Dkt = np.zeros((K,N))
-    prof.jFick = np.zeros((K,N))
-    prof.jSoret = np.zeros((K,N))
-    prof.jCorr = np.zeros(N)
     prof.X = np.zeros((K,N))
 
     for j in range(N):
@@ -192,30 +197,32 @@ def expandProfile(prof, gas):
         prof.q[j] = -np.dot(wdot, gas.partial_molar_enthalpies)
         prof.X[:,j] = gas.X
 
-        Dbin = gas.binary_diff_coeffs
-        prof.Dkt[:,j] = gas.thermal_diff_coeffs
-
-        eps = 1e-15;
-        for k in range(K):
-            X = gas.X
-            Y = gas.Y
-            sum1 = sum(X[i]/Dbin[k,i] for i in range(K) if i != k)
-            sum2 = sum((Y[i]+eps/K)/Dbin[k,i] for i in range(K) if i != k)
-            prof.rhoD[k,j] = prof.rho[j]/(sum1 + X[k]/(1+eps-Y[k])*sum2)
-
         prof.k[j] = gas.thermal_conductivity
         prof.cp[j] = gas.cp_mass
         prof.mu[j] = gas.viscosity
         prof.Wmx[j] = gas.mean_molecular_weight
 
-    for j in range(1, N-1):
-        for k in range(K):
-            prof.jFick[k,j] = -0.5 * ((prof.rhoD[k,j] + prof.rhoD[k,j+1]) *
-                                      ((prof.Y[k,j+1]-prof.Y[k,j])/prof.hh[j]))
-            prof.jSoret[k,j] = -0.5 * ((prof.Dkt[k,j]/prof.T[j] +
-                                        prof.Dkt[k,j+1]/prof.T[j+1]) *
-                                        (prof.T[j+1]-prof.T[j])/prof.hh[j])
-            prof.jCorr[j] -= prof.jFick[k,j] + prof.jSoret[k,j]
+        if diffusion:
+            Dbin = gas.binary_diff_coeffs
+            prof.Dkt[:,j] = gas.thermal_diff_coeffs
+
+            eps = 1e-15;
+            for k in range(K):
+                X = gas.X
+                Y = gas.Y
+                sum1 = sum(X[i]/Dbin[k,i] for i in range(K) if i != k)
+                sum2 = sum((Y[i]+eps/K)/Dbin[k,i] for i in range(K) if i != k)
+                prof.rhoD[k,j] = prof.rho[j]/(sum1 + X[k]/(1+eps-Y[k])*sum2)
+
+    if diffusion:
+        for j in range(1, N-1):
+            for k in range(K):
+                prof.jFick[k,j] = -0.5 * ((prof.rhoD[k,j] + prof.rhoD[k,j+1]) *
+                                          ((prof.Y[k,j+1]-prof.Y[k,j])/prof.hh[j]))
+                prof.jSoret[k,j] = -0.5 * ((prof.Dkt[k,j]/prof.T[j] +
+                                            prof.Dkt[k,j+1]/prof.T[j+1]) *
+                                            (prof.T[j+1]-prof.T[j])/prof.hh[j])
+                prof.jCorr[j] -= prof.jFick[k,j] + prof.jSoret[k,j]
 
     prof.W = gas.molecular_weights
 
