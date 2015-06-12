@@ -118,7 +118,7 @@ def get_qdot(gas, profile, pressure=101325):
     return np.array(q)
 
 
-def expandProfile(prof, gas, diffusion=True):
+def expandProfile(prof, gas, diffusion=True, reaction_rates=True):
     """
     Reconstruct derived data associated with a flame profile.
 
@@ -130,16 +130,22 @@ def expandProfile(prof, gas, diffusion=True):
     :param diffusion:
         Set to `False` to disable calculating diffusion properties (which can
         be slow for large mechanisms)
+    :param reaction_rates:
+        Set to `False` to disable detailed reaction rates (creation /
+        destruction / rates-of-progress)
 
     Arrays which are reconstructed:
 
         * grid properties: *hh*, *cfp*, *cf*, *cfm*, *rphalf*, *dlj*
         * thermodynamic properties: *rho*, *cp*, *Wmx*, *W*
-        * kinetic properties: *wdot*, *q*
+        * kinetic properties: *wdot*, *q*, *creation_rates*, *destruction_rates*,
+          *forward_rates_of_progress*, *reverse_rates_of_progress*,
+          *net_rates_of_progress*
         * transport properties: *rhoD*, *k*, *mu*, *Dkt*, *jFick*, *jSoret*, *jCorr*
         * other: *X* (mole fractions)
     """
     N = len(prof.x)
+    I = gas.n_reactions
 
     # Grid properties
     try:
@@ -189,12 +195,24 @@ def expandProfile(prof, gas, diffusion=True):
     prof.Wmx = np.zeros(N)
     prof.X = np.zeros((K,N))
 
+    if reaction_rates:
+        prof.creation_rates = np.zeros((K,N))
+        prof.destruction_rates = np.zeros((K,N))
+        prof.forward_rates_of_progress = np.zeros((I,N))
+        prof.reverse_rates_of_progress = np.zeros((I,N))
+        prof.net_rates_of_progress = np.zeros((I,N))
+
     for j in range(N):
         gas.TPY = prof.T[j], P, prof.Y[:,j]
         prof.rho[j] = gas.density
         wdot = gas.net_production_rates
         prof.wdot[:,j] = wdot
         prof.q[j] = -np.dot(wdot, gas.partial_molar_enthalpies)
+        prof.creation_rates[:,j] = gas.creation_rates
+        prof.destruction_rates[:,j] = gas.destruction_rates
+        prof.forward_rates_of_progress[:,j] = gas.forward_rates_of_progress
+        prof.reverse_rates_of_progress[:,j] = gas.reverse_rates_of_progress
+        prof.net_rates_of_progress[:,j] = gas.net_rates_of_progress
         prof.X[:,j] = gas.X
 
         prof.k[j] = gas.thermal_conductivity
