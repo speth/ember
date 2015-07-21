@@ -4,18 +4,15 @@
 
 #include "cantera/thermo/ThermoFactory.h"
 #include "cantera/kinetics/importKinetics.h"
+#include "cantera/transport/MixTransport.h"
+#include "cantera/transport/MultiTransport.h"
 
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
 
-ApproxMixTransport::ApproxMixTransport(Cantera::ThermoPhase& thermo,
-                                       Cantera::TransportFactory& factory)
+ApproxMixTransport::ApproxMixTransport()
     : _threshold(0.0)
 {
-    dvector state;
-    thermo.saveState(state);
-    factory.initTransport(this, &thermo, 0, 0);
-    thermo.restoreState(state);
 }
 
 void ApproxMixTransport::setThreshold(double threshold)
@@ -255,13 +252,8 @@ typedef Eigen::Map<dvec> vec_map;
 
 #ifdef EMBER_EXTENDED_MULTITRANSPORT
 
-MultiTransportEigen::MultiTransportEigen(Cantera::ThermoPhase& thermo,
-                                         Cantera::TransportFactory& factory)
+MultiTransportEigen::MultiTransportEigen()
 {
-    dvector state;
-    thermo.saveState(state);
-    factory.initTransport(this, &thermo, 0, 0);
-    thermo.restoreState(state);
 }
 
 void MultiTransportEigen::solveLMatrixEquation()
@@ -471,26 +463,22 @@ void CanteraGas::initialize()
     kinetics->finalize();
 
     // Initialize the default transport properties object
-    Cantera::TransportFactory* transFac = Cantera::TransportFactory::factory();
     if (transportModel == "Multi") {
         #ifdef EMBER_EXTENDED_MULTITRANSPORT
-            transport = new MultiTransportEigen(thermo, *transFac);
+            transport = new MultiTransportEigen();
         #else
-            transport = dynamic_cast<Cantera::GasTransport*>(
-            transFac->newTransport("Multi",&thermo));
+            transport = new Cantera::MultiTransport();
         #endif
     } else if (transportModel == "Mix") {
-        transport = dynamic_cast<Cantera::GasTransport*>(
-            transFac->newTransport("Mix",&thermo));
+        transport = new Cantera::MixTransport();
     } else if (transportModel == "Approx") {
-        ApproxMixTransport* atran = new ApproxMixTransport(thermo, *transFac);
+        ApproxMixTransport* atran = new ApproxMixTransport();
         atran->setThreshold(transportThreshold);
         transport = atran;
     } else {
         throw DebugException("Error: Invalid transport model specified.");
     }
-    transFac->initTransport(transport, &thermo);
-    transFac->deleteFactory();
+    transport->init(&thermo);
 
     nSpec = thermo.nSpecies();
     Dbin.setZero(nSpec,nSpec);

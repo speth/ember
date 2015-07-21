@@ -1,6 +1,5 @@
 #include "../src/chemistry0d.h"
 #include "cantera/thermo/ThermoFactory.h"
-#include "cantera/equilibrium.h"
 
 #include "gtest/gtest.h"
 
@@ -13,7 +12,8 @@ public:
         multi_gas.reset(Cantera::newPhase("gri30.xml", ""));
         eigen_gas.reset(Cantera::newPhase("gri30.xml", ""));
         multi.reset(dynamic_cast<Cantera::MultiTransport*>(Cantera::newTransportMgr("Multi", multi_gas.get())));
-        eigen.reset(new MultiTransportEigen(*eigen_gas, *Cantera::TransportFactory::factory()));
+        eigen.reset(new MultiTransportEigen());
+        eigen->init(eigen_gas.get());
         K = multi_gas->nSpecies();
     }
 
@@ -57,7 +57,7 @@ TEST_F(EigenTransportTest, ArbitraryMixture)
             X[(k+j) % K] = (j + 1) / 54.0;
         }
         multi_gas->setState_TPX(300, 101325, &X[0]);
-        Cantera::equilibrate(*multi_gas, "TP");
+        multi_gas->equilibrate("TP");
         multi_gas->getMoleFractions(&X[0]);
         eigen_gas->setMoleFractions(&X[0]);
 

@@ -27,8 +27,7 @@ class ConfigOptions;
 class ApproxMixTransport : public Cantera::MixTransport
 {
 public:
-    ApproxMixTransport(Cantera::ThermoPhase& thermo,
-                       Cantera::TransportFactory& factory);
+    ApproxMixTransport();
 
     //! Set the mole fraction threshold below which species are not included
     //! in transport property calculations.
@@ -55,8 +54,7 @@ private:
 class MultiTransportEigen : public Cantera::MultiTransport
 {
 public:
-    explicit MultiTransportEigen(Cantera::ThermoPhase& thermo,
-                                 Cantera::TransportFactory& factory);
+    MultiTransportEigen();
     virtual void solveLMatrixEquation();
 };
 

@@ -33,10 +33,7 @@ installed:
 
 * `Python 2.7 (64-bit) <https://www.python.org/downloads/>`_
 * `Numpy <http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy>`_ - version 1.8 or higher
-* `Cantera 2.1 Python module <https://sourceforge.net/projects/cantera/files/cantera/>`_
-
-  - For Ember 1.2.x, install Cantera 2.1 and the "Legacy" Cantera Python module
-  - For Ember 1.3 and higher, install the new Python module
+* `Cantera 2.2 Python module <https://github.com/Cantera/cantera/releases>`_
 
 And optionally, for generating portable output files:
 
@@ -60,10 +57,7 @@ The following software needs to be installed in order to compile Ember:
 
 * SCons (>= 2.1.0 recommended)
 * Eigen (>= 3.0)
-* Cantera (>= 2.1.0)
-
-  - For Ember 1.2.x, install Cantera with the 'legacy' Python module
-  - For Ember 1.3 and higher, install the 'new' Python module
+* Cantera (>= 2.2.0)
 
   .. note::
 
