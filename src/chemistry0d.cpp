@@ -336,11 +336,11 @@ void InterpKinetics::rebuildInterpData(size_t nTemps, double Tmin, double Tmax)
     m_tmin = Tmin;
     m_tmax = Tmax;
 
-    m_rfn_const = dmatrix::Zero(m_ii, m_ntemps);
-    m_rfn_slope = dmatrix::Zero(m_ii, m_ntemps);
+    m_rfn_const = dmatrix::Zero(nReactions(), m_ntemps);
+    m_rfn_slope = dmatrix::Zero(nReactions(), m_ntemps);
 
-    m_rkcn_const = dmatrix::Zero(m_ii, m_ntemps);
-    m_rkcn_slope = dmatrix::Zero(m_ii, m_ntemps);
+    m_rkcn_const = dmatrix::Zero(nReactions(), m_ntemps);
+    m_rkcn_slope = dmatrix::Zero(nReactions(), m_ntemps);
 
     m_rfn_low_const = dmatrix::Zero(m_nfall, m_ntemps);
     m_rfn_low_slope = dmatrix::Zero(m_nfall, m_ntemps);
@@ -355,8 +355,8 @@ void InterpKinetics::rebuildInterpData(size_t nTemps, double Tmin, double Tmax)
         thermo().setState_TR(Tmin + ((double) n)/(m_ntemps - 1) * (Tmax - Tmin),
                              rho_save);
         GasKinetics::update_rates_T();
-        m_rfn_const.col(n) = vec_map(&m_rfn[0], m_ii);
-        m_rkcn_const.col(n) = vec_map(&m_rkcn[0], m_ii);
+        m_rfn_const.col(n) = vec_map(&m_rfn[0], nReactions());
+        m_rkcn_const.col(n) = vec_map(&m_rkcn[0], nReactions());
         m_rfn_low_const.col(n) = vec_map(&m_rfn_low[0], m_nfall);
         m_rfn_high_const.col(n) = vec_map(&m_rfn_high[0], m_nfall);
         m_falloff_work_const.col(n) = vec_map(&falloff_work[0], m_nfall);
@@ -390,8 +390,8 @@ void InterpKinetics::update_rates_T()
     assert(dT >= 0 && dT <= (m_tmax - m_tmin) / (m_ntemps - 1));
     assert(n < m_ntemps);
 
-    vec_map(&m_rfn[0], m_ii) = m_rfn_const.col(n) + m_rfn_slope.col(n) * dT;
-    vec_map(&m_rkcn[0], m_ii) = m_rkcn_const.col(n) + m_rkcn_slope.col(n) * dT;
+    vec_map(&m_rfn[0], nReactions()) = m_rfn_const.col(n) + m_rfn_slope.col(n) * dT;
+    vec_map(&m_rkcn[0], nReactions()) = m_rkcn_const.col(n) + m_rkcn_slope.col(n) * dT;
     vec_map(&m_rfn_low[0], m_nfall) = m_rfn_low_const.col(n) + m_rfn_low_slope.col(n) * dT;
     vec_map(&m_rfn_high[0], m_nfall) = m_rfn_high_const.col(n) + m_rfn_high_slope.col(n) * dT;
     vec_map(&falloff_work[0], m_nfall) = m_falloff_work_const.col(n) + m_falloff_work_slope.col(n) * dT;
