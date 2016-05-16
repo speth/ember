@@ -298,15 +298,15 @@ void MultiTransportEigen::solveLMatrixEquation()
     m_Lmatrix.resize(3*m_nsp, 3*m_nsp, 0.0);
 
     //! Evaluate the upper-left block of the L matrix.
-    eval_L0000(DATA_PTR(m_molefracs));
-    eval_L0010(DATA_PTR(m_molefracs));
+    eval_L0000(&m_molefracs[0]);
+    eval_L0010(&m_molefracs[0]);
     eval_L0001();
     eval_L1000();
-    eval_L1010(DATA_PTR(m_molefracs));
-    eval_L1001(DATA_PTR(m_molefracs));
+    eval_L1010(&m_molefracs[0]);
+    eval_L1001(&m_molefracs[0]);
     eval_L0100();
     eval_L0110();
-    eval_L0101(DATA_PTR(m_molefracs));
+    eval_L0101(&m_molefracs[0]);
 
     // Solve it using LU decomposition.
     Eigen::Map<Eigen::MatrixXd> L(m_Lmatrix.colPts()[0], 3*m_nsp , 3*m_nsp);
@@ -342,12 +342,13 @@ void InterpKinetics::rebuildInterpData(size_t nTemps, double Tmin, double Tmax)
     m_rkcn_const = dmatrix::Zero(nReactions(), m_ntemps);
     m_rkcn_slope = dmatrix::Zero(nReactions(), m_ntemps);
 
-    m_rfn_low_const = dmatrix::Zero(m_nfall, m_ntemps);
-    m_rfn_low_slope = dmatrix::Zero(m_nfall, m_ntemps);
-    m_rfn_high_const = dmatrix::Zero(m_nfall, m_ntemps);
-    m_rfn_high_slope = dmatrix::Zero(m_nfall, m_ntemps);
-    m_falloff_work_const = dmatrix::Zero(m_nfall, m_ntemps);
-    m_falloff_work_slope = dmatrix::Zero(m_nfall, m_ntemps);
+    size_t nFall = m_falloff_low_rates.nReactions();
+    m_rfn_low_const = dmatrix::Zero(nFall, m_ntemps);
+    m_rfn_low_slope = dmatrix::Zero(nFall, m_ntemps);
+    m_rfn_high_const = dmatrix::Zero(nFall, m_ntemps);
+    m_rfn_high_slope = dmatrix::Zero(nFall, m_ntemps);
+    m_falloff_work_const = dmatrix::Zero(nFall, m_ntemps);
+    m_falloff_work_slope = dmatrix::Zero(nFall, m_ntemps);
 
     double T_save = thermo().temperature();
     double rho_save = thermo().density();
@@ -357,9 +358,9 @@ void InterpKinetics::rebuildInterpData(size_t nTemps, double Tmin, double Tmax)
         GasKinetics::update_rates_T();
         m_rfn_const.col(n) = vec_map(&m_rfn[0], nReactions());
         m_rkcn_const.col(n) = vec_map(&m_rkcn[0], nReactions());
-        m_rfn_low_const.col(n) = vec_map(&m_rfn_low[0], m_nfall);
-        m_rfn_high_const.col(n) = vec_map(&m_rfn_high[0], m_nfall);
-        m_falloff_work_const.col(n) = vec_map(&falloff_work[0], m_nfall);
+        m_rfn_low_const.col(n) = vec_map(&m_rfn_low[0], nFall);
+        m_rfn_high_const.col(n) = vec_map(&m_rfn_high[0], nFall);
+        m_falloff_work_const.col(n) = vec_map(&falloff_work[0], nFall);
     }
 
     double dT = (Tmax - Tmin) / (m_ntemps - 1);
@@ -390,11 +391,12 @@ void InterpKinetics::update_rates_T()
     assert(dT >= 0 && dT <= (m_tmax - m_tmin) / (m_ntemps - 1));
     assert(n < m_ntemps);
 
+    size_t nFall = m_falloff_low_rates.nReactions();
     vec_map(&m_rfn[0], nReactions()) = m_rfn_const.col(n) + m_rfn_slope.col(n) * dT;
     vec_map(&m_rkcn[0], nReactions()) = m_rkcn_const.col(n) + m_rkcn_slope.col(n) * dT;
-    vec_map(&m_rfn_low[0], m_nfall) = m_rfn_low_const.col(n) + m_rfn_low_slope.col(n) * dT;
-    vec_map(&m_rfn_high[0], m_nfall) = m_rfn_high_const.col(n) + m_rfn_high_slope.col(n) * dT;
-    vec_map(&falloff_work[0], m_nfall) = m_falloff_work_const.col(n) + m_falloff_work_slope.col(n) * dT;
+    vec_map(&m_rfn_low[0], nFall) = m_rfn_low_const.col(n) + m_rfn_low_slope.col(n) * dT;
+    vec_map(&m_rfn_high[0], nFall) = m_rfn_high_const.col(n) + m_rfn_high_slope.col(n) * dT;
+    vec_map(&falloff_work[0], nFall) = m_falloff_work_const.col(n) + m_falloff_work_slope.col(n) * dT;
 
     m_logStandConc = log(thermo().standardConcentration());
     m_temp = Tnow;

@@ -17,6 +17,7 @@ Basic usage:
 import os
 import platform
 from distutils.sysconfig import get_config_var
+from distutils.version import StrictVersion
 from Cython.Build import cythonize
 import numpy as np
 from buildutils import *
@@ -293,7 +294,7 @@ include_dirs.extend([get_config_var('INCLUDEPY'),
 if ('g++' in env.subst('$CXX')
     or 'clang++' in env.subst('$CXX')
     or 'icpc' in env.subst('$CXX')):
-    flags = ['-ftemplate-depth-128', '-fPIC', '-g', '-Wall', '-pthread']
+    flags = ['-ftemplate-depth-128', '-std=c++0x', '-fPIC', '-g', '-Wall', '-pthread']
     linkflags = ['-pthread']
     defines = []
     if env['debug_symbols']:
@@ -386,9 +387,16 @@ if not retcode:
 # Header optionally used by gtest
 env['HAS_TR1_TUPLE'] = conf.CheckCXXHeader('tr1/tuple', '<>')
 
-tests['CanteraThreadSafe'] = conf.CheckDeclaration('THREAD_SAFE_CANTERA',
-                                                   '#include "cantera/base/config.h"',
-                                                   'C++')
+cantera_version_source = get_expression_value(['"cantera/base/config.h"'],
+                                              'CANTERA_VERSION')
+retcode, cantera_version = conf.TryRun(cantera_version_source, '.cpp')
+
+if StrictVersion(cantera_version) > StrictVersion('2.3.0a1'):
+    tests['CanteraThreadSafe'] = True
+else:
+    tests['CanteraThreadSafe'] = conf.CheckDeclaration('THREAD_SAFE_CANTERA',
+                                                       '#include "cantera/base/config.h"',
+                                                       'C++')
 
 if env['use_tbb'] and not tests['CanteraThreadSafe']:
     raise EnvironmentError("Ember requires a thread-safe version of Cantera in"
@@ -439,8 +447,8 @@ configInfo['SUNDIALS_VERSION'] = ''.join(sundials_version.strip().split('.')[:2]
 print """INFO: Using Sundials version %s""" % sundials_version.strip()
 
 tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
-    "Cantera::MixTransport::getMixDiffCoeffsMass",
-    includes='#include "cantera/transport.h"')
+    "Cantera::Transport::getMixDiffCoeffsMass",
+    includes='#include "cantera/transport/TransportBase.h"')
 
 src = """
 #include "cantera/transport/MultiTransport.h"
