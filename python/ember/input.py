@@ -1306,9 +1306,9 @@ class ConcreteConfig(_ember.ConfigOptions):
         for a in strainRates:
             aSave.append(a)
 
-            restartFile = 'prof_eps{:04i}.{}'.format(a, fileExt)
-            historyFile = 'out_eps{:04i}.{}'.format(a, fileExt)
-            configFile = 'conf_eps{:04i}.{}'.format(a, fileExt)
+            restartFile = 'prof_eps{:04d}.{}'.format(a, fileExt)
+            historyFile = 'out_eps{:04d}.{}'.format(a, fileExt)
+            configFile = 'conf_eps{:04d}.{}'.format(a, fileExt)
 
             restartPath = os.path.join(self.paths.outputDir, restartFile)
             historyPath = os.path.join(self.paths.outputDir, historyFile)
