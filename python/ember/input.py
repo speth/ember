@@ -1360,8 +1360,8 @@ class ConcreteConfig(_ember.ConfigOptions):
                 log('Completed run at strain rate a = %g s^-1' % a)
                 log('Integration took %.1f seconds.' % (t2-t1))
 
-                solver.writeStateFile(restartFile)
-                solver.writeTimeseriesFile(historyFile)
+                solver.writeStateFile(os.path.splitext(restartFile)[0])
+                solver.writeTimeseriesFile(os.path.splitext(historyFile)[0])
                 tRun = np.array(solver.timeseriesWriter.t)
                 QRun = np.array(solver.timeseriesWriter.Q)
                 ScRun = np.array(solver.timeseriesWriter.Sc)
