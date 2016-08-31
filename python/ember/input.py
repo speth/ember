@@ -535,6 +535,9 @@ class WallFlux(Options):
     #: Conductance of the wall [W/m^2-K]
     Kwall = FloatOption(100, level=2)
 
+    #: Velocity flux at the wall. [m/s] for planar flames, [m^2/s] for curved
+    #: flames.
+    rVwall = FloatOption(0, level=2)
 
 class Ignition(Options):
     """
