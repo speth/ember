@@ -227,10 +227,12 @@ cdef class ConfigOptions:
             opts.wallFlux = True
             opts.Tinf = self.wallFlux.Tinf
             opts.Kwall = self.wallFlux.Kwall
+            opts.rvWall = self.wallFlux.rvWall
         else:
             opts.wallFlux = 0
             opts.Tinf = IC.Tu
             opts.Kwall = 0
+            opts.rvWall = 0
 
         # ignition parameters
         opts.ignition_tStart = self.ignition.tStart

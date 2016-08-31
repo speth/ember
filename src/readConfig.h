@@ -127,6 +127,7 @@ public:
     bool wallFlux; //<! True if wall flux is applied when x[0] == 0
     double Tinf; //<! Temperature used for computing wall heat flux [wallFlux.Tinf]
     double Kwall; //<! Thermal conductance of the wall at x = 0 [wallFlux.Kwall]
+    double rvWall; //<! velocity at the (porous) wall [wallFlux.rvWall]
 
     // Ignition parameters
     double ignition_tStart; //!< [ignition.tStart]

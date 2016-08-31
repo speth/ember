@@ -78,7 +78,7 @@ cdef extern from "readConfig.h":
         string interpFile
 
         cbool wallFlux
-        double Tinf, Kwall
+        double Tinf, Kwall, rvWall
 
         double ignition_tStart, ignition_duration, ignition_energy
         double ignition_center, ignition_stddev
