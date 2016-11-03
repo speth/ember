@@ -383,18 +383,11 @@ cantera_version_source = get_expression_value(['"cantera/base/config.h"'],
                                               'CANTERA_VERSION')
 retcode, cantera_version = conf.TryRun(cantera_version_source, '.cpp')
 
-if StrictVersion(cantera_version.strip()) > StrictVersion('2.3.0a1'):
-    tests['CanteraThreadSafe'] = True
-else:
-    tests['CanteraThreadSafe'] = conf.CheckDeclaration('THREAD_SAFE_CANTERA',
-                                                       '#include "cantera/base/config.h"',
-                                                       'C++')
-
-if env['use_tbb'] and not tests['CanteraThreadSafe']:
-    raise EnvironmentError("Ember requires a thread-safe version of Cantera in"
-                           "order to use multiple threads. See 'config.log' for"
-                           "details, or set 'use_tbb=n' to disable"
-                           "multiple-processor support.")
+min_cantera_version = '2.3.0a3'
+if StrictVersion(cantera_version.strip()) < StrictVersion(min_cantera_version):
+    raise EnvironmentError("Ember requires Cantera {} or newer, but the "
+        "installed version of Cantera is {}.".format(
+        min_cantera_version, cantera_version.strip()))
 
 # Determine Sundials version
 sundials_version_source = get_expression_value(['"sundials/sundials_config.h"'],
@@ -408,30 +401,6 @@ if retcode == 0:
 # Ignore the minor version and convert to integer, e.g. 2.4.x -> 24
 configInfo['SUNDIALS_VERSION'] = ''.join(sundials_version.strip().split('.')[:2])
 print """INFO: Using Sundials version %s""" % sundials_version.strip()
-
-tests['CanteraExtendedTransport'] = conf.CheckMemberFunction(
-    "Cantera::Transport::getMixDiffCoeffsMass",
-    includes='#include "cantera/transport/TransportBase.h"')
-
-src = """
-#include "cantera/transport/MultiTransport.h"
-class Foo : public Cantera::MultiTransport {
-    virtual void solveLMatrixEquation() {
-        m_Lmatrix; // must not be declared private
-    }
-};
-"""
-tests['CanteraExtendedMultiTransport'] = conf.TryCompile(src, '.cpp')
-
-if not tests['CanteraExtendedTransport']:
-    raise EnvironmentError("Missing required Cantera method 'getMixDiffCoeffsMass'. "
-                           "See 'config.log' for details.")
-
-if tests['CanteraExtendedMultiTransport']:
-    configInfo['EMBER_EXTENDED_MULTITRANSPORT'] = 1
-else:
-    print ('WARNING: Extended MultiTransport class unavailable. Multicomponent'
-           'transport model may not work correctly with multiple threads')
 
 config_h = env.Command('src/config.h',
                        'src/config.h.in',
