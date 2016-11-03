@@ -146,12 +146,6 @@ opts.AddVariables(
     ('libdirs',
      'Comma-separated List of additional library directories',
      ''),
-    ('boost_libs',
-     """Comma-separated list of extra libraries required to link using Boost
-        Thread. If unspecified, SCons will attempt to automatically determine
-        the correct libraries. This option should be set if that fails.
-     """,
-     ''),
     ('env_vars',
      """Environment variables to propagate through to SCons. Either the
         string "all" or a comma separated list of variable names, e.g.
@@ -403,35 +397,6 @@ if env['use_tbb'] and not tests['CanteraThreadSafe']:
                            "order to use multiple threads. See 'config.log' for"
                            "details, or set 'use_tbb=n' to disable"
                            "multiple-processor support.")
-
-# Figure out what needs to be linked for Boost Thread support (used by Cantera)
-boost_ok = False
-if env['boost_libs']:
-    boost_lib_choices = [env['boost_libs'].split(',')]
-else:
-    boost_lib_choices = [[''], ['boost_system'], ['boost_thread', 'boost_system']]
-for bt in boost_lib_choices:
-    header= "#define BOOST_ALL_NO_LIB\n#include <boost/thread/thread.hpp>"
-    call = "boost::mutex foo; boost::mutex::scoped_lock bar(foo);"
-
-    ans = SCons.Conftest.CheckLib(context,
-                                  [bt[0]],
-                                  header=header,
-                                  language='C++',
-                                  call=call,
-                                  extra_libs=bt[1:] if len(bt)>1 else None,
-                                  autoadd=False)
-    if not ans:
-        boost_ok = True
-        print 'Linking Boost thread with the following libraries: {0}'.format(
-            ', '.join(bt) or '<none>')
-        if bt[0] and env.subst('$CXX') != 'cl':
-            env.Append(LIBS=bt)
-        break
-
-# We only need Boost.Thread because Cantera uses it
-if tests['CanteraThreadSafe'] and not boost_ok:
-    raise EnvironmentError("Couldn't determine correct libraries to link for Boost Thread.")
 
 # Determine Sundials version
 sundials_version_source = get_expression_value(['"sundials/sundials_config.h"'],
