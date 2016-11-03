@@ -391,7 +391,7 @@ cantera_version_source = get_expression_value(['"cantera/base/config.h"'],
                                               'CANTERA_VERSION')
 retcode, cantera_version = conf.TryRun(cantera_version_source, '.cpp')
 
-if StrictVersion(cantera_version) > StrictVersion('2.3.0a1'):
+if StrictVersion(cantera_version.strip()) > StrictVersion('2.3.0a1'):
     tests['CanteraThreadSafe'] = True
 else:
     tests['CanteraThreadSafe'] = conf.CheckDeclaration('THREAD_SAFE_CANTERA',
