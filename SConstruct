@@ -143,6 +143,10 @@ opts.AddVariables(
     ('include',
      'Comma-separated List of additional include directories',
      ''),
+    ('cxx_flags',
+     """Flags to pass to the C++ compiler (separate multiple options with
+        spaces. If not specified, compiler-specific defaults will be used.""",
+     ''),
     ('libdirs',
      'Comma-separated List of additional library directories',
      ''),
@@ -320,7 +324,7 @@ else:
 
 env.Append(CPPPATH=include_dirs,
            LIBPATH=library_dirs,
-           CXXFLAGS=flags,
+           CXXFLAGS=env['cxx_flags'] or flags,
            CPPDEFINES=defines,
            LINKFLAGS=linkflags,
            LIBS=sundials + cantera + lastlibs)
