@@ -190,7 +190,6 @@ if os.name == 'nt' and 'g++' in env.subst('$CXX'):
     # Compile using mingw
     env = Environment(tools=['mingw', 'subst'], **extraEnvArgs)
     env.Append(LINKFLAGS=['-static-libgcc', '-static-libstdc++'])
-    env['LIBPREFIX'] = '' # prevent SCons from stripping 'lib' from library names
     opts.Update(env)
 
 if 'help' in COMMAND_LINE_TARGETS:
@@ -457,6 +456,10 @@ if 'g++' in env.subst('$CXX'):
     cyenv.Append(CXXFLAGS=['-w'])
 elif os.name == 'nt' and env.subst('$CXX') == 'cl':
     cyenv.Append(CXXFLAGS=['/w'])
+
+# Workaround for https://bugs.python.org/issue11566
+if os.name == 'nt' and env.subst('$CXX') != 'cl':
+    cyenv.Append(CPPDEFINES='_hypot=hypot')
 
 py_ext = cyenv.LoadableModule('#build/python/ember/_ember%s' % suffix, '#python/ember/_ember.cpp',
                               LIBPREFIX='', SHLIBSUFFIX=suffix, LIBSUFFIXES=[suffix])
