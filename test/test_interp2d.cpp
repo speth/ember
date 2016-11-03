@@ -59,37 +59,41 @@ TEST_F(TestBilinearInterpolator, AtGridPointsMinus)
 
 TEST_F(TestBilinearInterpolator, IntermediatePointsX)
 {
-    EXPECT_FLOAT_EQ(3.28, interp.get(0.4, -1.0));
-    EXPECT_FLOAT_EQ(3.28, interp.get(0.4, 1.0));
-    EXPECT_FLOAT_EQ(3.98, interp.get(0.75, -1.0));
-    EXPECT_FLOAT_EQ(3.98, interp.get(0.75, 1.0));
-    EXPECT_FLOAT_EQ(0.054, interp.get(0.01, 0.0));
-    EXPECT_FLOAT_EQ(0.27, interp.get(0.05, 0.0));
-    EXPECT_FLOAT_EQ(1.026, interp.get(0.19, 0.0));
+    double tol = 1e-12;
+    EXPECT_NEAR(3.28, interp.get(0.4, -1.0), tol);
+    EXPECT_NEAR(3.28, interp.get(0.4, 1.0), tol);
+    EXPECT_NEAR(3.98, interp.get(0.75, -1.0), tol);
+    EXPECT_NEAR(3.98, interp.get(0.75, 1.0), tol);
+    EXPECT_NEAR(0.054, interp.get(0.01, 0.0), tol);
+    EXPECT_NEAR(0.27, interp.get(0.05, 0.0), tol);
+    EXPECT_NEAR(1.026, interp.get(0.19, 0.0), tol);
 }
 
 TEST_F(TestBilinearInterpolator, IntermediatePointsY)
 {
-    EXPECT_FLOAT_EQ(5.0, interp.get(0.0, -1.5));
-    EXPECT_FLOAT_EQ(3.5, interp.get(0.0, -1.25));
-    EXPECT_FLOAT_EQ(1.0, interp.get(0.0, -0.5));
-    EXPECT_FLOAT_EQ(1.0, interp.get(0.0, 0.5));
-    EXPECT_FLOAT_EQ(4.44, interp.get(0.8, 1.1));
-    EXPECT_FLOAT_EQ(7.32, interp.get(0.8, 1.9));
+    double tol = 1e-12;
+    EXPECT_NEAR(5.0, interp.get(0.0, -1.5), tol);
+    EXPECT_NEAR(3.5, interp.get(0.0, -1.25), tol);
+    EXPECT_NEAR(1.0, interp.get(0.0, -0.5), tol);
+    EXPECT_NEAR(1.0, interp.get(0.0, 0.5), tol);
+    EXPECT_NEAR(4.44, interp.get(0.8, 1.1), tol);
+    EXPECT_NEAR(7.32, interp.get(0.8, 1.9), tol);
 }
 
 TEST_F(TestBilinearInterpolator, IntermediatePointsXY)
 {
-    EXPECT_FLOAT_EQ(5.29, interp.get(0.1, -1.5));
-    EXPECT_FLOAT_EQ(2.73, interp.get(0.5, 0.5));
-    EXPECT_FLOAT_EQ(5.69, interp.get(0.9, 1.5));
+    double tol = 1e-12;
+    EXPECT_NEAR(5.29, interp.get(0.1, -1.5), tol);
+    EXPECT_NEAR(2.73, interp.get(0.5, 0.5), tol);
+    EXPECT_NEAR(5.69, interp.get(0.9, 1.5), tol);
 }
 
 TEST_F(TestBilinearInterpolator, Extrapolation)
 {
-    EXPECT_FLOAT_EQ(-1.08, interp.get(-0.2, 0.0));
-    EXPECT_FLOAT_EQ(0.24, interp.get(-0.4, 1.0));
-    EXPECT_FLOAT_EQ(3.92, interp.get(1.2, -1.0));
-    EXPECT_FLOAT_EQ(14.0, interp.get(0.0, 3.0));
-    EXPECT_FLOAT_EQ(14.0, interp.get(0.0, -3.0));
+    double tol = 1e-12;
+    EXPECT_NEAR(-1.08, interp.get(-0.2, 0.0), tol);
+    EXPECT_NEAR(0.24, interp.get(-0.4, 1.0), tol);
+    EXPECT_NEAR(3.92, interp.get(1.2, -1.0), tol);
+    EXPECT_NEAR(14.0, interp.get(0.0, 3.0), tol);
+    EXPECT_NEAR(14.0, interp.get(0.0, -3.0), tol);
 }
