@@ -379,9 +379,6 @@ if not retcode:
     raise EnvironmentError("Failed to a required library."
                            "See config.log for details.")
 
-# Header optionally used by gtest
-env['HAS_TR1_TUPLE'] = conf.CheckCXXHeader('tr1/tuple', '<>')
-
 cantera_version_source = get_expression_value(['"cantera/base/config.h"'],
                                               'CANTERA_VERSION')
 retcode, cantera_version = conf.TryRun(cantera_version_source, '.cpp')
@@ -526,9 +523,6 @@ if os.name == 'nt':
         testenv.Append(LIBS=['python' + target_py_version.replace('.','')])
 else:
     testenv.Append(LIBS=['python' + target_py_version])
-
-if not env['HAS_TR1_TUPLE']:
-    testenv.Append(CPPDEFINES='GTEST_USE_OWN_TR1_TUPLE')
 
 test_program = testenv.Program('bin/unittest',
                                Glob('build/test/*.cpp') + common_objects)
