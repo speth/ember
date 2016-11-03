@@ -288,7 +288,8 @@ include_dirs.extend([get_config_var('INCLUDEPY'),
 if ('g++' in env.subst('$CXX')
     or 'clang++' in env.subst('$CXX')
     or 'icpc' in env.subst('$CXX')):
-    flags = ['-ftemplate-depth-128', '-std=c++0x', '-fPIC', '-g', '-Wall', '-pthread']
+    flags = ['-ftemplate-depth-128', '-std=c++0x', '-fPIC', '-g', '-Wall', '-pthread',
+             '-Wno-deprecated-declarations']
     linkflags = ['-pthread']
     defines = []
     if env['debug_symbols']:
