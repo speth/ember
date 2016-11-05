@@ -1,6 +1,5 @@
+#include "Python.h" // Include this first to avoid Cygwin compilation issues
 #include "callback.h"
-
-#include "Python.h"
 
 // A C++ exception that holds a Python exception so that it can be re-raised
 // by translate_exception()

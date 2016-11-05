@@ -298,6 +298,13 @@ if ('g++' in env.subst('$CXX')
     if env['debug_symbols']:
         flags.append('-g')
 
+    if 'cygwin' in platform.system().lower():
+        flags.remove('-std=c++0x')
+        flags.append('-std=gnu++0x')
+
+    if env['OS'] == 'nt' or 'cygwin' in platform.system().lower():
+        flags.remove('-fPIC')
+
     if env['debug']:
         flags.extend(['-O0','-fno-inline'])
     else:
@@ -428,6 +435,10 @@ if os.name == 'nt':
     py_gui2 = env.Command('python/scripts/ember.exe', py_gui1, '$python_cmd -c ' + script)
     env.Alias('build', [py_gui1, py_gui2])
 
+# Workaround for https://bugs.python.org/issue11566
+if os.name == 'nt' and env.subst('$CXX') != 'cl':
+    env.Append(CPPDEFINES='_hypot=hypot')
+
 # The Python module
 make_setup = env.SubstFile('#python/setup.py', '#python/setup.py.in')
 script = ('from distutils.sysconfig import *\n'
@@ -461,12 +472,8 @@ if 'g++' in env.subst('$CXX'):
 elif os.name == 'nt' and env.subst('$CXX') == 'cl':
     cyenv.Append(CXXFLAGS=['/w'])
 
-# Workaround for https://bugs.python.org/issue11566
-if os.name == 'nt' and env.subst('$CXX') != 'cl':
-    cyenv.Append(CPPDEFINES='_hypot=hypot')
-
 py_ext = cyenv.LoadableModule('#build/python/ember/_ember%s' % suffix, '#python/ember/_ember.cpp',
-                              LIBPREFIX='', SHLIBSUFFIX=suffix, LIBSUFFIXES=[suffix])
+                              LIBPREFIX='', SHLIBPREFIX='', SHLIBSUFFIX=suffix, LIBSUFFIXES=[suffix])
 
 setup_cmd = 'cd python && $python_cmd setup.py build --build-lib=../build/python '
 
