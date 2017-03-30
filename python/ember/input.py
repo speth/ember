@@ -1388,4 +1388,5 @@ class ConcreteConfig(_ember.ConfigOptions):
                 data['Q'] = Q
                 data['Sc'] = Sc
                 data['xFlame'] = xFlame
-            return _ember.FlameSolver(self)
+
+        return _ember.FlameSolver(self)
