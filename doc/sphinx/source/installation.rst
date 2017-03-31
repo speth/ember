@@ -45,8 +45,8 @@ Build Dependencies
 
 The following software needs to be installed in order to compile Ember:
 
-* A C++ compiler (g++, Clang, Intel C++, Visual Studio 2008)
-* Python 2.6 or higher (2.7 recommended)
+* A C++ compiler (g++, Clang, Intel C++, Visual Studio 2015)
+* Python 2.7
 * Cython (>= 0.18)
 * Boost (>= 1.40, including the compiled ``boost_thread`` library)
 
@@ -56,8 +56,8 @@ The following software needs to be installed in order to compile Ember:
      compile Cantera.
 
 * SCons (>= 2.1.0 recommended)
-* Eigen (>= 3.0)
-* Cantera (>= 2.2.0)
+* Eigen (>= 3.2)
+* Cantera (>= 2.3.0)
 
   .. note::
 
