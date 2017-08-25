@@ -48,6 +48,7 @@ cdef extern from "readConfig.h":
         cbool fixedBurnedVal, fixedLeftLoc, twinFlame
         int continuityBC
         cbool curvedFlame, unburnedLeft, fuelLeft
+        cbool axiJetFlame
         string flameType
         int regridStepInterval, outputStepInterval, profileStepInterval
         int currentStateStepInterval, terminateStepInterval
@@ -93,6 +94,7 @@ cdef extern from "readConfig.h":
         cbool haveTStart
 
         int gridAlpha
+        int gridBeta
 
         cbool outputProfiles
 
@@ -133,6 +135,7 @@ cdef extern from "grid.h":
     cdef cppclass CxxOneDimGrid "OneDimGrid":
         CxxEigenVec x
         int alpha
+        int beta
         CxxEigenVec cfp, cf, cfm, hh, rphalf
 
 
