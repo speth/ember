@@ -32,12 +32,14 @@ void OneDimGrid::setOptions(const ConfigOptions& options)
     fixedLeftLoc = options.fixedLeftLoc;
     twinFlame = options.twinFlame;
     curvedFlame = options.curvedFlame;
+    axiJetFlame = options.axiJetFlame;
 
     boundaryTol = options.boundaryTol;
     boundaryTolRm = options.boundaryTolRm;
     unstrainedDownstreamWidth = options.unstrainedDownstreamWidth;
     addPointCount = options.addPointCount;
     alpha = options.gridAlpha;
+    beta = options.gridBeta;
 }
 
 void OneDimGrid::updateValues()
@@ -856,6 +858,7 @@ GridBased::GridBased()
     , cf(grid.cf)
     , cfp(grid.cfp)
     , alpha(grid.alpha)
+    , beta(grid.beta)
     , nPoints(grid.nPoints)
     , jj(grid.jj)
 {

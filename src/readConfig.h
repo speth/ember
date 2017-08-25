@@ -52,6 +52,9 @@ public:
     //! If specified, the leftmost grid point will not extend beyond x = 0.
     bool twinFlame;
 
+    //! [general.axiJetFlame] Set to true for the axisymmetric jet flame configuration.
+    bool axiJetFlame;
+
     ContinuityBoundaryCondition::BC continuityBC;
 
     //! [general.curvedFlame] Set to true for the twin flame configuration.
@@ -156,7 +159,8 @@ public:
     double tEndMin; //!< [terminationCondition.tMin]
     bool haveTStart;
 
-    int gridAlpha; //!< 1 for curved flames, 0 for planar flames
+    int gridAlpha; //!< 1 for curved flames, 0 for planar axisymmetric jet flames
+    int gridBeta; //!< 1 for axisymmetric jet flames, 0 for planar and curved flames
 
     // Controls which variables are included in the outXXXXXX.h5 files
     bool outputProfiles; //!< [outputFiles.saveProfiles]

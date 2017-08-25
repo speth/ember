@@ -180,6 +180,8 @@ cdef class ConfigOptions:
         opts.nThreads = G.nThreads
         opts.curvedFlame = G.curvedFlame
         opts.gridAlpha = 1 if opts.curvedFlame else 0
+        opts.axiJetFlame = G.axiJetFlame
+        opts.gridBeta = 1 if opts.axiJetFlame else 0
         opts.twinFlame = G.twinFlame
         opts.chemistryIntegrator = G.chemistryIntegrator
         opts.splittingMethod = G.splittingMethod
@@ -547,6 +549,10 @@ cdef class FlameSolver:
     property gridAlpha:
         def __get__(self):
             return self.solver.grid.alpha
+
+    property gridBeta:
+        def __get__(self):
+            return self.solver.grid.beta
 
     property T:
         def __get__(self):

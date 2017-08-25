@@ -284,6 +284,10 @@ class General(Options):
     curvedFlame = BoolOption(False,
         filter=lambda conf: not conf.general.twinFlame)
 
+    #: True if solving an axisymmetric jet flame in cylindrical coordinate system.
+    axiJetFlame = BoolOption(False,
+                             filter=lambda conf: not conf.general.curvedFlame)
+
     #: True if solving a planar flame that is symmetric about the x = 0 plane.
     twinFlame = BoolOption(False,
         filter=lambda conf: not conf.general.curvedFlame)
@@ -901,6 +905,11 @@ class Config(object):
         if self.general.curvedFlame and self.general.twinFlame:
             error = True
             print "Error: 'twinFlame' and 'curvedFlame' are mutually exclusive."
+
+        # axiJetFlame and curvedFlame are mutually exclusive:
+        if self.general.curvedFlame and self.general.axiJetFlame:
+            error = True
+            print "Error: 'axiJetFlame' and 'curvedFlame' are mutually exclusive."
 
         # the "fuelLeft" option only makes sense for diffusion flames
         if (self.initialCondition.flameType == 'premixed' and

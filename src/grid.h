@@ -36,7 +36,8 @@ public:
     //! an upper bound on grid spacing to control numerical diffusion.
     dvec dampVal;
 
-    int alpha; //!< Domain curvature parameter. 0: planar, 1: cylindrical
+    int alpha; //!< Domain curvature parameter. 0: planar / disc, 1: cylindrical
+    int beta; //!< Domain curvature parameter. 0: planar / cylindrical; 1: disc
     size_t ju; //!< Index corresponding to the unburned mixture
     size_t jb; //!< Index corresponding to the burned mixture
 
@@ -97,6 +98,9 @@ public:
 
     //! `true` if the flame is curved (corresponding to #alpha = 1)
     bool curvedFlame;
+
+    //! `true` if the flame is opposed axisymmetric jets (corresponding to #beta = 1)
+    bool axiJetFlame;
 
     //! Relative tolerance used to extend the domain in order to satisfy zero-
     //! gradient boundary conditions.
@@ -249,7 +253,8 @@ protected:
     dvec& cfm; //!< Coefficient for y[j-1] in first centered difference
     dvec& cf; //!< Coefficient for y[j] in first centered difference
     dvec& cfp; //!< Coefficient for y[j+1] in first centered difference
-    int& alpha; //!< curved grid exponent. alpha = 1 for curved flames, 0 for planar flames.
+    int& alpha; //!< curved grid exponent. alpha = 1 for curved flames, 0 for planar flames and axisymmetric jet flames.
+    int& beta; //!< curved grid exponent. beta = 1 for axisymmetric jet flames, 0 for planar flames and curved flames.
 
     size_t& nPoints; //!< number of grid point
     size_t& jj; //!< index of last grid point (`== nPoints-1`)
