@@ -409,7 +409,7 @@ if retcode == 0:
     sys.exit(1)
 
 # Ignore the minor version and convert to integer, e.g. 2.4.x -> 24
-configInfo['SUNDIALS_VERSION'] = ''.join(sundials_version.strip().split('.')[:2])
+configInfo['EMBER_SUNDIALS_VERSION'] = ''.join(sundials_version.strip().split('.')[:2])
 print """INFO: Using Sundials version %s""" % sundials_version.strip()
 
 config_h = env.Command('src/config.h',

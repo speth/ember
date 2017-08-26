@@ -22,7 +22,7 @@
 typedef DlsMat DenseMat;
 typedef DlsMat BandMat;
 
-#if SUNDIALS_VERSION >= 25
+#if EMBER_SUNDIALS_VERSION >= 25
 typedef long int sd_size_t;
 #else
 typedef int sd_size_t;
