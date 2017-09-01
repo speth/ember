@@ -89,7 +89,6 @@ void FlameSolver::initialize(void)
 
     updateChemicalProperties();
     calculateQdot();
-    convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
 
     t = tStart;
     tOutput = t;
@@ -213,7 +212,7 @@ void FlameSolver::prepareIntegrators()
     assert(mathUtils::notnan(drhodt));
     convectionSystem.setDensityDerivative(drhodt);
     convectionSystem.setSplitConstants(splitConstConv);
-    convectionSystem.utwSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
+    convectionSystem.updateContinuityBoundaryCondition(qDot, options.continuityBC);
     splitTimer.stop();
 }
 

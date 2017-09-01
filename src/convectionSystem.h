@@ -181,6 +181,10 @@ public:
     //! compute the density derivative appearing in the continuity equation.
     void setDensityDerivative(const dvec& drhodt);
 
+    //! @see ConvectionSystemUTW::updateContinuityBoundaryCondition
+    void updateContinuityBoundaryCondition(const dvec& qdot,
+                                           ContinuityBoundaryCondition::BC newBC);
+
     //! Set the constants introduced by the splitting method.
     void setSplitConstants(const dmatrix& splitConst);
 

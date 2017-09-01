@@ -553,6 +553,13 @@ void ConvectionSystemSplit::setDensityDerivative(const dvec& drhodt)
     utwSystem.drhodt = drhodt;
 }
 
+void ConvectionSystemSplit::updateContinuityBoundaryCondition
+(const dvec& qdot, ContinuityBoundaryCondition::BC newBC)
+{
+    utwSystem.unroll_y(utwSolver->y);
+    utwSystem.updateContinuityBoundaryCondition(qdot, newBC);
+}
+
 void ConvectionSystemSplit::resetSplitConstants()
 {
     utwSystem.resetSplitConstants();
