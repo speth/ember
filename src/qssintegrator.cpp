@@ -194,14 +194,17 @@ int QssIntegrator::integrateOneStep(double tf) {
 
         if (dt <= dtmin + 1e-16*tn) {
             // Integration failed with a timestep that is too small.
-            logFile.write("QssIntegrator failed: timestep too small.");
-            logFile.write(format("dt = %e, tn = %e, dtmin = %e") % dt % tn % dtmin);
-            logFile.write("     i    q[i]     d[i]     y[i]    rtau[i]    dtc    q[i]-d[i]    ys[i]    ymin[i]");
+            logFile.write(format("QssIntegrator failed: timestep too small: "
+                "dt = %e, tn = %e, dtmin = %e") % dt % tn % dtmin);
 
-            for (size_t i=0; i<N; i++) {
-                double dtc = epsmin*y[i]/(abs(q[i]-d[i]) + 1.0e-30);
-                logFile.write(format("%3i %9e %9e %9e %9e %9e %9e %9e %9e") % i % q[i] %
-                        d[i] % y[i] % rtau[i] % dtc % (q[i]-d[i]) % ys[i] % ymin[i]);
+            if (debugParameters::veryVerbose) {
+                logFile.write("     i    q[i]     d[i]     y[i]    rtau[i]    dtc    q[i]-d[i]    ys[i]    ymin[i]");
+
+                for (size_t i=0; i<N; i++) {
+                    double dtc = epsmin*y[i]/(abs(q[i]-d[i]) + 1.0e-30);
+                    logFile.write(format("%3i %9e %9e %9e %9e %9e %9e %9e %9e") % i % q[i] %
+                            d[i] % y[i] % rtau[i] % dtc % (q[i]-d[i]) % ys[i] % ymin[i]);
+                }
             }
 
             // Return, indicating an error.

@@ -789,16 +789,18 @@ void FlameSolver::integrateProductionTerms(size_t j1, size_t j2)
         }
         if (err < 0) {
             logFile.write(format("Error at j = %i") % j);
-            logFile.write(format("T = %s") % system.T);
-            logFile.write(format("U = %s") % system.U);
-            logFile.write("Y = ", false);
-            logFile.write(system.Y);
-            if (options.nThreads == 1) {
-                // This diagnostic file can only be written when running with a
-                // single thread to avoid calling Python from threads that were
-                // not initialized to use Python
-                writeStateFile((format("prod%i_error_t%.6f_j%03i") %
-                        1 % tStageEnd % j).str(), true, false);
+            if (debugParameters::veryVerbose) {
+                logFile.write(format("T = %s") % system.T);
+                logFile.write(format("U = %s") % system.U);
+                logFile.write("Y = ", false);
+                logFile.write(system.Y);
+                if (options.nThreads == 1) {
+                    // This diagnostic file can only be written when running with a
+                    // single thread to avoid calling Python from threads that were
+                    // not initialized to use Python
+                    writeStateFile((format("prod%i_error_t%.6f_j%03i") %
+                            1 % tStageEnd % j).str(), true, false);
+                }
             }
         }
         logFile.verboseWrite(format(" [%s]...") % system.getStats(), false);
