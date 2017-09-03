@@ -48,6 +48,16 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
             }
         }
     } else {
+        if (continuityBC == ContinuityBoundaryCondition::Temp) {
+            size_t j = jContBC;
+            // Find value of rV[jContBC] such that dTdt[jContBC] == 0, per later
+            // calculation of dTdt
+            if (j == 0 || splitConstT[j] / (T[j+1] - T[j]) < 0) {
+                rV[j] = rphalf[j] * rho[j] * splitConstT[j] * hh[j] / (T[j+1] - T[j]);
+            } else {
+                rV[j] = rphalf[j-1] * rho[j] * splitConstT[j] * hh[j-1] / (T[j] - T[j-1]);
+            }
+        }
         for (size_t j=jContBC; j<nPoints-1; j++) {
             rV[j+1] = rV[j] - hh[j] * (drhodt[j] + rho[j] * U[j] * rphalf[j]);
         }
@@ -70,7 +80,6 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
             dWdx[j] = (Wmx[j] - Wmx[j-1]) / hh[j-1];
         }
     }
-
 
     // *** Calculate dW/dt, dU/dt, dT/dt
 
@@ -187,7 +196,7 @@ void ConvectionSystemUTW::updateContinuityBoundaryCondition
     assert(mathUtils::notnan(V));
     continuityBC = newBC;
     double qmax = 0;
-    double Tmid = 0.5 * (T[0] + T[jj]);
+    double Tmid = 0.5 * (T.maxCoeff() + T.minCoeff());
     size_t jStart;
 
     switch (continuityBC) {

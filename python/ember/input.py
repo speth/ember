@@ -309,7 +309,10 @@ class General(Options):
 
     #: Method for setting the boundary condition for the continuity equation
     #: Valid options are: ``fixedLeft``, ``fixedRight``, ``fixedQdot``,
-    #: ``fixedTemperature``, and ``stagnationPoint``.
+    #: ``fixedTemperature``, and ``stagnationPoint``. The ``fixedTemperature``
+    #: condition holds the location where the midpoint temperature is reached
+    #: constant, while the other options fix the value of V at the specified
+    #: point.
     continuityBC = StringOption("fixedLeft",
                                 ("fixedRight", "fixedQdot", "fixedTemperature",
                                  "stagnationPoint"),
