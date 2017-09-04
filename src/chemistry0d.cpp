@@ -410,47 +410,6 @@ void CanteraGas::initialize()
     isInitialized = true;
 }
 
-dvec CanteraGas::calculateReactantMixture(const std::string& fuel,
-                                             const std::string& oxidizer,
-                                             double equivalenceRatio)
-{
-    size_t mC = thermo.elementIndex("C");
-    size_t mO = thermo.elementIndex("O");
-    size_t mH = thermo.elementIndex("H");
-
-    double Cf(0), Hf(0), Of(0); // moles of C/H/O in fuel
-    double Co(0), Ho(0), Oo(0); // moles of C/H/O in oxidizer
-
-    dvec Xf(nSpec), Xo(nSpec), Xr(nSpec);
-
-    thermo.setState_TPX(300.0, pressure, fuel);
-    getMoleFractions(Xf);
-    thermo.setState_TPX(300.0, pressure, oxidizer);
-    getMoleFractions(Xo);
-
-    dvec a(thermo.nElements());
-    for (size_t k=0; k<nSpec; k++) {
-        thermo.getAtoms(k, &a[0]);
-        if (mC != npos) {
-            Cf += a[mC]*Xf[k];
-            Co += a[mC]*Xo[k];
-        }
-        if (mH != npos) {
-            Hf += a[mH]*Xf[k];
-            Ho += a[mH]*Xo[k];
-        }
-        if (mO != npos) {
-            Of += a[mO]*Xf[k];
-            Oo += a[mO]*Xo[k];
-        }
-    }
-    double stoichAirFuelRatio = -(Of-2*Cf-Hf/2)/(Oo-2*Co-Ho/2);
-    Xr = Xf * equivalenceRatio + stoichAirFuelRatio * Xo;
-    Xr /= Xr.sum();
-
-    return Xr;
-}
-
 void CanteraGas::setStateMass(const dvec& Y, const double T)
 {
     thermo.setState_TPY(T, pressure, Y.data());

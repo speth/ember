@@ -97,12 +97,6 @@ public:
     void initialize();
     bool initialized() const { return isInitialized; }
 
-    //! Calculate the mole fractions of the reactant mixture from the
-    //! compositions of the fuel and oxidizer mixtures and the equivalence ratio.
-    dvec calculateReactantMixture(const std::string& fuel,
-                                  const std::string& oxidizer,
-                                  double equivalenceRatio);
-
     void setStateMass(const dvec& Y, const double T);
     void setStateMass(const double* Y, const double T);
 

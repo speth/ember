@@ -1053,12 +1053,11 @@ class ConcreteConfig(_ember.ConfigOptions):
         if IC.flameType == 'premixed':
             # Reactants
             if IC.reactants:
-                reactants = IC.reactants
+                gas.X = IC.reactants
             else:
-                reactants = utils.calculateReactantMixture(gas, IC.fuel, IC.oxidizer,
-                                                           IC.equivalenceRatio)
+                gas.set_equivalence_ratio(IC.equivalenceRatio, IC.fuel, IC.oxidizer)
 
-            gas.TPX = IC.Tu, IC.pressure, reactants
+            gas.TP = IC.Tu, IC.pressure
             rhou = gas.density
             Yu = gas.Y
 
@@ -1168,9 +1167,8 @@ class ConcreteConfig(_ember.ConfigOptions):
         elif IC.flameType == 'diffusion':
             # Stoichiometric mixture at the center
             IC.equivalenceRatio = 1.0
-            products = utils.calculateReactantMixture(gas, IC.fuel, IC.oxidizer,
-                                                      IC.equivalenceRatio)
-            gas.TPX = 0.5*(IC.Tfuel+IC.Toxidizer), IC.pressure, products
+            gas.set_equivalence_ratio(1.0, IC.fuel, IC.oxidizer)
+            gas.TP = 0.5*(IC.Tfuel+IC.Toxidizer), IC.pressure
             gas.equilibrate('HP')
             T[jm] = gas.T
             Y[:,jm] = gas.Y

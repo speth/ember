@@ -245,38 +245,6 @@ def expandProfile(prof, gas, diffusion=True, reaction_rates=True):
     prof.W = gas.molecular_weights
 
 
-def calculateReactantMixture(gas, fuel, oxidizer, equivalenceRatio):
-    gas.TPX = 300.0, 101325, fuel
-    Xf = gas.X
-    gas.TPX = 300.0, 101325, oxidizer
-    Xo = gas.X
-
-    nO = np.array([gas.n_atoms(k, 'O') for k in range(gas.n_species)])
-
-    if 'C' in gas.element_names:
-        nC = np.array([gas.n_atoms(k, 'C') for k in range(gas.n_species)])
-    else:
-        nC = np.zeros(gas.n_species)
-
-    if 'H' in gas.element_names:
-        nH = np.array([gas.n_atoms(k, 'H') for k in range(gas.n_species)])
-    else:
-        nH = np.zeros(gas.n_species)
-
-    Cf = (nC * Xf).sum()
-    Co = (nC * Xo).sum()
-    Of = (nO * Xf).sum()
-    Oo = (nO * Xo).sum()
-    Hf = (nH * Xf).sum()
-    Ho = (nH * Xo).sum()
-
-    stoichAirFuelRatio = - (Of - 2*Cf - Hf/2.0) / (Oo - 2*Co - Ho/2.0)
-    Xr = Xf * equivalenceRatio + stoichAirFuelRatio * Xo
-    Xr /= Xr.sum()
-
-    return Xr
-
-
 def smooth(v):
     v[1:-1] = 0.25 * v[:-2] + 0.5 * v[1:-1] + 0.25 * v[2:]
     return v
