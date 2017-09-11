@@ -5,6 +5,7 @@
 #include "grid.h"
 #include "perfTimer.h"
 #include "quasi2d.h"
+#include "scalarFunction.h"
 
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -80,6 +81,17 @@ public:
     ContinuityBoundaryCondition::BC continuityBC;
     size_t jContBC; //!< The point at which the continuity equation BC is applied.
     double xVzero; //!< Location of the stagnation point (if using fixedZero BC)
+
+    //! An object that provides the strain rate and its time derivative
+    ScalarFunction* strainFunction;
+
+    //! Set the function used to compute the strain rate as a function of time
+    void setStrainFunction(ScalarFunction* f) { strainFunction = f; }
+
+    //! Set the density of the unburned mixture.
+    //! This value appears in the source term of the momentum equation.
+    double rhou; //!< density of the unburned gas
+    void setRhou(double _rhou) { rhou = _rhou; }
 
 private:
     void V2rV(); //!< compute #rV from #V

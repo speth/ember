@@ -495,7 +495,6 @@ void FlameSolver::resizeAuxiliary()
             system->initialize(nSpec);
             system->setOptions(options);
             system->setTimers(&reactionRatesTimer, &thermoTimer, &jacobianTimer);
-            system->setStrainFunction(strainfunc);
             system->setRateMultiplierFunction(rateMultiplierFunction);
             system->setHeatLossFunction(heatLossFunction);
             system->setRhou(rhou);
@@ -523,6 +522,9 @@ void FlameSolver::resizeAuxiliary()
     convectionSystem.setGrid(grid);
     convectionSystem.resize(nPoints, nSpec, state);
     convectionSystem.setLeftBC(Tleft, Yleft);
+
+    convectionSystem.utwSystem.setStrainFunction(strainfunc);
+    convectionSystem.utwSystem.setRhou(rhou);
 
     if (options.quasi2d) {
         convectionSystem.setupQuasi2D(vzInterp, vrInterp);

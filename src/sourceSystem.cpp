@@ -142,14 +142,11 @@ int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
 
     updateThermo();
 
-    double a = strainFunction->a(t);
-    double dadt = strainFunction->dadt(t);
-
     // *** Calculate the time derivatives
     double scale;
     if (!quasi2d) {
         scale = 1.0;
-        dUdt = - U*U + rhou/rho*(dadt/pow(2.0,beta) + a*a/pow(2.0,2*beta)) + splitConst[kMomentum]; //aelong added beta for axiJetflames
+        dUdt = - U*U + splitConst[kMomentum];
         qDot = - (wDot * hk).sum() + getQdotIgniter(t);
         if (heatLoss && options->alwaysUpdateHeatFlux) {
             qDot -= heatLoss->eval(x, t, U, T, Y);
@@ -464,14 +461,11 @@ void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d,
 
     qDot = - ((wDotQ - wDotD) * hk).sum() + getQdotIgniter(t);
 
-    double a = strainFunction->a(t);
-    double dadt = strainFunction->dadt(t);
-
     // *** Calculate the time derivatives
     double scale;
     if (!quasi2d) {
         scale = 1.0;
-        dUdtQ = rhou/rho*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta)) - U*U + splitConst[kMomentum]; //aelong added beta for axiJetflames
+        dUdtQ = splitConst[kMomentum];
         dUdtD = 0;
         dTdtQ = qDot/(rho*cp) + splitConst[kEnergy];
     } else {
@@ -492,8 +486,6 @@ void SourceSystemQSS::odefun(double t, const dvec& y, dvec& q, dvec& d,
 
     assert(rhou > 0);
     assert(rho > 0);
-    assert(dadt > -1e100 && dadt < 1e100);
-    assert(a > -1e100 && a < 1e100);
     assert(U > -1e100 && U < 1e100);
     assert(splitConst[kMomentum] > -1e100 && splitConst[kMomentum] < 1e100);
 
