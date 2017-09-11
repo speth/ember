@@ -21,7 +21,6 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     rho = gas->pressure * Wmx / (Cantera::GasConstant * T);
 
     // *** Calculate V ***
-    //aelong added beta for axiJetflames
     if (continuityBC == ContinuityBoundaryCondition::Left) {
         rV[0] = rVzero;
         for (size_t j=0; j<nPoints-1; j++) {
@@ -83,10 +82,13 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     }
 
     // *** Calculate dW/dt, dU/dt, dT/dt
+    double a = strainFunction->a(t);
+    double dadt = strainFunction->dadt(t);
 
-    // Left boundary conditions.
-    // Convection term only contributes in the ControlVolume case
-    dUdt[0] = splitConstU[0]; // zero-gradient condition for U is handled in diffusion term
+    // Left boundary conditions. Convection term only contributes in the
+    // ControlVolume case. Zero-gradient condition for U is handled in diffusion
+    // term.
+    dUdt[0] = splitConstU[0] - U[0]*U[0] + rhou/rho[0]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta));
 
     if (grid.leftBC == BoundaryCondition::ControlVolume ||
         grid.leftBC == BoundaryCondition::WallFlux)
@@ -104,7 +106,8 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
 
     // Intermediate points
     for (size_t j=1; j<jj; j++) {
-        dUdt[j] = -V[j] * dUdx[j] / rho[j] + splitConstU[j];
+        dUdt[j] = -V[j] * dUdx[j] / rho[j] - U[j]*U[j]
+                + rhou/rho[j]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta)) + splitConstU[j];
         dTdt[j] = -V[j] * dTdx[j] / rho[j] + splitConstT[j];
         dWdt[j] = -V[j] * dWdx[j] / rho[j] + splitConstW[j];
     }
@@ -113,12 +116,14 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     if (rV[jj] < 0  || grid.rightBC == BoundaryCondition::FixedValue) {
         // Convection term has nothing to contribute in this case,
         // So only the value from the other terms remains
-        dUdt[jj] = splitConstU[jj];
+        dUdt[jj] = splitConstU[jj] - U[jj]*U[jj]
+                   + rhou/rho[jj]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta));
         dTdt[jj] = splitConstT[jj];
         dWdt[jj] = splitConstW[jj];
     } else {
         // Outflow  at the boundary
-        dUdt[jj] = splitConstU[jj] - V[jj] * (U[jj]-U[jj-1])/hh[jj-1]/rho[jj];
+        dUdt[jj] = splitConstU[jj] - V[jj] * (U[jj]-U[jj-1])/hh[jj-1]/rho[jj]
+                   -U[jj]*U[jj] + rhou/rho[jj]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta));
         dTdt[jj] = splitConstT[jj] - V[jj] * (T[jj]-T[jj-1])/hh[jj-1]/rho[jj];
         dWdt[jj] = splitConstW[jj] - V[jj] * (Wmx[jj]-Wmx[jj-1])/hh[jj-1]/rho[jj];
     }
