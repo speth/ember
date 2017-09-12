@@ -524,10 +524,21 @@ class InitialCondition(Options):
     #: True if initial profiles for x,T,U,V and Y are given
     haveProfiles = BoolOption(False, level=3)
 
+    #: Initial grid used if ``haveProfiles`` is set to ``True``
     x = Option(None, level=3)
+
+    #: Initial temperature profile used if ``haveProfiles`` is set to ``True``
     T = Option(None, level=3)
+
+    #: Initial tangential velocity gradient profile used if ``haveProfiles`` is
+    #: set to ``True``
     U = Option(None, level=3)
+
+    #: Initial mass fraction profiles used if ``haveProfiles`` is set to
+    #: ``True``
     Y = Option(None, level=3)
+
+    #: Initial mass flux profile used if ``haveProfiles`` is set to ``True``
     V = Option(None, level=3)
 
 
