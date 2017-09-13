@@ -29,6 +29,7 @@ SundialsCvode::~SundialsCvode()
 
 void SundialsCvode::initialize()
 {
+    tInt = t0;
     int flag = 0;
     if (_initialized) {
         // Starting over with a new IC, but the same ODE
@@ -403,6 +404,7 @@ SundialsIda::~SundialsIda()
 
 void SundialsIda::initialize()
 {
+    tInt = t0;
     sundialsMem = IDACreate();
     if (check_flag((void *)sundialsMem, "IDACreate", 0)) {
         throw DebugException("SundialsIda::initialize: error in IDACreate");
