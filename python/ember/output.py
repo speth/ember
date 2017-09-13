@@ -117,7 +117,8 @@ class StateWriter(object):
                                   'dWdt', 'drhodt'])
 
             if self.options.outputFiles.auxiliaryVariables or errorFile:
-                self.write(data, ['sumcpj', 'Tleft', 'Yleft', 'dWdx', 'dTdx'])
+                self.write(data, ['sumcpj', 'Tleft', 'Yleft', 'dWdx', 'dTdx',
+                    'splitConstDiff', 'splitConstConv', 'splitConstProd'])
 
             if self.options.outputFiles.extraVariables or errorFile:
                 # These variables can be recomputed from the state variables

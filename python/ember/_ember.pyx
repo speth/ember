@@ -584,6 +584,18 @@ cdef class FlameSolver:
         def __get__(self):
             return getArray_Vec(self.solver.rho)
 
+    property splitConstConv:
+        def __get__(self):
+            return getArray_Matrix(self.solver.splitConstConv)
+
+    property splitConstDiff:
+        def __get__(self):
+            return getArray_Matrix(self.solver.splitConstDiff)
+
+    property splitConstProd:
+        def __get__(self):
+            return getArray_Matrix(self.solver.splitConstProd)
+
     property dUdtDiff:
         def __get__(self):
             return getArray_MatrixRow(self.solver.ddtDiff, 0)

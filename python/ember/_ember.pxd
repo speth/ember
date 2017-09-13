@@ -207,6 +207,10 @@ cdef extern from "flameSolver.h":
         double Tleft
         CxxEigenVec Yleft
 
+        CxxEigenMatrix splitConstConv
+        CxxEigenMatrix splitConstDiff
+        CxxEigenMatrix splitConstProd
+
         CxxEigenMatrix ddtDiff
         CxxEigenMatrix ddtConv
         CxxEigenMatrix ddtProd
