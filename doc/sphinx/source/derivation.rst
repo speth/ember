@@ -156,22 +156,20 @@ where `Y_{k}` is the mass fraction of species `k`, `\dot{\omega}_{k}` is the
 molar production rate of species `k`, `W_{k}` is the molecular weight of species
 `k`, and the diffusion mass flux `\mathbf{j}_{k}` is defined as:
 
-.. math:: \mathbf{j}_{k} =  -\frac{\rho W_{k}}{\bar{W}}D_{km}\nabla X_{k}
-                            -\frac{D_{k}^{T}}{T}\nabla T+Y_{k}\mathbf{j}'
-                         =  -\rho D_{km}\left(\nabla Y_{k}+\frac{Y_{k}}{\bar{W}}\nabla\bar{W}\right)
+.. math:: \mathbf{j}_{k} =  -\rho D_{km} \nabla Y_{k}
                             -\frac{D_{k}^{T}}{T}\nabla T+Y_{k}\mathbf{j}'
 
-Here, `T` is the temperature, `X_{k}` are the species mole fractions, and
-`D_{km}` and `D_{k}^{T}` are respectively the mixture-averaged diffusion
-coefficient and the thermal diffusion coefficient of species `k`. Note that
-this definition of the diffusion mass flux includes the thermal diffusion
-(Soret) effect. The final term introduces a correction, `\mathbf{j}'`, which
-corrects for the inaccuracy of mixture-averaged model so that the requirement
-`\sum\mathbf{j}_{k}=0` is satisfied. In order to calculate `\mathbf{j}'`, we
-first calculate the diffusion mass fluxes ignoring its contribution:
+Here, `T` is the temperature and `D_{km}` and `D_{k}^{T}` are respectively
+the mass-based mixture-averaged diffusion coefficient and the thermal diffusion
+coefficient of species `k`. Note that this definition of the diffusion mass flux
+includes the thermal diffusion (Soret) effect. The final term introduces a
+correction, `\mathbf{j}'`, which corrects for the inaccuracy of mixture-averaged
+model so that the requirement `\sum\mathbf{j}_{k}=0` is satisfied. In order to
+calculate `\mathbf{j}'`, we first calculate the diffusion mass fluxes ignoring
+its contribution:
 
-.. math:: \mathbf{j}_{k}^{*}=-\rho D_{km}\left(\nabla Y_{k}
-          +\frac{Y_{k}}{\bar{W}}\nabla\bar{W}\right)-\frac{D_{k}^{T}}{T}\nabla T
+.. math:: \mathbf{j}_{k}^{*}=-\rho D_{km} \nabla Y_{k}
+          -\frac{D_{k}^{T}}{T}\nabla T
 
 Then, `\mathbf{j}'` is calculated as:
 
@@ -190,8 +188,7 @@ and setting the `z`-derivatives to zero, the species equation becomes:
 
 and the diffusion mass flux is:
 
-.. math:: j_{k}=-\rho D_{km}\left(\frac{\partial Y_{k}}{\partial r}+
-          \frac{Y_{k}}{\bar{W}}\frac{\partial\bar{W}}{\partial r}\right)-
+.. math:: j_{k}=-\rho D_{km}\frac{\partial Y_{k}}{\partial r} -
           \frac{D_{k}^{T}}{T}\frac{\partial T}{\partial r}+Y_{k}j'
 
 Energy Equation
