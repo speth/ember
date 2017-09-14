@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.abspath('../../../build/python'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo', 'sphinx.ext.pngmath', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode','sphinxcontrib.doxylink']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode','sphinxcontrib.doxylink']
 
 doxylink = {'cxx': (os.path.abspath('../../ember-cxx.tag'),
                     '../../doxygen/html')}
