@@ -211,7 +211,7 @@ public:
     dvec wDot; //!< species net production rates [kmol/m^3*s]
 
 private:
-    std::auto_ptr<SundialsCvode> integrator;
+    std::unique_ptr<SundialsCvode> integrator;
 };
 
 //! This is the system representing the (chemical) source term at a point,
