@@ -659,7 +659,6 @@ void FlameSolver::updateChemicalProperties(size_t j1, size_t j2)
 {
     CanteraGas& gas = gases.local();
     if (!gas.initialized()) {
-        tbb::mutex::scoped_lock lock(gasInitMutex);
         gas.setOptions(options);
         gas.initialize();
     }
@@ -761,7 +760,6 @@ void FlameSolver::integrateProductionTerms(size_t j1, size_t j2)
 {
     CanteraGas& gas = gases.local();
     if (!gas.initialized()) {
-        tbb::mutex::scoped_lock lock(gasInitMutex);
         gas.setOptions(options);
         gas.initialize();
     }
