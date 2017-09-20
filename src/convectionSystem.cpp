@@ -265,21 +265,11 @@ void ConvectionSystemUTW::updateContinuityBoundaryCondition
 
     case ContinuityBoundaryCondition::Temp:
         jContBC = 0;
-        if (T[jj] >= T[0]) {
-            // T increases left to right
-            for (size_t j=0; j<nPoints; j++) {
-                if (T[j] > Tmid) {
-                    jContBC = j;
-                    break;
-                }
-            }
-        } else {
-            // T increases right to left
-            for (size_t j=0; j<nPoints; j++) {
-                if (T[j] < Tmid) {
-                    jContBC = j;
-                    break;
-                }
+        // Find the leftmost location where T crosses Tmid
+        for (size_t j=1; j<nPoints; j++) {
+            if ((T[j]-Tmid) * (T[j-1]-Tmid) <= 0) {
+                jContBC = j;
+                break;
             }
         }
         break;
