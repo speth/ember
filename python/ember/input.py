@@ -924,7 +924,8 @@ class Config(object):
         # Make sure that the mechanism file actually works and contains the
         # specified fuel and oxidizer species
         gas = cantera.Solution(self.chemistry.mechanismFile.value,
-                               self.chemistry.phaseID.value)
+                               self.chemistry.phaseID.value,
+                               transport_model=None)
         if self.initialCondition.reactants.value is not None:
             gas.X = self.initialCondition.reactants.value
         else:
@@ -1035,7 +1036,8 @@ class ConcreteConfig(_ember.ConfigOptions):
                 setattr(self, name, None)
 
         self.gas = cantera.Solution(self.chemistry.mechanismFile,
-                                    self.chemistry.phaseID)
+                                    self.chemistry.phaseID,
+                                    transport_model=None)
 
         if self.general.fixedBurnedVal is None:
             if ((self.general.twinFlame or self.general.cylindricalFlame)
