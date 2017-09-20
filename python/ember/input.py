@@ -185,7 +185,7 @@ class Options(object):
 
             value = getattr(self, attr)
             if isinstance(value, Option):
-                if value.value == value.default:
+                if type(value.value) == type(value.default) and value.value == value.default:
                     continue
                 else:
                     value = value.value
