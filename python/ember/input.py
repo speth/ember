@@ -233,7 +233,7 @@ def _isDiffusion(conf):
 
 
 def _isSymmetric(conf):
-    return conf.general.curvedFlame or conf.general.twinFlame
+    return conf.general.cylindricalFlame or conf.general.twinFlame
 
 
 def _usingCvode(conf):
@@ -281,16 +281,16 @@ class General(Options):
 
     #: True if solving a radially propagating flame in a cylindrical
     #: coordinate system.
-    curvedFlame = BoolOption(False,
-        filter=lambda conf: not conf.general.twinFlame)
+    cylindricalFlame = BoolOption(False,
+                                  filter=lambda conf: not conf.general.twinFlame)
 
     #: True if solving an axisymmetric jet flame in cylindrical coordinate system.
-    axiJetFlame = BoolOption(False,
-                             filter=lambda conf: not conf.general.curvedFlame)
+    discFlame = BoolOption(False,
+                           filter=lambda conf: not conf.general.cylindricalFlame)
 
     #: True if solving a planar flame that is symmetric about the x = 0 plane.
     twinFlame = BoolOption(False,
-        filter=lambda conf: not conf.general.curvedFlame)
+        filter=lambda conf: not conf.general.cylindricalFlame)
 
     #: Input file (HDF5 format) containing the interpolation data needed for
     #: the quasi2d mode. Contains:
@@ -896,20 +896,20 @@ class Config(object):
         # Position control can only be used with "twin" or "curved" flames
         if (self.positionControl is not None and
             not self.general.twinFlame and
-            not self.general.curvedFlame):
+            not self.general.cylindricalFlame):
             error = True
             print ("Error: PositionControl can only be used when either 'twinFlame'\n"
-                   "       or 'curvedFlame' is set to True.")
+                   "       or 'cylindricalFlame' is set to True.")
 
-        # twinFlame and curvedFlame are mutually exclusive:
-        if self.general.curvedFlame and self.general.twinFlame:
+        # twinFlame and cylindricalFlame are mutually exclusive:
+        if self.general.cylindricalFlameFlame and self.general.twinFlame:
             error = True
-            print "Error: 'twinFlame' and 'curvedFlame' are mutually exclusive."
+            print "Error: 'twinFlame' and 'cylindricalFlame' are mutually exclusive."
 
-        # axiJetFlame and curvedFlame are mutually exclusive:
-        if self.general.curvedFlame and self.general.axiJetFlame:
+        # discFlame and cylindricalFlame are mutually exclusive:
+        if self.general.cylindricalFlame and self.general.discFlame:
             error = True
-            print "Error: 'axiJetFlame' and 'curvedFlame' are mutually exclusive."
+            print "Error: 'discFlame' and 'cylindricalFlame' are mutually exclusive."
 
         # the "fuelLeft" option only makes sense for diffusion flames
         if (self.initialCondition.flameType == 'premixed' and
@@ -1033,7 +1033,7 @@ class ConcreteConfig(_ember.ConfigOptions):
                                     self.chemistry.phaseID)
 
         if self.general.fixedBurnedVal is None:
-            if ((self.general.twinFlame or self.general.curvedFlame)
+            if ((self.general.twinFlame or self.general.cylindricalFlame)
                 and not self.general.unburnedLeft):
                 self.general.fixedBurnedVal = False
             else:
@@ -1151,7 +1151,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         N = IC.nPoints
         gas = self.gas
 
-        xLeft = (0.0 if self.general.twinFlame or self.general.curvedFlame
+        xLeft = (0.0 if self.general.twinFlame or self.general.cylindricalFlame
                  else IC.xLeft)
 
         x = np.linspace(xLeft, IC.xRight, N)
@@ -1232,7 +1232,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         for _ in range(2):
             utils.smooth(U)
 
-        if self.general.twinFlame or self.general.curvedFlame:
+        if self.general.twinFlame or self.general.cylindricalFlame:
             # Stagnation point at x = 0
             V[0] = 0
             for j in range(1, N):

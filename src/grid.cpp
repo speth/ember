@@ -31,8 +31,8 @@ void OneDimGrid::setOptions(const ConfigOptions& options)
     unburnedLeft = options.unburnedLeft;
     fixedLeftLoc = options.fixedLeftLoc;
     twinFlame = options.twinFlame;
-    curvedFlame = options.curvedFlame;
-    axiJetFlame = options.axiJetFlame;
+    cylindricalFlame = options.cylindricalFlame;
+    discFlame = options.discFlame;
 
     boundaryTol = options.boundaryTol;
     boundaryTolRm = options.boundaryTolRm;
@@ -561,7 +561,7 @@ bool OneDimGrid::addLeft(vector<dvector>& y)
         // Add point to the left.
         for (size_t i=0; i<addPointCount; i++) {
             double xLeft = x[0] - sqrt(uniformityTol) * (x[1]-x[0]);
-            if (twinFlame || curvedFlame) {
+            if (twinFlame || cylindricalFlame) {
                 if (x[0] == 0) {
                     break;
                 }
