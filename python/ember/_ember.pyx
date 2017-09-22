@@ -178,10 +178,10 @@ cdef class ConfigOptions:
         opts.unburnedLeft = G.unburnedLeft
         opts.fuelLeft = G.fuelLeft
         opts.nThreads = G.nThreads
-        opts.curvedFlame = G.curvedFlame
-        opts.gridAlpha = 1 if opts.curvedFlame else 0
-        opts.axiJetFlame = G.axiJetFlame
-        opts.gridBeta = 1 if opts.axiJetFlame else 0
+        opts.cylindricalFlame = G.cylindricalFlame
+        opts.gridAlpha = 1 if opts.cylindricalFlame else 0
+        opts.discFlame = G.discFlame
+        opts.gridBeta = 1 if opts.discFlame else 0
         opts.twinFlame = G.twinFlame
         opts.chemistryIntegrator = G.chemistryIntegrator
         opts.splittingMethod = G.splittingMethod

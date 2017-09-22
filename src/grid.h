@@ -97,10 +97,10 @@ public:
     bool twinFlame;
 
     //! `true` if the flame is curved (corresponding to #alpha = 1)
-    bool curvedFlame;
+    bool cylindricalFlame;
 
     //! `true` if the flame is opposed axisymmetric jets (corresponding to #beta = 1)
-    bool axiJetFlame;
+    bool discFlame;
 
     //! Relative tolerance used to extend the domain in order to satisfy zero-
     //! gradient boundary conditions.

@@ -11,7 +11,7 @@ public:
         nPoints = 401;
         grid.unburnedLeft = true;
         grid.fixedBurnedVal = true;
-        grid.curvedFlame = false;
+        grid.cylindricalFlame = false;
         grid.twinFlame = false;
         grid.alpha = 0;
         grid.setSize(nPoints);
@@ -85,7 +85,7 @@ TEST_F(DiffusionSystemTest, CylindricalCoordinates)
     // Exact solution in cylindrical coordinates. Same shape as the Cartesian
     // case, but decays as 1/t instead of 1/sqrt(t).
 
-    grid.curvedFlame = true;
+    grid.cylindricalFlame = true;
     grid.alpha = 1;
     grid.fixedBurnedVal = true;
     grid.unburnedLeft = false;

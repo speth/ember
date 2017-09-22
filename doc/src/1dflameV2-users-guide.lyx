@@ -398,7 +398,7 @@ centering
 \begin_layout Plain Layout
 \begin_inset CommandInset label
 LatexCommand label
-name "cap:CurvedFlameZero"
+name "cap:cylindricalFlameZero"
 
 \end_inset
 
@@ -427,7 +427,7 @@ The curved flame at zero stagnation radius is quite similar to the twin
  This configuration is shown in Figure 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "cap:CurvedFlameZero"
+reference "cap:cylindricalFlameZero"
 
 \end_inset
 
@@ -496,7 +496,7 @@ status open
 \begin_layout Plain Layout
 \begin_inset CommandInset label
 LatexCommand label
-name "cap:CurvedFlameFinite"
+name "cap:cylindricalFlameFinite"
 
 \end_inset
 
@@ -525,7 +525,7 @@ The tubular flame at zero stagnation radius can be modified by introducing
 , as shown in Figure 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "cap:CurvedFlameFinite"
+reference "cap:cylindricalFlameFinite"
 
 \end_inset
 

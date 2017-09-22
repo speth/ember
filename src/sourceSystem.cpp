@@ -47,7 +47,7 @@ double SourceSystem::getQdotIgniter(double t)
 void SourceSystem::setOptions(ConfigOptions& options_)
 {
     options = &options_;
-    beta = &options_.axiJetFlame;
+    beta = &options_.discFlame;
 }
 
 void SourceSystem::initialize(size_t new_nSpec)

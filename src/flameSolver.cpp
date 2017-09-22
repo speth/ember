@@ -625,7 +625,7 @@ void FlameSolver::updateBC()
         grid.leftBC = BoundaryCondition::WallFlux;
     } else if (grid.ju == 0 || (grid.jb == 0 && grid.fixedBurnedVal)) {
         grid.leftBC = BoundaryCondition::FixedValue;
-    } else if ((options.twinFlame || options.curvedFlame) &&
+    } else if ((options.twinFlame || options.cylindricalFlame) &&
                 x[0] >= 0.0 && x[0] <= options.centerGridMin) {
         grid.leftBC = BoundaryCondition::ControlVolume;
     } else {
@@ -945,8 +945,8 @@ double FlameSolver::getFlamePosition(void)
 
 void FlameSolver::loadProfile(void)
 {
-    grid.alpha = (options.curvedFlame) ? 1 : 0;
-    grid.beta = (options.axiJetFlame) ? 1 : 0;
+    grid.alpha = (options.cylindricalFlame) ? 1 : 0;
+    grid.beta = (options.discFlame) ? 1 : 0;
     grid.unburnedLeft = options.unburnedLeft;
 
     // Read initial condition specified in the configuration file

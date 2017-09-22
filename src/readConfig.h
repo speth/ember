@@ -52,15 +52,15 @@ public:
     //! If specified, the leftmost grid point will not extend beyond x = 0.
     bool twinFlame;
 
-    //! [general.axiJetFlame] Set to true for the axisymmetric jet flame configuration.
-    bool axiJetFlame;
+    //! [general.discFlame] Set to true for the axisymmetric jet flame configuration.
+    bool discFlame;
 
     ContinuityBoundaryCondition::BC continuityBC;
 
-    //! [general.curvedFlame] Set to true for the twin flame configuration.
+    //! [general.cylindricalFlame] Set to true for the twin flame configuration.
     //! If specified, the leftmost grid point will not extend beyond x = 0.
     //! Also sets #gridAlpha = 1. Otherwise, #gridAlpha = 0.
-    bool curvedFlame;
+    bool cylindricalFlame;
     bool unburnedLeft; //!< [general.unburnedLeft]
     bool fuelLeft; //!< [general.fuelLeft]
 

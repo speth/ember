@@ -47,8 +47,8 @@ cdef extern from "readConfig.h":
         string outputDir
         cbool fixedBurnedVal, fixedLeftLoc, twinFlame
         int continuityBC
-        cbool curvedFlame, unburnedLeft, fuelLeft
-        cbool axiJetFlame
+        cbool cylindricalFlame, unburnedLeft, fuelLeft
+        cbool discFlame
         string flameType
         int regridStepInterval, outputStepInterval, profileStepInterval
         int currentStateStepInterval, terminateStepInterval
