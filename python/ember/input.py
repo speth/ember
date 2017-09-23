@@ -279,14 +279,12 @@ class General(Options):
     #: configurations.
     fixedLeftLocation = BoolOption(False, level=1, filter=_isSymmetric)
 
-    #: True if solving a radially propagating flame in a cylindrical
-    #: coordinate system.
-    cylindricalFlame = BoolOption(False,
-                                  filter=lambda conf: not conf.general.twinFlame)
+    #: Geometry specification for the flame. Options are: 'planar', 'cylindrical',
+    #: and 'disc.'
+    flameGeometry = StringOption("planar", ("cylindrical","disc"), level=1)
 
-    #: True if solving an axisymmetric jet flame in cylindrical coordinate system.
-    discFlame = BoolOption(False,
-                           filter=lambda conf: not conf.general.cylindricalFlame)
+    cylindricalFlame = False
+    discFlame = False
 
     #: True if solving a planar flame that is symmetric about the x = 0 plane.
     twinFlame = BoolOption(False,
@@ -892,6 +890,8 @@ class Config(object):
 
     def validate(self):
         error = False
+        cylindricalFlame = True if self.general.flameGeometry == 'cylindrical' else False
+        discFlame = True if self.general.flameGeometry == 'disc' else False
 
         # Position control can only be used with "twin" or "curved" flames
         if (self.positionControl is not None and
@@ -902,12 +902,12 @@ class Config(object):
                    "       or 'cylindricalFlame' is set to True.")
 
         # twinFlame and cylindricalFlame are mutually exclusive:
-        if self.general.cylindricalFlameFlame and self.general.twinFlame:
+        if cylindricalFlame and self.general.twinFlame:
             error = True
             print "Error: 'twinFlame' and 'cylindricalFlame' are mutually exclusive."
 
         # discFlame and cylindricalFlame are mutually exclusive:
-        if self.general.cylindricalFlame and self.general.discFlame:
+        if cylindricalFlame and discFlame:
             error = True
             print "Error: 'discFlame' and 'cylindricalFlame' are mutually exclusive."
 
@@ -950,6 +950,7 @@ class Config(object):
 
         if error:
             print 'Validation failed.'
+            print 'To force simulation attempt: Config.run("force")'
         else:
             print 'Validation completed successfully.'
 
@@ -981,7 +982,7 @@ class Config(object):
 
         return error
 
-    def run(self):
+    def run(self, command=None):
         """
         Run the simulation using the parameters set in this Config.
 
@@ -998,6 +999,12 @@ class Config(object):
             # Validate the configuration and exit
             self.validate()
             return
+
+        if command is None:
+            self.validate()
+        elif command != 'force':
+            print 'An argument of "force" will allow for skipping validation and attempting to simulate.'
+            print 'Exiting...'
 
         concrete = self.evaluate()
         if self.strainParameters.rates:
