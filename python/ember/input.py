@@ -1155,6 +1155,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         configuration parameters.
         """
         IC = self.initialCondition
+        beta = (1.0 if self.general.flameGeometry=='disc' else 0.0)
         N = IC.nPoints
         gas = self.gas
 
@@ -1186,20 +1187,20 @@ class ConcreteConfig(_ember.ConfigOptions):
         rhou = self.setBoundaryValues(T, Y)
 
         if IC.flameType == 'premixed':
-            T[jm] = IC.Tu
-            # Diluent in the middle
-            gas.TPX = IC.Tu, IC.pressure, IC.oxidizer
+            gas.set_equivalence_ratio(IC.equivalenceRatio, IC.fuel, IC.oxidizer)
+            gas.TP = IC.Tu, IC.pressure
+            gas.equilibrate('HP')
+            T[jm] = gas.T
             Y[:,jm] = gas.Y
 
         elif IC.flameType == 'diffusion':
-            # Stoichiometric mixture at the center
+            # Assume stoichiometric mixture at the center
             IC.equivalenceRatio = 1.0
             gas.set_equivalence_ratio(1.0, IC.fuel, IC.oxidizer)
             gas.TP = 0.5*(IC.Tfuel+IC.Toxidizer), IC.pressure
             gas.equilibrate('HP')
             T[jm] = gas.T
             Y[:,jm] = gas.Y
-
 
         newaxis = np.newaxis
         Y[:,1:jl1] = Y[:,0,newaxis]
@@ -1243,18 +1244,24 @@ class ConcreteConfig(_ember.ConfigOptions):
             # Stagnation point at x = 0
             V[0] = 0
             for j in range(1, N):
-                V[j] = V[j-1] - rho[j]*U[j]*(x[j] - x[j-1])
-        else:
-            # Put the stagnation point on the hot side of the flame
-            if T[-1] > T[0]:
-                jz = 3 * N // 4
-            else:
-                jz = N // 4
+                # derived from finite difference of continuity equation
+                V[j] = V[j-1] - 2**beta * rho[j]*U[j]*(x[j] - x[j-1])
+
+        elif IC.flameType == 'diffusion':
+            jz = N // 4 # place stagnation point on the fuel side (flame on oxidizer side)
             V[jz] = 0
             for j in range(jz+1, N):
-                V[j] = V[j-1] - rho[j]*U[j]*(x[j] - x[j-1])
+                V[j] = V[j-1] - 2**beta * rho[j]*U[j]*(x[j] - x[j-1])
             for j in range(jz-1, -1, -1):
-                V[j] = V[j] + rho[j-1]*U[j-1]*(x[j] - x[j-1])
+                V[j] = V[j+1] + 2**beta * rho[j]*U[j]*(x[j+1] - x[j])
+
+        else: # Single Premixed jet opposing inert or hot products
+            jz = 3 * N // 4  # place stagnation point on the products/inert side
+            V[jz] = 0
+            for j in range(jz+1, N):
+                V[j] = V[j-1] - 2**beta * rho[j]*U[j]*(x[j] - x[j-1])
+            for j in range(jz-1, -1, -1):
+                V[j] = V[j+1] + 2**beta * rho[j]*U[j]*(x[j+1] - x[j])
 
         IC.x = x
         IC.Y = Y
