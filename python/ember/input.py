@@ -506,13 +506,11 @@ class InitialCondition(Options):
     #: Position of the rightmost point of the initial grid.
     xRight = FloatOption(0.002)
 
-    #: The width of the central plateau in the initial profile
-    #: [m]. For premixed flames, this mixture is composed of oxidizer
-    #: at the unburned gas temperature. Recommended value: 0.0. For
-    #: diffusion flames, this mixture is composed of a stoichiometric
-    #: fuel/air brought to equilibrium at constant enthalpy and
-    #: pressure. Recommended value: 0.002.
-    centerWidth = FloatOption(0.000, level=1)
+    #: The width of the central plateau in the initial profile [m]. For premixed
+    #: flames, this mixture is composed of equilibrium products. For diffusion
+    #: flames, this mixture is composed of a stoichiometric fuel/air brought to
+    #: equilibrium at constant enthalpy and pressure.
+    centerWidth = FloatOption(0.001, level=1)
 
     #: The width of the slope away from the central plateau in the
     #: initial profile [m]. Recommended value for premixed flames:
