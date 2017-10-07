@@ -921,6 +921,14 @@ class Config(object):
             error = True
             print "Error: 'general.unburnedLeft' should not be specified for diffusion flames."
 
+        # the "fixedTemperature" boundary condition currently only works with
+        # balanced splitting
+        if (self.general.splittingMethod == 'strang' and
+            self.general.continuityBC == 'fixedTemperature'):
+            error = True
+            print ("Error: 'fixedTemperature' continuity boundary condition is"
+                   " only compatible with 'balanced' splitting.")
+
         # Make sure that the mechanism file actually works and contains the
         # specified fuel and oxidizer species
         gas = cantera.Solution(self.chemistry.mechanismFile.value,
