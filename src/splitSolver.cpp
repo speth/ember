@@ -26,17 +26,9 @@ void SplitSolver::resize(index_t nRows, index_t nCols)
 
 void SplitSolver::calculateTimeDerivatives(double dt)
 {
-    double split = useBalancedSplitting;
-
-    if (useBalancedSplitting) {
-        deltaConv -= 0.25 * dt * (ddtProd + ddtDiff + ddtCross);
-        deltaDiff -= 0.25 * dt * (ddtProd + ddtConv + ddtCross);
-        deltaProd -= 0.5 * dt * (ddtConv + ddtDiff + ddtCross);
-    }
-
-    ddtConv = deltaConv / dt + split * 0.75 * ddtConv;
-    ddtDiff = deltaDiff / dt + split * 0.75 * ddtDiff;
-    ddtProd = deltaProd / dt + split * 0.5 * ddtProd;
+    ddtConv = deltaConv / dt - splitConstConv;
+    ddtDiff = deltaDiff / dt - splitConstDiff;
+    ddtProd = deltaProd / dt - splitConstProd;
 }
 
 int SplitSolver::step()
