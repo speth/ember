@@ -97,11 +97,11 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
         double rVzero_mod = std::max(rV[0], 0.0);
 
         dTdt[0] = -rVzero_mod * (T[0] - Tleft) / (rho[0] * centerVol) + splitConstT[0];
-        dWdt[0] = -rVzero_mod * (Wmx[0] - Wleft) / (rho[0] * centerVol) + splitConstW[0];
+        dWdt[0] = -rVzero_mod * (Wmx[0] - Wleft) / (rho[0] * centerVol) - Wmx[0] * Wmx[0] * splitConstW[0];
 
     } else { // FixedValue or ZeroGradient
         dTdt[0] = splitConstT[0];
-        dWdt[0] = splitConstW[0];
+        dWdt[0] = - Wmx[0] * Wmx[0] * splitConstW[0];
     }
 
     // Intermediate points
@@ -109,7 +109,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
         dUdt[j] = -V[j] * dUdx[j] / rho[j] - U[j]*U[j]
                 + rhou/rho[j]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta)) + splitConstU[j];
         dTdt[j] = -V[j] * dTdx[j] / rho[j] + splitConstT[j];
-        dWdt[j] = -V[j] * dWdx[j] / rho[j] + splitConstW[j];
+        dWdt[j] = -V[j] * dWdx[j] / rho[j] - Wmx[j] * Wmx[j] * splitConstW[j];
     }
 
     // Right boundary values
@@ -119,13 +119,13 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
         dUdt[jj] = splitConstU[jj] - U[jj]*U[jj]
                    + rhou/rho[jj]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta));
         dTdt[jj] = splitConstT[jj];
-        dWdt[jj] = splitConstW[jj];
+        dWdt[jj] = -Wmx[jj] * Wmx[jj] * splitConstW[jj];
     } else {
         // Outflow  at the boundary
         dUdt[jj] = splitConstU[jj] - V[jj] * (U[jj]-U[jj-1])/hh[jj-1]/rho[jj]
                    -U[jj]*U[jj] + rhou/rho[jj]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta));
         dTdt[jj] = splitConstT[jj] - V[jj] * (T[jj]-T[jj-1])/hh[jj-1]/rho[jj];
-        dWdt[jj] = splitConstW[jj] - V[jj] * (Wmx[jj]-Wmx[jj-1])/hh[jj-1]/rho[jj];
+        dWdt[jj] = - Wmx[jj] * Wmx[jj] * splitConstW[jj] - V[jj] * (Wmx[jj]-Wmx[jj-1])/hh[jj-1]/rho[jj];
     }
 
     roll_ydot(ydot);
@@ -577,13 +577,11 @@ void ConvectionSystemSplit::setSplitConstants(const dmatrix& splitConst)
 {
     utwSystem.splitConstT = splitConst.row(kEnergy);
     utwSystem.splitConstU = splitConst.row(kMomentum);
-    utwSystem.splitConstW.resize(nPoints);
+    utwSystem.splitConstW.setZero(nPoints);
     for (size_t j=0; j<nPoints; j++) {
-        double value = 0;
         for (size_t k=0; k<nSpec; k++) {
-             value += splitConst(kSpecies+k,j)/W[k];
+            utwSystem.splitConstW[j] += splitConst(kSpecies+k,j) / W[k];
         }
-        utwSystem.splitConstW[j] = - value * Wmx[j] * Wmx[j];
     }
 
     for (size_t k=0; k<nSpec; k++) {
