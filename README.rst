@@ -1,5 +1,12 @@
-Getting Started with Ember
-==========================
+=====================================
+Ember: unsteady strained flame solver
+=====================================
+
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.1004753.svg
+   :target: https://doi.org/10.5281/zenodo.1004753
+
+Introduction
+------------
 
 Ember is a quasi-one-dimensional, unsteady reacting flow solver. It can be used
 to simulate a number of fundamental flame configurations, including premixed
