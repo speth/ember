@@ -1136,6 +1136,7 @@ class ConcreteConfig(_ember.ConfigOptions):
             gas.TPX = IC.Toxidizer, IC.pressure, IC.oxidizer
             if IC.equilibrateCounterflow:
                 gas.equilibrate(IC.equilibrateCounterflow)
+            rhou = gas.density  # use oxidizer value for diffusion flame
 
             Yoxidizer = gas.Y
             Toxidizer = gas.T
@@ -1150,9 +1151,6 @@ class ConcreteConfig(_ember.ConfigOptions):
                 Y[:,0] = Yoxidizer
                 T[-1] = IC.Tfuel
                 Y[:,-1] = Yfuel
-
-            gas.TPY = T[0], IC.pressure, Y[:,0]
-            rhou = gas.density  # arbitrary for diffusion flame
 
         return rhou
 
@@ -1243,7 +1241,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         for j in range(N):
             gas.TPY = T[j], IC.pressure, Y[:,j]
             rho[j] = gas.density
-            U[j] = a0 * np.sqrt(rhou/rho[j])
+            U[j] = a0 * np.sqrt(rhou/rho[j]/2**(2*beta))
 
         for _ in range(2):
             utils.smooth(U)

@@ -1026,7 +1026,8 @@ void FlameSolver::loadProfile(void)
             Yright = Yfuel;
         }
 
-        rhou = rhoLeft;
+        rhou = rhoOxidizer;
+
     } else if (options.flameType == "quasi2d") {
         gas.thermo.setState_TPY(T(0), options.pressure, &Y(0,0));
         rhoLeft = gas.thermo.density();
