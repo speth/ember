@@ -283,9 +283,6 @@ class General(Options):
     #: and 'disc.'
     flameGeometry = StringOption("planar", ("cylindrical","disc"), level=1)
 
-    cylindricalFlame = False
-    discFlame = False
-
     #: True if solving a planar flame that is symmetric about the x = 0 plane.
     twinFlame = BoolOption(False,
         filter=lambda conf: not conf.general.cylindricalFlame)
@@ -894,7 +891,7 @@ class Config(object):
         # Position control can only be used with "twin" or "curved" flames
         if (self.positionControl is not None and
             not self.general.twinFlame and
-            not self.general.cylindricalFlame):
+            not cylindricalFlame):
             error = True
             print ("Error: PositionControl can only be used when either 'twinFlame'\n"
                    "       or 'cylindricalFlame' is set to True.")
@@ -1048,7 +1045,7 @@ class ConcreteConfig(_ember.ConfigOptions):
                                     transport_model=None)
 
         if self.general.fixedBurnedVal is None:
-            if ((self.general.twinFlame or self.general.cylindricalFlame)
+            if ((self.general.twinFlame or self.general.flameGeometry == 'cylindrical')
                 and not self.general.unburnedLeft):
                 self.general.fixedBurnedVal = False
             else:
@@ -1165,7 +1162,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         N = IC.nPoints
         gas = self.gas
 
-        xLeft = (0.0 if self.general.twinFlame or self.general.cylindricalFlame
+        xLeft = (0.0 if self.general.twinFlame or self.general.flameGeometry == 'cylindrical'
                  else IC.xLeft)
 
         x = np.linspace(xLeft, IC.xRight, N)
@@ -1246,7 +1243,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         for _ in range(2):
             utils.smooth(U)
 
-        if self.general.twinFlame or self.general.cylindricalFlame:
+        if self.general.twinFlame or self.general.flameGeometry == 'cylindrical':
             # Stagnation point at x = 0
             V[0] = 0
             for j in range(1, N):
