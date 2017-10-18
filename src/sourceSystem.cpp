@@ -146,7 +146,7 @@ int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
     double scale;
     if (!quasi2d) {
         scale = 1.0;
-        dUdt = - U*U + splitConst[kMomentum];
+        dUdt = splitConst[kMomentum];
         qDot = - (wDot * hk).sum() + getQdotIgniter(t);
         if (heatLoss && options->alwaysUpdateHeatFlux) {
             qDot -= heatLoss->eval(x, t, U, T, Y);
@@ -258,7 +258,7 @@ int SourceSystemCVODE::denseJacobian(const realtype t, const sdVector& y,
         J(kEnergy, kEnergy) = -dwhdT/(rho*cp) - qDot*drhodT/(rho*rho*cp);
 
         // dMomentum/dU
-        J(kMomentum, kMomentum) = -2*U;
+        J(kMomentum, kMomentum) = 0;
 
         // dMomentum/dT
         J(kMomentum, kEnergy) = -A*drhodT/(rho*rho);
