@@ -24,19 +24,19 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     if (continuityBC == ContinuityBoundaryCondition::Left) {
         rV[0] = rVzero;
         for (size_t j=0; j<nPoints-1; j++) {
-            rV[j+1] = rV[j] - hh[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j] * rphalf[j]);
+            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j]);
         }
     } else if (continuityBC == ContinuityBoundaryCondition::Zero) {
         // jContBC is the point just to the right of the stagnation point
         size_t j = jContBC;
-        double dVdx0 = - drhodt[j] - rho[j] * pow(2.0,grid.beta)* U[j] * rphalf[j];
+        double dVdx0 = - rphalf[j] * (drhodt[j] - rho[j] * pow(2.0,grid.beta)* U[j]);
         if (jContBC != 0) {
-            dVdx0 = 0.5 * dVdx0 - 0.5 * (drhodt[j-1] + rho[j-1] * pow(2.0,grid.beta)* U[j-1] * rphalf[j-1]);
+            dVdx0 = 0.5 * dVdx0 - 0.5 * rphalf[j-1] * (drhodt[j-1] + rho[j-1] * pow(2.0,grid.beta)* U[j-1]);
         }
 
         rV[j] = (x[j] - xVzero) * dVdx0;
         for (j=jContBC; j<jj; j++) {
-            rV[j+1] = rV[j] - hh[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j] * rphalf[j]);
+            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j]);
         }
 
         if (jContBC != 0) {
@@ -44,7 +44,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
 //            dVdx0 = - drhodt[j] - rho[j] * U[j] * rphalf[j];
             rV[j] = (x[j] - xVzero) * dVdx0;
             for (j=jContBC-1; j>0; j--) {
-                rV[j-1] = rV[j] + hh[j-1] * (drhodt[j-1] + rho[j-1] * pow(2.0,grid.beta)* U[j-1] * rphalf[j-1]);
+                rV[j-1] = rV[j] + hh[j-1] * rphalf[j-1] * (drhodt[j-1] + rho[j-1] * pow(2.0,grid.beta)* U[j-1]);
             }
         }
     } else {
@@ -59,10 +59,10 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
             }
         }
         for (size_t j=jContBC; j<nPoints-1; j++) {
-            rV[j+1] = rV[j] - hh[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j] * rphalf[j]);
+            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j]);
         }
         for (size_t j=jContBC; j>0; j--) {
-            rV[j-1] = rV[j] + hh[j-1] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j] * rphalf[j]);
+            rV[j-1] = rV[j] + hh[j-1] * rphalf[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j]);
         }
     }
 
