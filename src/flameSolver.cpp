@@ -943,8 +943,6 @@ double FlameSolver::getFlamePosition(void)
 
 void FlameSolver::loadProfile(void)
 {
-    grid.alpha = (options.cylindricalFlame) ? 1 : 0;
-    grid.beta = (options.discFlame) ? 2 : 1;
     grid.unburnedLeft = options.unburnedLeft;
 
     // Read initial condition specified in the configuration file

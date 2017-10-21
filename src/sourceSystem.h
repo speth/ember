@@ -100,7 +100,6 @@ public:
 
     double U; //!< tangential velocity
     double T; //!< temperature
-    bool beta; //!< curvature parameter for axisymmetric jet flames
     dvec Y; //!< species mass fraction
 
     //! Extra constant term introduced by splitting

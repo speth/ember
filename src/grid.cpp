@@ -38,8 +38,8 @@ void OneDimGrid::setOptions(const ConfigOptions& options)
     boundaryTolRm = options.boundaryTolRm;
     unstrainedDownstreamWidth = options.unstrainedDownstreamWidth;
     addPointCount = options.addPointCount;
-    alpha = options.gridAlpha;
-    beta = options.gridBeta;
+    alpha = (options.cylindricalFlame) ? 1 : 0;
+    beta = (options.discFlame) ? 2 : 1;
 }
 
 void OneDimGrid::updateValues()

@@ -57,9 +57,8 @@ public:
 
     ContinuityBoundaryCondition::BC continuityBC;
 
-    //! [general.cylindricalFlame] Set to true for the twin flame configuration.
+    //! [general.cylindricalFlame] Set to true for the cylindrical flame configuration.
     //! If specified, the leftmost grid point will not extend beyond x = 0.
-    //! Also sets #gridAlpha = 1. Otherwise, #gridAlpha = 0.
     bool cylindricalFlame;
     bool unburnedLeft; //!< [general.unburnedLeft]
     bool fuelLeft; //!< [general.fuelLeft]
@@ -158,9 +157,6 @@ public:
     double tEnd; //!< [terminationCondition.tEnd]
     double tEndMin; //!< [terminationCondition.tMin]
     bool haveTStart;
-
-    int gridAlpha; //!< 1 for curved flames, 0 for planar axisymmetric jet flames
-    int gridBeta; //!< 2 for axisymmetric jet flames, 1 for planar and curved flames
 
     // Controls which variables are included in the outXXXXXX.h5 files
     bool outputProfiles; //!< [outputFiles.saveProfiles]
