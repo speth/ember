@@ -1158,7 +1158,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         configuration parameters.
         """
         IC = self.initialCondition
-        beta = (1.0 if self.general.flameGeometry=='disc' else 0.0)
+        beta = (2.0 if self.general.flameGeometry=='disc' else 1.0)
         N = IC.nPoints
         gas = self.gas
 
@@ -1238,7 +1238,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         for j in range(N):
             gas.TPY = T[j], IC.pressure, Y[:,j]
             rho[j] = gas.density
-            U[j] = a0 * np.sqrt(rhou/rho[j]/2**(2*beta))
+            U[j] = a0 / beta * np.sqrt(rhou/rho[j])
 
         for _ in range(2):
             utils.smooth(U)
@@ -1248,23 +1248,23 @@ class ConcreteConfig(_ember.ConfigOptions):
             V[0] = 0
             for j in range(1, N):
                 # derived from finite difference of continuity equation
-                V[j] = V[j-1] - 2**beta * rho[j]*U[j]*(x[j] - x[j-1])
+                V[j] = V[j-1] - beta * rho[j]*U[j]*(x[j] - x[j-1])
 
         elif IC.flameType == 'diffusion':
             jz = N // 4 # place stagnation point on the fuel side (flame on oxidizer side)
             V[jz] = 0
             for j in range(jz+1, N):
-                V[j] = V[j-1] - 2**beta * rho[j]*U[j]*(x[j] - x[j-1])
+                V[j] = V[j-1] - beta * rho[j]*U[j]*(x[j] - x[j-1])
             for j in range(jz-1, -1, -1):
-                V[j] = V[j+1] + 2**beta * rho[j]*U[j]*(x[j+1] - x[j])
+                V[j] = V[j+1] + beta * rho[j]*U[j]*(x[j+1] - x[j])
 
         else: # Single Premixed jet opposing inert or hot products
             jz = 3 * N // 4  # place stagnation point on the products/inert side
             V[jz] = 0
             for j in range(jz+1, N):
-                V[j] = V[j-1] - 2**beta * rho[j]*U[j]*(x[j] - x[j-1])
+                V[j] = V[j-1] - beta * rho[j]*U[j]*(x[j] - x[j-1])
             for j in range(jz-1, -1, -1):
-                V[j] = V[j+1] + 2**beta * rho[j]*U[j]*(x[j+1] - x[j])
+                V[j] = V[j+1] + beta * rho[j]*U[j]*(x[j+1] - x[j])
 
         IC.x = x
         IC.Y = Y

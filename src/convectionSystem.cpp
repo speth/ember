@@ -24,19 +24,19 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     if (continuityBC == ContinuityBoundaryCondition::Left) {
         rV[0] = rVzero;
         for (size_t j=0; j<nPoints-1; j++) {
-            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j]);
+            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * grid.beta* U[j]);
         }
     } else if (continuityBC == ContinuityBoundaryCondition::Zero) {
         // jContBC is the point just to the right of the stagnation point
         size_t j = jContBC;
-        double dVdx0 = - rphalf[j] * (drhodt[j] - rho[j] * pow(2.0,grid.beta)* U[j]);
+        double dVdx0 = - rphalf[j] * (drhodt[j] - rho[j] * beta * U[j]);
         if (jContBC != 0) {
-            dVdx0 = 0.5 * dVdx0 - 0.5 * rphalf[j-1] * (drhodt[j-1] + rho[j-1] * pow(2.0,grid.beta)* U[j-1]);
+            dVdx0 = 0.5 * dVdx0 - 0.5 * rphalf[j-1] * (drhodt[j-1] + rho[j-1] * beta * U[j-1]);
         }
 
         rV[j] = (x[j] - xVzero) * dVdx0;
         for (j=jContBC; j<jj; j++) {
-            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j]);
+            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
         }
 
         if (jContBC != 0) {
@@ -44,7 +44,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
 //            dVdx0 = - drhodt[j] - rho[j] * U[j] * rphalf[j];
             rV[j] = (x[j] - xVzero) * dVdx0;
             for (j=jContBC-1; j>0; j--) {
-                rV[j-1] = rV[j] + hh[j-1] * rphalf[j-1] * (drhodt[j-1] + rho[j-1] * pow(2.0,grid.beta)* U[j-1]);
+                rV[j-1] = rV[j] + hh[j-1] * rphalf[j-1] * (drhodt[j-1] + rho[j-1] * beta * U[j-1]);
             }
         }
     } else {
@@ -59,10 +59,10 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
             }
         }
         for (size_t j=jContBC; j<nPoints-1; j++) {
-            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j]);
+            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
         }
         for (size_t j=jContBC; j>0; j--) {
-            rV[j-1] = rV[j] + hh[j-1] * rphalf[j] * (drhodt[j] + rho[j] * pow(2.0,grid.beta)* U[j]);
+            rV[j-1] = rV[j] + hh[j-1] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
         }
     }
 
@@ -88,7 +88,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     // Left boundary conditions. Convection term only contributes in the
     // ControlVolume case. Zero-gradient condition for U is handled in diffusion
     // term.
-    dUdt[0] = splitConstU[0] - U[0]*U[0] + rhou/rho[0]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta));
+    dUdt[0] = splitConstU[0] - U[0]*U[0] + rhou/rho[0]*(dadt/beta + a*a/(beta*beta));
 
     if (grid.leftBC == BoundaryCondition::ControlVolume ||
         grid.leftBC == BoundaryCondition::WallFlux)
@@ -107,7 +107,7 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     // Intermediate points
     for (size_t j=1; j<jj; j++) {
         dUdt[j] = -V[j] * dUdx[j] / rho[j] - U[j]*U[j]
-                + rhou/rho[j]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta)) + splitConstU[j];
+                + rhou/rho[j]*(dadt/beta + a*a/(beta*beta)) + splitConstU[j];
         dTdt[j] = -V[j] * dTdx[j] / rho[j] + splitConstT[j];
         dWdt[j] = -V[j] * dWdx[j] / rho[j] - Wmx[j] * Wmx[j] * splitConstW[j];
     }
@@ -117,13 +117,13 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
         // Convection term has nothing to contribute in this case,
         // So only the value from the other terms remains
         dUdt[jj] = splitConstU[jj] - U[jj]*U[jj]
-                   + rhou/rho[jj]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta));
+                   + rhou/rho[jj]*(dadt/beta + a*a/(beta*beta));
         dTdt[jj] = splitConstT[jj];
         dWdt[jj] = -Wmx[jj] * Wmx[jj] * splitConstW[jj];
     } else {
         // Outflow  at the boundary
         dUdt[jj] = splitConstU[jj] - V[jj] * (U[jj]-U[jj-1])/hh[jj-1]/rho[jj]
-                   -U[jj]*U[jj] + rhou/rho[jj]*(dadt/pow(2.0, beta) + a*a/pow(2.0, 2*beta));
+                   -U[jj]*U[jj] + rhou/rho[jj]*(dadt/beta + a*a/(beta*beta));
         dTdt[jj] = splitConstT[jj] - V[jj] * (T[jj]-T[jj-1])/hh[jj-1]/rho[jj];
         dWdt[jj] = - Wmx[jj] * Wmx[jj] * splitConstW[jj] - V[jj] * (Wmx[jj]-Wmx[jj-1])/hh[jj-1]/rho[jj];
     }

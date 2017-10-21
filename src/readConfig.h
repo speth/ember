@@ -160,7 +160,7 @@ public:
     bool haveTStart;
 
     int gridAlpha; //!< 1 for curved flames, 0 for planar axisymmetric jet flames
-    int gridBeta; //!< 1 for axisymmetric jet flames, 0 for planar and curved flames
+    int gridBeta; //!< 2 for axisymmetric jet flames, 1 for planar and curved flames
 
     // Controls which variables are included in the outXXXXXX.h5 files
     bool outputProfiles; //!< [outputFiles.saveProfiles]

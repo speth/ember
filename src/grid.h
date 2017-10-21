@@ -37,7 +37,7 @@ public:
     dvec dampVal;
 
     int alpha; //!< Domain curvature parameter. 0: planar / disc, 1: cylindrical
-    int beta; //!< Domain curvature parameter. 0: planar / cylindrical; 1: disc
+    int beta; //!< Domain curvature parameter. 1: planar / cylindrical; 2: disc
     size_t ju; //!< Index corresponding to the unburned mixture
     size_t jb; //!< Index corresponding to the burned mixture
 
@@ -99,7 +99,7 @@ public:
     //! `true` if the flame is curved (corresponding to #alpha = 1)
     bool cylindricalFlame;
 
-    //! `true` if the flame is opposed axisymmetric jets (corresponding to #beta = 1)
+    //! `true` if the flame is opposed axisymmetric jets (corresponding to #beta = 2)
     bool discFlame;
 
     //! Relative tolerance used to extend the domain in order to satisfy zero-
@@ -254,7 +254,7 @@ protected:
     dvec& cf; //!< Coefficient for y[j] in first centered difference
     dvec& cfp; //!< Coefficient for y[j+1] in first centered difference
     int& alpha; //!< curved grid exponent. alpha = 1 for curved flames, 0 for planar flames and axisymmetric jet flames.
-    int& beta; //!< curved grid exponent. beta = 1 for axisymmetric jet flames, 0 for planar flames and curved flames.
+    int& beta; //!< curved grid exponent. beta = 2 for axisymmetric jet flames, 1 for planar flames and curved flames.
 
     size_t& nPoints; //!< number of grid point
     size_t& jj; //!< index of last grid point (`== nPoints-1`)

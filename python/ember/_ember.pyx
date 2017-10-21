@@ -181,7 +181,7 @@ cdef class ConfigOptions:
         opts.cylindricalFlame = 1 if G.flameGeometry == 'cylindrical' else 0
         opts.gridAlpha = 1 if opts.cylindricalFlame else 0
         opts.discFlame = 1 if G.flameGeometry == 'disc' else 0
-        opts.gridBeta = 1 if opts.discFlame else 0
+        opts.gridBeta = 2 if opts.discFlame else 1
         opts.twinFlame = G.twinFlame
         opts.chemistryIntegrator = G.chemistryIntegrator
         opts.splittingMethod = G.splittingMethod
