@@ -14,6 +14,8 @@ Basic usage:
     'scons msi' - Create a MSI installer for Windows
 """
 
+from __future__ import print_function
+
 import os
 import platform
 from distutils.sysconfig import get_config_var
@@ -23,7 +25,7 @@ import numpy as np
 from buildutils import *
 
 if not COMMAND_LINE_TARGETS:
-    print __doc__
+    print(__doc__)
     sys.exit(0)
 
 VariantDir('build/core','src', duplicate=0)
@@ -83,7 +85,7 @@ if os.name == 'nt':
         msvc = pickCompilerEnv['msvc_version'] or pickCompilerEnv['MSVC_VERSION']
         extraEnvArgs['MSVC_VERSION'] = msvc
         tbbCompiler = 'vc' + msvc.split('.')[0] # e.g. vc9
-        print 'INFO: Compiling with MSVC', msvc
+        print('INFO: Compiling with MSVC', msvc)
 
     elif pickCompilerEnv['toolchain'] == 'mingw':
         toolchain = ['mingw', 'f90']
@@ -102,8 +104,8 @@ if os.name == 'nt':
         tbbArch = 'ia32'
 
     defaults.blas_lapack = ''
-    print 'INFO: Compiling for architecture:', pickCompilerEnv['target_arch']
-    print 'INFO: Compiling using the following toolchain(s):', repr(toolchain)
+    print('INFO: Compiling for architecture:', pickCompilerEnv['target_arch'])
+    print('INFO: Compiling using the following toolchain(s):', repr(toolchain))
 
 elif platform.system() == 'Darwin':
     defaults.blas_lapack = ''
@@ -198,7 +200,7 @@ if os.name == 'nt' and 'g++' in env.subst('$CXX'):
 
 if 'help' in COMMAND_LINE_TARGETS:
     # Print help about configuration options and exit
-    print """
+    print("""
         ************************************************
         *   Configuration options for building Ember   *
         ************************************************
@@ -217,16 +219,16 @@ running 'scons build'. The format of this file is:
     option2 = 'value2'
 
         ************************************************
-"""
+""")
     for opt in opts.options:
-        print '\n'.join(formatOption(env, opt))
+        print('\n'.join(formatOption(env, opt)))
     sys.exit(0)
 
 # Print values of all build options:
-print "Configuration variables read from 'ember.conf' and command line:"
+print("Configuration variables read from 'ember.conf' and command line:")
 for line in open('ember.conf'):
-    print '   ', line.strip()
-print
+    print('   ', line.strip())
+print()
 
 env['OS'] = platform.system()
 
@@ -240,7 +242,7 @@ elif env['env_vars']:
         if name in os.environ:
             env['ENV'][name] = os.environ[name]
         elif name not in defaults.env_vars:
-            print 'WARNING: failed to propagate environment variable', name
+            print('WARNING: failed to propagate environment variable', name)
 
 cantera = ['cantera'] + env['cantera_libs'].split(',')
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
@@ -326,7 +328,7 @@ elif env.subst('$CXX') == 'cl':
         defines.append('NDEBUG')
 
 else:
-    print 'error: unknown c++ compiler: "%s"' % env['CXX']
+    print('error: unknown c++ compiler: "%s"' % env['CXX'])
     sys.exit(1)
 
 env.Append(CPPPATH=include_dirs,
@@ -404,13 +406,13 @@ sundials_version_source = get_expression_value(['"sundials/sundials_config.h"'],
                                                    'SUNDIALS_PACKAGE_VERSION')
 retcode, sundials_version = conf.TryRun(sundials_version_source, '.cpp')
 if retcode == 0:
-    print "Failed to determine Sundials version."
-    print "See 'config.log' for details."
+    print("Failed to determine Sundials version.")
+    print("See 'config.log' for details.")
     sys.exit(1)
 
 # Ignore the minor version and convert to integer, e.g. 2.4.x -> 24
 configInfo['EMBER_SUNDIALS_VERSION'] = ''.join(sundials_version.strip().split('.')[:2])
-print """INFO: Using Sundials version %s""" % sundials_version.strip()
+print("""INFO: Using Sundials version %s""" % sundials_version.strip())
 
 config_h = env.Command('src/config.h',
                        'src/config.h.in',
@@ -444,14 +446,29 @@ make_setup = env.SubstFile('#python/setup.py', '#python/setup.py.in')
 script = ('from distutils.sysconfig import *\n'
           'print(get_config_var("EXT_SUFFIX") or get_config_var("SO"))\n'
           'print(get_config_var("INCLUDEPY"))\n'
-          'print(get_config_var("LDLIBRARY"))\n'
+          'print(get_config_var("LIBRARY") or get_config_var("LDLIBRARY"))\n'
+          'print(get_config_var("LIBDIR"))\n'
           'print(get_python_version())\n')
 
-suffix, includepy, pylib, target_py_version = [s.strip()
+suffix, includepy, pylib, pylibdir, target_py_version = [s.strip()
     for s in getCommandOutput(env['python_cmd'], '-c', script).split()]
+
+if pylibdir != 'None':
+    env.Append(LIBPATH=pylibdir)
 
 def compile_cython(target, source, env):
     cythonize([f.abspath for f in source])
+
+# extract 'pythonX.Y' from 'libpythonX.Y.dll.a' or 'libpythonX.Y.a'
+if pylib != 'None':
+    pylib = pylib[3:]
+    if pylib.endswith('.a'):
+        pylib = pylib[:-2]
+    if pylib.endswith('.dll'):
+        pylib = pylib[:-4]
+    python_libs = [pylib]
+else:
+    python_libs = []
 
 env.Command('python/ember/_ember.cpp', ['python/ember/_ember.pyx'], compile_cython)
 env.Depends('python/ember/_ember.cpp', 'python/ember/_ember.pxd')
@@ -463,8 +480,7 @@ cyenv.Append(CPPPATH=includepy)
 if env['OS'] == 'Darwin':
     cyenv.Append(LINKFLAGS='-undefined dynamic_lookup')
 elif 'cygwin' in platform.system().lower():
-    # extract 'pythonX.Y' from 'libpythonX.Y.dll.a'
-    cyenv.Append(LIBS=[pylib[3:-6]])
+    cyenv.Append(LIBS=python_libs)
 
 # Suppress warnings from Cython-generated code
 if 'g++' in env.subst('$CXX'):
@@ -499,13 +515,15 @@ testenv = env.Clone()
 testenv.Append(LIBS=['gtest'],
                CPPPATH=['ext/gtest/include'])
 
+if pylibdir != 'None':
+    testenv.AppendENVPath('LD_LIBRARY_PATH', pylibdir)
+
 if os.name == 'nt':
-    testenv.Append(LIBPATH=get_config_var('LIBDEST'))
     testenv['ENV']['PATH'] += ';' + Dir('lib').abspath
     if env.subst('CXX') != 'cl':
-        testenv.Append(LIBS=['python' + target_py_version.replace('.','')])
+        testenv.Append(LIBS=python_libs)
 else:
-    testenv.Append(LIBS=['python' + target_py_version])
+    testenv.Append(LIBS=python_libs)
 
 test_program = testenv.Program('bin/unittest',
                                Glob('build/test/*.cpp') + common_objects)

@@ -8,6 +8,8 @@ to generate the Boost Python library for.
 The script takes as an argument the path to the Boost directory
 """
 
+from __future__ import print_function
+
 import sys
 import os
 import shutil
@@ -17,9 +19,9 @@ from distutils.sysconfig import get_config_var
 from os.path import join
 
 def main(boost_dir):
-    print 'This is Python %s' % platform.python_version()
-    print 'Compiled with %s' % platform.python_compiler()
-    print 'Architecture: %s' % platform.architecture()[0]
+    print('This is Python %s' % platform.python_version())
+    print('Compiled with %s' % platform.python_compiler())
+    print('Architecture: %s' % platform.architecture()[0])
     buildlibs = ['thread', 'date_time']
 
     pycomp = platform.python_compiler()
@@ -30,7 +32,7 @@ def main(boost_dir):
     elif pycomp.startswith('MSC v.1600'):
         msvc_version  = '10.0' # Visual Studio 2010
     else:
-        print 'Error: Python compiled with unknown version of Visual Studio'
+        print('Error: Python compiled with unknown version of Visual Studio')
         sys.exit(0)
     msvc_short = msvc_version.replace('.', '')
 
@@ -50,7 +52,7 @@ def main(boost_dir):
         os.system('bootstrap.bat')
 
     boost_version_string = getBoostVersion(boost_dir)
-    print 'Boost version: %s' % boost_version_string
+    print('Boost version: %s' % boost_version_string)
 
     extra_args = ['-j8',
                   '--user-config=%s' % jamConfig.name]
@@ -81,4 +83,4 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         main(sys.argv[1])
     else:
-        print r'Usage: python setupBoost.py c:\path\to\boost'
+        print(r'Usage: python setupBoost.py c:\path\to\boost')

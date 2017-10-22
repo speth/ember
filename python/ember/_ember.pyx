@@ -9,6 +9,26 @@ import sys
 from cython.operator cimport dereference as deref
 from _ember cimport *
 
+cdef int _pythonMajorVersion = sys.version_info[0]
+
+cdef string stringify(x) except *:
+    """ Converts Python strings to std::string. """
+    # This method works with both Python 2.x and 3.x.
+    if isinstance(x, bytes):
+        return string(<bytes>x)
+    else:
+        tmp = bytes(x.encode())
+        return string(tmp)
+
+cdef pystr(string x):
+    cdef bytes s = x.c_str()
+    if _pythonMajorVersion == 2:
+        # Python 2.x
+        return s
+    else:
+        # Python 3.x
+        return s.decode()
+
 cdef np.ndarray[np.double_t, ndim=1] getArray_vector(vector[double]& vec):
     cdef np.ndarray[np.double_t, ndim=1] v = np.empty(vec.size())
     cdef int i
@@ -141,11 +161,11 @@ cdef double integrator_func_callback(double x, double t, double U, double T,
             return np.nan
 
 def addCanteraDirectory(dirname):
-    CxxAddCanteraDirectory(dirname)
+    CxxAddCanteraDirectory(stringify(dirname))
 
 
 def writelog(text):
-    CxxSingletonLogfile.write(text)
+    CxxSingletonLogfile.write(stringify(text))
 
 
 cdef class ConfigOptions:
@@ -165,9 +185,9 @@ cdef class ConfigOptions:
                 return option, True
 
         # Paths
-        opts.outputDir = self.paths.outputDir
+        opts.outputDir = stringify(self.paths.outputDir)
         if self.paths.logFile is not None:
-            CxxSingletonLogfile.open(self.paths.logFile)
+            CxxSingletonLogfile.open(stringify(self.paths.logFile))
         if not os.path.exists(opts.outputDir):
             os.makedirs(opts.outputDir)
 
@@ -181,17 +201,17 @@ cdef class ConfigOptions:
         opts.cylindricalFlame = G.flameGeometry == 'cylindrical'
         opts.discFlame = G.flameGeometry == 'disc'
         opts.twinFlame = G.twinFlame
-        opts.chemistryIntegrator = G.chemistryIntegrator
-        opts.splittingMethod = G.splittingMethod
-        opts.setContinuityBC(G.continuityBC)
+        opts.chemistryIntegrator = stringify(G.chemistryIntegrator)
+        opts.splittingMethod = stringify(G.splittingMethod)
+        opts.setContinuityBC(stringify(G.continuityBC))
         opts.errorStopCount = G.errorStopCount
         opts.stopIfError = G.errorStopCount > 0
 
         # Chemistry
-        opts.gasMechanismFile = self.chemistry.mechanismFile
-        opts.gasPhaseID = self.chemistry.phaseID
-        opts.transportModel = self.chemistry.transportModel
-        opts.kineticsModel = self.chemistry.kineticsModel
+        opts.gasMechanismFile = stringify(self.chemistry.mechanismFile)
+        opts.gasPhaseID = stringify(self.chemistry.phaseID)
+        opts.transportModel = stringify(self.chemistry.transportModel)
+        opts.kineticsModel = stringify(self.chemistry.kineticsModel)
         opts.transportThreshold = self.chemistry.threshold
         if self.chemistry.rateMultiplierFunction is not None:
             opts.rateMultiplierFunctionType = 'chebyshev'
@@ -218,7 +238,7 @@ cdef class ConfigOptions:
         w, h = Y.shape[0], Y.shape[1]
         opts.Y_initial = map_matrix(&Y[0,0], h, w, h, 1)
 
-        opts.flameType = IC.flameType
+        opts.flameType = stringify(IC.flameType)
         opts.pressure = IC.pressure
         opts.quasi2d = IC.flameType == 'quasi2d'
 
@@ -334,7 +354,7 @@ cdef class ConfigOptions:
         TC = self.terminationCondition
         opts.tEnd = TC.tEnd
         opts.tEndMin = TC.tMin
-        opts.terminationMeasurement = TC.measurement if TC.measurement is not None else ''
+        opts.terminationMeasurement = stringify(TC.measurement if TC.measurement is not None else '')
         if TC.measurement:
             opts.terminationPeriod = TC.steadyPeriod
             opts.terminationTolerance = TC.tolerance

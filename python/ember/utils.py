@@ -2,7 +2,7 @@ import numpy as np
 import cantera as ct
 import os
 import sys
-import _ember
+from . import _ember
 import time
 
 class Struct(object):

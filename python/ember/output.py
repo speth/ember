@@ -1,7 +1,7 @@
 import os
 
-from _ember import writelog
-from ember import utils
+from ._ember import writelog
+from . import utils
 import numpy as np
 
 class OutputFile(object):

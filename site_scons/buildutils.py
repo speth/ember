@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 from os.path import join as pjoin
 import sys
@@ -135,24 +136,25 @@ def listify(value):
     Convert an option specified as a string to a list.  Allow both
     comma and space as delimiters. Passes lists transparently.
     """
-    if isinstance(value, types.StringTypes):
-        return value.replace(',', ' ').split()
-    else:
+    if isinstance(value, (list, tuple)):
         # Already a sequence. Return as a list
         return list(value)
+    else:
+        # assume `value` is a string
+        return value.split()
 
 
 def removeFile(name):
     """ Remove file (if it exists) and print a log message """
     if os.path.exists(name):
-        print 'Removing file "%s"' % name
+        print('Removing file "%s"' % name)
         os.remove(name)
 
 
 def removeDirectory(name):
     """ Remove directory recursively and print a log message """
     if os.path.exists(name):
-        print 'Removing directory "%s"' % name
+        print('Removing directory "%s"' % name)
         shutil.rmtree(name)
 
 
@@ -181,7 +183,10 @@ def getCommandOutput(cmd, *args):
     if proc.returncode:
         raise OSError(err)
 
-    return data.strip()
+    if sys.version_info.major == 3:
+        return data.strip().decode('utf-8')
+    else:
+        return data.strip()
 
 class DefineDict(object):
     """
@@ -214,8 +219,8 @@ class ConfigBuilder(object):
 
     def __call__(self, source, target, env):
         for s, t in zip(source, target):
-            config_h_in = file(str(s), "r")
-            config_h = file(str(t), "w")
+            config_h_in = open(str(s), "r")
+            config_h = open(str(t), "w")
 
             config_h.write(config_h_in.read() % self.defines)
             config_h_in.close()
@@ -223,12 +228,12 @@ class ConfigBuilder(object):
             self.print_config(str(t))
 
     def print_config(self, filename):
-        print 'Generating %s with the following settings:' % filename
-        for key, val in sorted(self.defines.data.iteritems()):
+        print('Generating %s with the following settings:' % filename)
+        for key, val in sorted(self.defines.data.items()):
             if val is not None:
-                print "    %-35s %s" % (key, val)
+                print("    %-35s %s" % (key, val))
         for key in sorted(self.defines.undefined):
-            print "    %-35s %s" % (key, '*undefined*')
+            print("    %-35s %s" % (key, '*undefined*'))
 
 
 # Monkey patch for SCons Cygwin bug

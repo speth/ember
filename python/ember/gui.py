@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 import os
 import threading
 import time
-import types
 import numpy as np
 from PySide import QtGui, QtCore
 import utils
@@ -17,6 +17,10 @@ matplotlib.use('Qt4Agg')
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+if sys.version_info.major == 3:
+    _stringTypes = (str,)
+else:
+    _stringTypes = (str, unicode)
 
 class SolverThread(threading.Thread):
     def __init__(self, *args, **kwargs):
@@ -474,9 +478,9 @@ class MainWindow(QtGui.QMainWindow):
             self.conf = input.Config(input.Paths(logFile='gui-runlog.txt'))
         elif isinstance(conf, input.Config):
             self.conf = conf
-        elif isinstance(conf, types.StringTypes):
+        elif isinstance(conf, _stringTypes):
             if not os.path.exists(conf):
-                print "Can't find input file '%s'" % conf
+                print("Can't find input file '%s'" % conf)
                 return
             localenv = {}
             execstatements = ['from numpy import *',
@@ -537,7 +541,7 @@ class MainWindow(QtGui.QMainWindow):
                     self.saveConf(False)
                     return
                 elif ret != dlg.Yes:
-                    print 'unknown return value:', ret
+                    print('unknown return value:', ret)
 
             self.confFileName = filename
         else:

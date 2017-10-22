@@ -1,11 +1,11 @@
 import os.path as _path
 
 import cantera
-from _ember import *
-import _ember
-from input import *
-from output import *
-import utils
+from ._ember import *
+from . import _ember
+from .input import *
+from .output import *
+from . import utils
 
 __version__ = '1.4.0'
 

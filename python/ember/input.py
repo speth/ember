@@ -12,19 +12,24 @@ configuration by passing :class:`.Options` objects to the constructor for
         InitialCondition(equivalenceRatio=0.9))
 """
 
+from __future__ import print_function
+
 import numbers
 import os
 import sys
-import types
 import cantera
 import numpy as np
-import utils
-import output
+from . import utils
 import copy
 import time
 
-import _ember
+from . import _ember
 from . import output
+
+if sys.version_info.major == 3:
+    _stringTypes = (str,)
+else:
+    _stringTypes = (str, unicode)
 
 class Option(object):
     """
@@ -101,7 +106,10 @@ class Option(object):
         return repr(self.value)
 
     def __nonzero__(self):
-        return bool(self.value)
+        return bool(self.value) # python2
+
+    def __bool__(self):
+        return bool(self.value) # python3
 
     def __eq__(self, other):
         try:
@@ -119,7 +127,7 @@ class Option(object):
 class StringOption(Option):
     """ An option whose value must be a string. """
     def validate(self):
-        if not (isinstance(self.value, types.StringTypes) or
+        if not (isinstance(self.value, _stringTypes) or
                 (self.value is None and self.nullable)):
             return 'Value must be a string. Got %r' % self.value
         return Option.validate(self)
@@ -156,12 +164,12 @@ class Options(object):
     """ Base class for elements of :class:`.Config` """
     def __init__(self, **kwargs):
         # Copy the defaults from the class's dictionary
-        for name,value in self.__class__.__dict__.iteritems():
+        for name,value in self.__class__.__dict__.items():
             if isinstance(value, Option):
                 setattr(self, name, copy.deepcopy(value))
 
         # Apply the options specified in kwargs
-        for key,value in kwargs.iteritems():
+        for key,value in kwargs.items():
             if hasattr(self, key):
                 opt = getattr(self, key)
                 if isinstance(opt, Option):
@@ -870,7 +878,7 @@ class Config(object):
         return ConcreteConfig(self)
 
     def __iter__(self):
-        for item in self.__dict__.itervalues():
+        for item in self.__dict__.values():
             if isinstance(item, Options):
                 yield item
 
@@ -893,38 +901,38 @@ class Config(object):
             not self.general.twinFlame and
             not cylindricalFlame):
             error = True
-            print ("Error: PositionControl can only be used when either 'twinFlame'\n"
-                   "       or 'cylindricalFlame' is set to True.")
+            print("Error: PositionControl can only be used when either 'twinFlame'\n"
+                  "       or 'cylindricalFlame' is set to True.")
 
         # twinFlame and cylindricalFlame are mutually exclusive:
         if cylindricalFlame and self.general.twinFlame:
             error = True
-            print "Error: 'twinFlame' and 'cylindricalFlame' are mutually exclusive."
+            print("Error: 'twinFlame' and 'cylindricalFlame' are mutually exclusive.")
 
         # discFlame and cylindricalFlame are mutually exclusive:
         if cylindricalFlame and discFlame:
             error = True
-            print "Error: 'discFlame' and 'cylindricalFlame' are mutually exclusive."
+            print("Error: 'discFlame' and 'cylindricalFlame' are mutually exclusive.")
 
         # the "fuelLeft" option only makes sense for diffusion flames
         if (self.initialCondition.flameType == 'premixed' and
             self.general.fuelLeft.isSet):
             error = True
-            print "Error: 'general.fuelLeft' should not be specified for premixed flames."
+            print("Error: 'general.fuelLeft' should not be specified for premixed flames.")
 
         # the "unburnedLeft" option only makes sense for premixed flames
         if (self.initialCondition.flameType == 'diffusion' and
             self.general.unburnedLeft.isSet):
             error = True
-            print "Error: 'general.unburnedLeft' should not be specified for diffusion flames."
+            print("Error: 'general.unburnedLeft' should not be specified for diffusion flames.")
 
         # the "fixedTemperature" boundary condition currently only works with
         # balanced splitting
         if (self.general.splittingMethod == 'strang' and
             self.general.continuityBC == 'fixedTemperature'):
             error = True
-            print ("Error: 'fixedTemperature' continuity boundary condition is"
-                   " only compatible with 'balanced' splitting.")
+            print("Error: 'fixedTemperature' continuity boundary condition is"
+                  " only compatible with 'balanced' splitting.")
 
         # Make sure that the mechanism file actually works and contains the
         # specified fuel and oxidizer species
@@ -950,13 +958,13 @@ class Config(object):
             restart = self.initialCondition.restartFile.value
             if not os.path.exists(restart):
                 error = True
-                print "Error: Couldn't find restart file %r.\n" % restart
+                print("Error: Couldn't find restart file %r.\n" % restart)
 
         if error:
-            print 'Validation failed.'
-            print 'To force simulation attempt: Config.run("force")'
+            print('Validation failed.')
+            print('To force simulation attempt: Config.run("force")')
         else:
-            print 'Validation completed successfully.'
+            print('Validation completed successfully.')
 
         return not error
 
@@ -972,17 +980,17 @@ class Config(object):
         for i in range(len(Rf)):
             if Rf[i] > 1e30:
                 error = True
-                print ('WARNING: Excessively high forward rate constant'
-                       ' for reaction %i at T = %6.2f K' % (i+1,T))
-                print '    Reaction equation: %s' % gas.reaction_equation(i)
-                print '    Forward rate constant: %e' % Rf[i]
+                print('WARNING: Excessively high forward rate constant'
+                      ' for reaction %i at T = %6.2f K' % (i+1,T))
+                print('    Reaction equation: %s' % gas.reaction_equation(i))
+                print('    Forward rate constant: %e' % Rf[i])
 
             if Rr[i] > 1e30:
                 error = True
-                print ('WARNING: Excessively high reverse rate constant'
-                       ' for reaction %i at T = %6.2f K' % (i+1,T))
-                print '    Reaction equation: %s' % gas.reaction_equation(i)
-                print '    Reverse rate constant: %e' % Rr[i]
+                print('WARNING: Excessively high reverse rate constant'
+                      ' for reaction %i at T = %6.2f K' % (i+1,T))
+                print('    Reaction equation: %s' % gas.reaction_equation(i))
+                print('    Reverse rate constant: %e' % Rr[i])
 
         return error
 
@@ -1007,8 +1015,8 @@ class Config(object):
         if command is None:
             self.validate()
         elif command != 'force':
-            print 'An argument of "force" will allow for skipping validation and attempting to simulate.'
-            print 'Exiting...'
+            print('An argument of "force" will allow for skipping validation and attempting to simulate.')
+            print('Exiting...')
 
         concrete = self.evaluate()
         if self.strainParameters.rates:
@@ -1027,7 +1035,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         super(ConcreteConfig, self).__init__()
         self.original = config
 
-        for name, opts in config.__dict__.iteritems():
+        for name, opts in config.__dict__.items():
             if isinstance(opts, Options):
                 group = opts.__class__()
                 group.original = opts
@@ -1291,11 +1299,11 @@ class ConcreteConfig(_ember.ConfigOptions):
         confString = self.original.stringify()
 
         if not os.path.isdir(self.paths.outputDir):
-            os.makedirs(self.paths.outputDir, 0755)
+            os.makedirs(self.paths.outputDir, 0o0755)
         confOutPath = os.path.join(self.paths.outputDir, 'config')
         if (os.path.exists(confOutPath)):
             os.unlink(confOutPath)
-        confOut = file(confOutPath, 'w')
+        confOut = open(confOutPath, 'w')
         confOut.write(confString)
 
         solver = _ember.FlameSolver(self)
@@ -1316,22 +1324,22 @@ class ConcreteConfig(_ember.ConfigOptions):
         confString = self.original.stringify()
         strainRates = self.strainParameters.rates
         if not strainRates:
-            print 'No strain rate list specified'
+            print('No strain rate list specified')
             return
 
         self.strainParameters.rates = None
         if self.paths.logFile:
-            _logFile = file(self.paths.logFile, 'w')
+            _logFile = open(self.paths.logFile, 'w')
             def log(message):
                 _logFile.write(message)
                 _logFile.write('\n')
                 _logFile.flush()
         else:
             def log(message):
-                print message
+                print(message)
 
         if not os.path.exists(self.paths.outputDir):
-            os.mkdir(self.paths.outputDir, 0755)
+            os.mkdir(self.paths.outputDir, 0o0755)
 
         self.strainParameters.initial = strainRates[0]
 
@@ -1378,7 +1386,7 @@ class ConcreteConfig(_ember.ConfigOptions):
                 # Data is not already present, so run the flame solver for this strain rate
 
                 log('Beginning run at strain rate a = %g s^-1' % a)
-                confOut = file(configPath, 'w')
+                confOut = open(configPath, 'w')
                 confOut.write(confString)
 
                 self.strainParameters.initial = a

@@ -87,23 +87,23 @@ def main():
     Y3 = getBdfSolutions(0.0125, 1.0, y0, A, k)
     exact = ExactIntegrator(y0, A, k)
 
-    print 'Temporal BDF2 solutions, dt = 0.20:'
+    print('Temporal BDF2 solutions, dt = 0.20:')
     for y in Y1:
-        print '{' + ', '.join(['%16.14f' % yi for yi in y]) + '}'
-    print ''
+        print('{' + ', '.join(['%16.14f' % yi for yi in y]) + '}')
+    print()
 
-    print 'BDF2 solution at t = 1.0 (dt = 0.05)'
-    print '{' + ', '.join(['%16.14f' % yi for yi in Y2[-1]]) + '}\n'
+    print('BDF2 solution at t = 1.0 (dt = 0.05)')
+    print('{' + ', '.join(['%16.14f' % yi for yi in Y2[-1]]) + '}\n')
 
-    print 'BDF2 solution at t = 1.0 (dt = 0.0125):'
-    print '{' + ', '.join(['%16.14f' % yi for yi in Y3[-1]]) + '}\n'
+    print('BDF2 solution at t = 1.0 (dt = 0.0125):')
+    print('{' + ', '.join(['%16.14f' % yi for yi in Y3[-1]]) + '}\n')
 
-    print 'Exact solution at t = 1.0:'
-    print '{' + ', '.join(['%16.14f' % yi for yi in exact(1.0)]) + '}\n'
+    print('Exact solution at t = 1.0:')
+    print('{' + ', '.join(['%16.14f' % yi for yi in exact(1.0)]) + '}\n')
 
-    print 'Apparent order of convergence: dt = 0.05 vs dt 0.0125:'
-    print np.log((np.linalg.norm(Y2[-1] - exact(1.0))
-                  / np.linalg.norm(Y3[-1] - exact(1.0)))) / np.log(0.05/0.0125)
+    print('Apparent order of convergence: dt = 0.05 vs dt 0.0125:')
+    print(np.log((np.linalg.norm(Y2[-1] - exact(1.0))
+                  / np.linalg.norm(Y3[-1] - exact(1.0)))) / np.log(0.05/0.0125))
 
 
 if __name__ == '__main__':

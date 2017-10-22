@@ -127,5 +127,4 @@ class TestDiffusion(CanteraTest):
             self.assertNear(ox.Y[i], solver.Y[i,-1])
 
         # products
-        print prod.T, solver.T
         self.assertTrue(prod.T - 300 < max(solver.T) < prod.T)
