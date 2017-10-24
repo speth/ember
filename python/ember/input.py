@@ -241,7 +241,7 @@ def _isDiffusion(conf):
 
 
 def _isSymmetric(conf):
-    return conf.general.cylindricalFlame or conf.general.twinFlame
+    return conf.general.flameGeometry == 'cylindrical' or conf.general.twinFlame
 
 
 def _usingCvode(conf):
@@ -293,7 +293,7 @@ class General(Options):
 
     #: True if solving a planar flame that is symmetric about the x = 0 plane.
     twinFlame = BoolOption(False,
-        filter=lambda conf: not conf.general.cylindricalFlame)
+        filter=lambda conf: conf.general.flameGeometry != 'cylindrical')
 
     #: Input file (HDF5 format) containing the interpolation data needed for
     #: the quasi2d mode. Contains:
