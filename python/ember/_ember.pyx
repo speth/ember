@@ -188,8 +188,6 @@ cdef class ConfigOptions:
         opts.outputDir = stringify(self.paths.outputDir)
         if self.paths.logFile is not None:
             CxxSingletonLogfile.open(stringify(self.paths.logFile))
-        if not os.path.exists(opts.outputDir):
-            os.makedirs(opts.outputDir)
 
         # General
         G = self.general
