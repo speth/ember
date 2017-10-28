@@ -174,7 +174,10 @@ int QssIntegrator::integrateOneStep(double tf) {
         // Calculate new f, check for convergence, and limit decreasing
         // functions. the order of the operations in this loop is important.
         for (size_t i=0; i<N; i++) {
-            double scr2 = std::max(ys[i] + dt*scratch[i], 0.0);
+            double scr2 = ys[i] + dt*scratch[i];
+            if (enforce_ymin[i]) {
+                scr2 = std::max(scr2, ymin[i]);
+            }
             double scr1 = abs(scr2 - y1[i]);
             y[i] = std::max(scr2, ymin[i]);
 
