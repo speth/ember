@@ -106,7 +106,7 @@ cdef void logger_func_callback(const string& name, int flag,
     """
     with gil:
         try:
-            (<LoggerCallback>obj).eval(name, flag)
+            (<LoggerCallback>obj).eval(pystr(name), flag)
         except BaseException as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
 
