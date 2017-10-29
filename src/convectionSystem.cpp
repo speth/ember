@@ -3,9 +3,6 @@
 #include "chemistry0d.h"
 #include "tbb_tools.h"
 
-#include <boost/foreach.hpp>
-#define foreach BOOST_FOREACH
-
 ConvectionSystemUTW::ConvectionSystemUTW()
     : gas(NULL)
     , continuityBC(ContinuityBoundaryCondition::Left)
@@ -417,7 +414,7 @@ void ConvectionSystemSplit::setGrid(const OneDimGrid& grid)
 {
     GridBased::setGrid(grid);
     utwSystem.setGrid(grid);
-    foreach (ConvectionSystemY& system, speciesSystems) {
+    for (ConvectionSystemY& system : speciesSystems) {
         system.setGrid(grid);
     }
 }
@@ -506,7 +503,7 @@ void ConvectionSystemSplit::setState(double tInitial)
     utwSolver->minStep = 1e-16;
     utwSolver->initialize();
 
-    foreach (SundialsCvode& solver, speciesSolvers) {
+    for (SundialsCvode& solver : speciesSolvers) {
         solver.t0 = tInitial;
         solver.maxNumSteps = 1000000;
         solver.minStep = 1e-16;
@@ -568,7 +565,7 @@ void ConvectionSystemSplit::updateContinuityBoundaryCondition
 void ConvectionSystemSplit::resetSplitConstants()
 {
     utwSystem.resetSplitConstants();
-    foreach (ConvectionSystemY& system, speciesSystems) {
+    for (ConvectionSystemY& system : speciesSystems) {
         system.resetSplitConstants();
     }
 }
@@ -635,7 +632,7 @@ void ConvectionSystemSplit::integrateSpeciesTerms(size_t k1, size_t k2)
 int ConvectionSystemSplit::getNumSteps()
 {
     int nSteps = utwSolver->getNumSteps();
-    foreach (SundialsCvode& solver, speciesSolvers) {
+    for (SundialsCvode& solver : speciesSolvers) {
         nSteps += solver.getNumSteps();
     }
     return nSteps;

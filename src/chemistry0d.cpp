@@ -7,9 +7,6 @@
 #include "cantera/transport/MixTransport.h"
 #include "cantera/transport/MultiTransport.h"
 
-#include <boost/foreach.hpp>
-#define foreach BOOST_FOREACH
-
 ApproxMixTransport::ApproxMixTransport()
     : _threshold(0.0)
 {
@@ -80,7 +77,7 @@ void ApproxMixTransport::getMixDiffCoeffs(double* const d)
                     }
                 }
             } else {
-                foreach (size_t j, _kMajor) {
+                for (size_t j : _kMajor) {
                     if (j != k) {
                         sum2 += m_molefracs[j] / m_bdiff(j,k);
                     }
@@ -124,7 +121,7 @@ void ApproxMixTransport::getMixDiffCoeffsMass(double* const d)
                     sum2 += m_molefracs[i] * m_mw[i] / m_bdiff(k,i);
                 }
             } else {
-                foreach (size_t i, _kMajor) {
+                for (size_t i : _kMajor) {
                     if (i==k) {
                         continue;
                     }
@@ -163,7 +160,7 @@ void ApproxMixTransport::getMixDiffCoeffsMole(double* const d)
                     }
                 }
             } else {
-                foreach (size_t j, _kMajor) {
+                for (size_t j : _kMajor) {
                     if (j != k) {
                         sum2 += m_molefracs[j] / m_bdiff(j,k);
                     }

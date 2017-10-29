@@ -2,8 +2,6 @@
 #include "debugUtils.h"
 
 #include <assert.h>
-#include <boost/foreach.hpp>
-#define foreach BOOST_FOREACH
 
 using namespace mathUtils;
 using std::max; using std::min;
@@ -371,7 +369,7 @@ void OneDimGrid::addPoint(int jInsert, vector<dvector>& y)
     tmp << dampVal.head(jInsert + 1), val, dampVal.tail(N - jInsert - 1);
     dampVal = tmp;
 
-    foreach(dvector& row, y) {
+    for (dvector& row : y) {
         double yNew = mathUtils::splines(x, Eigen::Map<dvec>(&row[0], row.size()),
                                          xInsert);
         row.insert(row.begin()+jInsert+1, yNew);
@@ -388,7 +386,7 @@ void OneDimGrid::removePoint(int jRemove, vector<dvector>& y)
     x = tmp;
     tmp << dampVal.head(jRemove), dampVal.tail(dampVal.rows() - jRemove - 1);
     dampVal = tmp;
-    foreach(dvector& row, y) {
+    for (dvector& row : y) {
         row.erase(row.begin() + jRemove);
     }
 }

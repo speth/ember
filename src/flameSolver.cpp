@@ -1,8 +1,5 @@
 #include "flameSolver.h"
 #include "scalarFunction.h"
-#include <boost/foreach.hpp>
-
-#define foreach BOOST_FOREACH
 
 FlameSolver::FlameSolver()
     : U(0, 0, Stride1X(1 ,1))
@@ -699,7 +696,7 @@ void FlameSolver::setDiffusionSolverState(double tInitial)
 {
     splitTimer.resume();
     size_t k = 0;
-    foreach (TridiagonalIntegrator& integrator, diffusionSolvers) {
+    for (TridiagonalIntegrator& integrator : diffusionSolvers) {
         double dt = (dlj.square().tail(nPoints - 2) /
             (diffusionTerms[k].B * diffusionTerms[k].D).segment(1, nPoints-2)).minCoeff();
         dt = std::min(options.diffusionTimestepMultiplier * dt, options.globalTimestep);
