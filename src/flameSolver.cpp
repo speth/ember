@@ -791,12 +791,31 @@ void FlameSolver::integrateProductionTerms(size_t j1, size_t j2)
             T(j) = sourceTerms[j].T;
             Y.col(j) = sourceTerms[j].Y;
         } else {
-            logFile.write(format("Error at j = %i") % j);
+            // Print gas mole fractions to help identify problematic reactions
+            dvec X0(nSpec), X1(nSpec);
+            gas.thermo.setMassFractions_NoNorm(Y.col(j).data());
+            gas.getMoleFractions(X0);
+            gas.thermo.setMassFractions_NoNorm(sourceTerms[j].Y.data());
+            gas.getMoleFractions(X1);
+            logFile.write(format("Error at j = %i. Gas state:\n") % j);
+            logFile.write(" k        Species     X Initial    X Final     Delta X");
+            logFile.write("----  --------------  ----------  ----------  ----------");
+            logFile.write(format("      %14s  %10.4g  %10.4g  %10.4g") %
+                "T" % T(j) % sourceTerms[j].T % (sourceTerms[j].T - T(j)));
+            for (size_t k = 0; k < nSpec; k++) {
+                if (std::abs(X0[k]) > 1e-4 ||
+                    std::abs(X1[k]) > 1e-4 ||
+                    std::abs(X1[k]-X0[k]) > 1e-6) {
+                    logFile.write(format("%4s  %14s  %10.4g  %10.4g  %10.4g") %
+                        k % gas.thermo.speciesName(k) % X0[k] % X1[k] % (X1[k]-X0[k]));
+                }
+            }
             if (debugParameters::veryVerbose) {
-                logFile.write(format("T = %s") % system.T);
+                logFile.write(format("\nT = %s") % system.T);
                 logFile.write(format("U = %s") % system.U);
                 logFile.write("Y = ", false);
-                logFile.write(system.Y);
+                Eigen::IOFormat fmt(15, Eigen::DontAlignCols, ", ", ", ", "", "", "[", "]");
+                logFile.write(system.Y.format(fmt));
                 if (options.nThreads == 1) {
                     // This diagnostic file can only be written when running with a
                     // single thread to avoid calling Python from threads that were
