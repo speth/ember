@@ -7,9 +7,9 @@ import threading
 import time
 import numpy as np
 from PySide import QtGui, QtCore
-import utils
-import input
-import _ember
+from . import utils
+from . import input
+from . import _ember
 
 import matplotlib
 matplotlib.rcParams['backend.qt4'] = 'PySide'
@@ -29,7 +29,7 @@ class SolverThread(threading.Thread):
         self.conf = kwargs['conf'].evaluate()
         self.solver.lock = threading.Lock()
         self.solver.progress = 0.0
-        self._stop = False
+        self.__stop = False
         self.daemon = True
         self.stage = 0
 
@@ -38,7 +38,7 @@ class SolverThread(threading.Thread):
     def run(self):
         done = 0
         i = 0
-        while not self._stop and not done:
+        while not self.__stop and not done:
             i += 1
             with self.solver.lock:
                 done = self.solver.step()
@@ -47,10 +47,10 @@ class SolverThread(threading.Thread):
                 self.updateProgress()
             if done:
                 self.solver.progress = 1.0
-        self._stop = True
+        self.__stop = True
 
     def stop(self):
-        self._stop = True
+        self.__stop = True
 
     def updateProgress(self):
         TC = self.conf.terminationCondition
@@ -488,7 +488,7 @@ class MainWindow(QtGui.QMainWindow):
                               'from ember.input import *']
 
             execstatements.extend(open(conf).readlines())
-            exec '\n'.join(execstatements) in localenv
+            exec('\n'.join(execstatements), localenv)
             self.conf = localenv['conf']
             self.confFileName = conf
 
