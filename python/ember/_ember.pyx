@@ -438,7 +438,7 @@ cdef class FlameSolver:
             with nogil:
                 done = self.solver.step()
         except Exception as e:
-            writelog(e.message)
+            writelog(str(e))
             raise
 
         return done
