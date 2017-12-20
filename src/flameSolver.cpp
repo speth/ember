@@ -784,7 +784,13 @@ void FlameSolver::integrateProductionTerms(size_t j1, size_t j2)
         } else {
             err = system.integrateToTime(tStageEnd - tStageStart);
         }
-        if (err < 0) {
+        if (err >= 0) {
+            logFile.verboseWrite(format(" [%s]...") % system.getStats(), false);
+            sourceTerms[j].unroll_y();
+            U(j) = sourceTerms[j].U;
+            T(j) = sourceTerms[j].T;
+            Y.col(j) = sourceTerms[j].Y;
+        } else {
             logFile.write(format("Error at j = %i") % j);
             if (debugParameters::veryVerbose) {
                 logFile.write(format("T = %s") % system.T);
@@ -800,11 +806,6 @@ void FlameSolver::integrateProductionTerms(size_t j1, size_t j2)
                 }
             }
         }
-        logFile.verboseWrite(format(" [%s]...") % system.getStats(), false);
-        sourceTerms[j].unroll_y();
-        U(j) = sourceTerms[j].U;
-        T(j) = sourceTerms[j].T;
-        Y.col(j) = sourceTerms[j].Y;
     }
 }
 

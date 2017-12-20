@@ -308,7 +308,12 @@ void SourceSystemCVODE::setState
 
 int SourceSystemCVODE::integrateToTime(double tf)
 {
-    return integrator->integrateToTime(integrator->t0 + tf);
+    try {
+        return integrator->integrateToTime(integrator->t0 + tf);
+    } catch (Cantera::CanteraError& err) {
+        logFile.write(err.what());
+        return -1;
+    }
 }
 
 int SourceSystemCVODE::integrateOneStep(double tf)
