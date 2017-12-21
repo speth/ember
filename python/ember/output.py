@@ -21,6 +21,9 @@ class OutputFile(object):
                 " Expected one of: ('h5', 'npz')".format(filename))
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        dirname = os.path.dirname(self.filename)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
         if self.filename.endswith('h5'):
             self.data.close()
         elif self.filename.endswith('npz'):

@@ -56,10 +56,10 @@ class SolverThread(threading.Thread):
         TC = self.conf.terminationCondition
         errNow = self.solver.terminationCondition
         if TC.measurement is None:
-            self.solver.progress = self.solver.timeVector[-1] / TC.tEnd
+            self.solver.progress = self.solver.timeseriesWriter.t[-1] / TC.tEnd
         elif self.stage == 0:
             # First part: getting past the minimum steady-state measurement period
-            self.solver.progress = self.frac0 * self.solver.timeVector[-1] / TC.steadyPeriod
+            self.solver.progress = self.frac0 * self.solver.timeseriesWriter.t[-1] / TC.steadyPeriod
             if errNow < 1e9:
                 self.refCond = errNow
                 self.stage = 1
@@ -411,8 +411,8 @@ class SolverWidget(QtGui.QWidget):
         if self.solver.progress > 0:
             self.progressBar.setValue(1000 * self.solver.progress)
         with self.solver.lock:
-            t = np.array(self.solver.timeVector)
-            Sc = np.array(self.solver.consumptionSpeed)
+            t = np.array(self.solver.timeseriesWriter.t)
+            Sc = np.array(self.solver.timeseriesWriter.Sc)
 
             self.T_profile.set_data(self.solver.x * 1000,
                                     self.solver.T)
