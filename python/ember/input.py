@@ -22,6 +22,7 @@ import numpy as np
 from . import utils
 import copy
 import time
+import shutil
 
 from . import _ember
 from . import output
@@ -624,6 +625,28 @@ class StrainParameters(Options):
     function = Option(None, level=2)
 
 
+class Extinction(Options):
+    """ Settings pertaining to running a flame extinction simulation """
+
+    #: Choice of increasing strain rate by a multiplicative factor or step size
+    method = StringOption("step", ("step", "factor"), level=1)
+
+    #: Starting and lower limits for increasing strain rate under either method
+    initialStep = FloatOption(25.0)
+    minStep = FloatOption(0.5)
+    initialFactor = FloatOption(1.05)
+    minFactor = FloatOption(1.0001)
+
+    #: Factor by which the strain rate step size or increase factor is reduced by after each non-burning solution
+    reductionFactor = FloatOption(0.6)
+
+    #: Maximum profile temperature below which simulation is considered non-burning and immediately ended
+    cutoffTemp = FloatOption(1000.0)
+
+    #: Starting strain rate to be used when progressing to extinction
+    initialStrainRate = FloatOption(300.0)
+
+
 class PositionControl(Options):
     """
     Parameters defining the position of the flame as a function of
@@ -873,6 +896,7 @@ class Config(object):
         self.debug = get(Debug)
         self.outputFiles = get(OutputFiles)
         self.terminationCondition = get(TerminationCondition)
+        self.extinction = get(Extinction)
 
     def evaluate(self):
         return ConcreteConfig(self)
@@ -1014,15 +1038,52 @@ class Config(object):
 
         if command is None:
             self.validate()
+        elif command == 'validate':
+            self.validate()
+            return
         elif command != 'force':
             print('An argument of "force" will allow for skipping validation and attempting to simulate.')
             print('Exiting...')
+            return
 
         concrete = self.evaluate()
         if self.strainParameters.rates:
             return concrete.multirun()
         else:
             return concrete.run()
+
+
+    def runESR(self, command=None):
+        """
+        Run an extinction strain rate simulation using the parameters set in
+        this Config.
+
+        The strain rate parameter will be increased until a steady burning flame
+        can no longer be achieved.
+
+        If the script which calls this function is passed the argument
+        *validate*, then the configuration will be checked for errors and the
+        script will exit without running the simulation.
+        """
+        if len(sys.argv) > 1 and sys.argv[1].lower() == 'validate':
+            # Validate the configuration and exit
+            self.validate()
+            return
+
+        concrete = self.evaluate()
+
+        if command is None:
+            self.validate()
+        elif command == 'validate':
+            self.validate()
+            return
+        elif command != 'force':
+            print('An argument of "force" will allow for skipping validation and attempting to simulate.')
+            print('Exiting...')
+            return
+
+        return concrete.runESR()
+
 
 
 class ConcreteConfig(_ember.ConfigOptions):
@@ -1314,6 +1375,219 @@ class ConcreteConfig(_ember.ConfigOptions):
         solver.finalize()
         return solver
 
+    def runESR(self):
+        """
+        Run a sequence of flame simulations at increasing strain rates until
+        a steady burning solution is no longer possible with an increase
+        in strain rate. The parameters governing this progression are defined
+        under the configuration field :attr:`Extinction`.
+        """
+
+        if os.path.exists(self.paths.outputDir):
+            print('Output directory already exists')
+            print('Exiting...')
+            return
+
+        # Establishing the directory structure for saving the output files from
+        # the number of flame simulations at increasing strain rates
+        outDirTop = self.paths.outputDir
+        logPath = self.paths.outputDir+'/logFiles'
+        currentRunPath = self.paths.outputDir+'/runFiles'
+        ssProfilePath = self.paths.outputDir+'/ssFiles'
+        restartPath = None
+
+        self.paths.outputDir = currentRunPath
+
+        if not os.path.exists(self.paths.outputDir):
+            os.makedirs(outDirTop, 0o0755)
+            os.makedirs(logPath, 0o0755)
+            os.makedirs(currentRunPath, 0o0755)
+            os.makedirs(ssProfilePath, 0o0755)
+
+        fileExt = self.outputFiles.fileExtension
+
+        if self.paths.logFile:
+            _logFile = open(self.paths.logFile, 'w')
+            def log(message):
+                _logFile.write(message)
+                _logFile.write('\n')
+                _logFile.flush()
+        else:
+            def log(message):
+                print(message)
+
+        strainRateValues = []
+        maxTemps = []
+
+        strainRate = self.extinction.initialStrainRate
+
+        # There are two methods that can be used to progress and converge to the
+        # extinction strain rate. The first is by an initially constant step
+        # size in strain rate that will later be reduced when converging to the
+        # extinction point. The second is to increase by a factor of the current
+        # strain rate which will also be reduced when converging to the
+        # extinction point.
+        if self.extinction.method == 'step':
+            stepSize = self.extinction.initialStep
+        else:
+            incFactor = self.extinction.initialFactor
+
+        complete = False
+        hasExtinguished = False
+
+        # The extinction simulation is considered converged once the step size
+        # or increase factor has been reduced below the minimum cutoff value
+        # that is specified by the user in the configuration script.
+        while not complete:
+            # Because a continuation approach is used, the flame solution at the
+            # previous strain rate is used as an initial guess for the flame at
+            # the new strain rate, and 'restartPath' references the location of
+            # the most recently converged strained flame at the highest strain
+            # rate so far.
+            if restartPath is not None:
+                if self.extinction.method == 'step':
+                    strainRate += stepSize
+                else:
+                    strainRate *= incFactor
+
+            log('\nBeginning run at strain rate:  %g s^-1' % strainRate)
+
+            self.strainParameters.initial = strainRate
+            self.strainParameters.final = strainRate
+
+            self.paths.logFile = os.path.join(logPath, 'log_sr{:08.2f}.txt'.format(strainRate))
+            self.apply_options()
+            solver = _ember.FlameSolver(self)
+            t1 = time.time()
+            solver.initialize()
+
+            done = False
+            extinguished = False
+            while not done:
+                done = solver.step()
+                # In order to speed up ESR calculations, the user specifies in
+                # the input a 'cutoffTemp'. If the simulation maximum
+                # temperature falls below this temperature, the simulation
+                # stops, and it is assumed that the simulation would simply
+                # continue in time until converging to a non-burning opposed jet
+                # solution which can be computationally intensive, especially
+                # for kinetic models with large numbers of species.
+                if max(solver.T) < self.extinction.cutoffTemp:
+                    done = True
+                    extinguished = True
+            solver.finalize()
+            t2 = time.time()
+
+            log('Run finished; Integration took %.1f seconds.' % (t2-t1))
+
+            # When using 'dTdt' strained flame convergence near the extinction
+            # strain rate, under some conditions the simulation will converge
+            # prematurely. This will yield a maximum temperature that is
+            # incorrectly greater than the previous max T at a lower strain
+            # rate. When this issue is observed, the following code block
+            # modifies and tightens the convergence criteria accordingly to
+            # avoid this non-physical result.
+            if hasExtinguished is True:
+                if max(solver.T) >= maxTemps[-1]:
+                    if self.terminationCondition.measurement == 'dTdt':
+                        print('Switching convergence method to Q')
+                        self.terminationCondition.measurement = 'Q'
+
+                        done = False
+                        while not done:
+                            done = solver.step()
+                            if max(solver.T) < self.extinction.cutoffTemp:
+                                done = True
+                                extinguished = True
+                        solver.finalize()
+                        t2 = time.time()
+
+                    if max(solver.T) >= maxTemps[-1]:
+                        print('Tightening tolerance')
+                        self.terminationCondition.tolerance /= 2.0
+
+                        done = False
+                        while not done:
+                            done = solver.step()
+                            if max(solver.T) < self.extinction.cutoffTemp:
+                                done = True
+                                extinguished = True
+                        solver.finalize()
+                        t2 = time.time()
+
+                    if max(solver.T) >= maxTemps[-1]:
+                        print('Refining tolerance failed')
+                        print('marking as extinguished..')
+                        extinguished = True
+
+            # When a steady, burning solution is found, the solution is saved
+            # and the starting point for subsequent simulations is updated to
+            # this newly converged strain rate.
+            if extinguished is False:
+                log('Found burning solution with Tmax = %.1f' % max(solver.T))
+
+                restartFile = 'prof_sr{:08.2f}.{}'.format(strainRate, fileExt)
+                restartPath = os.path.join(ssProfilePath, restartFile)
+
+                solver.writeStateFile(os.path.splitext(restartFile)[0])
+                os.rename(os.path.join(self.paths.outputDir, restartFile), restartPath)
+
+                strainRateValues.append(strainRate)
+                maxTemps.append(max(solver.T))
+
+                with open(os.path.join(outDirTop, 'conf_extinction.txt'), 'w') as confOut:
+                    confOut.write(self.original.stringify())
+
+            else:
+                log('Found non-burning solution')
+
+                if restartPath is not None:
+                    hasExtinguished = True
+
+                    if self.extinction.method == 'step':
+                        strainRate -= stepSize
+                        stepSize *= self.extinction.reductionFactor
+                        if stepSize < self.extinction.minStep:
+                            complete = True
+                    else:
+                        strainRate /= incFactor
+                        incFactor = 1.0 + (incFactor-1.0) * self.extinction.reductionFactor
+                        if incFactor < self.extinction.minFactor:
+                            complete = True
+
+            # To reduce the number of files produced during an extinction
+            # simulation, the intermediate time point solutions are deleted
+            # after completing a run to the steady state solution.
+            if not complete:
+                shutil.rmtree(currentRunPath)
+                os.mkdir(currentRunPath, 0o0755)
+
+            # It is possible for the user to specify and initial starting strain
+            # rate that is already beyond the extinction strain rate for their
+            # specified initial unburned gas. If a steady, burning flame is not
+            # achieved at the initial strain rate, the initial strain rate is
+            # reduced by a factor of 2 and convergence is tried again.
+            if restartPath is None:
+                strainRate /= 2.0
+                if strainRate < 10.0:
+                    complete = True
+                    print('Failed to find burning starting point')
+            else:
+                self.readInitialCondition(restartPath)
+
+        # A summary of the progression to extinction is saved. This is often
+        # useful when evaluating qualitatively, whether the solution seems to
+        # have converged to the extinction point.
+        with open(os.path.join(outDirTop,'extProfile.csv'),'w') as extProgData:
+            extProgData.write('Strain Rate [1/s],Max. Temp. [K]\n')
+
+            for a, Tmax in zip(strainRateValues, maxTemps):
+                extProgData.write('{0:0.5f},{1:0.5f}\n'.format(a,Tmax))
+            extProgData.close()
+
+        return _ember.FlameSolver(self)
+
+
     def multirun(self):
         """
         Run a sequence of flame simulations at different strain rates using
@@ -1339,7 +1613,7 @@ class ConcreteConfig(_ember.ConfigOptions):
                 print(message)
 
         if not os.path.exists(self.paths.outputDir):
-            os.mkdir(self.paths.outputDir, 0o0755)
+            os.makedirs(self.paths.outputDir, 0o0755)
 
         self.strainParameters.initial = strainRates[0]
 
