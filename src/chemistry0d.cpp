@@ -361,6 +361,9 @@ void CanteraGas::setOptions(const ConfigOptions& options)
 
 void CanteraGas::initialize()
 {
+    // suppress thermo warnings to simplify output. Without this warnings printed for every thread created
+    Cantera::suppress_thermo_warnings();
+
     // XML Information File
     rootXmlNode = Cantera::get_XML_File(mechanismFile);
     if (rootXmlNode == NULL) {
