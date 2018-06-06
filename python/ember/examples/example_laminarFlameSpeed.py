@@ -1,8 +1,16 @@
 #!/usr/bin/python
+"""
+An unstrained flame converges to a stable propagation rate for a slightly
+lean methane/air mixture.
+"""
+
 from ember import *
+import matplotlib.pyplot as plt
+
+output = 'run/ex_lfs'
 
 conf = Config(
-    Paths(outputDir='run/laminar-methane'),
+    Paths(outputDir=output),
     InitialCondition(fuel='CH4:1.0',
                      oxidizer='O2:1, N2:3.76',
                      equivalenceRatio=0.9,
@@ -20,3 +28,16 @@ conf = Config(
 
 if __name__ == '__main__':
     conf.run()
+
+    struct = utils.load(output + '/profNow.h5')
+
+    plt.figure()
+    plt.plot(struct.x, struct.V / struct.rho)
+    plt.xlabel('Position [m]')
+    plt.ylabel('Axial Velocity [m/s]')
+    plt.twinx()
+    plt.plot(struct.x, struct.T, 'r--')
+    plt.tick_params( colors='r')
+    plt.ylabel('Temperature (K)', color='r')
+    plt.savefig(output+'/FinalProfiles.png')
+    plt.close()
