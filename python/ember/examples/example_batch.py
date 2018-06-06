@@ -5,16 +5,23 @@
 #$ -j y
 #$ -o job-output-example-parallel.txt
 
+"""
+Example of running flames multiple configuration conditions (equivalence ratios,
+temperatures, dilutions, etc). Default flame: Lean methane opposing hot products
+in planar opposed jet configuration.
+"""
+
 from ember import *
 
-outputDir = 'run/example-parallel-phi%4.2f'
-logFile = 'out-example-parallel-phi%4.2f'
+outputDir = 'run/ex_batch/ex-parallel-phi%4.2f'
+logFile = 'run/ex_batch/out-ex-parallel-phi%4.2f'
 
 def start(phi):
     conf = Config(
         General(nThreads=8),
         Paths(outputDir=outputDir % phi,
-              logFile=logFile % phi),
+              logFile=logFile % phi
+              ),
         InitialCondition(equivalenceRatio=phi),
         StrainParameters(initial=50,
                          final=50),
