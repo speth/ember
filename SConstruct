@@ -18,10 +18,8 @@ from __future__ import print_function
 
 import os
 import platform
-from distutils.sysconfig import get_config_var
 from distutils.version import StrictVersion
 from Cython.Build import cythonize
-import numpy as np
 from buildutils import *
 
 if not COMMAND_LINE_TARGETS:
@@ -265,9 +263,6 @@ lastlibs += env['blas_lapack'].split(',')
 include_dirs = env['include'].split(',')
 library_dirs = [env.Dir('lib').abspath] + env['libdirs'].split(',')
 
-if os.name == 'nt':
-    library_dirs.append(get_config_var('prefix') + '/libs')
-
 if env['cantera']:
     include_dirs.append(env['cantera'] + '/include')
     library_dirs.append(env['cantera'] + '/lib')
@@ -287,8 +282,6 @@ if env['use_tbb'] and env['tbb']:
     include_dirs.append(env['tbb'] + '/include')
     library_dirs.append(tbbLibDir)
 
-include_dirs.extend([get_config_var('INCLUDEPY'),
-                     np.get_include()])
 
 if ('g++' in env.subst('$CXX')
     or 'clang++' in env.subst('$CXX')
@@ -444,15 +437,21 @@ if os.name == 'nt' and env.subst('$CXX') != 'cl':
 # The Python module
 make_setup = env.SubstFile('#python/setup.py', '#python/setup.py.in')
 script = ('from distutils.sysconfig import *\n'
+          'import numpy\n'
           'print(get_config_var("EXT_SUFFIX") or get_config_var("SO"))\n'
           'print(get_config_var("INCLUDEPY"))\n'
           'print(get_config_var("LIBRARY") or get_config_var("LDLIBRARY"))\n'
           'print(get_config_var("LIBDIR"))\n'
-          'print(get_python_version())\n')
+          'print(get_config_var("prefix"))\n'
+          'print(get_python_version())\n'
+          'print(numpy.get_include())\n')
 
-suffix, includepy, pylib, pylibdir, target_py_version = [s.strip()
+suffix, includepy, pylib, pylibdir, pyprefix, target_py_version, np_include = [s.strip()
     for s in getCommandOutput(env['python_cmd'], '-c', script).split()]
 
+if os.name == 'nt':
+    library_dirs.append(pyprefix + '/libs')
+env.Append(CPPPATH=includepy)
 if pylibdir != 'None':
     env.Append(LIBPATH=pylibdir)
 
@@ -475,7 +474,7 @@ env.Depends('python/ember/_ember.cpp', 'python/ember/_ember.pxd')
 
 cyenv = env.Clone() # environment for compiling the Cython module
 cyenv.Prepend(CPPPATH='src', LIBPATH='build/core', LIBS=corelib)
-cyenv.Append(CPPPATH=includepy)
+cyenv.Append(CPPPATH=np_include)
 
 if env['OS'] == 'Darwin':
     cyenv.Append(LINKFLAGS='-undefined dynamic_lookup')
