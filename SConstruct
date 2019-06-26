@@ -19,7 +19,6 @@ from __future__ import print_function
 import os
 import platform
 from distutils.version import StrictVersion
-from Cython.Build import cythonize
 from buildutils import *
 
 if not COMMAND_LINE_TARGETS:
@@ -469,7 +468,8 @@ if pylib != 'None':
 else:
     python_libs = []
 
-env.Command('python/ember/_ember.cpp', ['python/ember/_ember.pyx'], compile_cython)
+env.Command('python/ember/_ember.cpp', ['python/ember/_ember.pyx'],
+    '''${python_cmd} -c "import Cython.Build; Cython.Build.cythonize('${SOURCE}')"''')
 env.Depends('python/ember/_ember.cpp', 'python/ember/_ember.pxd')
 
 cyenv = env.Clone() # environment for compiling the Cython module
