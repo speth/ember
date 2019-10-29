@@ -72,7 +72,7 @@ class HDFStruct(Struct):
             raise Exception("File not found: " + filename)
         data = h5py.File(filename, mode='r') # We don't need to write to the file
         for key in data:
-            self[key] = data[key].value
+            self[key] = data[key][()]
         data.close() # I don't know if this is necessary, but it can't hurt
 
 
