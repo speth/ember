@@ -6,6 +6,8 @@ burner separation distance assumed. The converged axial velocity profile is plot
 """
 
 from ember import *
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 output = 'run/ex_single'

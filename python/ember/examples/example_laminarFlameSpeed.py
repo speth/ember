@@ -5,6 +5,8 @@ lean methane/air mixture.
 """
 
 from ember import *
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 output = 'run/ex_lfs'

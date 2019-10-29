@@ -5,6 +5,8 @@ for a low strain rate. The converged axial velocity profile is plotted.
 """
 
 from ember import *
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 output = 'run/ex_diffusion'
