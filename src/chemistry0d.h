@@ -7,6 +7,7 @@
 
 #include "cantera/transport/MixTransport.h"
 #include "cantera/transport/MultiTransport.h"
+#include "cantera/transport/UnityLewisTransport.h"
 #include "cantera/transport/TransportFactory.h"
 #include "cantera/thermo/IdealGasPhase.h"
 #include "cantera/kinetics/GasKinetics.h"

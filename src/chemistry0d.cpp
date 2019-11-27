@@ -6,6 +6,7 @@
 #include "cantera/kinetics/importKinetics.h"
 #include "cantera/transport/MixTransport.h"
 #include "cantera/transport/MultiTransport.h"
+#include "cantera/transport/UnityLewisTransport.h"
 
 ApproxMixTransport::ApproxMixTransport()
     : _threshold(0.0)
@@ -396,6 +397,8 @@ void CanteraGas::initialize()
         transport = new Cantera::MultiTransport();
     } else if (transportModel == "Mix") {
         transport = new Cantera::MixTransport();
+    } else if (transportModel == "UnityLewis") {
+        transport = new Cantera::UnityLewisTransport();
     } else if (transportModel == "Approx") {
         ApproxMixTransport* atran = new ApproxMixTransport();
         atran->setThreshold(transportThreshold);
