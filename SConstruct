@@ -137,7 +137,8 @@ opts.AddVariables(
         '', PathVariable.PathAccept),
     PathVariable(
         'boost',
-        'Location of the Boost header files.',
+        'Location of the Boost header files (that is, parent directory'
+        ' of the "include" directory).',
         '', PathVariable.PathAccept),
     ('include',
      'Comma-separated List of additional include directories',
@@ -275,7 +276,6 @@ if env['eigen']:
 
 if env['boost']:
     include_dirs.append(env['boost'] + '/include')
-    library_dirs.append(env['boost'] + '/lib')
 
 if env['use_tbb'] and env['tbb']:
     include_dirs.append(env['tbb'] + '/include')
