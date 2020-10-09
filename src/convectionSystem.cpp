@@ -472,7 +472,6 @@ void ConvectionSystemSplit::resize
     utwSolver->setBandwidth(0,0);
     utwSolver->reltol = reltol;
     utwSolver->linearMultistepMethod = CV_ADAMS;
-    utwSolver->nonlinearSolverMethod = CV_FUNCTIONAL;
     for (size_t j=0; j<nPoints; j++) {
         utwSolver->abstol[3*j+kMomentum] = abstolU;
         utwSolver->abstol[3*j+kEnergy] = abstolT;
@@ -672,7 +671,6 @@ void ConvectionSystemSplit::configureSolver(SundialsCvode& solver, const size_t 
         solver.abstol[j] = abstolY;
     }
     solver.linearMultistepMethod = CV_ADAMS;
-    solver.nonlinearSolverMethod = CV_FUNCTIONAL;
 
     speciesSystems[k].resize(nPoints);
     speciesSystems[k].Yleft = Yleft[k];

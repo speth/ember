@@ -62,15 +62,15 @@ The following software needs to be installed in order to compile Ember:
   .. note::
 
      Cantera must be compiled using the option ``build_thread_safe=y``
-     (passed as a command line arguement to ``scons build ...``)
+     (passed as a command line argument to ``scons build ...``)
 
-* Sundials (2.4.0 or 2.5.0)
+* Sundials (>= 3.0)
 
   .. note::
 
      On Linux, Sundials must be compiled to use "position independent
-     code". For most compilers, this can be specified by using the option
-     ``--with-cflags=-fPIC`` when running ``configure``.
+     code". For most compilers, this can be specifying ``-fPIC``
+     as part of the ``CMAKE_C_FLAGS`` variables when running CMake.
 
 * Intel Threading Building Blocks (>= 4.0). TBB is optional, but strongly
   recommended. Without TBB, Ember will only run on a single processor. To

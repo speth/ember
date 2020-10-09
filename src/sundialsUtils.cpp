@@ -15,6 +15,8 @@ SundialsCvode::SundialsCvode(unsigned int n)
     , errorStopCount(0)
     , theODE(NULL)
     , sundialsMem(NULL)
+    , sundialsLinsol(NULL)
+    , sundialsLinsolMatrix(NULL)
     , nEq(n)
     , bandwidth_upper(-1)
     , bandwidth_lower(-1)
@@ -45,7 +47,11 @@ void SundialsCvode::initialize()
 
     // On the first call to initialize, need to allocate and set up
     // the Sundials solver, set tolerances and link the ODE functions
-    sundialsMem = CVodeCreate(linearMultistepMethod, nonlinearSolverMethod);
+    #if EMBER_SUNDIALS_VERSION < 40
+        sundialsMem = CVodeCreate(linearMultistepMethod, CV_NEWTON);
+    #else
+        sundialsMem = CVodeCreate(linearMultistepMethod);
+    #endif
     if (check_flag((void *)sundialsMem, "CVodeCreate", 0)) {
         throw DebugException("SundialsCvode::initialize: error in CVodeCreate");
     }
@@ -70,29 +76,42 @@ void SundialsCvode::initialize()
     }
 
     if (bandwidth_upper == -1 && bandwidth_lower == -1) {
-        // Call CVDense to specify the CVDENSE dense linear solver
-        flag = CVDense(sundialsMem, nEq);
-        if (check_flag(&flag, "CVDense", 1)) {
-            throw DebugException("SundialsCvode::initialize: error in CVDense");
+        SUNLinSolFree((SUNLinearSolver) sundialsLinsol);
+        SUNMatDestroy((SUNMatrix) sundialsLinsolMatrix);
+        sundialsLinsolMatrix = SUNDenseMatrix(y.size(), y.size());
+        if (sundialsLinsolMatrix == nullptr) {
+            throw DebugException((format("SundialsCvode::initialize: "
+                "Unable to create SUNDenseMatrix of size %i x %i")
+                % y.size() % y.size()).str()
+            );
         }
-
-        // Set the Jacobian routine to denseJac (user-supplied)
-        flag = CVDlsSetDenseJacFn(sundialsMem, denseJac);
-        if (check_flag(&flag, "CVDlsSetDenseJacFn", 1)) {
+        sundialsLinsol = SUNDenseLinearSolver(y.forSundials(), (SUNMatrix) sundialsLinsolMatrix);
+        CVodeSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsol,
+                                (SUNMatrix) sundialsLinsolMatrix);
+        flag = CVodeSetJacFn(sundialsMem, denseJac);
+        if (check_flag(&flag, "CVodeSetJacFn", 1)) {
             throw DebugException("SundialsCvode::initialize: error in CVDlsSetDenseJacFn");
         }
     } else {
-        // Call CVDense to specify the CVBAND Banded linear solver
-        flag = CVBand(sundialsMem, nEq, bandwidth_upper, bandwidth_lower);
-        if (check_flag(&flag, "CVBand", 1)) {
-            throw DebugException("SundialsCvode::initialize: error in CVBand");
+        // Specify the banded linear solver
+        SUNLinSolFree((SUNLinearSolver) sundialsLinsol);
+        SUNMatDestroy((SUNMatrix) sundialsLinsolMatrix);
+        #if EMBER_SUNDIALS_VERSION < 40
+            sundialsLinsolMatrix = SUNBandMatrix(y.size(), bandwidth_upper,
+                bandwidth_lower, bandwidth_lower + bandwidth_upper);
+        #else
+            sundialsLinsolMatrix = SUNBandMatrix(y.size(), bandwidth_upper,
+                                                    bandwidth_lower);
+        #endif
+        if (sundialsLinsolMatrix == nullptr) {
+            throw DebugException((format("SundialsCvode::initialize: "
+                "Unable to create SUNBandMatrix of size %i with bandwidths "
+                "%i and %i") % y.size() % bandwidth_upper % bandwidth_lower).str()
+            );
         }
-
-        // Set the Jacobian routine to bandJac (user-supplied)
-        flag = CVDlsSetBandJacFn(sundialsMem, bandJac);
-        if (check_flag(&flag, "CVDlsSetBandJacFn", 1)) {
-            throw DebugException("SundialsCvode::initialize: error in CVDlsSetBandJacFn");
-        }
+        sundialsLinsol = SUNBandLinearSolver(y.forSundials(), (SUNMatrix) sundialsLinsolMatrix);
+        CVodeSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsol,
+                                (SUNMatrix) sundialsLinsolMatrix);
     }
 
     _initialized = true;
@@ -244,9 +263,10 @@ int SundialsCvode::g(realtype t, N_Vector yIn, realtype *gout, void *g_data)
 }
 
 // Jacobian routine. Compute J(t,y) = df/dy. *
-int SundialsCvode::denseJac(sd_size_t N, realtype t, N_Vector yIn,
-                            N_Vector fyIn, DenseMat JIn, void *user_data,
-                            N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+int SundialsCvode::denseJac(
+    realtype t, N_Vector yIn,
+    N_Vector fyIn, SUNMatrix JIn, void *user_data,
+    N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
     sdVector y(yIn);
     sdVector fy(fyIn);
@@ -255,9 +275,9 @@ int SundialsCvode::denseJac(sd_size_t N, realtype t, N_Vector yIn,
     return ((sdODE*) user_data)->denseJacobian(t, y, fy, J);
 }
 
-int SundialsCvode::bandJac(sd_size_t N, sd_size_t mupper, sd_size_t mLower,
-	realtype t, N_Vector yIn, N_Vector fyIn, DlsMat JIn, void* user_data,
-        N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+int SundialsCvode::bandJac(
+	realtype t, N_Vector yIn, N_Vector fyIn, SUNMatrix JIn, void* user_data,
+    N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
     sdVector y(yIn);
     sdVector fy(fyIn);
@@ -314,10 +334,10 @@ std::ostream& operator<<(std::ostream& os, const sdVector& v)
 sdMatrix::sdMatrix(unsigned int n, unsigned int m)
 {
     alloc = true;
-    M = NewDenseMat(n,m);
+    M = SUNDenseMatrix(n,m);
 }
 
-sdMatrix::sdMatrix(DenseMat other)
+sdMatrix::sdMatrix(SUNMatrix other)
 {
     alloc = false;
     M = other;
@@ -331,7 +351,7 @@ sdMatrix::sdMatrix()
 
 sdMatrix::~sdMatrix() {
     if (alloc) {
-    	DestroyMat(M);
+        SUNMatDestroy(M);
     }
 }
 
@@ -340,10 +360,10 @@ sdMatrix::~sdMatrix() {
 sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower)
 {
     alloc = true;
-    M = NewBandMat(N,bwUpper,bwLower, std::min(N-1, bwUpper+bwLower));
+    M = SUNBandMatrix(N, bwUpper, bwLower);
 }
 
-sdBandMatrix::sdBandMatrix(BandMat other)
+sdBandMatrix::sdBandMatrix(SUNMatrix other)
 {
     alloc = false;
     M = other;
@@ -357,21 +377,21 @@ sdBandMatrix::sdBandMatrix()
 
 sdBandMatrix::~sdBandMatrix() {
     if (alloc) {
-        DestroyMat(M);
+        SUNMatDestroy(M);
     }
 }
 
 void sdBandMatrix::print(const std::string& name) const
 {
-    std::cout << M->M << std::endl;
-    std::cout << M->ml << std::endl;
-    std::cout << M->mu << std::endl;
-    for (int i = 0; i < M->M; i++) {
-        for (int j = i - M->ml; j <= i + M->mu; j++) {
-            if (j < 0 || j >= M->M) {
+    std::cout << SM_ROWS_B(M) << std::endl;
+    std::cout << SM_LBAND_B(M) << std::endl;
+    std::cout << SM_UBAND_B(M) << std::endl;
+    for (int i = 0; i < SM_ROWS_B(M); i++) {
+        for (int j = i - SM_LBAND_B(M); j <= i + SM_UBAND_B(M); j++) {
+            if (j < 0 || j >= SM_COLUMNS_B(M)) {
                 continue;
             }
-            std::cout << boost::format("%s[%i,%i] = %e") % name % i % j % BAND_ELEM(M,i,j) << std::endl;
+            std::cout << boost::format("%s[%i,%i] = %e") % name % i % j % SM_ELEMENT_B(M,i,j) << std::endl;
         }
     }
     std::cout.flush();
@@ -379,6 +399,7 @@ void sdBandMatrix::print(const std::string& name) const
 
 // Sundials IDA Solver
 
+#if EMBER_ENABLE_IDA
 SundialsIda::SundialsIda(unsigned int n)
     : abstol(n)
     , findRoots(false)
@@ -653,3 +674,4 @@ void SundialsIda::setDAE(sdDAE* newDAE)
 {
     theDAE = newDAE;
 }
+#endif // EMBER_ENABLE_IDA

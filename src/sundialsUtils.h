@@ -1,5 +1,12 @@
 #pragma once
 
+#include "config.h"
+
+// The IDA solver is currently unused, and disabled since the current
+// implementation has not been updated to work with recent Sundials
+// versions.
+#define EMBER_ENABLE_IDA 0
+
 #include <nvector/nvector_serial.h>
 #include <sundials/sundials_dense.h>
 #include <sundials/sundials_band.h>
@@ -7,11 +14,20 @@
 #include <sundials/sundials_types.h>
 
 #include <cvode/cvode.h>
-#include <cvode/cvode_dense.h>
-#include <cvode/cvode_band.h>
-#include <ida/ida.h>
-//#include <ida/ida_dense.h>
-#include <ida/ida_spbcgs.h>
+
+#if EMBER_ENABLE_IDA
+    #include <ida/ida.h>
+    #include "ida/ida_spils.h"
+    //#include <ida/ida_dense.h>
+#endif
+
+#include "cvodes/cvodes_direct.h"
+#include "cvodes/cvodes_spils.h"
+#include "sunlinsol/sunlinsol_dense.h"
+#include "sunlinsol/sunlinsol_band.h"
+#include "sunlinsol/sunlinsol_spgmr.h"
+#include "sunmatrix/sunmatrix_dense.h"
+#include "sunmatrix/sunmatrix_band.h"
 
 #include <iostream>
 #include <vector>
@@ -19,14 +35,7 @@
 
 #include "config.h"
 
-typedef DlsMat DenseMat;
-typedef DlsMat BandMat;
-
-#if EMBER_SUNDIALS_VERSION >= 25
 typedef long int sd_size_t;
-#else
-typedef int sd_size_t;
-#endif
 
 //! wrapper class for Sundials "N_Vector"
 class sdVector
@@ -66,7 +75,7 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const sdVector& v);
 
-//! Wrapper class for Sundials `DenseMat` objects
+//! Wrapper class for Sundials `SUNDenseMatrix` objects
 class sdMatrix
 {
 public:
@@ -74,7 +83,7 @@ public:
     sdMatrix(unsigned int n, unsigned int m);
 
     //! Create a wrapper for an existing `DensMat` object.
-    sdMatrix(DenseMat other);
+    sdMatrix(SUNMatrix other);
 
     sdMatrix();
     ~sdMatrix();
@@ -82,56 +91,56 @@ public:
     template <class T>
     realtype& operator()(T i, T j)
     {
-        return DENSE_ELEM(M, static_cast<long int>(i), static_cast<long int>(j));
+        return SM_ELEMENT_D(M, static_cast<long int>(i), static_cast<long int>(j));
     }
 
     template <class T>
     realtype& operator()(T i, T j) const
     {
-        return DENSE_ELEM(M, static_cast<long int>(i), static_cast<long int>(j));
+        return SM_ELEMENT_D(M, static_cast<long int>(i), static_cast<long int>(j));
     }
 
     //! Return a pointer to the underlying data, needed by Sundials functions.
-    realtype* forSundials() { return M->data; }
+    realtype* forSundials() { return SM_DATA_D(M); }
 
 private:
-    DenseMat M;
+    SUNMatrix M;
     bool alloc;
 };
 
-//! Wrapper class for Sundials `BandMat` objects
+//! Wrapper class for Sundials `SUNBandMatrix` objects
 class sdBandMatrix
 {
 public:
-    //! Create and wrap a new `BandMat`.
+    //! Create and wrap a new `SUNBandMatrix`.
     //! @param N dimension of the matrix (square)
     //! @param bwUpper upper bandwidth of the matrix
     //! @param bwLower lower bandwidth of the matrix
     sdBandMatrix(long int N, long int bwUpper, long int bwLower);
 
-    //! Create a wrapper for an existing `BandMat` object.
-    sdBandMatrix(BandMat other);
+    //! Create a wrapper for an existing `SUNBandMatrix` object.
+    sdBandMatrix(SUNMatrix other);
 
     sdBandMatrix();
     ~sdBandMatrix();
 
     realtype& operator()(long int i, long int j)
     {
-        return BAND_ELEM(M,i,j);
+        return SM_ELEMENT_B(M,i,j);
     }
 
     realtype& operator()(long int i, long int j) const
     {
-        return BAND_ELEM(M,i,j);
+        return SM_ELEMENT_B(M,i,j);
     }
 
-    //! Return a pointer to the underlying `BandMat` needed by Sundials functions
-    BandMat& forSundials() { return M; }
+    //! Return a pointer to the underlying `SUNBandMatrix` needed by Sundials functions
+    SUNMatrix& forSundials() { return M; }
 
     void print(const std::string& name="M") const;
 
 private:
-    BandMat M;
+    SUNMatrix M;
     bool alloc;
 };
 
@@ -183,7 +192,6 @@ public:
  *    - #reltol
  *    - #abstol
  *    - #linearMultistepMethod
- *    - #nonlinearSolverMethod
  *  - The following configuration variables are optional:
  *    - #findRoots
  *    - #maxNumSteps
@@ -212,9 +220,6 @@ public:
 
     //! CV_ADAMS for non-stiff problems, CV_BDF for stiff problems
     int linearMultistepMethod;
-
-    //! CV_FUNCTIONAL for non-stiff problems, CV_NEWTON for stiff problems
-    int nonlinearSolverMethod;
 
     //! Specify whether or not to use the function g for rootfinding
     bool findRoots;
@@ -272,15 +277,18 @@ public:
 private:
     static int f(realtype t, N_Vector yIn, N_Vector ydotIn, void* f_data);
     static int g(realtype t, N_Vector yIn, realtype *gout, void* g_data);
-    static int denseJac(sd_size_t N, realtype t, N_Vector yIn,
-                        N_Vector fy, DenseMat Jin, void* jac_data,
+    static int denseJac(realtype t, N_Vector yIn,
+                        N_Vector fy, SUNMatrix Jin, void* jac_data,
                         N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-    static int bandJac(sd_size_t N, sd_size_t mupper, sd_size_t mLower, realtype t,
-                       N_Vector y, N_Vector fy, DlsMat Jac, void* user_data,
-                       N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+    static int bandJac(realtype t, N_Vector y, N_Vector fy, SUNMatrix Jac,
+                       void* user_data, N_Vector tmp1, N_Vector tmp2,
+                       N_Vector tmp3);
 
     sdODE* theODE;
     void* sundialsMem;
+    void* sundialsLinsol; //!< Sundials linear solver object
+    void* sundialsLinsolMatrix; //!< matrix used by Sundials
+
     int nEq;
 
     int bandwidth_upper;
@@ -289,6 +297,7 @@ private:
     bool _initialized;
 };
 
+#if EMBER_ENABLE_IDA
 //! Abstract base class for an system of differential-algebraic equations to
 //! be integrated by SundialsIda.
 class sdDAE {
@@ -443,7 +452,7 @@ private:
     static int g(realtype t, N_Vector yIn, N_Vector ydotIn, realtype *gout, void* g_data);
 
     static int Jac(long int N, realtype t, N_Vector yIn, N_Vector ydotIn,
-                   N_Vector res, realtype c_j, void* jac_data, DenseMat Jin,
+                   N_Vector res, realtype c_j, void* jac_data, SUNMatrix Jin,
                    N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
     static int JvProd(realtype t, N_Vector yIn, N_Vector ydotIn, N_Vector resIn,
@@ -462,3 +471,4 @@ private:
     void* sundialsMem;
     int nEq;
 };
+#endif // EMBER_ENABLE_IDA

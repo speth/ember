@@ -110,7 +110,6 @@ void SourceSystemCVODE::initialize(size_t new_nSpec)
     integrator.reset(new SundialsCvode(static_cast<int>(nSpec+2)));
     integrator->setODE(this);
     integrator->linearMultistepMethod = CV_BDF;
-    integrator->nonlinearSolverMethod = CV_NEWTON;
     integrator->maxNumSteps = 1000000;
 }
 

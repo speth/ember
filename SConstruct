@@ -344,9 +344,10 @@ int main(int argc, char** argv) {
     context.Result(result)
     return result
 
-def get_expression_value(includes, expression):
+def get_expression_value(includes, expression, extra=''):
     s = ['#include ' + i for i in includes]
     s.extend(('#include <iostream>',
+              extra,
               'int main(int argc, char** argv) {',
               '    std::cout << %s << std::endl;' % expression,
               '    return 0;',
@@ -394,8 +395,12 @@ if StrictVersion(cantera_version.strip()) < StrictVersion(min_cantera_version):
         min_cantera_version, cantera_version.strip()))
 
 # Determine Sundials version
-sundials_version_source = get_expression_value(['"sundials/sundials_config.h"'],
-                                                   'SUNDIALS_PACKAGE_VERSION')
+sundials_version_source = get_expression_value(
+    ['"sundials/sundials_config.h"'],
+    'SUNDIALS_VERSION',
+    '#ifndef SUNDIALS_VERSION\n'
+    '#define SUNDIALS_VERSION SUNDIALS_PACKAGE_VERSION\n'
+    '#endif')
 retcode, sundials_version = conf.TryRun(sundials_version_source, '.cpp')
 if retcode == 0:
     print("Failed to determine Sundials version.")
