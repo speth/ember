@@ -11,7 +11,7 @@ class OutputFile(object):
     def __enter__(self):
         if self.filename.endswith('.h5'):
             import h5py
-            self.data = h5py.File(self.filename)
+            self.data = h5py.File(self.filename, mode='a')
             return self.data
         elif self.filename.endswith('.npz'):
             self.data = {}
