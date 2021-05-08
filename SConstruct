@@ -280,9 +280,21 @@ if env['use_tbb'] and env['tbb']:
     library_dirs.append(tbbLibDir)
 
 
-if ('g++' in env.subst('$CXX')
-    or 'clang++' in env.subst('$CXX')
-    or 'icpc' in env.subst('$CXX')):
+if env.subst('$CXX') == 'cl':
+    flags = ['/nologo', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc', '/MD']
+    linkflags=[]
+    defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS']
+    if env['debug_symbols']:
+        env.Append(LINKFLAGS='/DEBUG')
+        flags.append('/Zi')
+
+    if env['debug']:
+        flags.extend(['/Od', '/Ob0', '/MD'])
+    else:
+        flags.append('/O2')
+        defines.append('NDEBUG')
+else:
+    # Assume that GCC-compatible flags are accepted
     flags = ['-ftemplate-depth-128', '-std=c++0x', '-fPIC', '-g', '-Wall', '-pthread',
              '-Wno-deprecated-declarations']
     linkflags = ['-pthread']
@@ -303,23 +315,6 @@ if ('g++' in env.subst('$CXX')
         flags.extend(['-O3', '-finline-functions', '-Wno-inline'])
         defines.append('NDEBUG')
 
-elif env.subst('$CXX') == 'cl':
-    flags = ['/nologo', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc', '/MD']
-    linkflags=[]
-    defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS']
-    if env['debug_symbols']:
-        env.Append(LINKFLAGS='/DEBUG')
-        flags.append('/Zi')
-
-    if env['debug']:
-        flags.extend(['/Od', '/Ob0', '/MD'])
-    else:
-        flags.append('/O2')
-        defines.append('NDEBUG')
-
-else:
-    print('error: unknown c++ compiler: "%s"' % env['CXX'])
-    sys.exit(1)
 
 env.Append(CPPPATH=include_dirs,
            LIBPATH=library_dirs,
