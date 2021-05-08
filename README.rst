@@ -17,9 +17,9 @@ flames in a prescribed velocity field (using the method of lines).
 Ember integrates the governing equations using a variant on the standard Strang
 splitting method which eliminates steady-state errors.
 
-Online documentation for Ember is located at `<http://speth.github.com/ember-doc>`_.
+Online documentation for Ember is located at `<https://speth.github.io/ember-doc>`_.
 
-`Installation Instructions <http://speth.github.io/ember-doc/sphinx/html/installation.html>`_
+`Installation Instructions <https://speth.github.io/ember-doc/sphinx/html/installation.html>`_
 
 Running Ember
 -------------
@@ -37,7 +37,7 @@ Running Ember
     python/ember/examples/example-premixed.py
 
   A complete list of all available input parameters may be found in the `HTML
-  documentation. <http://speth.github.com/ember-doc/sphinx/html/input.html>`_
+  documentation. <https://speth.github.io/ember-doc/sphinx/html/input.html>`_
   Alternatively, you look at the definitions in
   ``python/ember/input.py``. Specify the path to your mechanism file as the
   ``mechanismFile``. Other parameters you may want to change are in the
