@@ -121,11 +121,9 @@ opts.AddVariables(
         'cantera',
         'Location of the Cantera header and library files.',
         '', PathVariable.PathAccept),
-    ('cantera_libs',
-     """Comma-separated list of extra libraries required to link with
-        Cantera. If Cantera was not built with the "single_library=y" option,
-        this may include some of 'execstream', 'ctmath', 'ctlapack', 'ctblas',
-        and 'ctf2c'""",
+    ('extra_libs',
+     """Comma-separated list of extra libraries to link with. Depending on how
+        Cantera was built, this may include 'fmt' and 'yaml-cpp'.""",
      ''),
     PathVariable(
         'sundials',
@@ -242,7 +240,7 @@ elif env['env_vars']:
         elif name not in defaults.env_vars:
             print('WARNING: failed to propagate environment variable', name)
 
-cantera = ['cantera'] + env['cantera_libs'].split(',')
+cantera = ['cantera'] + env['extra_libs'].split(',')
 sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
 lastlibs = ['tbb'] if env['use_tbb'] else []
 
