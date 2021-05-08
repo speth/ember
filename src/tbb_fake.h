@@ -4,24 +4,15 @@
 
 namespace tbb {
 
-class task_scheduler_init {
+class global_control {
 public:
-    const static int deferred = 0;
-    task_scheduler_init(int ignored) {}
-    void initialize(int nThreads) {
+    const static int max_allowed_parallelism = 0;
+    global_control(int param, int nThreads) {
         if (nThreads > 1) {
             logFile.write("Warning: Running in single-threaded mode because TBB"
                 " support was not enabled when compiling Ember.");
         }
     }
-};
-
-class mutex {
-public:
-    class scoped_lock {
-    public:
-        scoped_lock(mutex m) {};
-    };
 };
 
 template <class T>

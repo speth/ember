@@ -11,7 +11,6 @@ FlameSolver::FlameSolver()
     , stateWriter(NULL)
     , timeseriesWriter(NULL)
     , heatLossFunction(NULL)
-    , tbbTaskSched(tbb::task_scheduler_init::deferred)
     , vzInterp(new BilinearInterpolator)
     , vrInterp(new BilinearInterpolator)
     , TInterp(new BilinearInterpolator)
@@ -36,7 +35,8 @@ void FlameSolver::setOptions(const ConfigOptions& _options)
 
 void FlameSolver::initialize(void)
 {
-    tbbTaskSched.initialize (options.nThreads);
+    tbbTaskSched.reset(new tbb::global_control(
+        tbb::global_control::max_allowed_parallelism, options.nThreads));
     delete strainfunc;
     strainfunc = newScalarFunction(options.strainFunctionType, options);
 

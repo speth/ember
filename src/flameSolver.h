@@ -166,8 +166,8 @@ public:
     CanteraGas gas;
 
     tbb::enumerable_thread_specific<CanteraGas> gases;
-    tbb::mutex gasInitMutex;
-    tbb::task_scheduler_init tbbTaskSched;
+    std::mutex gasInitMutex;
+    std::unique_ptr<tbb::global_control> tbbTaskSched;
 
     void rollVectorVector(vector<dvector>& vv, const dmatrix& M) const;
     void unrollVectorVector(vector<dvector>& vv, dmatrix& M, size_t i) const;
