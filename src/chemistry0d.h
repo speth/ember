@@ -8,9 +8,9 @@
 #include "cantera/transport/MixTransport.h"
 #include "cantera/transport/MultiTransport.h"
 #include "cantera/transport/UnityLewisTransport.h"
-#include "cantera/transport/TransportFactory.h"
-#include "cantera/thermo/IdealGasPhase.h"
+#include "cantera/thermo/ThermoFactory.h"
 #include "cantera/kinetics/GasKinetics.h"
+#include "cantera/base/Solution.h"
 
 class ConfigOptions;
 
@@ -63,7 +63,7 @@ private:
 class InterpKinetics : public Cantera::GasKinetics
 {
 public:
-    InterpKinetics(Cantera::ThermoPhase* phase);
+    InterpKinetics();
 
     virtual void update_rates_T();
 
@@ -89,7 +89,6 @@ class CanteraGas
 {
 public:
     CanteraGas();
-    ~CanteraGas();
 
     double pressure; //!< thermodynamic pressure [Pa]
     size_t nSpec; //!< number of species
@@ -161,21 +160,16 @@ public:
     void getDestructionRates(dvec& wDot) const;
     void getDestructionRates(double* wDot) const;
 
-    Cantera::IdealGasPhase thermo;
-
+    std::unique_ptr<Cantera::ThermoPhase> thermo;
 private:
     std::string mechanismFile;
     std::string phaseID;
     std::string transportModel;
     std::string kineticsModel;
     double transportThreshold;
+    std::unique_ptr<Cantera::Kinetics> kinetics;
+    std::unique_ptr<Cantera::Transport> transport;
     bool isInitialized;
-
-    Cantera::XML_Node* rootXmlNode;
-    Cantera::XML_Node* phaseXmlNode;
-
-    Cantera::GasKinetics* kinetics;
-    Cantera::GasTransport* transport;
 
     dmatrix Dbin; //!< binary diffusion coefficients for species k
 

@@ -16,7 +16,7 @@ conf = Config(
     Paths(outputDir=output,
           # logFile='ex_cylindrical_outward.log'
           ),
-    Chemistry(mechanismFile='gri30.xml'),
+    Chemistry(mechanismFile='gri30.yaml'),
     General(flameGeometry='cylindrical',
             unburnedLeft=False,
             fixedLeftLocation=True,

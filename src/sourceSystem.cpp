@@ -133,8 +133,8 @@ int SourceSystemCVODE::f(const realtype t, const sdVector& y, sdVector& ydot)
     if (rateMultiplierFunction) {
         gas->setRateMultiplier(rateMultiplierFunction->a(t));
     }
-    gas->thermo.setMassFractions_NoNorm(Y.data());
-    gas->thermo.setState_TP(T, gas->pressure);
+    gas->thermo->setMassFractions_NoNorm(Y.data());
+    gas->thermo->setState_TP(T, gas->pressure);
     gas->getReactionRates(wDot);
     reactionRatesTimer->stop();
 
@@ -217,8 +217,8 @@ int SourceSystemCVODE::denseJacobian(const realtype t, const sdVector& y,
     for (size_t k=0; k<nSpec; k++) {
         YplusdY[k] = (abs(Y[k]) > eps/2) ? Y[k]*(1+eps) : eps;
         reactionRatesTimer->start();
-        gas->thermo.setMassFractions_NoNorm(YplusdY.data());
-        gas->thermo.setState_TP(T, gas->pressure);
+        gas->thermo->setMassFractions_NoNorm(YplusdY.data());
+        gas->thermo->setState_TP(T, gas->pressure);
 
         gas->getReactionRates(wDot2);
         reactionRatesTimer->stop();

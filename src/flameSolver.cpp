@@ -793,9 +793,9 @@ void FlameSolver::integrateProductionTerms(size_t j1, size_t j2)
         } else {
             // Print gas mole fractions to help identify problematic reactions
             dvec X0(nSpec), X1(nSpec);
-            gas.thermo.setMassFractions_NoNorm(Y.col(j).data());
+            gas.thermo->setMassFractions_NoNorm(Y.col(j).data());
             gas.getMoleFractions(X0);
-            gas.thermo.setMassFractions_NoNorm(sourceTerms[j].Y.data());
+            gas.thermo->setMassFractions_NoNorm(sourceTerms[j].Y.data());
             gas.getMoleFractions(X1);
             logFile.write(format("Error at j = %i. Gas state:\n") % j);
             logFile.write(" k        Species     X Initial    X Final     Delta X");
@@ -807,7 +807,7 @@ void FlameSolver::integrateProductionTerms(size_t j1, size_t j2)
                     std::abs(X1[k]) > 1e-4 ||
                     std::abs(X1[k]-X0[k]) > 1e-6) {
                     logFile.write(format("%4s  %14s  %10.4g  %10.4g  %10.4g") %
-                        k % gas.thermo.speciesName(k) % X0[k] % X1[k] % (X1[k]-X0[k]));
+                        k % gas.thermo->speciesName(k) % X0[k] % X1[k] % (X1[k]-X0[k]));
                 }
             }
             if (debugParameters::veryVerbose) {
@@ -1009,21 +1009,21 @@ void FlameSolver::loadProfile(void)
     } else if (options.flameType == "diffusion") {
         // Fuel composition
         size_t jFuel = (options.fuelLeft) ? 0 : jj;
-        gas.thermo.setState_TPY(T(jFuel), options.pressure, &Y(0,jFuel));
+        gas.thermo->setState_TPY(T(jFuel), options.pressure, &Y(0,jFuel));
         double rhoFuel = gas.getDensity();
         dvec Yfuel(nSpec);
         gas.getMassFractions(Yfuel);
-        double Tfuel = gas.thermo.temperature();
+        double Tfuel = gas.thermo->temperature();
 
         // Oxidizer composition
         size_t jOxidizer = (options.fuelLeft) ? jj : 0;
-        gas.thermo.setState_TPY(T(jOxidizer),
+        gas.thermo->setState_TPY(T(jOxidizer),
                                 options.pressure,
                                 &Y(0,jOxidizer));
         double rhoOxidizer = gas.getDensity();
         dvec Yoxidizer(nSpec);
         gas.getMassFractions(Yoxidizer);
-        double Toxidizer = gas.thermo.temperature();
+        double Toxidizer = gas.thermo->temperature();
 
         if (options.fuelLeft) {
             rhoLeft = rhoFuel;
@@ -1044,13 +1044,13 @@ void FlameSolver::loadProfile(void)
         rhou = rhoOxidizer;
 
     } else if (options.flameType == "quasi2d") {
-        gas.thermo.setState_TPY(T(0), options.pressure, &Y(0,0));
-        rhoLeft = gas.thermo.density();
+        gas.thermo->setState_TPY(T(0), options.pressure, &Y(0,0));
+        rhoLeft = gas.thermo->density();
         Tleft = T(0);
         Yleft.resize(nSpec);
         gas.getMassFractions(Yleft);
-        gas.thermo.setState_TPY(T(jj), options.pressure, &Y(0,jj));
-        rhoRight = gas.thermo.density();
+        gas.thermo->setState_TPY(T(jj), options.pressure, &Y(0,jj));
+        rhoRight = gas.thermo->density();
         Tright = T(jj);
         Yright.resize(nSpec);
         gas.getMassFractions(Yright);

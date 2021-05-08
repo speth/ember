@@ -3,10 +3,11 @@
 #include "readConfig.h"
 
 #include "cantera/thermo/ThermoFactory.h"
-#include "cantera/kinetics/importKinetics.h"
+#include "cantera/kinetics/KineticsFactory.h"
 #include "cantera/transport/MixTransport.h"
 #include "cantera/transport/MultiTransport.h"
 #include "cantera/transport/UnityLewisTransport.h"
+#include "cantera/transport/TransportFactory.h"
 
 ApproxMixTransport::ApproxMixTransport()
     : _threshold(0.0)
@@ -248,9 +249,8 @@ void ApproxMixTransport::update_C()
 
 typedef Eigen::Map<dvec> vec_map;
 
-InterpKinetics::InterpKinetics(Cantera::ThermoPhase* phase)
-    : GasKinetics(phase)
-    , m_ntemps(0)
+InterpKinetics::InterpKinetics()
+    : m_ntemps(0)
     , m_tmin(0)
     , m_tmax(0)
 {
@@ -331,23 +331,8 @@ void InterpKinetics::update_rates_T()
 
 CanteraGas::CanteraGas()
     : isInitialized(false)
-    , rootXmlNode(NULL)
-    , phaseXmlNode(NULL)
-    , kinetics(NULL)
-    , transport(NULL)
     , lastRateMultiplier(1.0)
 {
-}
-
-CanteraGas::~CanteraGas()
-{
-    Cantera::close_XML_File(mechanismFile);
-    //phaseXmlNode->unlock();
-    //rootXmlNode->unlock();
-//    delete rootXmlNode; // this deletes all child nodes as well
-
-    delete kinetics;
-    delete transport;
 }
 
 void CanteraGas::setOptions(const ConfigOptions& options)
@@ -362,105 +347,86 @@ void CanteraGas::setOptions(const ConfigOptions& options)
 
 void CanteraGas::initialize()
 {
-    // suppress thermo warnings to simplify output. Without this warnings printed for every thread created
+    // suppress thermo warnings to simplify output. Without this, warnings will
+    // be printed for every thread created
     Cantera::suppress_thermo_warnings();
+    thermo.reset(Cantera::newPhase(mechanismFile, phaseID));
 
-    // XML Information File
-    rootXmlNode = Cantera::get_XML_File(mechanismFile);
-    if (rootXmlNode == NULL) {
-        throw DebugException((format(
-            "Error parsing Cantera XML file '%s'.") % mechanismFile).str());
-    }
-
-    phaseXmlNode = rootXmlNode->findNameID("phase", phaseID);
-    if (phaseXmlNode == NULL) {
-        throw DebugException((format(
-            "Error finding phase '%s' in '%s'.") % phaseID % mechanismFile).str());
-    }
-
-    // Initialize the default thermodynamic properties object
-    Cantera::importPhase(*phaseXmlNode, &thermo);
-
-    // Initialize the default chemical kinetics object
-    if (kineticsModel == "standard") {
-        kinetics = new Cantera::GasKinetics(&thermo);
-    } else if (kineticsModel == "interp") {
-        kinetics = new InterpKinetics(&thermo);
+    auto kin_fac = Cantera::KineticsFactory::factory();
+    if (kineticsModel == "interp") {
+        // Overwrite the normal factory function
+        kin_fac->reg("gas", []() { return new InterpKinetics(); });
     } else {
-        throw DebugException("Unknown kinetics model specified.");
+        kin_fac->reg("gas", []() { return new Cantera::GasKinetics(); });
     }
-    kinetics->init();
-    Cantera::installReactionArrays(*phaseXmlNode, *kinetics, phaseID);
 
-    // Initialize the default transport properties object
-    if (transportModel == "Multi") {
-        transport = new Cantera::MultiTransport();
-    } else if (transportModel == "Mix") {
-        transport = new Cantera::MixTransport();
-    } else if (transportModel == "UnityLewis") {
-        transport = new Cantera::UnityLewisTransport();
-    } else if (transportModel == "Approx") {
-        ApproxMixTransport* atran = new ApproxMixTransport();
-        atran->setThreshold(transportThreshold);
-        transport = atran;
-    } else {
-        throw DebugException("Error: Invalid transport model specified.");
+    vector<Cantera::ThermoPhase*> kin_phases{thermo.get()};
+    kinetics = Cantera::newKinetics(kin_phases, mechanismFile, phaseID);
+
+    auto tran_fac = Cantera::TransportFactory::factory();
+    tran_fac->reg("Approx", []() { return new ApproxMixTransport(); });
+
+    // Initialize the transport properties object
+    transport.reset(Cantera::newTransportMgr(transportModel, thermo.get()));
+    if (transportModel == "Approx") {
+        auto& atran = dynamic_cast<ApproxMixTransport&>(*transport);
+        atran.setThreshold(transportThreshold);
     }
-    transport->init(&thermo);
+    transport->init(thermo.get());
 
-    nSpec = thermo.nSpecies();
+    nSpec = thermo->nSpecies();
     Dbin.setZero(nSpec,nSpec);
     isInitialized = true;
 }
 
 void CanteraGas::setStateMass(const dvec& Y, const double T)
 {
-    thermo.setState_TPY(T, pressure, Y.data());
+    thermo->setState_TPY(T, pressure, Y.data());
 }
 
 void CanteraGas::setStateMass(const double* Y, const double T)
 {
-    thermo.setState_TPY(T, pressure, Y);
+    thermo->setState_TPY(T, pressure, Y);
 }
 
 void CanteraGas::setStateMole(const dvec& X, const double T)
 {
-    thermo.setState_TPX(T, pressure, X.data());
+    thermo->setState_TPX(T, pressure, X.data());
 }
 
 void CanteraGas::setStateMole(const double* X, const double T)
 {
-    thermo.setState_TPX(T, pressure, X);
+    thermo->setState_TPX(T, pressure, X);
 }
 
 void CanteraGas::getMoleFractions(dvec& X) const
 {
-    thermo.getMoleFractions(X.data());
+    thermo->getMoleFractions(X.data());
 }
 
 void CanteraGas::getMoleFractions(double* X) const
 {
-    thermo.getMoleFractions(X);
+    thermo->getMoleFractions(X);
 }
 
 void CanteraGas::getMassFractions(double* Y) const
 {
-    thermo.getMassFractions(Y);
+    thermo->getMassFractions(Y);
 }
 
 void CanteraGas::getMassFractions(dvec& Y) const
 {
-    thermo.getMassFractions(Y.data());
+    thermo->getMassFractions(Y.data());
 }
 
 double CanteraGas::getDensity() const
 {
-    return thermo.density();
+    return thermo->density();
 }
 
 double CanteraGas::getMixtureMolecularWeight() const
 {
-    return thermo.meanMolecularWeight();
+    return thermo->meanMolecularWeight();
 }
 
 void CanteraGas::getMolecularWeights(dvec& W) const
@@ -471,7 +437,7 @@ void CanteraGas::getMolecularWeights(dvec& W) const
 void CanteraGas::getMolecularWeights(double* W) const
 {
     for (size_t k=0; k<nSpec; k++) {
-        W[k] = thermo.molecularWeight(k);
+        W[k] = thermo->molecularWeight(k);
     }
 }
 
@@ -503,7 +469,7 @@ void CanteraGas::getWeightedDiffusionCoefficientsMole(dvec& rhoD) const
 void CanteraGas::getWeightedDiffusionCoefficientsMole(double* rhoD) const
 {
     transport->getMixDiffCoeffs(rhoD);
-    double rho = thermo.density();
+    double rho = thermo->density();
     for (size_t k=0; k<nSpec; k++) {
         rhoD[k] *= rho;
     }
@@ -511,7 +477,7 @@ void CanteraGas::getWeightedDiffusionCoefficientsMole(double* rhoD) const
 
 void CanteraGas::getWeightedDiffusionCoefficientsMass(double* rhoD)
 {
-    double rho = thermo.density();
+    double rho = thermo->density();
 
     transport->getMixDiffCoeffsMass(rhoD);
     for (size_t k=0; k<nSpec; k++) {
@@ -536,28 +502,28 @@ void CanteraGas::getThermalDiffusionCoefficients(double* Dkt) const
 
 double CanteraGas::getSpecificHeatCapacity() const
 {
-    return thermo.cp_mass();
+    return thermo->cp_mass();
 }
 
 void CanteraGas::getSpecificHeatCapacities(dvec& cpSpec) const
 {
-    thermo.getPartialMolarCp(cpSpec.data());
+    thermo->getPartialMolarCp(cpSpec.data());
 }
 
 void CanteraGas::getSpecificHeatCapacities(double* cpSpec) const
 {
-    thermo.getPartialMolarCp(cpSpec);
+    thermo->getPartialMolarCp(cpSpec);
 }
 
 
 void CanteraGas::getEnthalpies(dvec& hk) const
 {
-    thermo.getPartialMolarEnthalpies(hk.data());
+    thermo->getPartialMolarEnthalpies(hk.data());
 }
 
 void CanteraGas::getEnthalpies(double* hk) const
 {
-    thermo.getPartialMolarEnthalpies(&hk[0]);
+    thermo->getPartialMolarEnthalpies(&hk[0]);
 }
 
 void CanteraGas::setRateMultiplier(double m)

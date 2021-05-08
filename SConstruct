@@ -241,7 +241,7 @@ elif env['env_vars']:
             print('WARNING: failed to propagate environment variable', name)
 
 cantera = ['cantera'] + env['extra_libs'].split(',')
-sundials = 'sundials_nvecserial sundials_ida sundials_cvode'.split()
+sundials = 'sundials_nvecserial sundials_ida sundials_cvodes'.split()
 lastlibs = ['tbb'] if env['use_tbb'] else []
 
 if os.name == 'nt':
