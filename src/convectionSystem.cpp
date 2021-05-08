@@ -651,8 +651,8 @@ void ConvectionSystemSplit::unroll_y()
 }
 
 void ConvectionSystemSplit::setupQuasi2D
-(boost::shared_ptr<BilinearInterpolator>& vzInterp,
- boost::shared_ptr<BilinearInterpolator>& vrInterp)
+(std::shared_ptr<BilinearInterpolator>& vzInterp,
+ std::shared_ptr<BilinearInterpolator>& vrInterp)
 {
     quasi2d = true;
     for (size_t k=0; k<nSpec; k++) {

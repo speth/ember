@@ -76,8 +76,8 @@ void SourceSystem::setPosition(size_t _j, double _x)
     x = _x;
 }
 
-void SourceSystem::setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vz_int,
-                                boost::shared_ptr<BilinearInterpolator> T_int)
+void SourceSystem::setupQuasi2d(std::shared_ptr<BilinearInterpolator> vz_int,
+                                std::shared_ptr<BilinearInterpolator> T_int)
 {
     quasi2d = true;
     vzInterp = vz_int;

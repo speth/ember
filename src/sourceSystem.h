@@ -6,8 +6,6 @@
 #include "quasi2d.h"
 #include "callback.h"
 
-#include <boost/shared_ptr.hpp>
-
 class PerfTimer;
 class CanteraGas;
 class ScalarFunction;
@@ -87,9 +85,9 @@ public:
     //! Set all the balanced splitting constants to zero.
     void resetSplitConstants() { splitConst.setZero(); }
 
-    //! ASsign the interpolators used for solving quasi-2D problems
-    void setupQuasi2d(boost::shared_ptr<BilinearInterpolator> vzInterp,
-                      boost::shared_ptr<BilinearInterpolator> TInterp);
+    //! Assign the interpolators used for solving quasi-2D problems
+    void setupQuasi2d(std::shared_ptr<BilinearInterpolator> vzInterp,
+                      std::shared_ptr<BilinearInterpolator> TInterp);
 
     //! Write the current values of the state variables, formatted to be read by
     //! Python, to the specified stream. Call with `init=true` when first called
@@ -151,11 +149,11 @@ protected:
 
     //! An interpolator for computing the axial (z) velocity when solving a
     //! quasi-2D problem
-    boost::shared_ptr<BilinearInterpolator> vzInterp;
+    std::shared_ptr<BilinearInterpolator> vzInterp;
 
     //! An interpolator for computing the temperature when solving a
     //! quasi-2D problem
-    boost::shared_ptr<BilinearInterpolator> TInterp;
+    std::shared_ptr<BilinearInterpolator> TInterp;
 };
 
 //! Represents a system of equations used to integrate the (chemical) source

@@ -7,7 +7,6 @@
 #include "quasi2d.h"
 #include "scalarFunction.h"
 
-#include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 
 class CanteraGas;
@@ -129,13 +128,13 @@ public:
     //! Axial (normal) velocity [m/s] as a function of time. This velocity
     //! data is computed by ConvectionSystemUTW. The keys are the times [s]
     //! for which the corresponding velocity field was computed.
-    boost::shared_ptr<vecInterpolator> vInterp;
+    std::shared_ptr<vecInterpolator> vInterp;
 
     //! Interpolator for the *z* velocity in the quasi-2d problem.
-    boost::shared_ptr<BilinearInterpolator> vzInterp;
+    std::shared_ptr<BilinearInterpolator> vzInterp;
 
     //! Interpolator for the *r* velocity in the quasi-2d problem.
-    boost::shared_ptr<BilinearInterpolator> vrInterp;
+    std::shared_ptr<BilinearInterpolator> vrInterp;
 
     //! `true` when solving the quasi-2d problem; `false` otherwise.
     bool quasi2d;
@@ -218,8 +217,8 @@ public:
     int getNumSteps();
 
     //! Set the velocity field data used in the Quasi2D case.
-    void setupQuasi2D(boost::shared_ptr<BilinearInterpolator>& vzInterp,
-                      boost::shared_ptr<BilinearInterpolator>& vrInterp);
+    void setupQuasi2D(std::shared_ptr<BilinearInterpolator>& vzInterp,
+                      std::shared_ptr<BilinearInterpolator>& vrInterp);
 
     VecMap U; //!< normalized tangential velocity (u*a/u_inf) [1/s]
     VecMap T; //!< temperature [K]
@@ -237,7 +236,7 @@ public:
     ConvectionSystemUTW utwSystem;
 
     //! Interpolation data for #V, used for the species solvers
-    boost::shared_ptr<vecInterpolator> vInterp;
+    std::shared_ptr<vecInterpolator> vInterp;
 
     PerfTimer utwTimer, speciesTimer;
 
@@ -253,7 +252,7 @@ private:
     double abstolY; //!< mass fraction absolute tolerance
 
     //! Solver for #utwSystem
-    boost::shared_ptr<SundialsCvode> utwSolver;
+    std::shared_ptr<SundialsCvode> utwSolver;
 
     //! Systems used to solve the convection term for each species.
     boost::ptr_vector<ConvectionSystemY> speciesSystems;

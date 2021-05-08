@@ -15,7 +15,6 @@
 
 #include <iostream>
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <boost/shared_ptr.hpp>
 #include "tbb_tools.h"
 
 using std::string;
@@ -179,7 +178,7 @@ public:
     void printPerfString(std::ostream& stats, const std::string& label, const PerfTimer& T);
 
     //! Data for solving quasi-2D method-of-lines problems
-    boost::shared_ptr<BilinearInterpolator> vzInterp, vrInterp, TInterp;
+    std::shared_ptr<BilinearInterpolator> vzInterp, vrInterp, TInterp;
 
     // Performance Timers
     // Just the total time:
