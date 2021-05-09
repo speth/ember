@@ -182,7 +182,13 @@ opts.AddVariables(
      defaults.blas_lapack),
     ('install_args',
      'Command-line arguments passed to "python setup.py install"',
-     '--user')
+     '--user'),
+    BoolVariable(
+        'verbose',
+        """Print extra information during the build process, especially about
+           errors.
+        """,
+        False),
     )
 
 opts.Update(env)
@@ -367,6 +373,10 @@ for header, quotes in required_headers:
     fail |= SCons.Conftest.CheckHeader(context, header, language='C++',
                                      include_quotes=quotes)
 if fail:
+    if env['verbose']:
+        print('*' * 25, 'Contents of config.log:', '*' * 25)
+        print(open('config.log').read())
+        print('*' * 28, 'End of config.log', '*' * 28)
     raise EnvironmentError("Failed to a required header file. "
                            "See config.log for details.")
 
@@ -374,6 +384,10 @@ if fail:
 src = get_expression_value(["<cmath>"], "sin(3.14)")
 retcode, retval = conf.TryRun(src, '.cpp')
 if not retcode:
+    if env['verbose']:
+        print('*' * 25, 'Contents of config.log:', '*' * 25)
+        print(open('config.log').read())
+        print('*' * 28, 'End of config.log', '*' * 28)
     raise EnvironmentError("Failed to a required library."
                            "See config.log for details.")
 
@@ -396,6 +410,10 @@ sundials_version_source = get_expression_value(
     '#endif')
 retcode, sundials_version = conf.TryRun(sundials_version_source, '.cpp')
 if retcode == 0:
+    if env['verbose']:
+        print('*' * 25, 'Contents of config.log:', '*' * 25)
+        print(open('config.log').read())
+        print('*' * 28, 'End of config.log', '*' * 28)
     print("Failed to determine Sundials version.")
     print("See 'config.log' for details.")
     sys.exit(1)
