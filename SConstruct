@@ -377,7 +377,7 @@ if fail:
         print('*' * 25, 'Contents of config.log:', '*' * 25)
         print(open('config.log').read())
         print('*' * 28, 'End of config.log', '*' * 28)
-    raise EnvironmentError("Failed to a required header file. "
+    raise EnvironmentError("Failed to find a required header file. "
                            "See config.log for details.")
 
 # Check for required libraries
@@ -388,7 +388,7 @@ if not retcode:
         print('*' * 25, 'Contents of config.log:', '*' * 25)
         print(open('config.log').read())
         print('*' * 28, 'End of config.log', '*' * 28)
-    raise EnvironmentError("Failed to a required library."
+    raise EnvironmentError("Failed to find a required library."
                            "See config.log for details.")
 
 cantera_version_source = get_expression_value(['"cantera/base/config.h"'],
