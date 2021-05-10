@@ -145,6 +145,10 @@ opts.AddVariables(
      """Flags to pass to the C++ compiler (separate multiple options with
         spaces. If not specified, compiler-specific defaults will be used.""",
      ''),
+    ('link_flags',
+     """Flags to pass to the linker (separate multiple options with spaces).
+        If not specified, compiler-specific defaults will be used.""",
+     ''),
     ('libdirs',
      'Comma-separated List of additional library directories',
      ''),
@@ -288,7 +292,7 @@ if env['use_tbb'] and env['tbb']:
 
 if env.subst('$CXX') == 'cl':
     flags = ['/nologo', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc', '/MD']
-    linkflags=[]
+    linkflags= env['link_flags'].split()
     defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS']
     if env['debug_symbols']:
         env.Append(LINKFLAGS='/DEBUG')
@@ -303,7 +307,7 @@ else:
     # Assume that GCC-compatible flags are accepted
     flags = ['-ftemplate-depth-128', '-std=c++0x', '-fPIC', '-g', '-Wall', '-pthread',
              '-Wno-deprecated-declarations']
-    linkflags = ['-pthread']
+    linkflags = env['link_flags'].split() + ['-pthread']
     defines = []
     if env['debug_symbols']:
         flags.append('-g')
