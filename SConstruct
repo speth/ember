@@ -474,9 +474,6 @@ env.Append(CPPPATH=includepy)
 if pylibdir != 'None':
     env.Append(LIBPATH=pylibdir)
 
-def compile_cython(target, source, env):
-    cythonize([f.abspath for f in source])
-
 # extract 'pythonX.Y' from 'libpythonX.Y.dll.a' or 'libpythonX.Y.a'
 if pylib != 'None':
     pylib = pylib[3:]
