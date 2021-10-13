@@ -215,7 +215,10 @@ void ApproxMixTransport::updateDiff_T()
             for (size_t k=0; k<m_nsp; k++) {
                 size_t ic = (k > j) ? m_nsp*j - (j-1)*j/2 + k - j
                                     : m_nsp*k - (k-1)*k/2 + j - k;
-                m_bdiff(j,k) = exp(Cantera::dot4(m_polytempvec, m_diffcoeffs[ic]));
+                m_bdiff(j,k) = exp(m_polytempvec[0] * m_diffcoeffs[ic][0] +
+                                   m_polytempvec[1] * m_diffcoeffs[ic][1] +
+                                   m_polytempvec[2] * m_diffcoeffs[ic][2] +
+                                   m_polytempvec[3] * m_diffcoeffs[ic][3]);
                 m_bdiff(k,j) = m_bdiff(j,k);
             }
         }
@@ -225,13 +228,16 @@ void ApproxMixTransport::updateDiff_T()
             for (size_t k=0; k<m_nsp; k++) {
                 size_t ic = (k > j) ? m_nsp*j - (j-1)*j/2 + k - j
                                     : m_nsp*k - (k-1)*k/2 + j - k;
-                m_bdiff(j,k) = m_temp * m_sqrt_t*Cantera::dot5(m_polytempvec, m_diffcoeffs[ic]);
+                m_bdiff(j,k) = m_temp * m_sqrt_t*
+                               (m_polytempvec[0] * m_diffcoeffs[ic][0] +
+                                m_polytempvec[1] * m_diffcoeffs[ic][1] +
+                                m_polytempvec[2] * m_diffcoeffs[ic][2] +
+                                m_polytempvec[3] * m_diffcoeffs[ic][3] +
+                                m_polytempvec[4] * m_diffcoeffs[ic][4]);
                 m_bdiff(k,j) = m_bdiff(j,k);
             }
         }
     }
-
-    m_bindiff_ok = true;
 }
 
 void ApproxMixTransport::update_C()
