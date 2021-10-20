@@ -86,9 +86,9 @@ void SundialsCvode::initialize()
             );
         }
         sundialsLinsol = SUNDenseLinearSolver(y.forSundials(), (SUNMatrix) sundialsLinsolMatrix);
-        CVodeSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsol,
+        CVDlsSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsol,
                                 (SUNMatrix) sundialsLinsolMatrix);
-        flag = CVodeSetJacFn(sundialsMem, denseJac);
+        flag = CVDlsSetJacFn(sundialsMem, denseJac);
         if (check_flag(&flag, "CVodeSetJacFn", 1)) {
             throw DebugException("SundialsCvode::initialize: error in CVDlsSetDenseJacFn");
         }
@@ -110,7 +110,7 @@ void SundialsCvode::initialize()
             );
         }
         sundialsLinsol = SUNBandLinearSolver(y.forSundials(), (SUNMatrix) sundialsLinsolMatrix);
-        CVodeSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsol,
+        CVDlsSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsol,
                                 (SUNMatrix) sundialsLinsolMatrix);
     }
 
@@ -360,7 +360,7 @@ sdMatrix::~sdMatrix() {
 sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower)
 {
     alloc = true;
-    M = SUNBandMatrix(N, bwUpper, bwLower);
+    M = SUNBandMatrix(N, bwUpper, bwLower, bwUpper + bwLower);
 }
 
 sdBandMatrix::sdBandMatrix(SUNMatrix other)
