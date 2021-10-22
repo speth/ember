@@ -204,6 +204,10 @@ if os.name == 'nt' and 'g++' in env.subst('$CXX'):
     env.Append(LINKFLAGS=['-static-libgcc', '-static-libstdc++'])
     opts.Update(env)
 
+if 'clean' in COMMAND_LINE_TARGETS:
+    remove_directory("build")
+    remove_file(".sconsign.dblite")
+
 if 'help' in COMMAND_LINE_TARGETS:
     # Print help about configuration options and exit
     print("""
