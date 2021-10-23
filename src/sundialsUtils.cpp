@@ -360,7 +360,7 @@ sdMatrix::~sdMatrix() {
 sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower)
 {
     alloc = true;
-    M = SUNBandMatrix(N, bwUpper, bwLower, bwUpper + bwLower);
+    M = SUNBandMatrix(N, bwUpper, bwLower);
 }
 
 sdBandMatrix::sdBandMatrix(SUNMatrix other)
