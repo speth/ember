@@ -336,6 +336,11 @@ env.Append(CPPPATH=include_dirs,
            LINKFLAGS=linkflags,
            LIBS=sundials + cantera + lastlibs)
 
+if env["OS"] == "Darwin" and not env.subst("$__RPATH"):
+    # SCons doesn't want to specify RPATH on macOS, so circumvent that behavior by
+    # specifying this directly as part of LINKFLAGS
+    env.Append(LINKFLAGS=[env.subst(f'-Wl,-rpath,{x}') for x in env['RPATH']])
+
 def CheckMemberFunction(context, function, includes=""):
     context.Message('Checking for %s... ' % function)
     src = """
