@@ -254,14 +254,14 @@ cantera = ['cantera'] + env['extra_libs'].split(',')
 sundials = 'sundials_nvecserial sundials_ida sundials_cvodes'.split()
 lastlibs = ['tbb'] if env['use_tbb'] else []
 
-if os.name == 'nt':
+if os.name == 'nt' and env['tbb']:
     if 'g++' in env.subst('$CXX'):
         lastlibs += ['python27']
         tbbCompiler = 'mingw'
         if target_arch == 'amd64':
             env.Append(CPPDEFINES='MS_WIN64')
     tbbLibDir = env['tbb']+'/lib/%s/%s' % (tbbArch, tbbCompiler)
-else:
+elif env['tbb']:
     tbbLibDir = env['tbb']+'/lib'
 
 if platform.system() == 'Darwin':
@@ -269,7 +269,9 @@ if platform.system() == 'Darwin':
 
 lastlibs += env['blas_lapack'].split(',')
 include_dirs = env['include'].split(',')
-library_dirs = [env.Dir('lib').abspath] + env['libdirs'].split(',')
+library_dirs = [env.Dir('lib').abspath]
+if env['libdirs']:
+    library_dirs += env['libdirs'].split(',')
 
 if env['cantera']:
     include_dirs.append(env['cantera'] + '/include')
@@ -328,6 +330,7 @@ else:
 
 env.Append(CPPPATH=include_dirs,
            LIBPATH=library_dirs,
+           RPATH=library_dirs,
            CXXFLAGS=env['cxx_flags'] or flags,
            CPPDEFINES=defines,
            LINKFLAGS=linkflags,
