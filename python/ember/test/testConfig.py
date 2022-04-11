@@ -42,7 +42,7 @@ class TestConfig(unittest.TestCase):
         self.assertTrue(c.validate())
 
     def test_validate_badmech(self):
-        c = Config(Chemistry(mechanismFile='wxyz.xml'))
+        c = Config(Chemistry(mechanismFile='wxyz.yaml'))
         with self.assertRaises(Exception):
             c.validate()
 

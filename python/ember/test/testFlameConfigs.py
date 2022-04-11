@@ -10,7 +10,7 @@ class TestPremixedStrained(CanteraTest):
             Paths(outputDir='build/test/work/premixedStrained',
                   logFile='build/test/work/premixedStrained.txt'),
             General(nThreads=1),
-            Chemistry(mechanismFile='h2o2.cti'),
+            Chemistry(mechanismFile='h2o2.yaml'),
             InitialCondition(fuel='H2:1.0',
                              oxidizer='O2:1.0, AR:4.0',
                              equivalenceRatio=0.3),
@@ -27,7 +27,7 @@ class TestPremixedStrained(CanteraTest):
         self.assertNear(solver.tNow, 0.01, atol=3e-5)
 
         # Reactants side
-        gas = ct.Solution('h2o2.cti')
+        gas = ct.Solution('h2o2.yaml')
         gas.TPX = 300, 101325, 'H2:0.6, O2:1.0, AR:4.0'
         self.assertNear(gas.T, solver.T[0])
         for i in range(gas.n_species):
@@ -48,7 +48,7 @@ class TestTwinPremixedStrained(CanteraTest):
         self.conf = Config(
             Paths(outputDir='build/test/work/twinPremixedStrained',
                   logFile='build/test/work/twinPremixedStrained.txt'),
-            Chemistry(mechanismFile='h2o2.cti'),
+            Chemistry(mechanismFile='h2o2.yaml'),
             InitialCondition(fuel='H2:1.0',
                              oxidizer='O2:1.0, AR:4.0',
                              xRight=0.003,
@@ -66,9 +66,9 @@ class TestTwinPremixedStrained(CanteraTest):
         solver = self.conf.run()
         self.assertNear(solver.tNow, 0.01, atol=3e-5)
 
-        products = ct.Solution('h2o2.cti')
-        equil_prod = ct.Solution('h2o2.cti')
-        reactants = ct.Solution('h2o2.cti')
+        products = ct.Solution('h2o2.yaml')
+        equil_prod = ct.Solution('h2o2.yaml')
+        reactants = ct.Solution('h2o2.yaml')
 
         # Reactants side
         reactants.TPX = 300, 101325, 'H2:0.6, O2:1.0, AR:4.0'
@@ -91,7 +91,7 @@ class TestDiffusion(CanteraTest):
             Paths(outputDir='build/test/work/h2Diffusion',
                   logFile='build/test/work/h2Diffusion.txt'),
             General(nThreads=1),
-            Chemistry(mechanismFile='h2o2.cti'),
+            Chemistry(mechanismFile='h2o2.yaml'),
             InitialCondition(flameType='diffusion',
                              fuel='H2:1.0, AR:1.0',
                              oxidizer='O2:1.0, AR:4.0'),
@@ -107,9 +107,9 @@ class TestDiffusion(CanteraTest):
         solver = self.conf.run()
         self.assertNear(solver.tNow, 0.01, atol=3e-5)
 
-        fuel = ct.Solution('h2o2.cti')
-        prod = ct.Solution('h2o2.cti')
-        ox = ct.Solution('h2o2.cti')
+        fuel = ct.Solution('h2o2.yaml')
+        prod = ct.Solution('h2o2.yaml')
+        ox = ct.Solution('h2o2.yaml')
 
         fuel.TPX = 300, 101325, 'H2:1.0, AR:1.0'
         ox.TPX = 300, 101325, 'O2:1.0, AR:4.0'

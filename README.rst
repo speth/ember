@@ -27,10 +27,9 @@ Running Ember
 * Prepare your kinetics mechanism. If you're starting with a mechanism that's
   in the Chemkin format, it will need to be converted::
 
-    $ source /wherever/cantera/is/installed/setup_cantera
-    $ ck2cti --input=<mech> --thermo=<thermo> --transport=<transport>
+    $ ck2yaml --input=<mech> --thermo=<thermo> --transport=<transport>
 
-  This will produce a``<mech>.cti`` file that can be used by Cantera and Ember.
+  This will produce a``<mech>.yaml`` file that can be used by Cantera and Ember.
 
 * Prepare the input file, based on the one specified in::
 

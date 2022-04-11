@@ -15,7 +15,7 @@ a = 300.0
 
 conf = Config(
     Paths(outputDir=output),
-    # Chemistry(mechanismFile='gri30.cti'),
+    # Chemistry(mechanismFile='gri30.yaml'),
     General(twinFlame=False,
             flameGeometry= 'disc',
             nThreads=4),

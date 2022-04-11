@@ -17,7 +17,7 @@ output = 'run/ex_extinction'
 
 conf = Config(
     Paths(outputDir=output),
-    # Chemistry(mechanismFile='gri30.cti'),
+    # Chemistry(mechanismFile='gri30.yaml'),
     General(twinFlame=True,
             flameGeometry='disc',
             unburnedLeft=False,

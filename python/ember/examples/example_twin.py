@@ -16,7 +16,7 @@ conf = Config(
     Paths(outputDir=output,
           # logFile='ex_twin.log'
           ),
-    # Chemistry(mechanismFile='gri30.xml'),
+    # Chemistry(mechanismFile='gri30.yaml'),
     General(twinFlame=True,
             unburnedLeft=False,
             nThreads=4),

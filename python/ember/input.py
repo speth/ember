@@ -352,7 +352,7 @@ class Chemistry(Options):
     """ Settings pertaining to the Cantera mechanism file """
 
     #: Path to the Cantera mechanism file in XML format
-    mechanismFile = StringOption("ucsd-methane.xml")
+    mechanismFile = StringOption("gri30.yaml")
 
     #: ID of the phase to use in the mechanism file.
     #: Found on a line that looks like::
