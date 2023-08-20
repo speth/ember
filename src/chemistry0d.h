@@ -9,7 +9,7 @@
 #include "cantera/transport/MultiTransport.h"
 #include "cantera/transport/UnityLewisTransport.h"
 #include "cantera/thermo/ThermoFactory.h"
-#include "cantera/kinetics/GasKinetics.h"
+#include "cantera/kinetics/BulkKinetics.h"
 #include "cantera/base/Solution.h"
 
 class ConfigOptions;
@@ -48,6 +48,7 @@ private:
     vector<size_t> _kMajor; //!< indices of the species where X[k] >= threshold
 };
 
+#if false // Disabled due to significant changes in BulkKinetics/GasKinetics implementation
 //! Approximate evaluator for kinetics rates at constant pressure using linear
 //! interpolation.
 /*!
@@ -82,6 +83,7 @@ private:
     dmatrix m_falloff_work_const, m_falloff_work_slope;
     dmatrix m_rkcn_const, m_rkcn_slope;
 };
+#endif
 
 //! A set of Cantera objects needed for calculating thermodynamic properties,
 //! transport properties, and kinetic rates for a constant-pressure mixture.

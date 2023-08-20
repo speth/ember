@@ -249,6 +249,7 @@ void ApproxMixTransport::update_C()
 
 typedef Eigen::Map<dvec> vec_map;
 
+#if false
 InterpKinetics::InterpKinetics()
     : m_ntemps(0)
     , m_tmin(0)
@@ -328,6 +329,7 @@ void InterpKinetics::update_rates_T()
     m_temp = Tnow;
     m_ROP_ok = false;
 }
+#endif
 
 CanteraGas::CanteraGas()
     : isInitialized(false)
@@ -355,9 +357,11 @@ void CanteraGas::initialize()
     auto kin_fac = Cantera::KineticsFactory::factory();
     if (kineticsModel == "interp") {
         // Overwrite the normal factory function
-        kin_fac->reg("gas", []() { return new InterpKinetics(); });
+        // kin_fac->reg("gas", []() { return new InterpKinetics(); });
+        Cantera::writelog("Warning: interpKinetics is not compatible with "
+                          "Cantera 3.0; falling back to BulkKinetics\n");
     } else {
-        kin_fac->reg("gas", []() { return new Cantera::GasKinetics(); });
+        kin_fac->reg("gas", []() { return new Cantera::BulkKinetics(); });
     }
 
     vector<Cantera::ThermoPhase*> kin_phases{thermo.get()};
