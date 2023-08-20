@@ -307,16 +307,12 @@ if env.subst('$CXX') == 'cl':
         defines.append('NDEBUG')
 else:
     # Assume that GCC-compatible flags are accepted
-    flags = ['-ftemplate-depth-128', '-std=c++0x', '-fPIC', '-g', '-Wall', '-pthread',
+    flags = ['-ftemplate-depth-128', '-std=c++17', '-fPIC', '-g', '-Wall', '-pthread',
              '-Wno-deprecated-declarations']
     linkflags = env['link_flags'].split() + ['-pthread']
     defines = []
     if env['debug_symbols']:
         flags.append('-g')
-
-    if 'cygwin' in platform.system().lower():
-        flags.remove('-std=c++0x')
-        flags.append('-std=gnu++0x')
 
     if env['OS'] == 'nt' or 'cygwin' in platform.system().lower():
         flags.remove('-fPIC')
