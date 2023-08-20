@@ -374,7 +374,7 @@ context = SCons.SConf.CheckContext(conf)
 fail = False
 required_headers = [('cantera/thermo/IdealGasPhase.h', '""'),
                     ('cvode/cvode.h', '<>'),
-                    ('Eigen/Dense', '<>')]
+                    ('eigen3/Eigen/Dense', '<>')]
 if env['use_tbb']:
     required_headers.append(('tbb/parallel_for.h', '""'))
 for header, quotes in required_headers:

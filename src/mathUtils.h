@@ -11,7 +11,7 @@
 
 #include "debugUtils.h"
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 using std::abs;
 using std::size_t;
