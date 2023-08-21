@@ -4,8 +4,9 @@
 #include "mathUtils.h" // debug
 
 SundialsCvode::SundialsCvode(unsigned int n)
-    : y(n)
-    , abstol(n)
+    : sunContext(new SundialsContext())
+    , y(n, *sunContext)
+    , abstol(n, *sunContext)
     , findRoots(false)
     , maxNumSteps(500)
     , minStep(0)
@@ -42,16 +43,15 @@ void SundialsCvode::initialize()
 
         CVodeSetMaxNumSteps(sundialsMem, maxNumSteps);
         CVodeSetMinStep(sundialsMem, minStep);
+        #if EMBER_SUNDIALS_VERSION >= 66
+            CVodeSetInterpolateStopTime(sundialsMem, true);
+        #endif
         return;
     }
 
     // On the first call to initialize, need to allocate and set up
     // the Sundials solver, set tolerances and link the ODE functions
-    #if EMBER_SUNDIALS_VERSION < 40
-        sundialsMem = CVodeCreate(linearMultistepMethod, CV_NEWTON);
-    #else
-        sundialsMem = CVodeCreate(linearMultistepMethod);
-    #endif
+    sundialsMem = CVodeCreate(linearMultistepMethod, sunContext->get());
     if (check_flag((void *)sundialsMem, "CVodeCreate", 0)) {
         throw DebugException("SundialsCvode::initialize: error in CVodeCreate");
     }
@@ -65,6 +65,9 @@ void SundialsCvode::initialize()
     CVodeSetUserData(sundialsMem, theODE);
     CVodeSetMaxNumSteps(sundialsMem, maxNumSteps);
     CVodeSetMinStep(sundialsMem, minStep);
+    #if EMBER_SUNDIALS_VERSION >= 66
+        CVodeSetInterpolateStopTime(sundialsMem, true);
+    #endif
 
     if (findRoots) {
         rootsFound.resize(nRoots);
@@ -78,16 +81,23 @@ void SundialsCvode::initialize()
     if (bandwidth_upper == -1 && bandwidth_lower == -1) {
         SUNLinSolFree((SUNLinearSolver) sundialsLinsol);
         SUNMatDestroy((SUNMatrix) sundialsLinsolMatrix);
-        sundialsLinsolMatrix = SUNDenseMatrix(y.size(), y.size());
+        sundialsLinsolMatrix = SUNDenseMatrix(y.size(), y.size(), sunContext->get());
         if (sundialsLinsolMatrix == nullptr) {
             throw DebugException((format("SundialsCvode::initialize: "
                 "Unable to create SUNDenseMatrix of size %i x %i")
                 % y.size() % y.size()).str()
             );
         }
-        sundialsLinsol = SUNDenseLinearSolver(y.forSundials(), (SUNMatrix) sundialsLinsolMatrix);
-        CVodeSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsol,
-                                (SUNMatrix) sundialsLinsolMatrix);
+        #if CT_SUNDIALS_USE_LAPACK
+            sundialsLinsol = SUNLinSol_LapackDense(y.forSundials(),
+                (SUNMatrix) sundialsLinsolMatrix, sunContext->get());
+        #else
+            sundialsLinsol = SUNLinSol_Dense(y.forSundials(), (SUNMatrix) sundialsLinsolMatrix,
+                                        sunContext->get());
+        #endif
+        flag = CVodeSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsolMatrix,
+                                    (SUNMatrix) sundialsLinsolMatrix);
+
         flag = CVodeSetJacFn(sundialsMem, denseJac);
         if (check_flag(&flag, "CVodeSetJacFn", 1)) {
             throw DebugException("SundialsCvode::initialize: error in CVDlsSetDenseJacFn");
@@ -96,22 +106,28 @@ void SundialsCvode::initialize()
         // Specify the banded linear solver
         SUNLinSolFree((SUNLinearSolver) sundialsLinsol);
         SUNMatDestroy((SUNMatrix) sundialsLinsolMatrix);
-        #if EMBER_SUNDIALS_VERSION < 40
-            sundialsLinsolMatrix = SUNBandMatrix(y.size(), bandwidth_upper,
-                bandwidth_lower, bandwidth_lower + bandwidth_upper);
-        #else
-            sundialsLinsolMatrix = SUNBandMatrix(y.size(), bandwidth_upper,
-                                                    bandwidth_lower);
-        #endif
+        sundialsLinsolMatrix = SUNBandMatrix(y.size(), bandwidth_upper,
+                                             bandwidth_lower, sunContext->get());
         if (sundialsLinsolMatrix == nullptr) {
             throw DebugException((format("SundialsCvode::initialize: "
                 "Unable to create SUNBandMatrix of size %i with bandwidths "
                 "%i and %i") % y.size() % bandwidth_upper % bandwidth_lower).str()
             );
         }
-        sundialsLinsol = SUNBandLinearSolver(y.forSundials(), (SUNMatrix) sundialsLinsolMatrix);
+        #if CT_SUNDIALS_USE_LAPACK
+            sundialsLinsol = SUNLinSol_LapackBand(y.forSundials(),
+                (SUNMatrix) sundialsLinsolMatrix, sunContext->get());
+        #else
+            sundialsLinsol = SUNLinSol_Band(y.forSundials(),
+                (SUNMatrix) sundialsLinsolMatrix, sunContext->get());
+        #endif
+        if (sundialsLinsol == nullptr) {
+            throw DebugException("SundialsCvode::initialize: "
+                "Unable to create Sundials Band matrix solver"
+            );
+        }
         CVodeSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsol,
-                                (SUNMatrix) sundialsLinsolMatrix);
+                             (SUNMatrix) sundialsLinsolMatrix);
     }
 
     _initialized = true;
@@ -248,18 +264,20 @@ int SundialsCvode::check_flag(void *flagvalue, const char *funcname, int opt)
 // f routine. Compute function f(t,y).
 int SundialsCvode::f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data)
 {
+    sdODE* ode = (sdODE*) f_data;
     sdVector y(yIn);
     sdVector ydot(ydotIn);
     // f_data contains a pointer to the "theODE" object
-    return ((sdODE*) f_data)->f(t, y, ydot);
+    return ode->f(t, y, ydot);
 }
 
 // g routine. Compute functions g_i(t,y) for i = 0,1.
 int SundialsCvode::g(realtype t, N_Vector yIn, realtype *gout, void *g_data)
 {
+    sdODE* ode = (sdODE*) g_data;
     sdVector y(yIn);
     // g_data contains a pointer to the "theODE" object
-    return ((sdODE*) g_data)->g(t, y, gout);
+    return ode->g(t, y, gout);
 }
 
 // Jacobian routine. Compute J(t,y) = df/dy. *
@@ -268,22 +286,24 @@ int SundialsCvode::denseJac(
     N_Vector fyIn, SUNMatrix JIn, void *user_data,
     N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
+    sdODE* ode = (sdODE*) user_data;
     sdVector y(yIn);
     sdVector fy(fyIn);
     sdMatrix J(JIn);
     // user_data contains a pointer to the "theODE" object
-    return ((sdODE*) user_data)->denseJacobian(t, y, fy, J);
+    return ode->denseJacobian(t, y, fy, J);
 }
 
 int SundialsCvode::bandJac(
 	realtype t, N_Vector yIn, N_Vector fyIn, SUNMatrix JIn, void* user_data,
     N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
+    sdODE* ode = (sdODE*) user_data;
     sdVector y(yIn);
     sdVector fy(fyIn);
     sdBandMatrix J(JIn);
     // user_data contains a pointer to the "theODE" object
-    return ((sdODE*) user_data)->bandedJacobian(t, y, fy, J);
+    return ode->bandedJacobian(t, y, fy, J);
 }
 
 void SundialsCvode::setODE(sdODE* newODE)
@@ -291,10 +311,17 @@ void SundialsCvode::setODE(sdODE* newODE)
     theODE = newODE;
 }
 
-sdVector::sdVector(unsigned int N)
+sdVector::sdVector()
+{
+    v = nullptr;
+    alloc = false;
+    n = 0;
+}
+
+sdVector::sdVector(unsigned int N, SundialsContext& context)
 {
     alloc = true;
-    v = N_VNew_Serial(N);
+    v = N_VNew_Serial(N, context.get());
     n = N;
     if (SundialsCvode::check_flag((void *)v, "N_VNew_Serial", 0)) {
         throw DebugException("sdVector: error allocating vector");
@@ -331,10 +358,10 @@ std::ostream& operator<<(std::ostream& os, const sdVector& v)
     return os;
 }
 
-sdMatrix::sdMatrix(unsigned int n, unsigned int m)
+sdMatrix::sdMatrix(unsigned int n, unsigned int m, SundialsContext& context)
 {
     alloc = true;
-    M = SUNDenseMatrix(n,m);
+    M = SUNDenseMatrix(n,m, context.get());
 }
 
 sdMatrix::sdMatrix(SUNMatrix other)
@@ -357,10 +384,11 @@ sdMatrix::~sdMatrix() {
 
 // Band Matrix
 
-sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower)
+sdBandMatrix::sdBandMatrix(long int N, long int bwUpper, long int bwLower,
+                           SundialsContext& context)
 {
     alloc = true;
-    M = SUNBandMatrix(N, bwUpper, bwLower);
+    M = SUNBandMatrix(N, bwUpper, bwLower, context.get());
 }
 
 sdBandMatrix::sdBandMatrix(SUNMatrix other)

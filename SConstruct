@@ -411,11 +411,7 @@ if StrictVersion(cantera_version.strip()) < StrictVersion(min_cantera_version):
 
 # Determine Sundials version
 sundials_version_source = get_expression_value(
-    ['"sundials/sundials_config.h"'],
-    'SUNDIALS_VERSION',
-    '#ifndef SUNDIALS_VERSION\n'
-    '#define SUNDIALS_VERSION SUNDIALS_PACKAGE_VERSION\n'
-    '#endif')
+    ['"sundials/sundials_config.h"'], 'SUNDIALS_VERSION')
 retcode, sundials_version = conf.TryRun(sundials_version_source, '.cpp')
 if retcode == 0:
     if env['verbose']:

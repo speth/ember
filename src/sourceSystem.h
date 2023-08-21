@@ -210,6 +210,8 @@ public:
 
 private:
     std::unique_ptr<SundialsCvode> integrator;
+
+    SundialsContext sunContext;
 };
 
 //! This is the system representing the (chemical) source term at a point,

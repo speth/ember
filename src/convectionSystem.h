@@ -275,4 +275,6 @@ private:
     bool quasi2d;
 
     double tStageStop; //!< end time of the current integration stage
+
+    SundialsContext sunContext;
 };

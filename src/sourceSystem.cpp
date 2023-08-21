@@ -269,8 +269,8 @@ int SourceSystemCVODE::fdJacobian(const realtype t, const sdVector& y,
                                   const sdVector& ydot, sdMatrix& J)
 {
     jacobianTimer->start();
-    sdVector yplusdy(y.length());
-    sdVector ydot2(y.length());
+    sdVector yplusdy(y.length(), sunContext);
+    sdVector ydot2(y.length(), sunContext);
     size_t nVars = nSpec+2;
     double eps = sqrt(DBL_EPSILON);
     double atol = DBL_EPSILON;
@@ -378,8 +378,8 @@ void SourceSystemCVODE::writeJacobian(std::ostream& out)
 {
     int N = integrator->y.length();
     double t = integrator->tInt;
-    sdMatrix J(N,N);
-    sdVector ydot(N);
+    sdMatrix J(N,N, sunContext);
+    sdVector ydot(N, sunContext);
     f(t, integrator->y, ydot);
     denseJacobian(t, integrator->y, ydot, J);
 

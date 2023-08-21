@@ -528,7 +528,7 @@ void ConvectionSystemSplit::set_rVzero(const double rVzero)
 
 void ConvectionSystemSplit::evaluate()
 {
-    sdVector ydotUTW(static_cast<int>(nVars*nPoints));
+    sdVector ydotUTW(static_cast<int>(nVars*nPoints), sunContext);
     utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
 
     vInterp->clear();
@@ -541,7 +541,7 @@ void ConvectionSystemSplit::evaluate()
 
     dYdt.resize(nSpec, nPoints);
     dYdt.setZero();
-    sdVector ydotk(static_cast<int>(nPoints));
+    sdVector ydotk(static_cast<int>(nPoints), sunContext);
     for (size_t k=0; k<nSpec; k++) {
         speciesSystems[k].vInterp = vInterp;
         speciesSystems[k].f(speciesSolvers[k].tInt, speciesSolvers[k].y, ydotk);
@@ -593,7 +593,7 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
         utwTimer.start();
         vInterp->clear();
 
-        sdVector ydotUTW(static_cast<int>(nVars*nPoints));
+        sdVector ydotUTW(static_cast<int>(nVars*nPoints), sunContext);
         utwSystem.f(utwSolver->tInt, utwSolver->y, ydotUTW);
         vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
 

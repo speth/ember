@@ -21,10 +21,17 @@
     //#include <ida/ida_dense.h>
 #endif
 
+#include "cantera/base/ct_defs.h"
+
 #include "cvodes/cvodes_direct.h"
 #include "cvodes/cvodes_spils.h"
-#include "sunlinsol/sunlinsol_dense.h"
-#include "sunlinsol/sunlinsol_band.h"
+#if CT_SUNDIALS_USE_LAPACK
+    #include "sunlinsol/sunlinsol_lapackdense.h"
+    #include "sunlinsol/sunlinsol_lapackband.h"
+#else
+    #include "sunlinsol/sunlinsol_dense.h"
+    #include "sunlinsol/sunlinsol_band.h"
+#endif
 #include "sunlinsol/sunlinsol_spgmr.h"
 #include "sunmatrix/sunmatrix_dense.h"
 #include "sunmatrix/sunmatrix_band.h"
@@ -36,13 +43,34 @@
 #include "config.h"
 
 typedef long int sd_size_t;
+using std::shared_ptr;
+
+//! A wrapper for managing a SUNContext object, need for Sundials >= 6.0
+class SundialsContext
+{
+public:
+    SundialsContext() {
+        SUNContext_Create(nullptr, &m_context);
+    }
+    ~SundialsContext() {
+        SUNContext_Free(&m_context);
+    }
+    SUNContext& get() {
+        return m_context;
+    }
+
+private:
+    SUNContext m_context;
+};
 
 //! wrapper class for Sundials "N_Vector"
 class sdVector
 {
 public:
+    sdVector();
+
     //! Construct a new vector of length `n`.
-    sdVector(unsigned int n);
+    sdVector(unsigned int n, SundialsContext& context);
 
     //! Wrap an existing `N_Vector`.
     sdVector(N_Vector other);
@@ -80,7 +108,7 @@ class sdMatrix
 {
 public:
     //! Create a new matrix with `n` rows and `m` columns.
-    sdMatrix(unsigned int n, unsigned int m);
+    sdMatrix(unsigned int n, unsigned int m, SundialsContext& context);
 
     //! Create a wrapper for an existing `DensMat` object.
     sdMatrix(SUNMatrix other);
@@ -116,7 +144,7 @@ public:
     //! @param N dimension of the matrix (square)
     //! @param bwUpper upper bandwidth of the matrix
     //! @param bwLower lower bandwidth of the matrix
-    sdBandMatrix(long int N, long int bwUpper, long int bwLower);
+    sdBandMatrix(long int N, long int bwUpper, long int bwLower, SundialsContext& context);
 
     //! Create a wrapper for an existing `SUNBandMatrix` object.
     sdBandMatrix(SUNMatrix other);
@@ -212,6 +240,10 @@ public:
     //! Set the %ODE to be solved
     void setODE(sdODE* newODE);
 
+private:
+    shared_ptr<SundialsContext> sunContext;
+
+public:
     realtype t0; //!< initial time
     sdVector y; //!< initial or current state vector
 
