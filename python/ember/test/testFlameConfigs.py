@@ -2,9 +2,10 @@ import unittest
 
 from ember import *
 import cantera as ct
-from cantera.test.utilities import CanteraTest
+from unittest import TestCase
+import numpy as np
 
-class TestPremixedStrained(CanteraTest):
+class TestPremixedStrained(TestCase):
     def setUp(self):
         self.conf = Config(
             Paths(outputDir='build/test/work/premixedStrained',
@@ -24,26 +25,24 @@ class TestPremixedStrained(CanteraTest):
 
     def test_run(self):
         solver = self.conf.run()
-        self.assertNear(solver.tNow, 0.01, atol=3e-5)
+        np.testing.assert_allclose(solver.tNow, 0.01, atol=3e-5)
 
         # Reactants side
         gas = ct.Solution('h2o2.yaml')
         gas.TPX = 300, 101325, 'H2:0.6, O2:1.0, AR:4.0'
-        self.assertNear(gas.T, solver.T[0])
-        for i in range(gas.n_species):
-            self.assertNear(gas.Y[i], solver.Y[i,0])
+        np.testing.assert_approx_equal(gas.T, solver.T[0])
+        np.testing.assert_allclose(gas.Y, solver.Y[:,0], atol=1e-8)
 
         # Products side
         gas.equilibrate('HP')
-        for i in range(gas.n_species):
-            self.assertNear(gas.Y[i], solver.Y[i,-1], atol=1e-8)
-        self.assertNear(gas.T, solver.T[-1], 5)
+        np.testing.assert_allclose(gas.Y, solver.Y[:,-1], atol=1e-8)
+        np.testing.assert_approx_equal(gas.T, solver.T[-1], 5)
 
         # Since this is Le < 1
         self.assertGreater(max(solver.T), gas.T)
 
 
-class TestTwinPremixedStrained(CanteraTest):
+class TestTwinPremixedStrained(TestCase):
     def setUp(self):
         self.conf = Config(
             Paths(outputDir='build/test/work/twinPremixedStrained',
@@ -64,7 +63,7 @@ class TestTwinPremixedStrained(CanteraTest):
 
     def test_run(self):
         solver = self.conf.run()
-        self.assertNear(solver.tNow, 0.01, atol=3e-5)
+        np.testing.assert_allclose(solver.tNow, 0.01, atol=3e-5)
 
         products = ct.Solution('h2o2.yaml')
         equil_prod = ct.Solution('h2o2.yaml')
@@ -72,9 +71,8 @@ class TestTwinPremixedStrained(CanteraTest):
 
         # Reactants side
         reactants.TPX = 300, 101325, 'H2:0.6, O2:1.0, AR:4.0'
-        self.assertNear(reactants.T, solver.T[-1])
-        for i in range(reactants.n_species):
-            self.assertNear(reactants.Y[i], solver.Y[i,-1])
+        np.testing.assert_allclose(reactants.T, solver.T[-1])
+        np.testing.assert_allclose(reactants.Y, solver.Y[:,-1], atol=1e-8)
 
         # Products side. Not necessarily equilibrium
         equil_prod.TPX = reactants.TPX
@@ -85,7 +83,7 @@ class TestTwinPremixedStrained(CanteraTest):
         self.assertGreater(products['H2O'].X, 0.5*equil_prod['H2O'].X)
 
 
-class TestDiffusion(CanteraTest):
+class TestDiffusion(TestCase):
     def setUp(self):
         self.conf = Config(
             Paths(outputDir='build/test/work/h2Diffusion',
@@ -105,7 +103,7 @@ class TestDiffusion(CanteraTest):
 
     def test_run(self):
         solver = self.conf.run()
-        self.assertNear(solver.tNow, 0.01, atol=3e-5)
+        np.testing.assert_allclose(solver.tNow, 0.01, atol=3e-5)
 
         fuel = ct.Solution('h2o2.yaml')
         prod = ct.Solution('h2o2.yaml')
@@ -117,14 +115,12 @@ class TestDiffusion(CanteraTest):
         prod.equilibrate('HP')
 
         # fuel side (left)
-        self.assertNear(fuel.T, solver.T[0])
-        for i in range(fuel.n_species):
-            self.assertNear(fuel.Y[i], solver.Y[i,0])
+        np.testing.assert_allclose(fuel.T, solver.T[0])
+        np.testing.assert_allclose(fuel.Y, solver.Y[:,0], atol=1e-9)
 
         # oxidizer side (right)
-        self.assertNear(ox.T, solver.T[-1])
-        for i in range(ox.n_species):
-            self.assertNear(ox.Y[i], solver.Y[i,-1])
+        np.testing.assert_allclose(ox.T, solver.T[-1])
+        np.testing.assert_allclose(ox.Y, solver.Y[:,-1], atol=1e-9)
 
         # products
         self.assertTrue(prod.T - 300 < max(solver.T) < prod.T)
