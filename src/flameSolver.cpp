@@ -15,6 +15,9 @@ FlameSolver::FlameSolver()
     , vrInterp(new BilinearInterpolator)
     , TInterp(new BilinearInterpolator)
 {
+    #ifndef NDEBUG
+        Cantera::printStackTraceOnSegfault();
+    #endif
 }
 
 FlameSolver::~FlameSolver()
