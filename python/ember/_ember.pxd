@@ -1,3 +1,5 @@
+#cython: embedsignature=True, language_level=3
+
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp cimport bool as cbool
@@ -179,7 +181,7 @@ cdef extern from "flameSolver.h":
         void setOptions(CxxConfigOptions&) except +
         void initialize() except +
         void finalize() except +
-        int step() nogil except +translate_callback_exception
+        int step() except +translate_callback_exception nogil
 
         double getHeatReleaseRate() except +
         double getConsumptionSpeed() except +

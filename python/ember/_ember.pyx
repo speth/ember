@@ -1,4 +1,4 @@
-#cython: embedsignature=True
+#cython: embedsignature=True, language_level=3
 #distutils: language = c++
 
 import numpy as np
@@ -7,7 +7,7 @@ import os
 import sys
 
 from cython.operator cimport dereference as deref
-from _ember cimport *
+from ._ember cimport *
 
 cdef int _pythonMajorVersion = sys.version_info[0]
 
@@ -98,7 +98,7 @@ cdef class LoggerCallback:
 
 
 cdef void logger_func_callback(const string& name, int flag,
-                               void* obj, void** err) nogil:
+                               void* obj, void** err) noexcept nogil:
     """
     This function is called from C/C++ to evaluate a `LoggerCallback` object
     *obj*. If an exception occurs while evaluating the function, the Python
@@ -141,7 +141,7 @@ cdef class IntegratorCallback:
 
 
 cdef double integrator_func_callback(double x, double t, double U, double T,
-                                     CxxEigenVec& y, void* obj, void** err) nogil:
+                                     CxxEigenVec& y, void* obj, void** err) noexcept nogil:
     """
     This function is called from C/C++ to evaluate a `IntegratorCallback` object
     *obj*. If an exception occurs while evaluating the function, the Python
@@ -212,7 +212,7 @@ cdef class ConfigOptions:
         opts.kineticsModel = stringify(self.chemistry.kineticsModel)
         opts.transportThreshold = self.chemistry.threshold
         if self.chemistry.rateMultiplierFunction is not None:
-            opts.rateMultiplierFunctionType = 'chebyshev'
+            opts.rateMultiplierFunctionType = stringify('chebyshev')
 
         # Initial condition
         IC = self.initialCondition
@@ -262,9 +262,9 @@ cdef class ConfigOptions:
 
         # strain rate parameters
         if self.strainParameters.function is not None:
-            opts.strainFunctionType = 'chebyshev'
+            opts.strainFunctionType = stringify('chebyshev')
         else:
-            opts.strainFunctionType = 'linear'
+            opts.strainFunctionType = stringify('linear')
             opts.strainRateInitial = self.strainParameters.initial
             opts.strainRateFinal = self.strainParameters.final
             opts.strainRateT0 = self.strainParameters.tStart
