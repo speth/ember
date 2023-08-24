@@ -250,7 +250,7 @@ elif env['env_vars']:
         elif name not in defaults.env_vars:
             print('WARNING: failed to propagate environment variable', name)
 
-cantera = ['cantera'] + env['extra_libs'].split(',')
+extra_libs = env['extra_libs'].split(',')
 sundials = 'sundials_nvecserial sundials_ida sundials_cvodes'.split()
 lastlibs = ['tbb'] if env['use_tbb'] else []
 
@@ -330,7 +330,7 @@ env.Append(CPPPATH=include_dirs,
            CXXFLAGS=env['cxx_flags'] or flags,
            CPPDEFINES=defines,
            LINKFLAGS=linkflags,
-           LIBS=sundials + cantera + lastlibs)
+           LIBS=sundials + extra_libs + lastlibs)
 
 if env["OS"] == "Darwin" and not env.subst("$__RPATH"):
     # SCons doesn't want to specify RPATH on macOS, so circumvent that behavior by
@@ -389,6 +389,14 @@ if fail:
                            "See config.log for details.")
 
 # Check for required libraries
+if conf.CheckLib('cantera_shared', autoadd=False, language='C++'):
+    env.Prepend(LIBS='cantera_shared')
+elif conf.CheckLib('cantera', autoadd=False, language='C++'):
+    env.Prepend(LIBS='cantera')
+else:
+    raise EnvironmentError("Failed to find the Cantera library. "
+                           "See config.log for details.")
+
 src = get_expression_value(["<cmath>"], "sin(3.14)")
 retcode, retval = conf.TryRun(src, '.cpp')
 if not retcode:
@@ -396,7 +404,7 @@ if not retcode:
         print('*' * 25, 'Contents of config.log:', '*' * 25)
         print(open('config.log').read())
         print('*' * 28, 'End of config.log', '*' * 28)
-    raise EnvironmentError("Failed to find a required library."
+    raise EnvironmentError("Failed to find a required library. "
                            "See config.log for details.")
 
 cantera_version_source = get_expression_value(['"cantera/base/config.h"'],
