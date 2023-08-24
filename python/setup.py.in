@@ -2,7 +2,7 @@ from distutils.core import setup
 from distutils.sysconfig import get_config_var
 import os
 
-dataFiles = ['_ember%s' % get_config_var('SO')]
+dataFiles = ['_ember%s' % get_config_var('EXT_SUFFIX')]
 
 if os.name == 'nt':
     scripts = ['scripts/ember-script.pyw',

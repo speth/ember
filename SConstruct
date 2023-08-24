@@ -465,7 +465,7 @@ if os.name == 'nt' and env.subst('$CXX') != 'cl':
 make_setup = env.SubstFile('#python/setup.py', '#python/setup.py.in')
 script = ('from distutils.sysconfig import *\n'
           'import numpy\n'
-          'print(get_config_var("EXT_SUFFIX") or get_config_var("SO"))\n'
+          'print(get_config_var("EXT_SUFFIX"))\n'
           'print(get_config_var("INCLUDEPY"))\n'
           'print(get_config_var("LIBRARY") or get_config_var("LDLIBRARY"))\n'
           'print(get_config_var("LIBDIR"))\n'
