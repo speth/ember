@@ -85,6 +85,8 @@ The following software needs to be installed in order to compile Ember:
 
 * h5py (>= 1.2.1, optional)
 
+* pytest (>= 7.0 recommended)
+
 In order to process the documentation, the following are also required:
 
 * Doxygen (>= 1.8.0)

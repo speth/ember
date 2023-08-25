@@ -524,7 +524,6 @@ py_build = env.Command('build/python/ember/__init__.py', py_ext, setup_cmd)
 env.Alias('build', py_build)
 env.Depends(py_build, [py_ext, make_setup])
 env.Depends(py_build, mglob(env, 'python/ember', 'py'))
-env.Depends(py_build, mglob(env, 'python/ember/test', 'py'))
 
 py_install = env.Command('dummy_target', py_build, setup_cmd + 'install $install_args')
 env.Alias('install', py_install)
@@ -570,8 +569,8 @@ def unittestRunner(target, source, env):
         environ['PYTHONPATH'] += os.path.pathsep + Dir('build/python').abspath
     else:
         environ['PYTHONPATH'] = Dir('build/python').abspath
-    return subprocess.call([env.subst('$python_cmd'), '-m','unittest',
-                            'discover', '-b', '-v', '-s', 'build/python'],
+    return subprocess.call([env.subst('$python_cmd'), '-m', 'pytest',
+                            '-v', 'test/python'],
                            env=environ)
 
 py_tests = testenv.Command('pytest_dummy', py_build, unittestRunner)
