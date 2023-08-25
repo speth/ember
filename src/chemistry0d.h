@@ -8,7 +8,6 @@
 #include "cantera/transport/MixTransport.h"
 #include "cantera/transport/MultiTransport.h"
 #include "cantera/transport/UnityLewisTransport.h"
-#include "cantera/thermo/ThermoFactory.h"
 #include "cantera/kinetics/BulkKinetics.h"
 #include "cantera/base/Solution.h"
 
@@ -162,15 +161,16 @@ public:
     void getDestructionRates(dvec& wDot) const;
     void getDestructionRates(double* wDot) const;
 
-    std::unique_ptr<Cantera::ThermoPhase> thermo;
+    std::shared_ptr<Cantera::ThermoPhase> thermo;
 private:
+    std::shared_ptr<Cantera::Solution> soln;
     std::string mechanismFile;
     std::string phaseID;
     std::string transportModel;
     std::string kineticsModel;
     double transportThreshold;
-    std::unique_ptr<Cantera::Kinetics> kinetics;
-    std::unique_ptr<Cantera::Transport> transport;
+    std::shared_ptr<Cantera::Kinetics> kinetics;
+    std::shared_ptr<Cantera::Transport> transport;
     bool isInitialized;
 
     dmatrix Dbin; //!< binary diffusion coefficients for species k

@@ -352,7 +352,6 @@ void CanteraGas::initialize()
     // suppress thermo warnings to simplify output. Without this, warnings will
     // be printed for every thread created
     Cantera::suppress_thermo_warnings();
-    thermo.reset(Cantera::newPhase(mechanismFile, phaseID));
 
     auto kin_fac = Cantera::KineticsFactory::factory();
     if (kineticsModel == "interp") {
@@ -364,19 +363,18 @@ void CanteraGas::initialize()
         kin_fac->reg("gas", []() { return new Cantera::BulkKinetics(); });
     }
 
-    vector<Cantera::ThermoPhase*> kin_phases{thermo.get()};
-    kinetics = Cantera::newKinetics(kin_phases, mechanismFile, phaseID);
-
     auto tran_fac = Cantera::TransportFactory::factory();
     tran_fac->reg("Approx", []() { return new ApproxMixTransport(); });
 
-    // Initialize the transport properties object
-    transport.reset(Cantera::newTransportMgr(transportModel, thermo.get()));
+    soln = Cantera::newSolution(mechanismFile, phaseID, transportModel);
+    thermo = soln->thermo();
+    kinetics = soln->kinetics();
+    transport = soln->transport();
+
     if (transportModel == "Approx") {
         auto& atran = dynamic_cast<ApproxMixTransport&>(*transport);
         atran.setThreshold(transportThreshold);
     }
-    transport->init(thermo.get());
 
     nSpec = thermo->nSpecies();
     Dbin.setZero(nSpec,nSpec);
