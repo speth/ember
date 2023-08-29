@@ -9,7 +9,12 @@
 #include "cantera/transport/MultiTransport.h"
 #include "cantera/transport/UnityLewisTransport.h"
 #include "cantera/kinetics/BulkKinetics.h"
+#include "cantera/kinetics/ReactionRate.h"
+#include "cantera/kinetics/ReactionData.h"
+#include "cantera/kinetics/Arrhenius.h"
 #include "cantera/base/Solution.h"
+
+using namespace Cantera;
 
 class ConfigOptions;
 
@@ -47,42 +52,111 @@ private:
     vector<size_t> _kMajor; //!< indices of the species where X[k] >= threshold
 };
 
-#if false // Disabled due to significant changes in BulkKinetics/GasKinetics implementation
-//! Approximate evaluator for kinetics rates at constant pressure using linear
-//! interpolation.
-/*!
- *  Recomputing the temperature dependent part of the kinetic rate expression
- *  (which requires evaluating exponentials) is expensive. When many
- *  evaluations of the same rate expression are required at different
- *  temperatures, it is efficient to approximate the rate expression over the
- *  temperature range of interest as being piecewise linear.
- *
- *  If rates are requested outside the current tabulated temperature range,
- *  the bounds are automatically extended and the table is regenerated.
- */
-class InterpKinetics : public Cantera::GasKinetics
+
+class InterpKinetics : public Cantera::BulkKinetics
 {
 public:
     InterpKinetics();
+};
 
-    virtual void update_rates_T();
+class MultiArrheniusInterp : public Cantera::MultiRateBase
+{
+public:
+    std::string type() override {
+        return m_base.type();
+    }
 
-    //! Recompute the tabulated interpolation data using *nTemps* temperature
-    //! intervals spanning the closed interval [*Tmin*, *Tmax*].
-    void rebuildInterpData(size_t nTemps, double Tmin, double Tmax);
+    void add(size_t rxn_index, ReactionRate& rate) override {
+        m_indices.emplace_back(rxn_index, m_nReactions++);
+        m_base.add(rxn_index, rate);
+    }
+
+    bool replace(size_t rxn_index, ReactionRate& rate) override {
+        throw DebugException("MultiArrheniusInterp::replace: operation not supported.");
+    }
+
+    void resize(size_t nSpecies, size_t nReactions, size_t nPhases) override {
+        m_base.resize(nSpecies, nReactions, nPhases);
+    }
+
+    void getRateConstants(double* kf) override {
+        for (const auto& [jGlobal, jLocal] : m_indices) {
+            kf[jGlobal] = m_kf_const(jLocal, m_T_index) + m_kf_slope(jLocal, m_T_index) * m_dT;
+        }
+    }
+
+    void processRateConstants_ddT(double* rop, const double* kf, double deltaT) override {
+        m_base.processRateConstants_ddT(rop, kf, deltaT);
+    }
+
+    void processRateConstants_ddP(double* rop, const double* kf, double deltaP) override {
+        m_base.processRateConstants_ddP(rop, kf, deltaP);
+    }
+
+    void processRateConstants_ddM(double* rop, const double* kf, double deltaM,
+                                  bool overwrite=true) override
+    {
+        m_base.processRateConstants_ddM(rop, kf, deltaM, overwrite);
+    }
+
+    void update(double T) override {
+        m_base.update(T);
+    }
+
+    void update(double T, double extra) override {
+        m_base.update(T, extra);
+    }
+
+    void update(double T, const vector<double>& extra) override {
+        m_base.update(T, extra);
+    }
+
+    bool update(const ThermoPhase& phase, const Kinetics& kin) override {
+        bool changed = false;
+        if (m_nReactions != m_kf_const.rows()) {
+            rebuildInterpData(phase, kin);
+            changed = true;
+        }
+
+        double Tnow = phase.temperature();
+        if (Tnow != Tprev) {
+            changed = true;
+            Tprev = Tnow;
+        }
+
+        m_T_index = static_cast<size_t>(floor(
+            (Tnow - m_Tmin) / (m_Tmax - m_Tmin) * (m_nTemps-1)));
+        m_dT = Tnow - m_T_index * (m_Tmax - m_Tmin) / (m_nTemps - 1) - m_Tmin;
+        assert(m_dT >= 0 && m_dT <= (m_Tmax - m_Tmin) / (m_nTemps - 1));
+        assert(m_T_index < m_nTemps);
+
+        m_base.update(phase, kin);
+        return changed;
+    }
+
+    double evalSingle(ReactionRate& rate) override {
+        return m_base.evalSingle(rate);
+    }
 
 private:
-    size_t m_ntemps; //!< number of temperatures over which to interpolate
-    double m_tmin; //!< minimum temperature
-    double m_tmax; //!< maximum temperature
+    void rebuildInterpData(const ThermoPhase& phase, const Kinetics& kin);
 
-    dmatrix m_rfn_const, m_rfn_slope;
-    dmatrix m_rfn_low_const, m_rfn_low_slope;
-    dmatrix m_rfn_high_const, m_rfn_high_slope;
-    dmatrix m_falloff_work_const, m_falloff_work_slope;
-    dmatrix m_rkcn_const, m_rkcn_slope;
+    Cantera::MultiRate<Cantera::ArrheniusRate, Cantera::ArrheniusData> m_base;
+    vector<pair<size_t, size_t>> m_indices; //! list of (global index, local index)
+
+    size_t m_nReactions = 0;
+    size_t m_nTemps = 200; //!< number of temperatures over which to interpolate
+    double m_Tmin = 273; //!< minimum temperature
+    double m_Tmax = 3500; //!< maximum temperature
+
+    dmatrix m_kf_const, m_kf_slope; // Interpolation data
+
+    // Interpolation parameters for the current temperature
+    size_t m_T_index;
+    double m_dT;
+    double Tprev = 0;
 };
-#endif
+
 
 //! A set of Cantera objects needed for calculating thermodynamic properties,
 //! transport properties, and kinetic rates for a constant-pressure mixture.

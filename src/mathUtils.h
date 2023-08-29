@@ -10,12 +10,13 @@
 #include <map>
 
 #include "debugUtils.h"
+#include "cantera/base/ct_defs.h"
 
 #include <eigen3/Eigen/Dense>
 
 using std::abs;
 using std::size_t;
-const size_t npos = -1;
+using Cantera::npos;
 
 typedef Eigen::ArrayXXd dmatrix;
 typedef Eigen::ArrayXd dvec;

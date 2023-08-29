@@ -247,89 +247,51 @@ void ApproxMixTransport::update_C()
     m_viscwt_ok = false;
 }
 
-typedef Eigen::Map<dvec> vec_map;
 
-#if false
 InterpKinetics::InterpKinetics()
-    : m_ntemps(0)
-    , m_tmin(0)
-    , m_tmax(0)
 {
+    //! Preempt the creation of the standard MultiRate evaluator for Arrhenius reactions
+    m_bulk_types["Arrhenius"] = m_bulk_rates.size();
+    m_bulk_rates.push_back(std::make_unique<MultiArrheniusInterp>());
 }
 
-void InterpKinetics::rebuildInterpData(size_t nTemps, double Tmin, double Tmax)
+void MultiArrheniusInterp::rebuildInterpData(const ThermoPhase& thermo, const Kinetics& kin)
 {
-    m_ntemps = nTemps;
-    m_tmin = Tmin;
-    m_tmax = Tmax;
-
-    m_rfn_const = dmatrix::Zero(nReactions(), m_ntemps);
-    m_rfn_slope = dmatrix::Zero(nReactions(), m_ntemps);
-
-    m_rkcn_const = dmatrix::Zero(nReactions(), m_ntemps);
-    m_rkcn_slope = dmatrix::Zero(nReactions(), m_ntemps);
-
-    size_t nFall = m_falloff_low_rates.nReactions();
-    m_rfn_low_const = dmatrix::Zero(nFall, m_ntemps);
-    m_rfn_low_slope = dmatrix::Zero(nFall, m_ntemps);
-    m_rfn_high_const = dmatrix::Zero(nFall, m_ntemps);
-    m_rfn_high_slope = dmatrix::Zero(nFall, m_ntemps);
-    m_falloff_work_const = dmatrix::Zero(nFall, m_ntemps);
-    m_falloff_work_slope = dmatrix::Zero(nFall, m_ntemps);
-
-    double T_save = thermo().temperature();
-    double rho_save = thermo().density();
-    for (size_t n = 0; n < m_ntemps; n++) {
-        thermo().setState_TR(Tmin + ((double) n)/(m_ntemps - 1) * (Tmax - Tmin),
-                             rho_save);
-        GasKinetics::update_rates_T();
-        m_rfn_const.col(n) = vec_map(&m_rfn[0], nReactions());
-        m_rkcn_const.col(n) = vec_map(&m_rkcn[0], nReactions());
-        m_rfn_low_const.col(n) = vec_map(&m_rfn_low[0], nFall);
-        m_rfn_high_const.col(n) = vec_map(&m_rfn_high[0], nFall);
-        m_falloff_work_const.col(n) = vec_map(&falloff_work[0], nFall);
+    // We need to modify the ThermoPhase state, but we will put it back the way
+    // we found it.
+    ThermoPhase& mthermo = const_cast<ThermoPhase&>(thermo);
+    double Tnow = thermo.temperature();
+    if (Tnow >= m_Tmax) {
+        m_nTemps += 10;
+        m_Tmax += 100.0;
+    } else if (Tnow <= m_Tmin) {
+        m_nTemps += 2;
+        m_Tmin = std::max(Tnow - 20.0, 10.0);
     }
 
-    double dT = (Tmax - Tmin) / (m_ntemps - 1);
-    for (size_t n = 0; n < m_ntemps - 1; n++) {
-        m_rfn_slope.col(n) = (m_rfn_const.col(n+1) - m_rfn_const.col(n)) / dT;
-        m_rkcn_slope.col(n) = (m_rkcn_const.col(n+1) - m_rkcn_const.col(n)) / dT;
-        m_rfn_low_slope.col(n) = (m_rfn_low_const.col(n+1) - m_rfn_low_const.col(n)) / dT;
-        m_rfn_high_slope.col(n) = (m_rfn_high_const.col(n+1) - m_rfn_high_const.col(n)) / dT;
-        m_falloff_work_slope.col(n) = (m_falloff_work_const.col(n+1) - m_falloff_work_const.col(n)) / dT;
+    m_kf_const = dmatrix::Zero(m_nReactions, m_nTemps);
+    m_kf_slope = dmatrix::Zero(m_nReactions, m_nTemps);
+
+    double dens_save = thermo.density();
+    vector<double> kf_global(kin.nReactions());
+    for (size_t n = 0; n < m_nTemps; n++) {
+        mthermo.setState_TD(m_Tmin + ((double) n)/(m_nTemps - 1) * (m_Tmax - m_Tmin),
+                            dens_save);
+
+        m_base.update(thermo, kin);
+        m_base.getRateConstants(kf_global.data());
+        for (const auto& [jGlobal, jLocal] : m_indices) {
+            m_kf_const(jLocal, n) = kf_global[jGlobal];
+        }
     }
-    thermo().setState_TR(T_save, rho_save);
+
+    double dT = (m_Tmax - m_Tmin) / (m_nTemps - 1);
+    for (size_t n = 0; n < m_nTemps - 1; n++) {
+        m_kf_slope.col(n) = (m_kf_const.col(n+1) - m_kf_const.col(n)) / dT;
+    }
+    mthermo.setState_TD(Tnow, dens_save);
 }
 
-void InterpKinetics::update_rates_T()
-{
-    if (!m_ntemps) {
-        rebuildInterpData(200, 250, 3000);
-    }
-    double Tnow = thermo().temperature();
-    if (Tnow >= m_tmax) {
-        rebuildInterpData(m_ntemps + 10, m_tmin, Tnow + 100.0);
-    } else if (Tnow <= m_tmin) {
-        rebuildInterpData(m_ntemps + 2, std::max(Tnow - 20.0, 10.0), m_tmax);
-    }
-
-    size_t n = static_cast<size_t>(floor((Tnow-m_tmin)/(m_tmax-m_tmin)*(m_ntemps-1)));
-    double dT = Tnow - n * (m_tmax - m_tmin) / (m_ntemps - 1) - m_tmin;
-    assert(dT >= 0 && dT <= (m_tmax - m_tmin) / (m_ntemps - 1));
-    assert(n < m_ntemps);
-
-    size_t nFall = m_falloff_low_rates.nReactions();
-    vec_map(&m_rfn[0], nReactions()) = m_rfn_const.col(n) + m_rfn_slope.col(n) * dT;
-    vec_map(&m_rkcn[0], nReactions()) = m_rkcn_const.col(n) + m_rkcn_slope.col(n) * dT;
-    vec_map(&m_rfn_low[0], nFall) = m_rfn_low_const.col(n) + m_rfn_low_slope.col(n) * dT;
-    vec_map(&m_rfn_high[0], nFall) = m_rfn_high_const.col(n) + m_rfn_high_slope.col(n) * dT;
-    vec_map(&falloff_work[0], nFall) = m_falloff_work_const.col(n) + m_falloff_work_slope.col(n) * dT;
-
-    m_logStandConc = log(thermo().standardConcentration());
-    m_temp = Tnow;
-    m_ROP_ok = false;
-}
-#endif
 
 CanteraGas::CanteraGas()
     : isInitialized(false)
@@ -356,9 +318,7 @@ void CanteraGas::initialize()
     auto kin_fac = Cantera::KineticsFactory::factory();
     if (kineticsModel == "interp") {
         // Overwrite the normal factory function
-        // kin_fac->reg("gas", []() { return new InterpKinetics(); });
-        Cantera::writelog("Warning: interpKinetics is not compatible with "
-                          "Cantera 3.0; falling back to BulkKinetics\n");
+        kin_fac->reg("gas", []() { return new InterpKinetics(); });
     } else {
         kin_fac->reg("gas", []() { return new Cantera::BulkKinetics(); });
     }
