@@ -27,6 +27,7 @@ doc/doxygen/html
 doc/sphinx/doctrees
 doc/sphinx/html
 doc/ember-cxx.tag
-python/setup.py
+python/setup.cfg
 python/ember/*.cpp
+python/Ember.egg-info
 src/config.h

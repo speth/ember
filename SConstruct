@@ -10,14 +10,15 @@ Basic usage:
     'scons test' - Run the test suite
 
     'scons install' - Install the Ember Python module
-
-    'scons msi' - Create a MSI installer for Windows
 """
 
 from __future__ import print_function
 
 import os
 import platform
+import textwrap
+import json
+from packaging.version import parse as parse_version
 from distutils.version import StrictVersion
 from buildutils import *
 
@@ -238,6 +239,8 @@ print()
 
 env['OS'] = platform.system()
 
+env['ember_version'] = '1.5.0b1'
+
 # Copy in external environment variables
 if env['env_vars'] == 'all':
     env['ENV'].update(os.environ)
@@ -265,6 +268,7 @@ elif env['tbb']:
     tbbLibDir = env['tbb']+'/lib'
 
 if platform.system() == 'Darwin':
+    env['ENV']['MACOSX_DEPLOYMENT_TARGET'] = '11.0'
     env.Append(FRAMEWORKS=['Accelerate'])
 
 lastlibs += env['blas_lapack'].split(',')
@@ -462,30 +466,44 @@ if os.name == 'nt':
                               env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
                               Copy('$TARGET', '$SOURCE'))
             env.Alias('build', tbb)
-    py_gui1 = env.Command('python/scripts/ember-script.pyw', 'python/scripts/ember',
-                          Copy('$TARGET', '$SOURCE'))
-    script = ('''"from pkg_resources import resource_string; open('$TARGET', 'wb').write(resource_string('setuptools', 'gui.exe'))"''')
-    py_gui2 = env.Command('python/scripts/ember.exe', py_gui1, '$python_cmd -c ' + script)
-    env.Alias('build', [py_gui1, py_gui2])
 
 # Workaround for https://bugs.python.org/issue11566
 if os.name == 'nt' and env.subst('$CXX') != 'cl':
     env.Append(CPPDEFINES='_hypot=hypot')
 
 # The Python module
-make_setup = env.SubstFile('#python/setup.py', '#python/setup.py.in')
-script = ('from distutils.sysconfig import *\n'
-          'import numpy\n'
-          'print(get_config_var("EXT_SUFFIX"))\n'
-          'print(get_config_var("INCLUDEPY"))\n'
-          'print(get_config_var("LIBRARY") or get_config_var("LDLIBRARY"))\n'
-          'print(get_config_var("LIBDIR"))\n'
-          'print(get_config_var("prefix"))\n'
-          'print(get_python_version())\n'
-          'print(numpy.get_include())\n')
+make_setup = env.SubstFile('#python/setup.cfg', '#python/setup.cfg.in')
+script = textwrap.dedent("""\
+    from sysconfig import *
+    import numpy, json
+    vars = get_config_vars()
+    vars['np_include'] = numpy.get_include()
+    vars['plat'] = get_platform()
+    print(json.dumps(vars))
+    """)
+py_info = json.loads(getCommandOutput(env['python_cmd'], '-c', script))
 
-suffix, includepy, pylib, pylibdir, pyprefix, target_py_version, np_include = [s.strip()
-    for s in getCommandOutput(env['python_cmd'], '-c', script).split()]
+py_version_full = parse_version(py_info["py_version"])
+
+suffix = py_info['EXT_SUFFIX']
+
+# Fix the module extension for Windows from the sysconfig library.
+# See https://github.com/python/cpython/pull/22088 and
+# https://bugs.python.org/issue39825
+if (py_version_full < parse_version("3.8.7")
+    and env["OS"] == "Windows"
+    and suffix == ".pyd"
+):
+    suffix = f".cp{py_info['py_version_nodot']}-{py_info['plat'].replace('-', '_')}.pyd"
+
+env["py_module_ext"] = suffix
+env["py_version_nodot"] = py_info['py_version_nodot']
+env["py_plat"] = py_info['plat'].replace('-', '_').replace('.', '_')
+includepy = py_info['INCLUDEPY']
+pylib = py_info['LIBRARY'] if 'LIBRARY' in py_info else py_info['LDLIBRARY']
+pylibdir = py_info['LIBDIR']
+pyprefix = py_info['prefix']
+np_include = py_info['np_include']
 
 if os.name == 'nt':
     library_dirs.append(pyprefix + '/libs')
@@ -523,26 +541,18 @@ if 'g++' in env.subst('$CXX'):
 elif os.name == 'nt' and env.subst('$CXX') == 'cl':
     cyenv.Append(CXXFLAGS=['/w'])
 
-py_ext = cyenv.LoadableModule('#build/python/ember/_ember%s' % suffix, '#python/ember/_ember.cpp',
+py_ext = cyenv.LoadableModule(f'#python/ember/_ember{suffix}', '#python/ember/_ember.cpp',
                               LIBPREFIX='', SHLIBPREFIX='', SHLIBSUFFIX=suffix, LIBSUFFIXES=[suffix])
 
-setup_cmd = 'cd python && $python_cmd setup.py build --build-lib=../build/python '
+build_cmd = ("${python_cmd} -m pip wheel -v --no-build-isolation --no-deps "
+             "--wheel-dir=build/ python/")
+wheel_name = ("Ember-${ember_version}-cp${py_version_nodot}"
+              "-cp${py_version_nodot}-${py_plat}.whl")
 
-if os.name == 'nt':
-    env.Depends(make_setup, [py_gui1, py_gui2])
-
-py_build = env.Command('build/python/ember/__init__.py', py_ext, setup_cmd)
+py_build = env.Command(f"#build/{wheel_name}", "python/setup.cfg.in", build_cmd)
 env.Alias('build', py_build)
 env.Depends(py_build, [py_ext, make_setup])
 env.Depends(py_build, mglob(env, 'python/ember', 'py'))
-
-py_install = env.Command('dummy_target', py_build, setup_cmd + 'install $install_args')
-env.Alias('install', py_install)
-
-py_msi = env.Command('dummy_target2', py_build,
-                     setup_cmd + 'bdist_msi --dist-dir=..' +
-                     ' --target-version=' + target_py_version)
-env.Alias('msi', py_msi)
 
 # GoogleTest tests
 testenv = env.Clone()
@@ -577,9 +587,9 @@ def unittestRunner(target, source, env):
 
     environ = dict(env['ENV'])
     if 'PYTHONPATH' in environ:
-        environ['PYTHONPATH'] += os.path.pathsep + Dir('build/python').abspath
+        environ['PYTHONPATH'] += os.path.pathsep + Dir('python').abspath
     else:
-        environ['PYTHONPATH'] = Dir('build/python').abspath
+        environ['PYTHONPATH'] = Dir('python').abspath
     return subprocess.call([env.subst('$python_cmd'), '-u', '-m', 'pytest',
                             '-v', '-s', 'test/python'],
                            env=environ)

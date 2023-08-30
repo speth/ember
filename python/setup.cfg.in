@@ -1,0 +1,24 @@
+[metadata]
+name = Ember
+version = @ember_version@
+description = Multipurpose 1D Flame Solver
+long_description = ''
+license_files = LICENSE.txt
+url = https://github.com/speth/ember
+author = Raymond L. Speth
+author_email = speth@mit.edu
+
+[options]
+packages =
+    ember
+    ember.data
+    ember.examples
+
+[options.package_data]
+ember = *.pxd, *.dll, *@py_module_ext@*
+ember.data = *.*
+ember.examples = *.*
+
+[options.entry_points]
+console_scipts =
+    ember = ember.gui:main
