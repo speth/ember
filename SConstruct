@@ -15,9 +15,11 @@ Basic usage:
 from __future__ import print_function
 
 import os
+import re
 import platform
 import textwrap
 import json
+from pathlib import Path
 from packaging.version import parse as parse_version
 from distutils.version import StrictVersion
 from buildutils import *
@@ -186,8 +188,8 @@ opts.AddVariables(
      'Comma-separated list of libraries to include for BLAS/LAPACK support',
      defaults.blas_lapack),
     ('install_args',
-     'Command-line arguments passed to "python setup.py install"',
-     '--user'),
+     'Command-line arguments passed to "pip install"',
+     ''),
     BoolVariable(
         'verbose',
         """Print extra information during the build process, especially about
@@ -475,10 +477,11 @@ if os.name == 'nt' and env.subst('$CXX') != 'cl':
 make_setup = env.SubstFile('#python/setup.cfg', '#python/setup.cfg.in')
 script = textwrap.dedent("""\
     from sysconfig import *
-    import numpy, json
+    import numpy, json, site
     vars = get_config_vars()
     vars['np_include'] = numpy.get_include()
     vars['plat'] = get_platform()
+    vars['site_packages'] = [d for d in site.getsitepackages() if d.endswith('-packages')]
     print(json.dumps(vars))
     """)
 py_info = json.loads(getCommandOutput(env['python_cmd'], '-c', script))
@@ -499,6 +502,7 @@ if (py_version_full < parse_version("3.8.7")
 env["py_module_ext"] = suffix
 env["py_version_nodot"] = py_info['py_version_nodot']
 env["py_plat"] = py_info['plat'].replace('-', '_').replace('.', '_')
+env["site_packages"] = py_info["site_packages"]
 includepy = py_info['INCLUDEPY']
 pylib = py_info['LIBRARY'] if 'LIBRARY' in py_info else py_info['LDLIBRARY']
 pylibdir = py_info['LIBDIR']
@@ -553,6 +557,34 @@ py_build = env.Command(f"#build/{wheel_name}", "python/setup.cfg.in", build_cmd)
 env.Alias('build', py_build)
 env.Depends(py_build, [py_ext, make_setup])
 env.Depends(py_build, mglob(env, 'python/ember', 'py'))
+
+### Installation ###
+
+# Determine installation path and install the Python module
+install_cmd = ["${python_cmd}", "-m", "pip", "install"]
+
+# Check for existing Python module installation. Allow pip to remove an existing
+# installation only if we're installing to the same location. Also disable
+# uninstallation if we're installing to a staging directory.
+info = getCommandOutput(env["python_cmd"], "-m", "pip", "show", "ember",
+                        ignore_errors=True)
+
+test_prefix = Path(env["site_packages"][0]).parents[2]
+
+match = re.search(r"Location: (.*)\n", info, re.MULTILINE)
+existing_prefix = Path(match.group(1)).parents[2] if match else None
+if existing_prefix and existing_prefix != test_prefix:
+    install_cmd.append("--ignore-installed")
+
+install_cmd.extend(("--no-build-isolation", "--no-deps", "-v", "--force-reinstall",
+                    f"build/{wheel_name}"))
+
+if env['install_args']:
+    install_cmd.extend(env['install_args'].split())
+
+mod_inst = env.Command("dummy", py_build, " ".join(install_cmd))
+env.Alias('install', mod_inst)
+
 
 # GoogleTest tests
 testenv = env.Clone()

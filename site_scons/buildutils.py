@@ -171,22 +171,27 @@ def ipdb():
     Pdb(def_colors).set_trace(sys._getframe().f_back)
 
 
-def getCommandOutput(cmd, *args):
+def getCommandOutput(cmd: str, *args: str, ignore_errors=False):
     """
-    Run a command with arguments and return its output. Substitute for
-    subprocess.check_output which is only available in Python >= 2.7
+    Run a command with arguments and return its output.
     """
-    proc = subprocess.Popen([cmd] + list(args),
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    data, err = proc.communicate()
-    if proc.returncode:
-        raise OSError(err)
+    environ = dict(os.environ)
+    if "PYTHONHOME" in environ:
+        # Can cause problems when trying to run a different Python interpreter
+        del environ["PYTHONHOME"]
+    kwargs = {}
+    if ignore_errors:
+        kwargs["stderr"] = subprocess.DEVNULL
+    data = subprocess.run(
+        [cmd] + list(args),
+        env=environ,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+        check=not ignore_errors,
+        **kwargs,
+    )
+    return data.stdout.strip()
 
-    if sys.version_info.major == 3:
-        return data.strip().decode('utf-8')
-    else:
-        return data.strip()
 
 class DefineDict(object):
     """
