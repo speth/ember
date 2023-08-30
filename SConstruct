@@ -411,7 +411,7 @@ cantera_version_source = get_expression_value(['"cantera/base/config.h"'],
                                               'CANTERA_VERSION')
 retcode, cantera_version = conf.TryRun(cantera_version_source, '.cpp')
 
-min_cantera_version = '2.3.0a3'
+min_cantera_version = '3.0.0'
 if StrictVersion(cantera_version.strip()) < StrictVersion(min_cantera_version):
     raise EnvironmentError("Ember requires Cantera {} or newer, but the "
         "installed version of Cantera is {}.".format(
