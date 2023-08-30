@@ -255,6 +255,136 @@ InterpKinetics::InterpKinetics()
     m_bulk_rates.push_back(std::make_unique<MultiArrheniusInterp>());
 }
 
+void InterpKinetics::updateROP()
+{
+    static const int cacheId = m_cache.getId();
+    CachedScalar last = m_cache.getScalar(cacheId);
+    double T = thermo().temperature();
+    double rho = thermo().density();
+    int statenum = thermo().stateMFNumber();
+
+    if (m_kc_const.rows() != nReactions() || T > m_TmaxInt || T < m_TminInt) {
+        // Rebuild the interpolation data
+        if (T >= m_TmaxInt) {
+            m_nInterp += 10;
+            m_TmaxInt += 100.0;
+        } else if (T <= m_TminInt) {
+            m_nInterp += 2;
+            m_TminInt = std::max(T - 20.0, 10.0);
+        }
+
+        m_kc_const = dmatrix::Zero(nReactions(), m_nInterp);
+        m_kc_slope = dmatrix::Zero(nReactions(), m_nInterp);
+        m_dg0_const = dmatrix::Zero(nReactions(), m_nInterp);
+        m_dg0_slope = dmatrix::Zero(nReactions(), m_nInterp);
+
+        double P_save = thermo().pressure();
+        dvec rkc(nReactions());
+        dvec dg0(nReactions());
+
+        for (size_t n = 0; n < m_nInterp; n++) {
+            double T = m_TminInt
+                + ((double) n)/(m_nInterp - 1) * (m_TmaxInt - m_TminInt);
+            thermo().setState_TP(T, P_save);
+
+            // Update properties that are independent of the composition
+            thermo().getStandardChemPotentials(m_grt.data());
+            dg0.setZero();
+
+            double logStandConc = log(thermo().standardConcentration());
+
+            // compute Delta G^0 for all reversible reactions
+            getRevReactionDelta(m_grt.data(), dg0.data());
+
+            double rrt = 1.0 / thermo().RT();
+            for (size_t i = 0; i < m_revindex.size(); i++) {
+                size_t irxn = m_revindex[i];
+                rkc[irxn] = std::min(
+                    exp(dg0[irxn] * rrt - m_dn[irxn] * logStandConc), BigNumber);
+            }
+
+            for (size_t i = 0; i != m_irrev.size(); ++i) {
+                rkc[ m_irrev[i] ] = 0.0;
+            }
+
+            m_dg0_const.col(n) = dg0;
+            m_kc_const.col(n) = rkc;
+        }
+
+        double dT = (m_TmaxInt - m_TminInt) / (m_nInterp - 1);
+        for (size_t n = 0; n < m_nInterp - 1; n++) {
+            m_dg0_slope.col(n) = (m_dg0_const.col(n+1) - m_dg0_const.col(n)) / dT;
+            m_kc_slope.col(n) = (m_kc_const.col(n+1) - m_kc_const.col(n)) / dT;
+        }
+        thermo().setState_TP(T, P_save);
+    }
+
+    if (last.state1 != T) {
+        size_t n = static_cast<size_t>(floor(
+            (T - m_TminInt) / (m_TmaxInt - m_TminInt) * (m_nInterp-1)));
+        double dT = T - n * (m_TmaxInt - m_TminInt) / (m_nInterp - 1) - m_TminInt;
+        assert(dT >= 0 && dT <= (m_TmaxInt - m_TminInt) / (m_nInterp - 1));
+        assert(n < m_nInterp);
+        Eigen::Map<dvec>(m_rkcn.data(), nReactions()) = m_kc_const.col(n) + m_kc_slope.col(n) * dT;
+        Eigen::Map<dvec>(m_delta_gibbs0.data(), nReactions()) = m_dg0_const.col(n) + m_dg0_slope.col(n) * dT;
+    }
+
+    if (!last.validate(T, rho, statenum)) {
+        // Update terms dependent on species concentrations and temperature
+        thermo().getActivityConcentrations(m_act_conc.data());
+        thermo().getConcentrations(m_phys_conc.data());
+        double ctot = thermo().molarDensity();
+
+        // Third-body objects interacting with MultiRate evaluator
+        m_multi_concm.update(m_phys_conc, ctot, m_concm.data());
+
+        // loop over MultiRate evaluators for each reaction type
+        for (auto& rates : m_bulk_rates) {
+            bool changed = rates->update(thermo(), *this);
+            if (changed) {
+                rates->getRateConstants(m_kf0.data());
+            }
+        }
+        m_ROP_ok = false;
+    }
+
+    if (m_ROP_ok) {
+        // rates of progress are up-to-date only if both the thermodynamic state
+        // and m_perturb are unchanged
+        return;
+    }
+
+    // Scale the forward rate coefficient by the perturbation factor
+    for (size_t i = 0; i < nReactions(); ++i) {
+        m_rfn[i] = m_kf0[i] * m_perturb[i];
+    }
+
+    copy(m_rfn.begin(), m_rfn.end(), m_ropf.data());
+    processThirdBodies(m_ropf.data());
+    copy(m_ropf.begin(), m_ropf.end(), m_ropr.begin());
+
+    // multiply ropf by concentration products
+    m_reactantStoich.multiply(m_act_conc.data(), m_ropf.data());
+
+    // for reversible reactions, multiply ropr by concentration products
+    applyEquilibriumConstants(m_ropr.data());
+    m_revProductStoich.multiply(m_act_conc.data(), m_ropr.data());
+    for (size_t j = 0; j != nReactions(); ++j) {
+        m_ropnet[j] = m_ropf[j] - m_ropr[j];
+    }
+
+    for (size_t i = 0; i < m_rfn.size(); i++) {
+        AssertFinite(m_rfn[i], "InterpKinetics::updateROP",
+                     "m_rfn[{}] is not finite.", i);
+        AssertFinite(m_ropf[i], "InterpKinetics::updateROP",
+                     "m_ropf[{}] is not finite.", i);
+        AssertFinite(m_ropr[i], "InterpKinetics::updateROP",
+                     "m_ropr[{}] is not finite.", i);
+    }
+    m_ROP_ok = true;
+
+}
+
 void MultiArrheniusInterp::rebuildInterpData(const ThermoPhase& thermo, const Kinetics& kin)
 {
     // We need to modify the ThermoPhase state, but we will put it back the way

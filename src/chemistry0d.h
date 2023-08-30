@@ -57,6 +57,17 @@ class InterpKinetics : public Cantera::BulkKinetics
 {
 public:
     InterpKinetics();
+
+    void updateROP() override;
+
+private:
+    // Piecewise linear interpolation data for equilibrium constant and deltaGibbs0
+    size_t m_nInterp = 200; //!< number of temperatures over which to interpolate
+    double m_TminInt = 273; //!< minimum temperature
+    double m_TmaxInt = 3500; //!< maximum temperature
+
+    dmatrix m_kc_const, m_kc_slope; // Interpolation data
+    dmatrix m_dg0_const, m_dg0_slope; // Interpolation data
 };
 
 class MultiArrheniusInterp : public Cantera::MultiRateBase
