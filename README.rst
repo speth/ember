@@ -19,7 +19,26 @@ splitting method which eliminates steady-state errors.
 
 Online documentation for Ember is located at `<https://speth.github.io/ember-doc>`_.
 
-`Installation Instructions <https://speth.github.io/ember-doc/sphinx/html/installation.html>`_
+Installation from source
+------------------------
+
+The easiest way to compile and install Ember is to use `conda-forge` to provide all
+dependencies beyond the base C++ compiler. After installing a Conda distribution such as
+`Miniforge <https://github.com/conda-forge/miniforge/releases>`_, you can install these
+dependencies in a new environment named `ember-build` by running::
+
+    $ mamba env create -n ember-build -f environment.yaml
+
+from the Ember source directory (that is, the directory containing this README).
+
+Then, compile, test, and install Ember by running:
+
+    $ scons build
+    $ scons test
+    $ scons install
+
+Further `Installation Instructions <https://speth.github.io/ember-doc/sphinx/html/installation.html>`_
+are available in the Ember documentation.
 
 Running Ember
 -------------

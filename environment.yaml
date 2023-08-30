@@ -1,0 +1,25 @@
+# Create an environment named 'ember-build' with these packages by running:
+#
+#     mamba env create -n ember-build -f environment.yaml
+#
+# or update an existing, activated environment by running:
+#
+#     mamba env update -f environment.yaml
+
+channels:
+- conda-forge
+dependencies:
+- cantera ==3.0.*
+- libcantera-devel ==3.0.*
+- python >=3.8
+- scons  >=4.0
+- boost-cpp >=1.70
+- sundials >=6.0
+- fmt
+- tbb
+- eigen
+- cython
+- numpy
+- pip
+- wheel
+- pytest

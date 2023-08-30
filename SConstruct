@@ -258,6 +258,7 @@ elif env['env_vars']:
 extra_libs = env['extra_libs'].split(',')
 sundials = 'sundials_nvecserial sundials_ida sundials_cvodes'.split()
 lastlibs = ['tbb'] if env['use_tbb'] else []
+lastlibs.append('fmt')
 
 if os.name == 'nt' and env['tbb']:
     if 'g++' in env.subst('$CXX'):
@@ -296,6 +297,18 @@ if env['boost']:
 if env['use_tbb'] and env['tbb']:
     include_dirs.append(env['tbb'] + '/include')
     library_dirs.append(tbbLibDir)
+
+# Add conda library/include paths (if applicable)
+if (conda_prefix := os.environ.get("CONDA_PREFIX")) is not None:
+    conda_prefix = Path(conda_prefix)
+    if os.name == "nt":
+        include_dirs.append((conda_prefix / "Library" / "include").as_posix())
+        library_dirs.append((conda_prefix / "Library" / "lib").as_posix())
+    else:
+        include_dirs.append((conda_prefix / "include").as_posix())
+        library_dirs.append((conda_prefix / "lib").as_posix())
+
+    print(f"INFO: Adding conda include and library paths: {conda_prefix}")
 
 
 if env.subst('$CXX') == 'cl':
