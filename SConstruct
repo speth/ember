@@ -411,6 +411,17 @@ cantera_version_source = get_expression_value(['"cantera/base/config.h"'],
                                               'CANTERA_VERSION')
 retcode, cantera_version = conf.TryRun(cantera_version_source, '.cpp')
 
+# Determine SUNDIALS linear solver libraries to link
+sundials_lapackband = conf.CheckDeclaration(
+    'SUNDIALS_SUNLINSOL_LAPACKBAND', '#include "sundials/sundials_config.h"', 'C++')
+sundials_lapackdense = conf.CheckDeclaration(
+    'SUNDIALS_SUNLINSOL_LAPACKDENSE', '#include "sundials/sundials_config.h"', 'C++')
+
+if sundials_lapackband and sundials_lapackdense:
+    env.Append(LIBS=['sundials_sunlinsollapackdense', 'sundials_sunlinsollapackband'])
+else:
+    env.Append(LIBS=['sundials_sunlinsoldense', 'sundials_sunlinsolband'])
+
 min_cantera_version = '3.0.0'
 if StrictVersion(cantera_version.strip()) < StrictVersion(min_cantera_version):
     raise EnvironmentError("Ember requires Cantera {} or newer, but the "
