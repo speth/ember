@@ -31,7 +31,7 @@ dependencies in a new environment named `ember-build` by running::
 
 from the Ember source directory (that is, the directory containing this README).
 
-Then, compile, test, and install Ember by running:
+Then, compile, test, and install Ember by running::
 
     $ scons build
     $ scons test
