@@ -23,3 +23,4 @@ dependencies:
 - pip
 - wheel
 - pytest
+# see doc-environment.yaml for packages needed to build the documentation

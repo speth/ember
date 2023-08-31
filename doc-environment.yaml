@@ -1,0 +1,12 @@
+# Add the packages to the active Ember build environment by running:
+#
+#     mamba env update -f doc-environment.yaml
+
+channels:
+- conda-forge
+dependencies:
+- doxygen
+- graphviz
+- pygments
+- pyparsing
+- sphinxcontrib-doxylink
