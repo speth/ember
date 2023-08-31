@@ -1,6 +1,6 @@
 /*! \mainpage Ember Documentation
 
-**Ember** is a code for simulating unsteady, quasi-one-dimensional flames
+\b Ember is a code for simulating unsteady, quasi-one-dimensional flames
 subjected to arbitrarily varying strain rates and curvature.
 
 Documentation for the C++ core of the Ember solver can be accessed via the
