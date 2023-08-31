@@ -303,7 +303,8 @@ if (conda_prefix := os.environ.get("CONDA_PREFIX")) is not None:
     conda_prefix = Path(conda_prefix)
     if os.name == "nt":
         include_dirs.append((conda_prefix / "Library" / "include").as_posix())
-        library_dirs.append((conda_prefix / "Library" / "lib").as_posix())
+        library_dirs.extend([(conda_prefix / "Library" / "lib").as_posix(),
+                             (conda_prefix / "libs").as_posix()])
     else:
         include_dirs.append((conda_prefix / "include").as_posix())
         library_dirs.append((conda_prefix / "lib").as_posix())
@@ -312,7 +313,7 @@ if (conda_prefix := os.environ.get("CONDA_PREFIX")) is not None:
 
 
 if env.subst('$CXX') == 'cl':
-    flags = ['/nologo', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc', '/MD']
+    flags = ['/nologo', '/W3', '/Zc:wchar_t', '/Zc:forScope', '/EHsc', '/MD', '/std:c++17']
     linkflags= env['link_flags'].split()
     defines = ['_SCL_SECURE_NO_WARNINGS', '_CRT_SECURE_NO_WARNINGS']
     if env['debug_symbols']:
@@ -474,15 +475,7 @@ common_objects = env.SharedObject(Glob('build/core/*.cpp'))
 corelib = env.Library('build/core/ember', common_objects)
 env.Alias('build', corelib)
 
-if os.name == 'nt':
-    if env['use_tbb']:
-        for dest in ['python/ember/TBB.dll', 'bin/TBB.dll']:
-            tbb = env.Command(dest,
-                              env['tbb']+'/bin/%s/%s/TBB.dll' % (tbbArch, tbbCompiler),
-                              Copy('$TARGET', '$SOURCE'))
-            env.Alias('build', tbb)
-
-# Workaround for https://bugs.python.org/issue11566
+    # Workaround for https://bugs.python.org/issue11566
 if os.name == 'nt' and env.subst('$CXX') != 'cl':
     env.Append(CPPDEFINES='_hypot=hypot')
 
@@ -517,19 +510,19 @@ env["py_version_nodot"] = py_info['py_version_nodot']
 env["py_plat"] = py_info['plat'].replace('-', '_').replace('.', '_')
 env["site_packages"] = py_info["site_packages"]
 includepy = py_info['INCLUDEPY']
-pylib = py_info['LIBRARY'] if 'LIBRARY' in py_info else py_info['LDLIBRARY']
-pylibdir = py_info['LIBDIR']
+pylib = py_info['LIBRARY'] if 'LIBRARY' in py_info else py_info.get('LDLIBRARY')
+pylibdir = py_info.get('LIBDIR')
 pyprefix = py_info['prefix']
 np_include = py_info['np_include']
 
 if os.name == 'nt':
     library_dirs.append(pyprefix + '/libs')
 env.Append(CPPPATH=includepy)
-if pylibdir != 'None':
+if pylibdir is not None:
     env.Append(LIBPATH=pylibdir)
 
 # extract 'pythonX.Y' from 'libpythonX.Y.dll.a' or 'libpythonX.Y.a'
-if pylib != 'None':
+if pylib is not None:
     pylib = pylib[3:]
     if pylib.endswith('.a'):
         pylib = pylib[:-2]
@@ -604,7 +597,7 @@ testenv = env.Clone()
 testenv.Append(LIBS=['gtest'],
                CPPPATH=['ext/gtest/include'])
 
-if pylibdir != 'None':
+if pylibdir is not None:
     testenv.AppendENVPath('LD_LIBRARY_PATH', pylibdir)
 
 if os.name == 'nt':

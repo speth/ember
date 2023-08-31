@@ -17,6 +17,7 @@ dependencies:
 - sundials >=6.0
 - fmt
 - tbb
+- tbb-devel
 - eigen
 - cython
 - numpy
