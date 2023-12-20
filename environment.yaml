@@ -9,12 +9,13 @@
 channels:
 - conda-forge
 dependencies:
-- cantera ==3.0.*
-- libcantera-devel ==3.0.*
-- python >=3.8
-- scons  >=4.0
-- boost-cpp >=1.70
-- sundials >=6.0
+- cantera==3.0.*
+- cxx-compiler==1.7.0
+- libcantera-devel==3.0.*
+- python>=3.8
+- scons>=4.0
+- boost-cpp>=1.70
+- sundials>=6.0
 - fmt
 - tbb
 - tbb-devel

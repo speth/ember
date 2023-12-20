@@ -22,6 +22,9 @@ Online documentation for Ember is located at `<https://speth.github.io/ember-doc
 Installation from source
 ------------------------
 
+For windows computers make sure that you have installed build tools `C++ build tools <https://visualstudio.microsoft.com/visual-cpp-build-tools>`  
+This must be installed manually  
+
 The easiest way to compile and install Ember is to use `conda-forge` to provide all
 dependencies beyond the base C++ compiler. After installing a Conda distribution such as
 `Miniforge <https://github.com/conda-forge/miniforge/releases>`_, you can install these
