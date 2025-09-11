@@ -12,8 +12,6 @@ Basic usage:
     'scons install' - Install the Ember Python module
 """
 
-from __future__ import print_function
-
 import os
 import re
 import platform
@@ -21,7 +19,6 @@ import textwrap
 import json
 from pathlib import Path
 from packaging.version import parse as parse_version
-from distutils.version import StrictVersion
 from buildutils import *
 
 if not COMMAND_LINE_TARGETS:
@@ -443,7 +440,7 @@ else:
     env.Append(LIBS=['sundials_sunlinsoldense', 'sundials_sunlinsolband'])
 
 min_cantera_version = '3.0.0'
-if StrictVersion(cantera_version.strip()) < StrictVersion(min_cantera_version):
+if parse_version(cantera_version.strip()) < parse_version(min_cantera_version):
     raise EnvironmentError("Ember requires Cantera {} or newer, but the "
         "installed version of Cantera is {}.".format(
         min_cantera_version, cantera_version.strip()))

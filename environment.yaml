@@ -9,10 +9,10 @@
 channels:
 - conda-forge
 dependencies:
-- cantera ==3.0.*
-- libcantera-devel ==3.0.*
-- python >=3.8
-- scons  >=4.0
+- cantera ==3.1.*
+- libcantera-devel ==3.1.*
+- python >=3.10
+- scons >=4.0
 - boost-cpp >=1.70
 - sundials >=6.0
 - fmt
@@ -23,5 +23,7 @@ dependencies:
 - numpy
 - pip
 - wheel
+- packaging
+- setuptools
 - pytest
 # see doc-environment.yaml for packages needed to build the documentation

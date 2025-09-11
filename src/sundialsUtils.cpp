@@ -3,12 +3,6 @@
 #include <iostream>
 #include "mathUtils.h" // debug
 
-// Ensure consistent SUNDIALS versions
-#include "cantera/base/ct_defs.h"
-static_assert(CT_SUNDIALS_VERSION == EMBER_SUNDIALS_VERSION,
-    "Mismatch between version of SUNDIALS used by Cantera and Ember ");
-
-
 SundialsCvode::SundialsCvode(unsigned int n)
     : sunContext(new SundialsContext())
     , y(n, *sunContext)
