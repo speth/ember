@@ -28,6 +28,7 @@ doc/sphinx/doctrees
 doc/sphinx/html
 doc/ember-cxx.tag
 python/setup.cfg
+python/LICENSE.txt
 python/ember/*.cpp
 python/Ember.egg-info
 src/config.h

@@ -559,10 +559,12 @@ build_cmd = ("${python_cmd} -m pip wheel -v --no-build-isolation --no-deps "
              "--wheel-dir=build/ python/")
 wheel_name = ("Ember-${ember_version}-cp${py_version_nodot}"
               "-cp${py_version_nodot}-${py_plat}.whl")
+license = env.Command('python/LICENSE.txt', 'LICENSE.txt',
+                      Copy('$TARGET', '$SOURCE'))
 
 py_build = env.Command(f"#build/{wheel_name}", "python/setup.cfg.in", build_cmd)
 env.Alias('build', py_build)
-env.Depends(py_build, [py_ext, make_setup])
+env.Depends(py_build, [py_ext, make_setup, license])
 env.Depends(py_build, mglob(env, 'python/ember', 'py'))
 
 ### Installation ###
