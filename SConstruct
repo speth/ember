@@ -341,13 +341,14 @@ else:
         defines.append('NDEBUG')
 
 
-env.Append(CPPPATH=include_dirs,
-           LIBPATH=library_dirs,
+env.Append(LIBPATH=library_dirs,
            RPATH=library_dirs,
            CXXFLAGS=env['cxx_flags'] or flags,
            CPPDEFINES=defines,
            LINKFLAGS=linkflags,
            LIBS=sundials + extra_libs + lastlibs)
+
+add_system_include(env, include_dirs)
 
 if env["OS"] == "Darwin" and not env.subst("$__RPATH"):
     # SCons doesn't want to specify RPATH on macOS, so circumvent that behavior by
@@ -517,7 +518,7 @@ np_include = py_info['np_include']
 
 if os.name == 'nt':
     library_dirs.append(pyprefix + '/libs')
-env.Append(CPPPATH=includepy)
+add_system_include(env, includepy)
 if pylibdir is not None:
     env.Append(LIBPATH=pylibdir)
 
@@ -538,7 +539,7 @@ env.Depends('python/ember/_ember.cpp', 'python/ember/_ember.pxd')
 
 cyenv = env.Clone() # environment for compiling the Cython module
 cyenv.Prepend(CPPPATH='src', LIBPATH='build/core', LIBS=corelib)
-cyenv.Append(CPPPATH=np_include)
+add_system_include(cyenv, np_include)
 
 if env['OS'] == 'Darwin':
     cyenv.Append(LINKFLAGS='-undefined dynamic_lookup')
@@ -594,8 +595,8 @@ env.Alias('install', mod_inst)
 
 # GoogleTest tests
 testenv = env.Clone()
-testenv.Append(LIBS=['gtest'],
-               CPPPATH=['ext/gtest/include'])
+testenv.Append(LIBS=['gtest'])
+add_system_include(testenv, 'ext/gtest/include')
 
 if pylibdir is not None:
     testenv.AppendENVPath('LD_LIBRARY_PATH', pylibdir)

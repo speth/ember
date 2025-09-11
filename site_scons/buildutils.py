@@ -131,6 +131,28 @@ def formatOption(env, opt):
     return lines
 
 
+def add_system_include(env, include, mode='append'):
+    # Add a file to the include path as a "system" include directory, which will
+    # suppress warnings stemming from code that isn't part of this project, and reduces
+    # time spent scanning these files for changes.
+    if mode == 'append':
+        add = env.Append
+    elif mode == 'prepend':
+        add = env.Prepend
+    else:
+        raise ValueError("mode must be 'append' or 'prepend'")
+
+    if env['CC'] == 'cl':
+        add(CPPPATH=include)
+    else:
+        if isinstance(include, (list, tuple)):
+            for inc in include:
+                if inc:
+                    add(CXXFLAGS=('-isystem', inc))
+        elif include:
+            add(CXXFLAGS=('-isystem', include))
+
+
 def listify(value):
     """
     Convert an option specified as a string to a list.  Allow both

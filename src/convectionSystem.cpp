@@ -598,13 +598,11 @@ void ConvectionSystemSplit::integrateToTime(const double tf)
         vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
 
         int cvode_flag = CV_SUCCESS;
-        int i = 0;
         logFile.verboseWrite("UTW...", false);
 
         // CVODE returns CV_TSTOP_RETURN when the solver has reached tf
         while (cvode_flag != CV_TSTOP_RETURN) {
             cvode_flag = utwSolver->integrateOneStep(tf);
-            i++;
             vInterp->insert(std::make_pair(utwSolver->tInt, utwSystem.V/utwSystem.rho));
         }
 

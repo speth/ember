@@ -333,8 +333,6 @@ private:
     void* sundialsLinsol; //!< Sundials linear solver object
     void* sundialsLinsolMatrix; //!< matrix used by Sundials
 
-    int nEq;
-
     int bandwidth_upper;
     int bandwidth_lower;
 
