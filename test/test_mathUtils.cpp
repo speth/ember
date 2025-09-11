@@ -42,6 +42,13 @@ TEST_F(TestVectorOps, minval)
     EXPECT_EQ(5, mathUtils::minval(data, 5, 19));
 }
 
+TEST(TestTrapz, cos)
+{
+    dvec x = dvec::LinSpaced(200, 0.0, M_PI_2);
+    dvec y = Eigen::cos(x);
+    EXPECT_NEAR(mathUtils::trapz(x, y), 1.0, 1e-5);
+}
+
 TEST(TestSplines, integrate_eigen)
 {
     dvec x = dvec::LinSpaced(31, 0.0, 3.0);
