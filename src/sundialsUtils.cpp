@@ -204,10 +204,18 @@ void SundialsCvode::printStats()
   flag = CVodeGetNumNonlinSolvConvFails(sundialsMem, &ncfn);
   check_flag(&flag, "CVodeGetNumNonlinSolvConvFails", 1);
 
-  flag = CVDlsGetNumJacEvals(sundialsMem, &nje);
-  check_flag(&flag, "CVDenseGetNumJacEvals", 1);
-  flag = CVDlsGetNumRhsEvals(sundialsMem, &nfeLS);
-  check_flag(&flag, "CVDenseGetNumRhsEvals", 1);
+  #if SUNDIALS_VERSION_MAJOR >= 6
+      flag = CVodeGetNumJacEvals(sundialsMem, &nje);
+  #else
+      flag = CVDlsGetNumJacEvals(sundialsMem, &nje);
+  #endif
+  check_flag(&flag, "CVodeGetNumJacEvals", 1);
+  #if SUNDIALS_VERSION_MAJOR >= 6
+      flag = CVodeGetNumRhsEvals(sundialsMem, &nfeLS);
+  #else
+      flag = CVDlsGetNumRhsEvals(sundialsMem, &nfeLS);
+  #endif
+  check_flag(&flag, "CVodeGetNumRhsEvals", 1);
 
   flag = CVodeGetNumGEvals(sundialsMem, &nge);
   check_flag(&flag, "CVodeGetNumGEvals", 1);

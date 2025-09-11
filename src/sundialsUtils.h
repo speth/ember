@@ -23,8 +23,11 @@
 
 #include "cantera/base/ct_defs.h"
 
-#include "cvodes/cvodes_direct.h"
-#include "cvodes/cvodes_spils.h"
+#if SUNDIALS_VERSION_MAJOR < 7
+    #include "cvodes/cvodes_direct.h"
+    #include "cvodes/cvodes_spils.h"
+#endif
+
 #if CT_SUNDIALS_USE_LAPACK
     #include "sunlinsol/sunlinsol_lapackdense.h"
     #include "sunlinsol/sunlinsol_lapackband.h"
@@ -35,6 +38,10 @@
 #include "sunlinsol/sunlinsol_spgmr.h"
 #include "sunmatrix/sunmatrix_dense.h"
 #include "sunmatrix/sunmatrix_band.h"
+
+#if SUNDIALS_VERSION_MAJOR >= 7
+    typedef sunrealtype realtype;
+#endif
 
 #include <iostream>
 #include <vector>
@@ -50,7 +57,12 @@ class SundialsContext
 {
 public:
     SundialsContext() {
-        SUNContext_Create(nullptr, &m_context);
+        #if SUNDIALS_VERSION_MAJOR >= 7
+            SUNContext_Create(SUN_COMM_NULL, &m_context);
+            SUNContext_ClearErrHandlers(m_context);
+        #else
+            SUNContext_Create(nullptr, &m_context);
+        #endif
     }
     ~SundialsContext() {
         SUNContext_Free(&m_context);

@@ -465,6 +465,9 @@ if retcode == 0:
 configInfo['EMBER_SUNDIALS_VERSION'] = ''.join(sundials_version.strip().split('.')[:2])
 print("""INFO: Using Sundials version %s""" % sundials_version.strip())
 
+if int(sundials_version.strip().split('.')[0]) >= 7:
+    env.Append(LIBS=['sundials_core'])
+
 config_h = env.Command('src/config.h',
                        'src/config.h.in',
                        ConfigBuilder(configInfo))
