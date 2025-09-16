@@ -557,7 +557,7 @@ py_ext = cyenv.LoadableModule(f'#python/ember/_ember{suffix}', '#python/ember/_e
 
 build_cmd = ("${python_cmd} -m pip wheel -v --no-build-isolation --no-deps "
              "--wheel-dir=build/ python/")
-wheel_name = ("Ember-${ember_version}-cp${py_version_nodot}"
+wheel_name = ("ember-${ember_version}-cp${py_version_nodot}"
               "-cp${py_version_nodot}-${py_plat}.whl")
 license = env.Command('python/LICENSE.txt', 'LICENSE.txt',
                       Copy('$TARGET', '$SOURCE'))
