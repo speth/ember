@@ -596,6 +596,20 @@ env.Alias('install', mod_inst)
 
 
 # GoogleTest tests
+if not os.path.exists('ext/gtest'):
+    if not os.path.exists(".git"):
+        raise EnvironmentError("GTest is missing. Extract package in ext/gtest.")
+
+    try:
+        code = subprocess.call(["git", "submodule", "update", "--init",
+                                "--recursive", "ext/gtest"])
+    except Exception:
+        code = -1
+    if code:
+        raise EnvironmentError("GTest submodule checkout failed. "
+            "Try manually checking out the submodule by running:\n\n"
+            "    git submodule update --init --recursive ext/gtest\n")
+
 testenv = env.Clone()
 testenv.Append(LIBS=['gtest'])
 add_system_include(testenv, 'ext/gtest/include')
