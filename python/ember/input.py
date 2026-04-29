@@ -646,6 +646,11 @@ class Extinction(Options):
     #: Starting strain rate to be used when progressing to extinction
     initialStrainRate = FloatOption(300.0)
 
+    #: If True, retain the runFiles snapshots from each strain rate run in
+    #: numbered subdirectories (``runFiles/run0001/``, ``runFiles/run0002/``,
+    #: ...) rather than deleting them between runs.
+    saveIntermediateProfiles = BoolOption(False)
+
 
 class PositionControl(Options):
     """
@@ -1434,6 +1439,7 @@ class ConcreteConfig(_ember.ConfigOptions):
 
         complete = False
         hasExtinguished = False
+        runIndex = 0
 
         # The extinction simulation is considered converged once the step size
         # or increase factor has been reduced below the minimum cutoff value
@@ -1450,6 +1456,7 @@ class ConcreteConfig(_ember.ConfigOptions):
                 else:
                     strainRate *= incFactor
 
+            runIndex += 1
             log('\nBeginning run at strain rate:  %g s^-1' % strainRate)
 
             self.strainParameters.initial = strainRate
@@ -1557,10 +1564,20 @@ class ConcreteConfig(_ember.ConfigOptions):
 
             # To reduce the number of files produced during an extinction
             # simulation, the intermediate time point solutions are deleted
-            # after completing a run to the steady state solution.
+            # after completing a run to the steady state solution, unless
+            # saveIntermediateProfiles is set.
             if not complete:
-                shutil.rmtree(currentRunPath)
-                os.mkdir(currentRunPath, 0o0755)
+                if self.extinction.saveIntermediateProfiles:
+                    archiveDir = os.path.join(currentRunPath,
+                                              'run{:04d}'.format(runIndex))
+                    os.makedirs(archiveDir, 0o0755)
+                    for fname in os.listdir(currentRunPath):
+                        fpath = os.path.join(currentRunPath, fname)
+                        if os.path.isfile(fpath):
+                            os.rename(fpath, os.path.join(archiveDir, fname))
+                else:
+                    shutil.rmtree(currentRunPath)
+                    os.mkdir(currentRunPath, 0o0755)
 
             # It is possible for the user to specify and initial starting strain
             # rate that is already beyond the extinction strain rate for their
