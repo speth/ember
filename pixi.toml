@@ -1,0 +1,77 @@
+[workspace]
+name = "ember"
+version = "1.5.0"
+description = "Ember: quasi-1D unsteady flame solver"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
+
+[dependencies]
+cantera = ">=3.1,<3.2"
+libcantera-devel = ">=3.1,<3.2"
+python = ">=3.10"
+scons = ">=4.0"
+boost-cpp = ">=1.70"
+sundials = ">=6.0"
+fmt = "*"
+tbb = "*"
+tbb-devel = "*"
+eigen = "*"
+cython = "*"
+numpy = "*"
+pip = "*"
+packaging = ">=24.0"
+setuptools = ">=75.3.1"
+pytest = "*"
+h5py = "*"
+matplotlib = "*"
+
+[feature.docs.dependencies]
+doxygen = "*"
+graphviz = "*"
+pygments = "*"
+pyparsing = "*"
+sphinxcontrib-doxylink = "*"
+
+[environments]
+default = { solve-group = "default" }
+docs = { features = ["docs"], solve-group = "default" }
+
+[activation]
+env = { PYTHONPATH = "$PIXI_PROJECT_ROOT/python" }
+
+[tasks.build]
+cmd = """
+scons build
+  cantera=$CONDA_PREFIX
+  sundials=$CONDA_PREFIX
+  eigen=$CONDA_PREFIX/include
+  boost=$CONDA_PREFIX
+  -j4
+"""
+description = "Build the Ember C++ library and Python module"
+
+[tasks.install]
+cmd = """
+scons install
+  cantera=$CONDA_PREFIX
+  sundials=$CONDA_PREFIX
+  eigen=$CONDA_PREFIX/include
+  boost=$CONDA_PREFIX
+"""
+depends-on = ["build"]
+description = "Install the Ember Python module into the pixi environment"
+
+[tasks.test]
+cmd = """
+scons test
+  cantera=$CONDA_PREFIX
+  sundials=$CONDA_PREFIX
+  eigen=$CONDA_PREFIX/include
+  boost=$CONDA_PREFIX
+"""
+depends-on = ["build"]
+description = "Run the Ember test suite"
+
+[tasks.clean]
+cmd = "scons -c && rm -rf build/"
+description = "Remove build artifacts"
