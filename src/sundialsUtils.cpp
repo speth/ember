@@ -94,7 +94,7 @@ void SundialsCvode::initialize()
             sundialsLinsol = SUNLinSol_Dense(y.forSundials(), (SUNMatrix) sundialsLinsolMatrix,
                                         sunContext->get());
         #endif
-        flag = CVodeSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsolMatrix,
+        flag = CVodeSetLinearSolver(sundialsMem, (SUNLinearSolver) sundialsLinsol,
                                     (SUNMatrix) sundialsLinsolMatrix);
 
         flag = CVodeSetJacFn(sundialsMem, denseJac);
