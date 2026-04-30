@@ -238,7 +238,7 @@ print()
 
 env['OS'] = platform.system()
 
-env['ember_version'] = '1.5.0'
+env['ember_version'] = '1.6.0'
 
 # Copy in external environment variables
 if env['env_vars'] == 'all':

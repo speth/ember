@@ -1,6 +1,6 @@
 [workspace]
 name = "ember"
-version = "1.5.0"
+version = "1.6.0"
 description = "Ember: quasi-1D unsteady flame solver"
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "osx-64", "linux-64"]
