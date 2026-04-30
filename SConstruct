@@ -341,6 +341,7 @@ else:
         defines.append('NDEBUG')
 
 
+library_dirs = list(dict.fromkeys(library_dirs))  # deduplicate, preserving order
 env.Append(LIBPATH=library_dirs,
            RPATH=library_dirs,
            CXXFLAGS=env['cxx_flags'] or flags,

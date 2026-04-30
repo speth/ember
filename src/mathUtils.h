@@ -99,15 +99,14 @@ namespace mathUtils
     template <typename Derived>
     bool notnan(const Eigen::EigenBase<Derived>& v)
     {
-        double s = v.derived().sum();
-        return (s > 0 || s <= 0);
+        return !std::isnan(v.derived().sum());
     }
 
     //! Returns true if `v` does not contain any `NaN`s
     template <typename T>
     bool notnan(const vector<T>& v) {
         for (size_t i=0; i<v.size(); i++) {
-            if (!(v[i] > 0) && !(v[i] <= 0)) {
+            if (std::isnan(v[i])) {
                 return false;
             }
         }
@@ -116,7 +115,7 @@ namespace mathUtils
 
     //! Returns true if `v` is not `NaN`.
     inline bool notnan(const double& v) {
-        return (v > 0 || v <= 0);
+        return !std::isnan(v);
     }
 
     //! Returns true if `v` does not contain any `NaN`s

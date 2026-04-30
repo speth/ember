@@ -38,10 +38,10 @@ public:
     //! in transport property calculations.
     void setThreshold(double threshold);
 
-    double viscosity();
-    void getMixDiffCoeffs(double* const d);
-    void getMixDiffCoeffsMass(double* const d);
-    void getMixDiffCoeffsMole(double* const d);
+    double viscosity() override;
+    void getMixDiffCoeffs(double* const d) override;
+    void getMixDiffCoeffsMass(double* const d) override;
+    void getMixDiffCoeffsMole(double* const d) override;
 
     //! Cantera 3.2 added a new getThermalDiffCoeffs implementation that uses
     //! all binary diffusion coefficient pairs. Since updateDiff_T() only fills
@@ -49,9 +49,9 @@ public:
     void getThermalDiffCoeffs(double* const dt) override;
 
 private:
-    void updateViscosity_T();
-    void updateDiff_T();
-    void update_C();
+    void updateViscosity_T() override;
+    void updateDiff_T() override;
+    void update_C() override;
 
     double _threshold;
     vector<size_t> _kMajor; //!< indices of the species where X[k] >= threshold
