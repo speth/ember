@@ -28,7 +28,7 @@ double ApproxMixTransport::viscosity()
         return m_viscmix;
     }
 
-    doublereal vismix = 0.0;
+    double vismix = 0.0;
 
     // update m_visc and m_phi if necessary
     if (!m_viscwt_ok) {
@@ -148,8 +148,8 @@ void ApproxMixTransport::getMixDiffCoeffsMole(double* const d)
         updateDiff_T();
     }
 
-    doublereal sum2;
-    doublereal p = m_thermo->pressure();
+    double sum2;
+    double p = m_thermo->pressure();
     if (m_nsp == 1) {
         d[0] = m_bdiff(0,0) / p;
     } else {
@@ -234,6 +234,19 @@ void ApproxMixTransport::updateDiff_T()
     m_bindiff_ok = true;
 }
 
+void ApproxMixTransport::getThermalDiffCoeffs(double* const dt)
+{
+    update_T();
+    update_C();
+    // MixTransport::getThermalDiffCoeffs (added in Cantera 3.2) needs all
+    // binary diffusion coefficient pairs. updateDiff_T() only fills the rows
+    // for major species, leaving minor-minor pairs uninitialized. Use the full
+    // GasTransport computation here to avoid NaN in the result.
+    GasTransport::updateDiff_T();
+    m_bindiff_ok = true;
+    MixTransport::getThermalDiffCoeffs(dt);
+}
+
 void ApproxMixTransport::update_C()
 {
     MixTransport::update_C();
@@ -251,8 +264,8 @@ void ApproxMixTransport::update_C()
 InterpKinetics::InterpKinetics()
 {
     //! Preempt the creation of the standard MultiRate evaluator for Arrhenius reactions
-    m_bulk_types["Arrhenius"] = m_bulk_rates.size();
-    m_bulk_rates.push_back(std::make_unique<MultiArrheniusInterp>());
+    m_rateTypes["Arrhenius"] = m_rateHandlers.size();
+    m_rateHandlers.push_back(std::make_unique<MultiArrheniusInterp>());
 }
 
 void InterpKinetics::updateROP()
@@ -339,7 +352,7 @@ void InterpKinetics::updateROP()
         m_multi_concm.update(m_phys_conc, ctot, m_concm.data());
 
         // loop over MultiRate evaluators for each reaction type
-        for (auto& rates : m_bulk_rates) {
+        for (auto& rates : m_rateHandlers) {
             bool changed = rates->update(thermo(), *this);
             if (changed) {
                 rates->getRateConstants(m_kf0.data());

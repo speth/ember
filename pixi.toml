@@ -6,8 +6,8 @@ channels = ["conda-forge"]
 platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 [dependencies]
-cantera = ">=3.1,<3.2"
-libcantera-devel = ">=3.1,<3.2"
+cantera = ">=3.2,<3.3"
+libcantera-devel = ">=3.2,<3.3"
 python = ">=3.10"
 scons = ">=4.0"
 boost-cpp = ">=1.70"

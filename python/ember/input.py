@@ -374,6 +374,13 @@ class Chemistry(Options):
     threshold = FloatOption(1e-5, level=2, label='Approx. transport threshold',
         filter=lambda conf: conf.chemistry.transportModel == 'Approx')
 
+    #: Enable thermal diffusion (Soret effect). When enabled, thermal diffusion
+    #: coefficients are computed and used to calculate Soret mass fluxes. Requires
+    #: O(K²) binary diffusion computation per grid point regardless of
+    #: ``transportModel``. Defaults to ``False`` for ``transportModel = "Approx"``
+    #: and ``True`` otherwise.
+    soretDiffusion = BoolOption(None, level=1)
+
     #: Set a scalar multiplier for the reaction rate term as a function time
     rateMultiplierFunction = Option(None, level=3)
 

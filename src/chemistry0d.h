@@ -43,6 +43,11 @@ public:
     void getMixDiffCoeffsMass(double* const d);
     void getMixDiffCoeffsMole(double* const d);
 
+    //! Cantera 3.2 added a new getThermalDiffCoeffs implementation that uses
+    //! all binary diffusion coefficient pairs. Since updateDiff_T() only fills
+    //! major-species rows, call the full GasTransport::updateDiff_T() here.
+    void getThermalDiffCoeffs(double* const dt) override;
+
 private:
     void updateViscosity_T();
     void updateDiff_T();
@@ -84,6 +89,10 @@ public:
 
     bool replace(size_t rxn_index, ReactionRate& rate) override {
         throw DebugException("MultiArrheniusInterp::replace: operation not supported.");
+    }
+
+    void modifyRateConstants(double* kf, double* kr) override {
+        // Arrhenius rates don't use this mechanism
     }
 
     void resize(size_t nSpecies, size_t nReactions, size_t nPhases) override {

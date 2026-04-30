@@ -211,6 +211,10 @@ cdef class ConfigOptions:
         opts.transportModel = stringify(self.chemistry.transportModel)
         opts.kineticsModel = stringify(self.chemistry.kineticsModel)
         opts.transportThreshold = self.chemistry.threshold
+        soret = self.chemistry.soretDiffusion
+        if soret is None:
+            soret = (self.chemistry.transportModel != 'Approx')
+        opts.soretDiffusion = soret
         if self.chemistry.rateMultiplierFunction is not None:
             opts.rateMultiplierFunctionType = stringify('chebyshev')
 

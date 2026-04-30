@@ -39,7 +39,7 @@ cdef extern from "eigen_utils.h":
 
 
 cdef extern from "chemistry0d.h":
-    cdef void CxxAddCanteraDirectory "Cantera::addDirectory" (string&)
+    cdef void CxxAddCanteraDirectory "Cantera::addDataDirectory" (string&)
 
 cdef extern from "readConfig.h":
     cdef cppclass CxxConfigOptions "ConfigOptions":
@@ -67,6 +67,7 @@ cdef extern from "readConfig.h":
 
         string gasMechanismFile, gasPhaseID, transportModel, kineticsModel
         double transportThreshold
+        bint soretDiffusion
 
         double pressure
 

@@ -1,5 +1,6 @@
 #include "sundialsUtils.h"
 #include "debugUtils.h"
+#include "cantera/base/ctexceptions.h"
 #include <iostream>
 #include "mathUtils.h" // debug
 
@@ -275,7 +276,11 @@ int SundialsCvode::f(realtype t, N_Vector yIn, N_Vector ydotIn, void *f_data)
     sdVector y(yIn);
     sdVector ydot(ydotIn);
     // f_data contains a pointer to the "theODE" object
-    return ode->f(t, y, ydot);
+    try {
+        return ode->f(t, y, ydot);
+    } catch (Cantera::CanteraError&) {
+        return 1; // recoverable error: ask CVODE to retry with a smaller step
+    }
 }
 
 // g routine. Compute functions g_i(t,y) for i = 0,1.

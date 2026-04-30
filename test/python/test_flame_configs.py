@@ -79,8 +79,10 @@ class TestTwinPremixedStrained(TestCase):
         equil_prod.equilibrate('HP')
         products.TPY = solver.T[0], 101325, solver.Y[:,0]
         self.assertTrue(equil_prod.T - 300 < products.T < equil_prod.T + 300)
-        self.assertLess(products['H2'].X, 0.1*reactants['H2'].X)
-        self.assertGreater(products['H2O'].X, 0.5*equil_prod['H2O'].X)
+        iH2 = products.species_index('H2')
+        iH2O = products.species_index('H2O')
+        self.assertLess(products.X[iH2], 0.1*reactants.X[iH2])
+        self.assertGreater(products.X[iH2O], 0.5*equil_prod.X[iH2O])
 
 
 class TestDiffusion(TestCase):
