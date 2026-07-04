@@ -188,11 +188,13 @@ public:
   kernel enum happens in Task 1.3 and must throw on unknown strings.
 
 **Steps:**
-- [ ] Add option across the four plumbing layers
-- [ ] Rebuild (`pixi run build`); verify `Config(General(convectionScheme=
+- [x] Add option across the four plumbing layers
+- [x] Rebuild (`pixi run build`); verify `Config(General(convectionScheme=
       'firstOrderUpwind')).validate()` passes and an invalid value fails
       validation (quick Python check, can be a throwaway snippet)
-- [ ] Commit: `convection: [1.2] convectionScheme config option`
+- [x] Commit: `convection: [1.2] convectionScheme config option`
+      (note: `readConfig.cpp` needed no change — string options bridge via
+      `.pyx` directly, matching `splittingMethod`)
 
 ### Task 1.3: Integrate kernel into `ConvectionSystemUTW` + trapezoidal march
 
