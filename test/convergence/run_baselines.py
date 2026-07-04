@@ -24,6 +24,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -218,11 +219,52 @@ def select_major_species(species_names, Y):
     return [species_names[i] for i in selected]
 
 
-def run_case(name, work_dir):
+
+# Matches the per-global-timestep debug log line written by FlameSolver when
+# Debug.timesteps is enabled (the default), e.g.:
+#   t = 0.000100 (dt = 1.000e-04) [C: 12]
+# The trailing integer is ConvectionSystemSplit::getNumSteps(), i.e. the
+# number of CVODE steps taken by the split convection sub-integrators
+# *since the last reinitialization* (which happens once per global
+# timestep in FlameSolver::setState). It is therefore a per-step count, not
+# a running total; to get a whole-run total we sum every occurrence in the
+# log file.
+CONVECTION_STEPS_RE = re.compile(r'\[C:\s*(\d+)\]')
+
+
+def total_convection_steps(log_path):
+    """Sum the per-timestep convection CVODE step counts logged when
+    Debug.timesteps is enabled, across an entire run's log file. Returns
+    None if the log file is missing or contains no matching lines (e.g.
+    Debug.timesteps was disabled)."""
+    if not log_path or not os.path.isfile(log_path):
+        return None
+    total = 0
+    found = False
+    with open(log_path) as f:
+        for line in f:
+            m = CONVECTION_STEPS_RE.search(line)
+            if m:
+                found = True
+                total += int(m.group(1))
+    return total if found else None
+
+
+def run_case(name, work_dir, scheme=None):
     build_fn = CASES[name]
     conf, deviations = build_fn(work_dir)
     deviations = (['Paths.outputDir/logFile redirected into scratch --outdir '
                     '(no effect on physics)'] + deviations)
+
+    if scheme is not None:
+        conf.general.convectionScheme.value = scheme
+        conf.general.convectionScheme.isSet = True
+        deviations.append(
+            'General.convectionScheme overridden to %r via --scheme '
+            '(harness extension for Task 1.5; no other physics changes)'
+            % scheme)
+
+    log_path = conf.paths.logFile.value
 
     conf.validate()
     concrete = conf.evaluate()
@@ -276,13 +318,17 @@ def run_case(name, work_dir):
         'generated_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'config_summary': conf.stringify(),
         'deviations_from_stock': deviations,
-        # The convection discretization scheme option does not exist yet at
-        # this commit (Phase 0, pre-implementation baseline). Once Phase 1
-        # adds a `scheme` option to General, it should be recorded here.
-        'scheme': None,
+        # Convection discretization scheme actually used for this run
+        # (General.convectionScheme, post any --scheme override).
+        'scheme': scheme if scheme is not None else concrete.general.convectionScheme,
         'runtime_seconds': runtime,
         'final_time': float(solver.tNow),
         'grid_size': int(len(x)),
+        # Sum of the per-global-timestep convection CVODE step counts (see
+        # total_convection_steps() above); None if Debug.timesteps was off
+        # or the log file wasn't found. Not included under 'scalars' so it
+        # is not swept into compare_baselines.py's scalar pass/fail check.
+        'total_convection_steps': total_convection_steps(log_path),
         'scalars': {
             'peak_T': peak_T,
             'consumption_speed': consumption_speed,
@@ -317,6 +363,12 @@ def main():
                               'execution (observed thread-scheduling nondeterminism, '
                               'see README.md); retrying is usually sufficient. '
                               '(default: 3)')
+    parser.add_argument('--scheme', choices=['firstOrderUpwind', 'secondOrderLimited'],
+                         default=None,
+                         help='Override General.convectionScheme for every case in this '
+                              'run (harness extension added for Task 1.5). Default: no '
+                              'override, i.e. use each case\'s configured default '
+                              '(currently secondOrderLimited).')
     args = parser.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)
@@ -329,16 +381,18 @@ def main():
         while True:
             attempt += 1
             try:
-                result = run_case(name, args.workdir)
+                result = run_case(name, args.workdir, scheme=args.scheme)
                 break
             except Exception as exc:
                 print('    attempt %d/%d failed: %r' % (attempt, args.retries, exc))
                 if attempt >= args.retries:
                     raise
         result['attempts'] = attempt
-        print('    finished in %.1f s (attempts=%d, final_time=%.5g, grid_size=%d, peak_T=%.1f)'
+        print('    finished in %.1f s (attempts=%d, final_time=%.5g, grid_size=%d, '
+              'peak_T=%.1f, scheme=%s, convection_steps=%s)'
               % (result['runtime_seconds'], attempt, result['final_time'],
-                 result['grid_size'], result['scalars']['peak_T']))
+                 result['grid_size'], result['scalars']['peak_T'],
+                 result['scheme'], result['total_convection_steps']))
         out_path = os.path.join(args.outdir, name + args.suffix + '.json')
         with open(out_path, 'w') as f:
             json.dump(result, f, indent=2)
