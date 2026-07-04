@@ -224,12 +224,13 @@ public:
   system.
 
 **Verification:**
-- [ ] Full test suite passes (`pixi run test`)
-- [ ] With `firstOrderUpwind`: `test/python/test_flame_configs.py` results
+- [x] Full test suite passes (`pixi run test`)
+- [x] With `firstOrderUpwind`: `test/python/test_flame_configs.py` results
       unchanged from pre-change behavior (spot-check one config by diffing
       final T profile against a pre-change run, or rely on Task 1.5 baseline
       comparison if preferred — state which was done in the commit message)
-- [ ] Commit: `convection: [1.3] UTW system on ConvectionDifferencer + trapezoidal continuity`
+      (done via spot-check vs. clean f2eafc1: bit-identical, max|dT|=0.0)
+- [x] Commit: `convection: [1.3] UTW system on ConvectionDifferencer + trapezoidal continuity`
 
 ### Task 1.4: Integrate kernel into `ConvectionSystemY` (incl. quasi-2D fix)
 
