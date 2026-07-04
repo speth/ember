@@ -351,6 +351,23 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
         update_v(t);
     }
 
+    // *** Calculate the upwinded convective derivative dY/dx ***
+    // The kernel writes dYdx at nodes 0..jj-1 (dYdx[0] is discarded by the j=0
+    // boundary row below). The upwind branch is selected per node from the sign
+    // of the advecting velocity. In the standard case this is the interpolated
+    // normal velocity v; in the quasi-2d case it is the node-wise radial
+    // velocity from vrInterp (fixing the legacy uninitialized-v upwind bug,
+    // spec 3.4). Copy the state into a dvec since the kernel consumes a dvec.
+    yIn = Eigen::Map<const dvec>(&y[0], nPoints);
+    if (quasi2d) {
+        for (size_t j=0; j<nPoints; j++) {
+            vAdv[j] = vrInterp->get(x[j], t);
+        }
+        differencer.computeDerivatives(yIn, vAdv, grid, dYdx);
+    } else {
+        differencer.computeDerivatives(yIn, v, grid, dYdx);
+    }
+
     // *** Calculate dY/dt
 
     // Left boundary conditions.
@@ -367,17 +384,11 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
     }
 
     // Intermediate points
-    double dYdx;
     for (size_t j=1; j<jj; j++) {
-        if (v[j] < 0) {
-            dYdx = (y[j+1] - y[j]) / hh[j];
-        } else {
-            dYdx = (y[j] - y[j-1]) / hh[j-1];
-        }
         if (quasi2d) {
-            ydot[j] = -vrInterp->get(x[j], t) * dYdx / vzInterp->get(x[j], t) + splitConst[j];
+            ydot[j] = -vrInterp->get(x[j], t) * dYdx[j] / vzInterp->get(x[j], t) + splitConst[j];
         } else {
-            ydot[j] = -v[j] * dYdx  + splitConst[j];
+            ydot[j] = -v[j] * dYdx[j]  + splitConst[j];
         }
     }
 
@@ -402,6 +413,15 @@ void ConvectionSystemY::resize(const size_t new_nPoints)
 {
     grid.setSize(new_nPoints);
     v.resize(nPoints);
+    dYdx.resize(nPoints);
+    yIn.resize(nPoints);
+    vAdv.resize(nPoints);
+    differencer.resize(nPoints);
+}
+
+void ConvectionSystemY::setScheme(ConvectionDifferencer::Scheme newScheme)
+{
+    differencer.setScheme(newScheme);
 }
 
 void ConvectionSystemY::resetSplitConstants()
@@ -725,6 +745,7 @@ void ConvectionSystemSplit::configureSolver(SundialsCvode& solver, const size_t 
     solver.linearMultistepMethod = CV_ADAMS;
 
     speciesSystems[k].resize(nPoints);
+    speciesSystems[k].setScheme(convectionScheme);
     speciesSystems[k].Yleft = Yleft[k];
     speciesSystems[k].k = k;
 }

@@ -134,6 +134,9 @@ public:
     //! terms to zero.
     void resetSplitConstants();
 
+    //! Select the discretization used for the advective derivatives.
+    void setScheme(ConvectionDifferencer::Scheme newScheme);
+
      //! Mass fraction to the left of the domain. Used only in conjuction with
      //! BoundaryCondition::ControlVolume.
     double Yleft;
@@ -162,6 +165,23 @@ private:
 
     //! The velocity normal to the flame [m/s].
     dvec v;
+
+    //! Kernel computing the upwind-biased advective derivatives. Owned per
+    //! system instance so that parallel species solvers (run under TBB) never
+    //! share scratch.
+    ConvectionDifferencer differencer;
+
+    //! Advective derivative dY/dx at nodes 0..jj-1, written by #differencer.
+    dvec dYdx;
+
+    //! Dense copy of the current mass-fraction state, needed because the kernel
+    //! consumes a #dvec while `f()` receives an #sdVector.
+    dvec yIn;
+
+    //! Node-wise advecting velocity used for upwind branch selection in the
+    //! quasi-2d case (built from #vrInterp). Kept separate from #v so the
+    //! boundary rows are unaffected.
+    dvec vAdv;
 };
 
 
@@ -287,7 +307,8 @@ private:
 
     //! Convection discretization scheme parsed from
     //! ConfigOptions::convectionScheme in setTolerances(). Stored so it can be
-    //! propagated to the UTW system (and, in a later task, the species systems).
+    //! propagated to the UTW system and to each species system (the latter in
+    //! configureSolver()).
     ConvectionDifferencer::Scheme convectionScheme;
 
     CanteraGas* gas; //!< Cantera object used for computing #Wmx
