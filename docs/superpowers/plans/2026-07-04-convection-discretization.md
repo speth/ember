@@ -160,9 +160,9 @@ public:
   each node uses the correct side (compare against hand-computed small case).
 
 **Steps:**
-- [ ] Write failing unit tests covering all requirements above
-- [ ] Implement kernel; iterate until tests pass (`pixi run test`)
-- [ ] Commit: `convection: [1.1] ConvectionDifferencer kernel + unit tests`
+- [x] Write failing unit tests covering all requirements above
+- [x] Implement kernel; iterate until tests pass (`pixi run test`)
+- [x] Commit: `convection: [1.1] ConvectionDifferencer kernel + unit tests`
 
 ### Task 1.2: Config plumbing for `convectionScheme`
 
