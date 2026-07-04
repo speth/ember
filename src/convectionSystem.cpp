@@ -8,7 +8,15 @@ ConvectionSystemUTW::ConvectionSystemUTW()
     , continuityBC(ContinuityBoundaryCondition::Left)
     , jContBC(0)
     , nVars(3)
+    , scheme(ConvectionDifferencer::Scheme::SecondOrderLimited)
 {
+    differencer.setScheme(scheme);
+}
+
+void ConvectionSystemUTW::setScheme(ConvectionDifferencer::Scheme newScheme)
+{
+    scheme = newScheme;
+    differencer.setScheme(newScheme);
 }
 
 int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
@@ -18,10 +26,27 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     rho = gas->pressure * Wmx / (Cantera::GasConstant * T);
 
     // *** Calculate V ***
+    // The continuity (rV) march uses the trapezoidal rule (spec 3.3) for the
+    // SecondOrderLimited scheme and the legacy rectangle rule for
+    // FirstOrderUpwind (kept bit-identical). trapFwd(j) is the trapezoidal
+    // mass-flux integral between nodes j and j+1 using node radii; it serves
+    // both the forward march (rV[j+1] = rV[j] - trapFwd(j)) and the backward
+    // march (rV[j-1] = rV[j] + trapFwd(j-1)).
+    const bool trapezoidal =
+        (scheme == ConvectionDifferencer::Scheme::SecondOrderLimited);
+    auto trapFwd = [&](size_t j) {
+        return 0.5 * hh[j] * (r[j] * (drhodt[j] + rho[j] * beta * U[j])
+                            + r[j+1] * (drhodt[j+1] + rho[j+1] * beta * U[j+1]));
+    };
+
     if (continuityBC == ContinuityBoundaryCondition::Left) {
         rV[0] = rVzero;
         for (size_t j=0; j<nPoints-1; j++) {
-            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * grid.beta* U[j]);
+            if (trapezoidal) {
+                rV[j+1] = rV[j] - trapFwd(j);
+            } else {
+                rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * grid.beta* U[j]);
+            }
         }
     } else if (continuityBC == ContinuityBoundaryCondition::Zero) {
         // jContBC is the point just to the right of the stagnation point
@@ -33,7 +58,11 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
 
         rV[j] = (x[j] - xVzero) * dVdx0;
         for (j=jContBC; j<jj; j++) {
-            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            if (trapezoidal) {
+                rV[j+1] = rV[j] - trapFwd(j);
+            } else {
+                rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            }
         }
 
         if (jContBC != 0) {
@@ -41,7 +70,11 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
 //            dVdx0 = - drhodt[j] - rho[j] * U[j] * rphalf[j];
             rV[j] = (x[j] - xVzero) * dVdx0;
             for (j=jContBC-1; j>0; j--) {
-                rV[j-1] = rV[j] + hh[j-1] * rphalf[j-1] * (drhodt[j-1] + rho[j-1] * beta * U[j-1]);
+                if (trapezoidal) {
+                    rV[j-1] = rV[j] + trapFwd(j-1);
+                } else {
+                    rV[j-1] = rV[j] + hh[j-1] * rphalf[j-1] * (drhodt[j-1] + rho[j-1] * beta * U[j-1]);
+                }
             }
         }
     } else {
@@ -56,27 +89,32 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
             }
         }
         for (size_t j=jContBC; j<nPoints-1; j++) {
-            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            if (trapezoidal) {
+                rV[j+1] = rV[j] - trapFwd(j);
+            } else {
+                rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            }
         }
         for (size_t j=jContBC; j>0; j--) {
-            rV[j-1] = rV[j] + hh[j-1] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            if (trapezoidal) {
+                rV[j-1] = rV[j] + trapFwd(j-1);
+            } else {
+                rV[j-1] = rV[j] + hh[j-1] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            }
         }
     }
 
     rV2V();
 
-    // *** Calculate upwinded convective derivatives
-    for (size_t j=0; j<nPoints-1; j++) {
-        if (rV[j] < 0 || j == 0) {
-            dTdx[j] = (T[j+1] - T[j]) / hh[j];
-            dUdx[j] = (U[j+1] - U[j]) / hh[j];
-            dWdx[j] = (Wmx[j+1] - Wmx[j]) / hh[j];
-        } else {
-            dTdx[j] = (T[j] - T[j-1]) / hh[j-1];
-            dUdx[j] = (U[j] - U[j-1]) / hh[j-1];
-            dWdx[j] = (Wmx[j] - Wmx[j-1]) / hh[j-1];
-        }
-    }
+    // *** Calculate upwinded convective derivatives ***
+    // Branch selection uses the (radial) mass flux rV, preserving the legacy
+    // sign convention. The kernel writes dTdx/dUdx/dWdx at nodes 0..jj-1; the
+    // right-boundary node jj is handled below, and the j=0 rows are set
+    // directly from the boundary conditions (these derivatives are unused
+    // there).
+    differencer.computeDerivatives(T, rV, grid, dTdx);
+    differencer.computeDerivatives(U, rV, grid, dUdx);
+    differencer.computeDerivatives(Wmx, rV, grid, dWdx);
 
     // *** Calculate dW/dt, dU/dt, dT/dt
     double a = strainFunction->a(t);
@@ -184,6 +222,8 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     Wmx.setZero(nPoints);
     dWdt.setZero(nPoints);
     dWdx.setZero(nPoints);
+
+    differencer.resize(nPoints);
 }
 
 void ConvectionSystemUTW::resetSplitConstants()
@@ -405,6 +445,7 @@ ConvectionSystemSplit::ConvectionSystemSplit()
     , vInterp(new vecInterpolator())
     , nSpec(0)
     , nVars(3)
+    , convectionScheme(ConvectionDifferencer::Scheme::SecondOrderLimited)
     , gas(NULL)
     , quasi2d(false)
 {
@@ -426,6 +467,19 @@ void ConvectionSystemSplit::setTolerances(const ConfigOptions& options)
     abstolT = options.integratorEnergyAbsTol;
     abstolW = options.integratorSpeciesAbsTol * 20;
     abstolY = options.integratorSpeciesAbsTol;
+
+    // Parse the convection discretization scheme once. The parsed value is
+    // stored so it can also be propagated to the species systems (a later
+    // task); here it is applied to the UTW system.
+    if (options.convectionScheme == "secondOrderLimited") {
+        convectionScheme = ConvectionDifferencer::Scheme::SecondOrderLimited;
+    } else if (options.convectionScheme == "firstOrderUpwind") {
+        convectionScheme = ConvectionDifferencer::Scheme::FirstOrderUpwind;
+    } else {
+        throw DebugException("Unknown convectionScheme: '" +
+                             options.convectionScheme + "'");
+    }
+    utwSystem.setScheme(convectionScheme);
 }
 
 void ConvectionSystemSplit::setGas(CanteraGas& gas_)
