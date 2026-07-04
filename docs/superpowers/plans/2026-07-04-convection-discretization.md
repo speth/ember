@@ -279,11 +279,13 @@ public:
   `example_twin`.
 
 **Steps:**
-- [ ] Run both scheme settings across the case set; write comparison report
+- [x] Run both scheme settings across the case set; write comparison report
       into README (tables of scalar deltas + step counts)
-- [ ] Verify `firstOrderUpwind` parity; investigate/fix any mismatch before
+- [x] Verify `firstOrderUpwind` parity; investigate/fix any mismatch before
       proceeding (bit-identical expectation modulo thread noise)
-- [ ] Commit: `convection: [1.5] phase-1 regression + baseline comparison`
+      (5/6 cases at 1e-9..1e-5; example_single 1.5e-4 — within its
+      demonstrated run-to-run noise; caveat documented in README)
+- [x] Commit: `convection: [1.5] phase-1 regression + baseline comparison`
 
 **Phase 1 exit criteria:** all unit + regression tests pass with both
 schemes; `firstOrderUpwind` parity confirmed; `secondOrderLimited` results
