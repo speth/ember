@@ -1,6 +1,6 @@
 # Higher-Order Convection Discretization Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace Ember's 1st-order upwind convection discretization with a
 config-selectable, limited, (mostly) 2nd-order upwind scheme plus a
@@ -100,13 +100,13 @@ codebase patterns.
   pre-implementation commit instead.
 
 **Steps:**
-- [ ] Write `run_baselines.py` and `compare_baselines.py` with README
-- [ ] Run the six cases; verify each completes and writes plausible JSON
+- [x] Write `run_baselines.py` and `compare_baselines.py` with README
+- [x] Run the six cases; verify each completes and writes plausible JSON
       (no NaNs, T within physical bounds)
-- [ ] Re-run one case twice to quantify run-to-run reproducibility (thread
+- [x] Re-run one case twice to quantify run-to-run reproducibility (thread
       scheduling noise); record the observed tolerance floor in the README —
       this becomes the comparison threshold for Task 1.5
-- [ ] Commit artifacts: `convection: [0.1] example baseline harness + baselines`
+- [x] Commit artifacts: `convection: [0.1] example baseline harness + baselines`
 
 ---
 
