@@ -255,8 +255,9 @@ public:
 - Boundary rows (`j=0` inflow balance, `j=jj` outflow) unchanged.
 
 **Verification:**
-- [ ] Full test suite passes with both scheme settings
-- [ ] Commit: `convection: [1.4] species convection on ConvectionDifferencer + quasi-2D velocity fix`
+- [x] Full test suite passes with both scheme settings
+- [x] Commit: `convection: [1.4] species convection on ConvectionDifferencer + quasi-2D velocity fix`
+      (firstOrderUpwind parity vs. 30a4c3c bit-identical: x, T, all species)
 
 ### Task 1.5: Regression + baseline comparison
 
