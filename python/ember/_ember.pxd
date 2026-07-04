@@ -57,6 +57,7 @@ cdef extern from "readConfig.h":
         double globalTimestep, diffusionTimestepMultiplier
 
         string splittingMethod, chemistryIntegrator, rateMultiplierFunctionType
+        string convectionScheme
         double integratorRelTol, integratorMomentumAbsTol, integratorEnergyAbsTol
         double integratorSpeciesAbsTol, integratorMinTimestep
 

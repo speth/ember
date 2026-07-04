@@ -201,6 +201,7 @@ cdef class ConfigOptions:
         opts.twinFlame = G.twinFlame
         opts.chemistryIntegrator = stringify(G.chemistryIntegrator)
         opts.splittingMethod = stringify(G.splittingMethod)
+        opts.convectionScheme = stringify(G.convectionScheme)
         opts.setContinuityBC(stringify(G.continuityBC))
         opts.errorStopCount = G.errorStopCount
         opts.stopIfError = G.errorStopCount > 0

@@ -335,6 +335,13 @@ class General(Options):
     #: terms. Options are ``strang`` and ``balanced``.
     splittingMethod = StringOption("balanced", ("strang",), level=2)
 
+    #: Discretization scheme to use for the convection term. The default,
+    #: ``secondOrderLimited``, is 2nd-order accurate in smooth regions and
+    #: falls back locally to a 1st-order limiter at extrema. ``firstOrderUpwind``
+    #: is the legacy scheme used prior to version 1.7.
+    convectionScheme = StringOption("secondOrderLimited",
+                                    ("firstOrderUpwind",), level=2)
+
     #: Number of integration failures to tolerate in the chemistry
     #: integrator before aborting.
     errorStopCount = IntegerOption(100, level=2)

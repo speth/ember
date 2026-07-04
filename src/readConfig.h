@@ -76,6 +76,7 @@ public:
     double globalTimestep; //!< [times.globalTimestep]
     double diffusionTimestepMultiplier;  //!< [times.diffusionTimestepMultiplier]
     std::string splittingMethod; //!< [general.splittingMethod]
+    std::string convectionScheme; //!< [general.convectionScheme]
 
     std::string chemistryIntegrator; //!< [general.chemistryIntegrator]
     double integratorRelTol; //!< [cvodeTolerances.relativeTolerance]
