@@ -284,3 +284,89 @@ public:
 **Phase 1 exit criteria:** all unit + regression tests pass with both
 schemes; `firstOrderUpwind` parity confirmed; `secondOrderLimited` results
 reviewed with no anomalies. Phase 1 is independently mergeable here.
+
+---
+
+## Phase 2 — Convergence studies and diffusion decision gate
+
+### Task 2.1: Convergence study scripts
+
+**Delegation:** Sonnet (scripting to a fixed protocol), Opus review of the
+protocol implementation.
+
+**Files:**
+- Create: `test/convergence/run_convergence.py`
+- Modify: `test/convergence/README.md`
+
+**Interfaces:**
+- Produces: `run_convergence.py --case {strained,twin,cylindrical} --scheme
+  {firstOrderUpwind,secondOrderLimited} [--damp-const X]` writing per-run
+  JSON (N, grid tolerances, consumption speed, peak T, CVODE step totals,
+  wall time) into `test/convergence/results/`.
+- Produces: `plot_convergence.py` generating error-vs-N plots (reference =
+  finest `secondOrderLimited` run per case) for both schemes.
+
+**Requirements (protocol from spec §6.4):**
+- Case A: unbounded strained premixed H₂ flame (base on `example_single` /
+  test configs; FixedValue + ZeroGradient BCs).
+- Case B: twin flame (ControlVolume BC) and cylindrical flame (α=1). Both
+  BC paths must appear in the study; if runtime forces a choice, twin is
+  required, cylindrical strongly preferred.
+- Resolution ladder via `vtol`/`dvtol`/`gridMax` sweeps (≥5 rungs spanning
+  ~4× in N); fixed strain/composition per case; steady-state termination.
+
+**Steps:**
+- [ ] Write scripts; smoke-test one rung per case
+- [ ] Commit: `convection: [2.1] convergence study scripts`
+
+### Task 2.2: Run studies, analyze, and decide Phase 3
+
+**Delegation:** Runs by Sonnet; analysis and written findings by Opus;
+**decision requires user review — do not proceed into Phase 3 without it.**
+
+**Files:**
+- Create: `test/convergence/results/` artifacts +
+  `docs/superpowers/specs/2026-07-04-convection-discretization-design.md`
+  gets a short "Phase 2 findings" addendum section (append, don't rewrite).
+
+**Requirements:**
+- Produce error-vs-N curves for both schemes, all cases; report observed
+  orders and the grid-size reduction at matched error.
+- `dampConst` relaxation trial on one case with `secondOrderLimited` to
+  quantify additional coarsening headroom (spec §6.4).
+- CVODE step-count comparison (limiter smoothness check, spec §5).
+- Written recommendation on the Phase 3 gate: does diffusion error dominate
+  at target resolutions? Evidence: if `secondOrderLimited` error-vs-N
+  flattens toward 2nd-order-diffusion-limited behavior while convection
+  refinement no longer helps, the gate opens.
+
+**Steps:**
+- [ ] Run full matrix; generate plots and findings addendum
+- [ ] Present findings + Phase 3 recommendation to user; record decision in
+      the addendum
+- [ ] Commit: `convection: [2.2] convergence study results + phase-3 decision`
+
+---
+
+## Phase 3 — Diffusion upgrade (CONDITIONAL — only if Phase 2 gate opens)
+
+Deliberately not planned in detail (spec §7). If the gate opens:
+
+- Option (a) minimal: harmonic-mean face diffusivity within the existing
+  3-point tridiagonal structure (`DiffusionSystem::get_A`).
+- Option (b) full: 5-point 4th-order conservative flux stencils +
+  pentadiagonal BDF integrator (extension of `TridiagonalIntegrator`).
+
+**Process requirement:** run a fresh brainstorming/design pass (new spec
+section or standalone spec) scoped by the Phase 2 evidence, then extend this
+plan with concrete tasks. Do not improvise Phase 3 directly from this
+paragraph.
+
+---
+
+## Future work (out of scope, documented)
+
+Conservative flux-form framework (Approach C): see spec Appendix A. The
+kernel's face-reconstruction internals are the intended reuse seam
+(`ỹ_{j±1/2}` values); keep them cleanly separable when implementing Task 1.1,
+but do not add speculative API surface for it (YAGNI).
