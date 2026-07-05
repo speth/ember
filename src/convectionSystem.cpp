@@ -81,7 +81,13 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
         if (continuityBC == ContinuityBoundaryCondition::Temp) {
             size_t j = jContBC;
             // Find value of rV[jContBC] such that dTdt[jContBC] == 0, per later
-            // calculation of dTdt
+            // calculation of dTdt. This inversion is always derived from the
+            // first-order upwind dTdx relation (rV*dTdx == splitConstT), even
+            // when `scheme` is SecondOrderLimited, which uses the limited
+            // 2nd-order dTdx below to actually advance dTdt. That means the
+            // dT/dt(jContBC) == 0 anchor holds exactly under FirstOrderUpwind
+            // but only approximately under SecondOrderLimited -- an accepted
+            // discrepancy (spec Sec 3.2), not a bug.
             if (j == 0 || splitConstT[j] / (T[j+1] - T[j]) < 0) {
                 rV[j] = rphalf[j] * rho[j] * splitConstT[j] * hh[j] / (T[j+1] - T[j]);
             } else {
@@ -489,8 +495,9 @@ void ConvectionSystemSplit::setTolerances(const ConfigOptions& options)
     abstolY = options.integratorSpeciesAbsTol;
 
     // Parse the convection discretization scheme once. The parsed value is
-    // stored so it can also be propagated to the species systems (a later
-    // task); here it is applied to the UTW system.
+    // stored so it can be propagated to each species system as it is
+    // configured (see configureSolver()); here it is applied to the UTW
+    // system.
     if (options.convectionScheme == "secondOrderLimited") {
         convectionScheme = ConvectionDifferencer::Scheme::SecondOrderLimited;
     } else if (options.convectionScheme == "firstOrderUpwind") {

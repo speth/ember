@@ -335,3 +335,57 @@ pixi run python test/convergence/compare_baselines.py \
     --threshold 1.0   # no meaningful gate for this comparison; raises the
                        # threshold purely to suppress "EXCEEDS THRESHOLD" noise
 ```
+
+### Continuity-BC smoke tests (final whole-branch review fix)
+
+All six curated cases above (and the Task 1.5 sweep) use the default
+`General.continuityBC='fixedLeft'`. The `stagnationPoint` and
+`fixedTemperature` continuity boundary conditions
+(`ContinuityBoundaryCondition::Zero` / `::Temp` in `convectionSystem.cpp`)
+take a structurally different path through `ConvectionSystemUTW::f()` — the
+`rV` march runs forward *and* backward from an interior `jContBC` rather than
+forward from `rV[0]` — and, per the final whole-branch review, had never
+actually executed under the new `secondOrderLimited` trapezoidal march before
+this check (nor, for that matter, under `firstOrderUpwind`, since no test or
+baseline configures anything other than `fixedLeft`).
+
+This was a does-it-execute-sanely smoke check, not a physics/convergence
+study: four short runs (`continuityBC` in `{stagnationPoint,
+fixedTemperature}` x `convectionScheme` in `{secondOrderLimited,
+firstOrderUpwind}`), each based on `TestPremixedStrained` from
+`test/python/test_flame_configs.py` (H2/O2/Ar premixed counterflow flame,
+`h2o2.yaml` mechanism, `nThreads=1`) with `TerminationCondition(tEnd=0.006,
+measurement=None)` — at the default `globalTimestep=2e-5 s` this is ~300
+global timesteps, enough for the flame to develop a real interior stagnation
+point and temperature gradient (both BCs need one to lock onto) while
+staying fast. `fixedTemperature` requires `General.splittingMethod
+='balanced'`, which is already Ember's default, so no extra config was
+needed. Script: `test/convergence/smoke_continuity_bc.py` (`pixi run python
+test/convergence/smoke_continuity_bc.py`).
+
+Pass criteria: run completes without exception, finite T/Y throughout, and
+peak T within 250-3000 K.
+
+| continuityBC       | convectionScheme    | Completed | final_time | grid_size | peak_T (K) | min_T (K) | finite |
+|--------------------|---------------------|-----------|------------|-----------|------------|-----------|--------|
+| stagnationPoint     | secondOrderLimited   | yes       | 0.006      | 65        | 1592.5     | 300.0     | yes    |
+| stagnationPoint     | firstOrderUpwind     | yes       | 0.006      | 60        | 1516.7     | 300.0     | yes    |
+| fixedTemperature    | secondOrderLimited   | yes       | 0.006      | 68        | 1557.2     | 300.0     | yes    |
+| fixedTemperature    | firstOrderUpwind     | yes       | 0.006      | 67        | 1538.2     | 300.0     | yes    |
+
+All four runs completed on the first attempt (no CVODE retries needed; the
+whole matrix was also re-run once in full as a repeatability check with
+identical qualitative results). No NaN/Inf in any T or Y profile; all peak
+temperatures are well inside the 250-3000 K physical bound. Qualitative
+scheme comparison: `secondOrderLimited` vs. `firstOrderUpwind` peak-T
+differs by ~5.0% for `stagnationPoint` and ~1.2% for `fixedTemperature` —
+larger than the ~0.1-0.5% seen in the fully-converged Task 1.5 sweep above,
+but expected here: these are short, still-transient runs (fixed `tEnd`
+rather than a steady-state termination criterion), so a modest shift in
+front position/speed from the different convection discretization is
+amplified relative to a converged profile. Neither BC nor either scheme
+shows a wild divergence, a sign flip, or any instability symptom (grid size,
+`min_T`, and `finite` are all consistent across the matrix), so both
+previously-unexercised branches are confirmed to execute sanely under both
+convection schemes. No numerics bug found; this closes the residual test-gap
+item from the final whole-branch review.

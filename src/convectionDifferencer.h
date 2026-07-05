@@ -30,8 +30,13 @@ public:
     //! Select the active discretization scheme.
     void setScheme(Scheme s);
 
-    //! Size the internal limiter scratch vector. Must be called with the
-    //! current number of grid points before computeDerivatives().
+    //! Size the internal limiter scratch vector. This is the intended
+    //! pre-allocation entry point: call it with the current number of grid
+    //! points before computeDerivatives() to avoid a reallocation on first
+    //! use. computeDerivatives() also self-sizes the scratch vector
+    //! defensively if it is ever found to be the wrong size (e.g. after a
+    //! regrid where resize() was not called again), so calling it is not
+    //! strictly required for correctness, only for avoiding that fallback.
     void resize(size_t nPoints);
 
     //! Compute the advective derivative \f$ dy/dx \f$ at nodes `0 .. jj-1`.
