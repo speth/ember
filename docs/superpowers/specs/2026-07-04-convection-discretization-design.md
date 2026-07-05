@@ -532,6 +532,15 @@ hypothesis); or (b) a grid-adaptation guard that denies the runaway a foothold
 isolation would need a run on a *fixed fine* grid (frozen at N≈500), which the
 current harness cannot seed without a `src/` change.
 
+**Ruled out: the QSS chemistry integrator (post-review diagnostic,
+2026-07-05).** All study runs used the default `chemistryIntegrator='qss'`.
+Re-running strained/sol/rung 5 with `chemistryIntegrator='cvode'` (everything
+else identical) reproduces the failure with the same signature — grid climbing
+496→537 without settling, per-global-step convection CVODE counts ~2600–2900,
+and the error artifact `err_convectionIntegration.h5` naming the convection
+integrator. The failure is chemistry-integrator-independent; the mechanism
+above stands.
+
 ### P2.5 dampConst trial (strained sol, dampConst 7 → 15)
 
 Grid-point count is **identical point-for-point** (55/75/115/145/223 at rungs
@@ -590,4 +599,14 @@ helps, the gate opens."*
 3. **dampConst: no action.** It yields no additional coarsening headroom for
    the strained case (§P2.5).
 
-**Decision: PENDING user review.**
+**Decision (project owner, 2026-07-05): Phase 3 gate OPEN.** The practically
+useful accuracy envelope is scalars (flame speed, peak T) to ~1e-4, perhaps
+slightly tighter to follow transients longer between regrids; sol reaches that
+at N≈100, and a diffusion upgrade that reduces N further is judged worth
+pursuing. The tight-tolerance CVODE robustness issue (§P2.4) is to be
+addressed via the recommended short design pass — the QSS chemistry integrator
+was tested and ruled out as a cause (§P2.4 diagnostic note), so the fix
+options remain limiter smoothing / σ-freezing and/or grid-adaptation guards
+(possibly revised refinement criteria). Phase 3 planning proceeds per the
+plan's process requirement (fresh brainstorming/design pass, then concrete
+plan tasks).

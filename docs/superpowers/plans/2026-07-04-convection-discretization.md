@@ -354,9 +354,10 @@ protocol implementation.
       CVODE failures at finest rungs for secondOrderLimited on
       strained/cylindrical, escalated. Analysis: 4d3e2f1 — spec addendum
       §P2.1–P2.7)
-- [ ] Present findings + Phase 3 recommendation to user; record decision in
-      the addendum
-- [ ] Commit: `convection: [2.2] convergence study results + phase-3 decision`
+- [x] Present findings + Phase 3 recommendation to user; record decision in
+      the addendum (decision: gate OPEN; robustness fix via design pass;
+      QSS chemistry integrator tested and ruled out as failure source)
+- [x] Commit: `convection: [2.2] convergence study results + phase-3 decision`
 
 ---
 
