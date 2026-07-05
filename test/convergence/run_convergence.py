@@ -134,7 +134,7 @@ def build_strained(rung_idx, scheme, damp_const, work_dir):
                           equivalenceRatio=0.3),
         StrainParameters(initial=800, final=800),
         Grid(**_grid_kwargs(rung_idx, damp_const)),
-        Times(regridStepInterval=10),
+        Times(profileStepInterval=10, regridStepInterval=10),
         TerminationCondition(tEnd=2.0, measurement='dTdt'))
     return conf
 
@@ -154,7 +154,7 @@ def build_twin(rung_idx, scheme, damp_const, work_dir):
                           xRight=0.01),
         StrainParameters(initial=100, final=100),
         Grid(**_grid_kwargs(rung_idx, damp_const)),
-        Times(regridStepInterval=10),
+        Times(profileStepInterval=10, regridStepInterval=10),
         TerminationCondition(tEnd=10))
     return conf
 
