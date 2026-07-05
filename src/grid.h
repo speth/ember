@@ -63,6 +63,24 @@ public:
     //! than this value are not considered during grid adaptation.
     double absvtol;
 
+    //! Local-error tolerance for grid adaptation. The estimated local
+    //! representation error of each adapted component must be smaller than
+    //! errTol times the component's range. Set from ConfigOptions in
+    //! setOptions().
+    double errTol;
+
+    //! Spatial order p of the active convection scheme (1: firstOrderUpwind,
+    //! 2: secondOrderLimited). The adaptation error estimate scales as
+    //! h^(p+1) * |d^(p+1)v/dx^(p+1)|. Set in setOptions().
+    int errorOrder;
+
+    //! Leading coefficient C_p of the local error estimate
+    //! E = C_p * h^(p+1) * |d^(p+1)v|. Initial values are the classical
+    //! interpolation-error bounds (1/8 for p=1, 1/15 for p=2); the p=2
+    //! value is calibrated so matched errTol gives matched accuracy across
+    //! convection schemes. Set in setOptions().
+    double errCoeff;
+
     //! Relative grid point removal tolerance. Grid points can be removed if
     //! all criteria are satisfied to this multiplier on the insertion
     //! tolerances.
@@ -183,6 +201,13 @@ public:
     //! Set adaptation and regridding tolerances specified in a ConfigOptions
     //! object.
     void setOptions(const ConfigOptions& options);
+
+    //! Estimate the nodal magnitude of the (#errorOrder + 1)-th derivative
+    //! of v, the weight in the local error estimate used by adapt().
+    //! Repeated application of the nonuniform first-derivative stencils;
+    //! end nodes copy the nearest interior estimate. updateValues() must
+    //! have been called first.
+    void computeErrorWeights(const dvector& v, dvector& W) const;
 
     //! Recompute derived mesh parameters after the grid has changed.
     void updateValues(void);

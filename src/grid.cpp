@@ -2,6 +2,7 @@
 #include "debugUtils.h"
 
 #include <assert.h>
+#include <cmath>
 
 using namespace mathUtils;
 using std::max; using std::min;
@@ -38,6 +39,42 @@ void OneDimGrid::setOptions(const ConfigOptions& options)
     addPointCount = options.addPointCount;
     alpha = (options.cylindricalFlame) ? 1 : 0;
     beta = (options.discFlame) ? 2 : 1;
+}
+
+void OneDimGrid::computeErrorWeights(const dvector& v, dvector& W) const
+{
+    W.assign(jj + 1, 0.0);
+    if (jj < 2) {
+        return;
+    }
+
+    // Nodal first and second derivatives from the nonuniform
+    // centered-difference coefficients; end nodes copy the nearest
+    // interior estimate.
+    dvector d1(jj + 1), d2(jj + 1);
+    for (size_t i = 1; i < jj; i++) {
+        d1[i] = cfp[i] * v[i+1] + cf[i] * v[i] + cfm[i] * v[i-1];
+    }
+    d1[0] = d1[1];
+    d1[jj] = d1[jj-1];
+
+    for (size_t i = 1; i < jj; i++) {
+        d2[i] = cfp[i] * d1[i+1] + cf[i] * d1[i] + cfm[i] * d1[i-1];
+    }
+    d2[0] = d2[1];
+    d2[jj] = d2[jj-1];
+
+    if (errorOrder == 1) {
+        for (size_t i = 0; i <= jj; i++) {
+            W[i] = std::abs(d2[i]);
+        }
+    } else {
+        for (size_t i = 1; i < jj; i++) {
+            W[i] = std::abs(cfp[i] * d2[i+1] + cf[i] * d2[i] + cfm[i] * d2[i-1]);
+        }
+        W[0] = W[1];
+        W[jj] = W[jj-1];
+    }
 }
 
 void OneDimGrid::updateValues()
