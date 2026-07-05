@@ -610,3 +610,15 @@ options remain limiter smoothing / σ-freezing and/or grid-adaptation guards
 (possibly revised refinement criteria). Phase 3 planning proceeds per the
 plan's process requirement (fresh brainstorming/design pass, then concrete
 plan tasks).
+
+**Design-pass scoping (project owner, 2026-07-05):** the design pass should
+evaluate **monitor-function / error-equidistribution grid adaptation** — the
+user specifies a dimensional error density rather than guessing `vtol`/`dvtol`
+relative-change tolerances — as the primary candidate, weighed against the
+narrower hysteresis + per-regrid-growth-cap patch. Rationale: it is more
+intuitive for users (an actual error scale, though not a full QoI
+specification), and a fixed total-error budget removes the unstable
+per-interval relative test at the root of the §P2.4 runaway. Full
+adjoint/QoI-driven refinement is deliberately out of scope for Ember (no
+steady residual formulation); that idea is earmarked for Cantera, whose 1D
+solver is already a steady Newton method with an assembled Jacobian.
