@@ -349,7 +349,11 @@ protocol implementation.
   refinement no longer helps, the gate opens.
 
 **Steps:**
-- [ ] Run full matrix; generate plots and findings addendum
+- [x] Run full matrix; generate plots and findings addendum
+      (runs: e8dcdcd — 33/36 matrix + 5/6 dampConst rungs; deterministic
+      CVODE failures at finest rungs for secondOrderLimited on
+      strained/cylindrical, escalated. Analysis: 4d3e2f1 — spec addendum
+      §P2.1–P2.7)
 - [ ] Present findings + Phase 3 recommendation to user; record decision in
       the addendum
 - [ ] Commit: `convection: [2.2] convergence study results + phase-3 decision`
