@@ -40,15 +40,18 @@ convection-scheme design doc):
   planar-twin path. Config follows ``example_cylindrical_outward`` /
   ``case_cylindrical_outward`` in run_baselines.py.
 
-Resolution ladder: a 6-rung sequence of ``(vtol, dvtol, gridMax)`` tuples
-(see RUNGS below), index 0 = coarsest, index 5 = finest, geometrically
-spaced by roughly a factor of 1.5x in vtol/dvtol per rung (~7x from coarsest
-to finest). This is a *nominal* ladder sized to produce "at least 5 rungs
-spanning roughly 4x in N" per spec §6.4; the actual N achieved by each rung
-is configuration-dependent (thin, highly-strained flames need more points
-per unit vtol than slow ones) and should be confirmed/retuned in Task 2.2
-against the observed grid sizes, without changing the rung *count* or
-*intent* documented here.
+Resolution ladder: a 6-rung sequence of ``(errTol, gridMax)`` pairs (see
+RUNGS below), index 0 = coarsest, index 5 = finest, geometrically spaced by
+roughly a factor of 2.5x in errTol per rung (~100x from coarsest to
+finest). ``gridMax`` co-scales alongside ``errTol`` (as it did for the
+Task 2.1 vtol ladder) so the far field stays bounded even at the finest
+rungs. Rung 5 targets accuracy at or beyond the old vtol rung-5 (the P2.4
+failure regime). This is a *nominal* ladder sized to produce "at least 5
+rungs spanning roughly 4x in N" per spec §6.4; the actual N achieved by
+each rung is configuration-dependent (thin, highly-strained flames need
+more points per unit errTol than slow ones) and should be
+confirmed/retuned against the observed grid sizes, without changing the
+rung *count* or *intent* documented here.
 
 Usage:
     pixi run python test/convergence/run_convergence.py \\
@@ -92,13 +95,16 @@ from run_baselines import git_commit, total_convection_steps
 # Resolution ladder: grid-tolerance rungs, coarsest (index 0) to finest.
 # See module docstring for the rationale/caveats.
 # ---------------------------------------------------------------------------
+# errTol ladder, coarse -> fine, ~2.5x per rung. gridMax co-scales as in the
+# Task 2.1 vtol ladder so the far field stays bounded. Rung 5 targets
+# accuracy at or beyond the old vtol rung-5 (the P2.4 failure regime).
 RUNGS = [
-    dict(vtol=0.24,  dvtol=0.40,  gridMax=4.0e-4),   # 0: coarsest
-    dict(vtol=0.16,  dvtol=0.27,  gridMax=2.5e-4),   # 1
-    dict(vtol=0.11,  dvtol=0.18,  gridMax=1.6e-4),   # 2
-    dict(vtol=0.075, dvtol=0.12,  gridMax=1.0e-4),   # 3
-    dict(vtol=0.050, dvtol=0.080, gridMax=6.3e-5),   # 4
-    dict(vtol=0.033, dvtol=0.055, gridMax=4.0e-5),   # 5: finest
+    dict(errTol=2.0e-2, gridMax=4.0e-4),   # 0: coarsest
+    dict(errTol=8.0e-3, gridMax=2.5e-4),   # 1
+    dict(errTol=3.2e-3, gridMax=1.6e-4),   # 2
+    dict(errTol=1.3e-3, gridMax=1.0e-4),   # 3
+    dict(errTol=5.0e-4, gridMax=6.3e-5),   # 4
+    dict(errTol=2.0e-4, gridMax=4.0e-5),   # 5: finest
 ]
 
 CASES = ('strained', 'twin', 'cylindrical')
@@ -107,7 +113,7 @@ SCHEMES = ('firstOrderUpwind', 'secondOrderLimited')
 
 def _grid_kwargs(rung_idx, damp_const):
     r = RUNGS[rung_idx]
-    kwargs = dict(vtol=r['vtol'], dvtol=r['dvtol'], gridMax=r['gridMax'])
+    kwargs = dict(errTol=r['errTol'], gridMax=r['gridMax'])
     if damp_const is not None:
         kwargs['dampConst'] = damp_const
     return kwargs
@@ -227,8 +233,7 @@ def run_once(case, scheme, rung_idx, damp_const, work_dir):
         'generated_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'config_summary': conf.stringify(),
         'grid_tolerances': {
-            'vtol': concrete.grid.vtol,
-            'dvtol': concrete.grid.dvtol,
+            'errTol': concrete.grid.errTol,
             'gridMax': concrete.grid.gridMax,
             'gridMin': concrete.grid.gridMin,
             'dampConst': concrete.grid.dampConst,
@@ -296,13 +301,13 @@ def main():
                               'occasional CVODE integrator error under multi-threaded '
                               'or stiff runs; retrying is usually sufficient). Default: 3')
     parser.add_argument('--list-rungs', action='store_true',
-                         help='Print the rung ladder (vtol/dvtol/gridMax per index) and exit')
+                         help='Print the rung ladder (errTol/gridMax per index) and exit')
     args = parser.parse_args()
 
     if args.list_rungs:
-        print('%-5s %-8s %-8s %-10s' % ('rung', 'vtol', 'dvtol', 'gridMax'))
+        print('%-5s %-10s %-10s' % ('rung', 'errTol', 'gridMax'))
         for i, r in enumerate(RUNGS):
-            print('%-5d %-8g %-8g %-10g' % (i, r['vtol'], r['dvtol'], r['gridMax']))
+            print('%-5d %-10g %-10g' % (i, r['errTol'], r['gridMax']))
         return
 
     if args.case is None or args.scheme is None:
