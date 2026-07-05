@@ -292,8 +292,7 @@ cdef class ConfigOptions:
 
         # Grid
         opts.centerGridMin = self.grid.centerGridMin
-        opts.vtol = self.grid.vtol
-        opts.dvtol = self.grid.dvtol
+        opts.errTol = self.grid.errTol
         opts.rmTol = self.grid.rmTol
         opts.dampConst = self.grid.dampConst
         opts.gridMax = self.grid.gridMax

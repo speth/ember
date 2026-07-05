@@ -16,8 +16,14 @@ OneDimGrid::OneDimGrid()
 
 void OneDimGrid::setOptions(const ConfigOptions& options)
 {
-    vtol_in = options.vtol;
-    dvtol_in = options.dvtol;
+    errTol = options.errTol;
+    if (options.convectionScheme == "firstOrderUpwind") {
+        errorOrder = 1;
+        errCoeff = 0.125;     // 1/8: piecewise-linear representation error
+    } else {
+        errorOrder = 2;
+        errCoeff = 1.0/15.0;  // ~quadratic representation error; calibrated in [G5]
+    }
     absvtol = options.absvtol;
     rmTol = options.rmTol;
     uniformityTol = options.uniformityTol;
@@ -118,12 +124,11 @@ void OneDimGrid::adapt(vector<dvector>& y)
     assert((dampVal > 0).all());
     setSize(y[0].size());
 
-    vtol.resize(nAdapt);
-    dvtol.resize(nAdapt);
-    for (size_t k=0; k<nAdapt; k++) {
-        vtol[k] = vtol_in;
-        dvtol[k] = dvtol_in;
-    }
+    // Working copy of dampVal kept consistent with the changing grid.
+    // updateValues() resizes dampVal without preserving its contents, so
+    // the member cannot be read safely once a point has been added or
+    // removed within this pass.
+    dvector dampLocal(dampVal.data(), dampVal.data() + nPoints);
 
     // Used for informational purposes only
     std::vector<int> insertionIndicies;
@@ -132,60 +137,48 @@ void OneDimGrid::adapt(vector<dvector>& y)
     // *** Grid point insertion algorithm
 
     size_t j = 0;
-    dvector dv(jj+1); // dv/dx
+    dvector W;
 
     while (j < jj) {
         updateValues();
-        dv.resize(jj+1);
         bool insert = false;
 
-        // Consider tolerances for each variable v in the solution y
+        // Consider the local error estimate for each variable v in y
         for (size_t k=0; k<nAdapt; k++) {
-
             dvector& v = y[k];
-            for (size_t i=1; i<jj; i++) {
-                dv[i] = cfp[i]*v[i+1] + cf[i]*v[i] + cfm[i]*v[i-1];
-            }
-
             double vRange = mathUtils::range(v);
-            double dvRange = mathUtils::range(dv,1,jj-1);
-
             if (vRange < absvtol) {
                 continue; // Ignore minor species
             }
+            computeErrorWeights(v, W);
 
-            // Apply grid point addition criteria:
-
-            // resolution of v
-            if (abs(v[j+1]-v[j]) > vtol[k]*vRange) {
-                insert = true;
-                if (debugParameters::debugAdapt) {
-                    logFile.write(format("Adapt: v resolution wants grid point"
-                        " j = %i, k = %i; |v(j+1)-v(j)|/vrange = %g > %g") %
-                        j % k % (abs(v[j+1]-v[j])/vRange) % vtol[k]);
-                }
+            // Local representation error estimate for interval j, using the
+            // largest derivative weight within one interval of j
+            size_t i0 = (j == 0) ? 0 : j - 1;
+            size_t i1 = std::min(j + 2, jj);
+            double w = 0;
+            for (size_t i=i0; i<=i1; i++) {
+                w = std::max(w, W[i]);
             }
-
-            // resolution of dv
-            if (j!=0 && j!=jj-1 && abs(dv[j+1]-dv[j]) > dvtol[k]*dvRange) {
+            double E = errCoeff * pow(hh[j], errorOrder+1) * w;
+            if (E > errTol*vRange) {
                 insert = true;
                 if (debugParameters::debugAdapt) {
-                    logFile.write(format(
-                        "Adapt: dv resolution (global) wants grid point"
-                        " j = %i, k = %i; |dv(j+1)-dv(j)|/vrange = %g > % g") %
-                        j % k % (abs(dv[j+1]-dv[j])/dvRange) % dvtol[k]);
+                    logFile.write(format("Adapt: local error wants grid point"
+                        " j = %i, k = %i; E/range = %g > %g") %
+                        j % k % (E/vRange) % errTol);
                 }
             }
         }
 
         // Damping of high-frequency numerical error
-        if (hh[j] > dampConst*dampVal[j]) {
+        if (hh[j] > dampConst*dampLocal[j]) {
             insert = true;
             if (debugParameters::debugAdapt) {
                 logFile.write(format(
                     "Adapt: damping criterion wants a grid point"
                     " j = %i; hh[j] = %g > %g") %
-                    j % hh[j] % (dampConst*dampVal[j]));
+                    j % hh[j] % (dampConst*dampLocal[j]));
             }
         }
 
@@ -250,6 +243,8 @@ void OneDimGrid::adapt(vector<dvector>& y)
             // Insert a new point
             insertionIndicies.push_back(static_cast<int>(j));
             addPoint(static_cast<int>(j), y);
+            dampLocal.insert(dampLocal.begin() + j + 1,
+                             0.5*(dampLocal[j] + dampLocal[j+1]));
             updated = true;
             setSize(nPoints+1);
             j+=2;
@@ -276,53 +271,41 @@ void OneDimGrid::adapt(vector<dvector>& y)
         // Assume removal, then look for a condition which prevents removal
         bool remove = true;
 
-        // Consider tolerances each variable v in the solution y
         for (size_t k=0; k<nAdapt; k++) {
-
             dvector& v = y[k];
-            for (size_t i=1; i<jj; i++) {
-                dv[i] = cfp[i]*v[i+1] + cf[i]*v[i] + cfm[i]*v[i-1];
-            }
-
             double vRange = mathUtils::range(v);
-            double dvRange = mathUtils::range(dv,1,jj-1);
-
             if (vRange < absvtol) {
                 continue; // Ignore minor species
             }
+            computeErrorWeights(v, W);
 
-            // Apply grid point removal criteria:
-
-            // resolution of v
-            if (abs(v[j+1]-v[j-1]) > rmTol*vtol[k]*vRange) {
-                if (debugParameters::debugAdapt) {
-                    logFile.write(format(
-                        "Adapt: no removal - v res. j = %i, k = %i;"
-                        " |v[j+1]-v[j-1]|/vtrange = %g > %g") %
-                        j % k % (abs(v[j+1]-v[j-1])/vRange) % (vtol[k]*rmTol));
-                }
-                remove = false;
+            // Error estimate for the interval that would result from
+            // removing point j (spanning x[j-1] to x[j+1])
+            size_t i0 = (j < 2) ? 0 : j - 2;
+            size_t i1 = std::min(j + 2, jj);
+            double w = 0;
+            for (size_t i=i0; i<=i1; i++) {
+                w = std::max(w, W[i]);
             }
-
-            // resolution of dv
-            if (j!=2 && j!=jj-1 && abs(dv[j+1]-dv[j-1]) > rmTol*dvtol[k]*dvRange) {
+            double E = errCoeff * pow(hh[j]+hh[j-1], errorOrder+1) * w;
+            if (E > rmTol*errTol*vRange) {
                 if (debugParameters::debugAdapt) {
                     logFile.write(format(
-                        "Adapt: no removal - dv res. j = %i, k = %i;"
-                        " |dv(j+1)-dv(j-1)|/dvrange = %g > %g") %
-                        j % k % (abs(dv[j+1]-dv[j-1])/dvRange) % (dvtol[k]*rmTol));
+                        "Adapt: no removal - error budget. j = %i, k = %i;"
+                        " E/range = %g > %g") %
+                        j % k % (E/vRange) % (rmTol*errTol));
                 }
                 remove = false;
             }
         }
 
         // Damping of high-frequency numerical error
-        if (hh[j]+hh[j-1] >= rmTol*dampConst*dampVal[j]) {
+        if (hh[j]+hh[j-1] >= rmTol*dampConst*dampLocal[j]) {
             if (debugParameters::debugAdapt) {
                 logFile.write(format(
                     "Adapt: no removal - damping criterion. j = %i;"
                     " hh(j)+hh(j-1) = %g > %g") %
-                    j % (hh[j]+hh[j-1]) % (dampConst*dampVal[j]));
+                    j % (hh[j]+hh[j-1]) % (dampConst*dampLocal[j]));
             }
             remove = false;
         }
@@ -373,6 +356,7 @@ void OneDimGrid::adapt(vector<dvector>& y)
         if (remove) {
             removalIndices.push_back(static_cast<int>(j));
             removePoint(static_cast<int>(j), y);
+            dampLocal.erase(dampLocal.begin() + j);
             setSize(nPoints-1);
             updated = true;
         } else {
@@ -387,6 +371,8 @@ void OneDimGrid::adapt(vector<dvector>& y)
         }
         logFile.write(removalIndices[removalIndices.size()-1]);
     }
+
+    dampVal = Eigen::Map<const dvec>(dampLocal.data(), dampLocal.size());
 
     if (updated) {
         updateValues();

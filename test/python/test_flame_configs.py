@@ -16,7 +16,7 @@ class TestPremixedStrained(TestCase):
                              oxidizer='O2:1.0, AR:4.0',
                              equivalenceRatio=0.3),
             StrainParameters(initial=800, final=800),
-            Grid(vtol=0.2, dvtol=0.3),
+            Grid(errTol=3.3e-3),
             Times(regridStepInterval=10),
             TerminationCondition(tEnd=0.01, measurement=None))
 
@@ -54,7 +54,7 @@ class TestTwinPremixedStrained(TestCase):
                              equivalenceRatio=0.3),
             General(nThreads=1, twinFlame=True, unburnedLeft=False),
             StrainParameters(initial=800, final=800),
-            Grid(vtol=0.2, dvtol=0.3),
+            Grid(errTol=3.3e-3),
             Times(regridStepInterval=10),
             TerminationCondition(tEnd=0.01, measurement=None))
 
@@ -96,7 +96,7 @@ class TestDiffusion(TestCase):
                              fuel='H2:1.0, AR:1.0',
                              oxidizer='O2:1.0, AR:4.0'),
             StrainParameters(initial=400, final=400),
-            Grid(vtol=0.2, dvtol=0.3),
+            Grid(errTol=3.3e-3),
             Times(regridStepInterval=10),
             TerminationCondition(tEnd=0.01, measurement=None))
 

@@ -66,6 +66,45 @@ double maxWeight(OneDimGrid& grid, const dvector& v)
     return *std::max_element(W.begin(), W.end());
 }
 
+//! Refill y from the analytic profile (mimics the solver re-solving on the
+//! new grid), reset dampVal, and run one adapt() pass.
+void adaptOnce(OneDimGrid& grid, std::vector<dvector>& y)
+{
+    y[0].resize(grid.nPoints);
+    for (size_t j = 0; j < grid.nPoints; j++) {
+        y[0][j] = tanhProfile(grid.x[j]);
+    }
+    grid.dampVal = dvec::Constant(grid.nPoints, 1e6);
+    grid.updated = false;
+    grid.adapt(y);
+}
+
+//! adapt() to a fixed point; returns iterations used (maxIter = no fixed point).
+int adaptToConvergence(OneDimGrid& grid, std::vector<dvector>& y, int maxIter = 25)
+{
+    for (int i = 0; i < maxIter; i++) {
+        adaptOnce(grid, y);
+        if (!grid.updated) {
+            return i;
+        }
+    }
+    return maxIter;
+}
+
+//! Max-filtered interval error estimate, mirroring the criterion in adapt().
+double intervalError(OneDimGrid& grid, const dvector& v, size_t j)
+{
+    dvector W;
+    grid.computeErrorWeights(v, W);
+    size_t i0 = (j == 0) ? 0 : j - 1;
+    size_t i1 = std::min(j + 2, grid.jj);
+    double w = 0;
+    for (size_t i = i0; i <= i1; i++) {
+        w = std::max(w, W[i]);
+    }
+    return grid.errCoeff * std::pow(grid.hh[j], grid.errorOrder + 1) * w;
+}
+
 } // namespace
 
 // max|v''| = (4/(3*sqrt(3)))/delta^2 for tanh; max|v'''| = 2/delta^3.
@@ -110,4 +149,99 @@ TEST(GridAdaptation, ErrorWeightToleratesNonuniformGrid)
 
     double d3exact = 2.0 / (kDelta * kDelta * kDelta);
     EXPECT_NEAR(maxWeight(grid, v), d3exact, 0.4 * d3exact);
+}
+
+TEST(GridAdaptation, MeetsErrorBudgetOnTanh)
+{
+    OneDimGrid grid = makeAdaptGrid(uniformGrid(17, 0, 2e-3));
+    std::vector<dvector> y(1);
+    grid.nAdapt = 1;
+
+    int iters = adaptToConvergence(grid, y);
+    ASSERT_LT(iters, 25) << "grid did not reach a fixed point";
+
+    grid.updateValues();
+    double vRange = mathUtils::range(y[0]);
+    for (size_t j = 0; j < grid.jj; j++) {
+        EXPECT_LE(intervalError(grid, y[0], j), grid.errTol * vRange * 1.000001)
+            << "budget violated at interval " << j;
+    }
+    EXPECT_GT(grid.nPoints, 20u);
+    EXPECT_LT(grid.nPoints, 500u);
+}
+
+TEST(GridAdaptation, SecondPassIsIdempotent)
+{
+    OneDimGrid grid = makeAdaptGrid(uniformGrid(17, 0, 2e-3));
+    std::vector<dvector> y(1);
+    grid.nAdapt = 1;
+    ASSERT_LT(adaptToConvergence(grid, y), 25);
+
+    adaptOnce(grid, y);
+    EXPECT_FALSE(grid.updated) << "converged grid changed on an extra pass";
+}
+
+TEST(GridAdaptation, HigherOrderNeedsFewerPoints)
+{
+    OneDimGrid g2 = makeAdaptGrid(uniformGrid(17, 0, 2e-3));  // p=2
+    OneDimGrid g1 = makeAdaptGrid(uniformGrid(17, 0, 2e-3));
+    g1.errorOrder = 1;
+    g1.errCoeff = 0.125;
+
+    std::vector<dvector> y1(1), y2(1);
+    g1.nAdapt = 1;
+    g2.nAdapt = 1;
+    ASSERT_LT(adaptToConvergence(g1, y1), 25);
+    ASSERT_LT(adaptToConvergence(g2, y2), 25);
+    EXPECT_GT(g1.nPoints, g2.nPoints);
+}
+
+TEST(GridAdaptation, CoarsensOverresolvedGrid)
+{
+    OneDimGrid grid = makeAdaptGrid(uniformGrid(513, 0, 2e-3));
+    std::vector<dvector> y(1);
+    grid.nAdapt = 1;
+
+    ASSERT_LT(adaptToConvergence(grid, y), 25);
+    EXPECT_LT(grid.nPoints, 300u) << "over-resolved grid was not coarsened";
+
+    grid.updateValues();
+    double vRange = mathUtils::range(y[0]);
+    for (size_t j = 0; j < grid.jj; j++) {
+        EXPECT_LE(intervalError(grid, y[0], j), grid.errTol * vRange * 1.000001);
+    }
+}
+
+TEST(GridAdaptation, DampValRespectedWhileGridChanges)
+{
+    OneDimGrid grid = makeAdaptGrid(uniformGrid(17, 0, 2e-3));
+    std::vector<dvector> y(1);
+    grid.nAdapt = 1;
+
+    // Damping limit hh <= dampConst*dampVal = 2e-5 in the left half only.
+    // Uses a custom loop because dampVal must be re-set every pass.
+    for (int i = 0; i < 25; i++) {
+        y[0].resize(grid.nPoints);
+        for (size_t j = 0; j < grid.nPoints; j++) {
+            y[0][j] = tanhProfile(grid.x[j]);
+        }
+        grid.dampVal.resize(grid.nPoints);
+        for (size_t j = 0; j < grid.nPoints; j++) {
+            grid.dampVal[j] = (grid.x[j] < 1e-3) ? 2e-5 / grid.dampConst : 1e6;
+        }
+        grid.updated = false;
+        grid.adapt(y);
+        if (!grid.updated) {
+            break;
+        }
+    }
+    ASSERT_FALSE(grid.updated);
+
+    grid.updateValues();
+    for (size_t j = 0; j < grid.jj; j++) {
+        if (grid.x[j + 1] < 1e-3) {
+            EXPECT_LE(grid.hh[j], 2e-5 * 1.01)
+                << "damping limit violated at j = " << j;
+        }
+    }
 }

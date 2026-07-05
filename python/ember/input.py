@@ -394,6 +394,16 @@ class Chemistry(Options):
 
 class Grid(Options):
     """ Parameters controlling the adaptive grid """
+    #: Target relative accuracy of the solution on the adapted grid. The
+    #: estimated local truncation error of each state-vector component is
+    #: kept below ``errTol`` times that component's range, using an error
+    #: estimate that accounts for the order of the selected
+    #: ``general.convectionScheme``. The same value yields similar solution
+    #: accuracy under either scheme; the higher-order scheme needs fewer
+    #: grid points. For high accuracy, ``errTol = 5e-4``; for minimal
+    #: accuracy, ``errTol = 0.01``.
+    errTol = FloatOption(2e-3, min=0)
+
     #: Maximum relative scalar variation of each state vector
     #: component between consecutive grid points. For high accuracy,
     #: ``vtol = 0.08``; For minimal accuracy, ``vtol = 0.20``.

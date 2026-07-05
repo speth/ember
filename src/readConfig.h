@@ -142,8 +142,7 @@ public:
     bool alwaysUpdateHeatFlux; //!< [externalHeatFlux.alwaysUpdate]
 
     // Tolerances for adaptation and regridding
-    double vtol; //!< [grid.vtol]
-    double dvtol; //!< [grid.dvtol]
+    double errTol; //!< [grid.errTol]
     double rmTol; //!< [grid.rmTol]
     double dampConst; //!< [grid.dampConst]
     double gridMin; //!< [grid.gridMin]

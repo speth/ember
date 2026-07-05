@@ -43,22 +43,6 @@ public:
 
     // **** Parameters for controlling internal grid points ****
 
-    //! Default relative solution variable tolerance for point insertion.
-    //! Set from ConfigOptions in setOptions().
-    double vtol_in;
-
-    //! Default derivative tolerance for point insertion.
-    //! Set from ConfigOptions in setOptions().
-    double dvtol_in;
-
-    //! Relative solution variable tolerance for point insertion for each
-    //! solution component. Length #nVars.
-    dvec vtol;
-
-    //! solution variable derivative tolerance for point insertion for each
-    //! solution component. Length #nVars.
-    dvec dvtol;
-
     //! Absolute tolerance for point insertion. Components with ranges smaller
     //! than this value are not considered during grid adaptation.
     double absvtol;
@@ -167,26 +151,24 @@ public:
     //!
     //! *Adaptation algorithm*
     //!
-    //! The insertion of the grid points is performed first. For each
-    //! component of the solution vector:
+    //! Insertion is performed first. For each adapted component f with
+    //! range(f) >= #absvtol, the local representation error of interval j
+    //! is estimated as
+    //!     E = C_p * hh[j]^(p+1) * max|d^(p+1) f|
+    //! where p (#errorOrder) is the spatial order of the convection scheme,
+    //! C_p is #errCoeff, and the derivative magnitude is taken as the
+    //! maximum of the estimates (computeErrorWeights()) at the nodes within
+    //! one interval of j. A point is inserted in interval j if
+    //!     E > errTol * range(f)
+    //! or if the damping, maximum-spacing, or uniformity criteria require
+    //! one.
     //!
-    //! 1. Find its range and the range of its derivative.
-    //! 2. Apply four criteria and and find where insertions are
-    //!    needed. the criteria for a component f(j) are:
-    //!      - `|f[j+1]-f[j]| < vtol*range(f)`
-    //!      - `|dfdy[j+1]-dfdy[j]| < dvtol*range(dfdy)`
-    //!      - `1/uniformityTol < hh[j]/hh[j-1] < uniformityTol`
-    //! 3. If any of these criteria is not satisfied, a grid point j
-    //!    is inserted.
-    //!
-    //! Next, the unnecessary grid points are removed, and the algorithm is
-    //! applied in reverse. If the criteria:
-    //!   - `|f[j]-f[j-1]| > rmTol*vtol*range(f)`
-    //!   - `|dfdy[j]-dfdy[j-1]| > rmTol*dvtol*range(dfdy)`
-    //!   - `hh[j]+hh[j-1] < uniformityTol*hh[j-2]`
-    //!   - `hh[j]+hh[j-1] < uniformityTol*hh[j+1]`
-    //!
-    //! are satisfied for all components at a point, it is removed.
+    //! Removal is considered next: point j is removed only if, for every
+    //! component, the estimate E evaluated for the merged interval
+    //! (hh[j]+hh[j-1], derivative maximum over nodes within two of j) stays
+    //! below rmTol * errTol * range(f), and the damping, maximum-spacing,
+    //! and uniformity criteria all permit it. Since merging roughly doubles
+    //! h and E scales as h^(p+1), removal has strong built-in hysteresis.
     void adapt(vector<dvector>& y);
 
     //! Add and remove points at the boundaries of the domain to satisfy
