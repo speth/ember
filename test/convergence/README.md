@@ -13,6 +13,15 @@ implementation plan, Phase 1 onward).
   profile L2/L-infinity norms on a common interpolated grid) against a
   pass/fail threshold.
 - `baselines/*.json` — the captured baseline outputs (committed to git).
+- `smoke_continuity_bc.py` — does-it-execute-sanely smoke check for the
+  `stagnationPoint`/`fixedTemperature` continuity BCs (see "Continuity-BC
+  smoke tests" section below).
+- `run_convergence.py` / `plot_convergence.py` — the Task 2.2 grid-convergence
+  study harness (Task 2.1 builds these scripts and smoke-tests them; Task 2.2
+  runs the full matrix). See "Grid-convergence study (Task 2.1/2.2)" below.
+- `results/` — output directory for `run_convergence.py` JSON files. Empty
+  (placeholder `.gitkeep` only) as of Task 2.1; the full study's results are
+  committed here in Task 2.2.
 
 ## Curated cases
 
@@ -389,3 +398,221 @@ shows a wild divergence, a sign flip, or any instability symptom (grid size,
 previously-unexercised branches are confirmed to execute sanely under both
 convection schemes. No numerics bug found; this closes the residual test-gap
 item from the final whole-branch review.
+
+## Grid-convergence study (Task 2.1/2.2)
+
+This section documents `run_convergence.py` and `plot_convergence.py`, the
+harness for the grid-convergence study required by spec §6.4. **Task 2.1
+(this task) writes and smoke-tests these scripts; it does not run the full
+study matrix.** Task 2.2 runs the complete (case x scheme x rung) sweep and
+commits the results.
+
+### Cases
+
+Three cases, chosen to cover both convection-BC families named in spec §6.4
+(`ConvectionSystemUTW::f()`'s two branches over `grid.leftBC`) with a fixed
+strain rate and composition per case (only the grid tolerances vary across
+rungs):
+
+| Case | `--case` | Composition / strain | Left BC | Right BC | Geometry |
+|---|---|---|---|---|---|
+| A | `strained` | H2:1.0 / O2:1.0,AR:4.0, phi=0.3, a=800/s | `ZeroGradient` | `FixedValue` | planar, alpha=0 |
+| B1 | `twin` | CH4:1.0/air, phi=0.70, a=100/s | `ControlVolume` | `FixedValue` | planar/twin, alpha=0 |
+| B2 | `cylindrical` | CH4:0.5,H2:0.5/air, phi=0.60, a=500/s | `ControlVolume` | `FixedValue` | cylindrical, alpha=1 |
+
+- **`strained`** (Case A, "unbounded"): `General(unburnedLeft=False,
+  fixedBurnedVal=False)` on the default planar geometry. Tracing
+  `FlameSolver::updateBC()` (src/flameSolver.cpp:619-638) and
+  `OneDimGrid::updateBoundaryIndices()` (src/grid.cpp:839-846): with
+  `unburnedLeft=False`, `jb=0` (burned/product index) and `ju=jj`
+  (unburned/reactant index); with `fixedBurnedVal=False` and this being
+  neither a twin nor a cylindrical flame, the left-boundary branch falls
+  through every special case (not `WallFlux`, not `ju==0`, not `jb==0 &&
+  fixedBurnedVal`, not twin/cylindrical centering) to the `else`:
+  `BoundaryCondition::ZeroGradient` — an open, unclamped product-side
+  boundary that the adaptive grid can extend outward as needed ("unbounded").
+  The right boundary (`ju==jj`, the physical reactant inlet) stays
+  `BoundaryCondition::FixedValue`. This is the literal `FixedValue`/
+  `ZeroGradient` pairing spec §6.4 names for Case A, and it is structurally
+  distinct from Case B's `ControlVolume` inflow-balance path. Composition and
+  strain rate follow `TestPremixedStrained`
+  (test/python/test_flame_configs.py) and `smoke_continuity_bc.py`.
+- **`twin`** (Case B1): `General(twinFlame=True, unburnedLeft=False)`, which
+  resolves to `BoundaryCondition::ControlVolume` at the symmetry/stagnation
+  plane (x=0). Physical setup follows `example_twin.py` /
+  `case_twin` in `run_baselines.py`.
+- **`cylindrical`** (Case B2): `General(flameGeometry='cylindrical',
+  unburnedLeft=False, fixedLeftLocation=True)`, i.e. curvature parameter
+  `alpha=1` in `OneDimGrid` (vs. `alpha=0` for the planar cases above). Also
+  resolves to `ControlVolume`, exercising the curved-geometry (`rphalf`
+  weighting) path instead of the planar-twin path. Physical setup follows
+  `example_cylindrical_outward.py` / `case_cylindrical_outward` in
+  `run_baselines.py`.
+
+All three use `General(nThreads=1)` for run-to-run determinism (the
+baseline harness's thread-scheduling noise, documented above, is an
+unwanted confound for a convergence-order study). `strained` uses the small
+`h2o2.yaml` mechanism (fast); `twin`/`cylindrical` use the stock `gri30.yaml`
+mechanism matching their source examples. Termination is measurement-based
+in all three cases (steady state, not a fixed `tEnd`): `strained` and
+`cylindrical` use `TerminationCondition(measurement='dTdt')` explicitly;
+`twin` relies on the default `measurement='Q'` (as in `example_twin.py`,
+which only overrides `tEnd` as a hard cap). `tEnd` is set generously in each
+case as a safety cap, not the expected termination trigger.
+
+### Resolution ladder
+
+Six rungs (`RUNGS` in `run_convergence.py`), index 0 (coarsest) to 5
+(finest), sweeping `Grid(vtol, dvtol, gridMax)` together (each rung also
+scales `gridMax` down so the max-spacing cap doesn't become the binding
+constraint before `vtol`/`dvtol` do):
+
+| rung | vtol | dvtol | gridMax |
+|---|---|---|---|
+| 0 | 0.24 | 0.40 | 4.0e-4 |
+| 1 | 0.16 | 0.27 | 2.5e-4 |
+| 2 | 0.11 | 0.18 | 1.6e-4 |
+| 3 | 0.075 | 0.12 | 1.0e-4 |
+| 4 | 0.050 | 0.080 | 6.3e-5 |
+| 5 | 0.033 | 0.055 | 4.0e-5 |
+
+`vtol`/`dvtol` shrink by a factor of ~1.5x per rung (~7.3x coarsest to
+finest). This is a **nominal** ladder: run_convergence.py defines >= 5 rungs
+intended to span roughly a 4x range in N per spec §6.4, but the actual N
+achieved by each rung is configuration-dependent (a thin, highly-strained
+flame needs more points per unit `vtol` than a slow one) and was not
+verified end-to-end for all rungs under Task 2.1 (only rung 0 was
+smoke-tested per case, see below). **Task 2.2 should confirm the achieved N
+values actually span roughly 4x-8x and retune the `RUNGS` table (values
+only, keep 6 rungs) if a case's ladder is off**, e.g. if two adjacent rungs
+happen to produce the same N (redundant) or the span comes out much
+narrower/wider than intended.
+
+`--damp-const X` overrides `Grid.dampConst` (default 7) for a single run,
+independent of the rung ladder — this is spec §6.4's "trial with relaxed
+`dampConst` to quantify the achievable grid coarsening", run as a one-off
+comparison against the matching (case, scheme, rung) run without the
+override, not swept across all rungs.
+
+### Usage
+
+```
+# List the rung ladder
+pixi run python test/convergence/run_convergence.py --list-rungs
+
+# Run every rung for one (case, scheme) pair (Task 2.2 usage)
+pixi run python test/convergence/run_convergence.py \
+    --case strained --scheme secondOrderLimited
+
+# Run a single rung (e.g. for a smoke test)
+pixi run python test/convergence/run_convergence.py \
+    --case strained --scheme secondOrderLimited --rung 0
+
+# Run an explicit subset of rungs
+pixi run python test/convergence/run_convergence.py \
+    --case twin --scheme firstOrderUpwind --rungs 0 2 4
+
+# One-off relaxed-dampConst trial
+pixi run python test/convergence/run_convergence.py \
+    --case cylindrical --scheme secondOrderLimited --rung 3 --damp-const 15
+```
+
+Full option list: `--case {strained,twin,cylindrical}` and `--scheme
+{firstOrderUpwind,secondOrderLimited}` (both required unless `--list-rungs`
+is given), `--damp-const X`, `--rung N` / `--rungs N [N ...]` (default: all
+6 rungs), `--outdir` (default `test/convergence/results`), `--workdir`
+(default `build/test/convergence-work`), `--retries` (default 3, same
+retry-on-exception behavior as `run_baselines.py` — see the known-flake note
+below).
+
+Output: one JSON file per run,
+`<outdir>/<case>_<scheme>_rung<N>[_damp<X>].json`.
+
+### JSON schema (`run_convergence.py` output)
+
+- `case`, `scheme`, `rung`, `damp_const` (`null` unless `--damp-const` given)
+- `commit`, `generated_at_utc`, `config_summary` — provenance, same
+  convention as `run_baselines.py`
+- `grid_tolerances` — `vtol`, `dvtol`, `gridMax`, `gridMin`, `dampConst`, read
+  back from the concrete (post-`evaluate()`) config, i.e. the tolerances
+  actually used, not just the rung table's nominal values
+- `N` — final grid size (`len(solver.x)`)
+- `scalars.consumption_speed`, `scalars.peak_T` — the two convergence
+  metrics required by spec §6.4; `consumption_speed` is `null` (with a note
+  in `scalar_notes`) if the domain's two boundary temperatures are nearly
+  equal, mirroring `run_baselines.py`'s guard (not expected for any of these
+  three cases' physical setups, but checked defensively)
+- `total_convection_steps` — whole-run sum of the per-global-timestep
+  `ConvectionSystemSplit::getNumSteps()` log values, via the same
+  `total_convection_steps()`/regex helper `run_convergence.py` imports from
+  `run_baselines.py`
+- `runtime_seconds` — wall-clock time for the run
+- `final_time` — solver's `tNow` at termination
+- `attempts` — number of attempts needed (see retry note below)
+
+### Plotting
+
+```
+pixi run python test/convergence/plot_convergence.py \
+    [--cases strained twin cylindrical] \
+    [--resultsdir test/convergence/results] \
+    [--outdir test/convergence/results/plots]
+```
+
+For each case and metric (`consumption_speed`, `peak_T`), loads every
+non-`--damp-const` run, takes the **largest-N `secondOrderLimited` run as
+the reference**, and plots log-log relative error vs. N for both schemes on
+one figure (`<case>_<metric>.png`). Skips (with a message, not an error) any
+case/metric that doesn't have at least a reference run plus 2 comparable
+points for a scheme, so it can be run against a partial results directory
+mid-sweep.
+
+### Known flake (inherited from run_baselines.py)
+
+Same as documented above for the baseline harness: the solver occasionally
+aborts with `CVODE Integrator had too many errors` under stiff/multi-step
+runs. `run_convergence.py` retries a failed run up to `--retries` times
+(default 3, matching `run_baselines.py`) before giving up; each JSON records
+`attempts`.
+
+### Task 2.1 smoke test
+
+One rung (rung 0, the coarsest) per case, default scheme
+(`secondOrderLimited`), run via:
+
+```
+pixi run python test/convergence/run_convergence.py \
+    --case strained --scheme secondOrderLimited --rung 0 \
+    --outdir build/test/convergence-smoke --workdir build/test/convergence-work-smoke
+pixi run python test/convergence/run_convergence.py \
+    --case twin --scheme secondOrderLimited --rung 0 \
+    --outdir build/test/convergence-smoke --workdir build/test/convergence-work-smoke
+pixi run python test/convergence/run_convergence.py \
+    --case cylindrical --scheme secondOrderLimited --rung 0 \
+    --outdir build/test/convergence-smoke --workdir build/test/convergence-work-smoke
+```
+
+(Output redirected to `build/` — already gitignored — rather than
+`test/convergence/results/`, since a single coarsest-rung run per case isn't
+a representative "result" of the study; `results/` stays an empty
+placeholder for Task 2.2's full sweep.)
+
+| case | scheme | rung | completed | N | final_time | peak_T (K) | consumption_speed (m/s) | convection_steps | wall time (s) |
+|---|---|---|---|---|---|---|---|---|---|
+| strained | secondOrderLimited | 0 | yes | 55 | 0.0046 | 1558.8 | 0.3569 | 16,245 | 0.9 |
+| twin | secondOrderLimited | 0 | yes | 76 | 0.0074 | 1842.6 | 0.1702 | 130,626 | 13.2 |
+| cylindrical | secondOrderLimited | 0 | yes | 64 | 0.0082 | 1790.9 | 0.2260 | 144,926 | 13.7 |
+
+All three runs completed on the first attempt (no retries needed). Every
+JSON has all required fields populated (`N`, `grid_tolerances`, both
+scalars, `total_convection_steps`, `runtime_seconds`); no NaN/Inf values
+anywhere in any of the three JSON files (checked recursively over every
+float field, not just the headline scalars); `peak_T` is physically
+sane (1550-1850 K, consistent with the lean/moderate-equivalence-ratio
+mixtures used); `consumption_speed` is positive and O(0.1-0.4 m/s), as
+expected for these mixtures/strain rates. This confirms the harness
+produces valid output for all three cases and both BC families
+(`ZeroGradient`/`FixedValue` for `strained`, `ControlVolume`/`FixedValue`
+for `twin` and `cylindrical`) at the coarsest rung; the full multi-rung,
+multi-scheme sweep (needed to actually assess convergence order) is Task
+2.2's job.
