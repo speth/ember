@@ -322,8 +322,10 @@ protocol implementation.
   ~4× in N); fixed strain/composition per case; steady-state termination.
 
 **Steps:**
-- [ ] Write scripts; smoke-test one rung per case
-- [ ] Commit: `convection: [2.1] convergence study scripts`
+- [x] Write scripts; smoke-test one rung per case
+- [x] Commit: `convection: [2.1] convergence study scripts`
+      (strained-case FixedValue/ZeroGradient BC pairing independently
+      verified in review, incl. explicit fixedBurnedVal=False)
 
 ### Task 2.2: Run studies, analyze, and decide Phase 3
 
