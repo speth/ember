@@ -404,15 +404,13 @@ class Grid(Options):
     #: accuracy, ``errTol = 0.01``.
     errTol = FloatOption(2e-3, min=0)
 
-    #: Maximum relative scalar variation of each state vector
-    #: component between consecutive grid points. For high accuracy,
-    #: ``vtol = 0.08``; For minimal accuracy, ``vtol = 0.20``.
-    vtol = FloatOption(0.12)
+    #: Deprecated and ignored. Grid resolution is controlled by
+    #: :attr:`errTol`.
+    vtol = FloatOption(None, level=3)
 
-    #: Maximum relative variation of the gradient of each state vector
-    #: component between consecutive grid points. For high accuracy,
-    #: ``dvtol = 0.12``; For minimal accuracy, ``dvtol = 0.4``.
-    dvtol = FloatOption(0.2)
+    #: Deprecated and ignored. Grid resolution is controlled by
+    #: :attr:`errTol`.
+    dvtol = FloatOption(None, level=3)
 
     #: Relative tolerance (compared to vtol and dvtol) for grid point removal.
     rmTol = FloatOption(0.6, level=1)
@@ -944,7 +942,20 @@ class Config(object):
 
         return 'conf = Config(\n' + ',\n'.join(ans) + ')\n'
 
+    def _warnDeprecated(self):
+        if self.grid.vtol.isSet or self.grid.dvtol.isSet:
+            print("WARNING: 'grid.vtol' and 'grid.dvtol' are deprecated and have"
+                  " no effect.\n"
+                  "         Grid resolution is now controlled by the local-error"
+                  " tolerance 'grid.errTol';\n"
+                  "         the same errTol gives similar accuracy for either"
+                  " convection scheme.")
+        if self.grid.errTol.value is not None and self.grid.errTol.value > 0.5:
+            print("WARNING: 'grid.errTol' > 0.5 effectively disables grid"
+                  " refinement.")
+
     def validate(self):
+        self._warnDeprecated()
         error = False
         cylindricalFlame = True if self.general.flameGeometry == 'cylindrical' else False
         discFlame = True if self.general.flameGeometry == 'disc' else False

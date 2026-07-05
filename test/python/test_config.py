@@ -54,3 +54,23 @@ class TestConfig(unittest.TestCase):
     def test_validate_bad_restart(self):
         c = Config(InitialCondition(restartFile='nosuchfile.h5'))
         self.assertFalse(c.validate())
+
+
+def test_deprecated_grid_tolerances_warn(capsys):
+    conf = Config(Grid(vtol=0.1, dvtol=0.15))
+    conf._warnDeprecated()
+    out = capsys.readouterr().out
+    assert 'deprecated' in out
+    assert 'errTol' in out
+
+
+def test_errtol_produces_no_warning(capsys):
+    conf = Config(Grid(errTol=1e-3))
+    conf._warnDeprecated()
+    assert capsys.readouterr().out == ''
+
+
+def test_absurd_errtol_warns(capsys):
+    conf = Config(Grid(errTol=0.9))
+    conf._warnDeprecated()
+    assert 'errTol' in capsys.readouterr().out
