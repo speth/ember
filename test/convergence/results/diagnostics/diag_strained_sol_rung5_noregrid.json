@@ -1,0 +1,19 @@
+{
+  "tag": "diag_strained_sol_rung5_noregrid",
+  "grid_kwargs": {
+    "vtol": 0.033,
+    "dvtol": 0.055,
+    "gridMax": 4e-05
+  },
+  "regridding": false,
+  "status": "FAILED",
+  "error": "Exception('CVODE Integrator had too many errors')",
+  "commit": "e8dcdcda9abb1a8525fca49c869f0628474537ee",
+  "generated_at_utc": "2026-07-05T03:29:53.392209+00:00",
+  "N": null,
+  "peak_T": null,
+  "consumption_speed": null,
+  "final_time": null,
+  "total_convection_steps": 117701,
+  "runtime_seconds": 7.486156463623047
+}

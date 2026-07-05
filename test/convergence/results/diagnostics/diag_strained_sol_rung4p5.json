@@ -1,0 +1,19 @@
+{
+  "tag": "diag_strained_sol_rung4p5",
+  "grid_kwargs": {
+    "vtol": 0.04,
+    "dvtol": 0.065,
+    "gridMax": 5e-05
+  },
+  "regridding": true,
+  "status": "ok",
+  "error": null,
+  "commit": "e8dcdcda9abb1a8525fca49c869f0628474537ee",
+  "generated_at_utc": "2026-07-05T03:29:58.387750+00:00",
+  "N": 269,
+  "peak_T": 1558.9217265643144,
+  "consumption_speed": 0.3591531841649894,
+  "final_time": 0.0062000000000000145,
+  "total_convection_steps": 44641,
+  "runtime_seconds": 4.986449718475342
+}
