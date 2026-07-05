@@ -1,0 +1,26 @@
+{
+  "case": "cylindrical",
+  "scheme": "firstOrderUpwind",
+  "rung": 0,
+  "damp_const": null,
+  "commit": "f38cfc31cef9a036d2fed8bbe28f47ce6be7e9e8",
+  "generated_at_utc": "2026-07-05T03:16:36.822534+00:00",
+  "config_summary": "conf = Config(\n    Paths(logFile='build/test/convergence-work/cylindrical_firstOrderUpwind_rung0.log',\n          outputDir='build/test/convergence-work/cylindrical_firstOrderUpwind_rung0'),\n    General(convectionScheme='firstOrderUpwind',\n            fixedLeftLocation=True,\n            flameGeometry='cylindrical',\n            unburnedLeft=False),\n    Grid(dvtol=0.4,\n         gridMax=0.0004,\n         vtol=0.24),\n    InitialCondition(equivalenceRatio=0.6,\n                     fuel='CH4:0.5, H2:0.5',\n                     xLeft=0.0,\n                     xRight=0.005),\n    StrainParameters(final=500,\n                     initial=500),\n    Times(profileStepInterval=10,\n          regridStepInterval=10),\n    TerminationCondition(measurement='dTdt',\n                         tEnd=10))\n",
+  "grid_tolerances": {
+    "vtol": 0.24,
+    "dvtol": 0.4,
+    "gridMax": 0.0004,
+    "gridMin": 5e-07,
+    "dampConst": 7
+  },
+  "N": 65,
+  "scalars": {
+    "consumption_speed": 0.22607144460274667,
+    "peak_T": 1775.3910720579054
+  },
+  "scalar_notes": {},
+  "total_convection_steps": 137353,
+  "runtime_seconds": 14.420450925827026,
+  "final_time": 0.008599999999999986,
+  "attempts": 1
+}

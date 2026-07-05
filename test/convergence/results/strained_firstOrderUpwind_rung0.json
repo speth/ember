@@ -1,0 +1,26 @@
+{
+  "case": "strained",
+  "scheme": "firstOrderUpwind",
+  "rung": 0,
+  "damp_const": null,
+  "commit": "f38cfc31cef9a036d2fed8bbe28f47ce6be7e9e8",
+  "generated_at_utc": "2026-07-05T02:58:17.378965+00:00",
+  "config_summary": "conf = Config(\n    Paths(logFile='build/test/convergence-work/strained_firstOrderUpwind_rung0.log',\n          outputDir='build/test/convergence-work/strained_firstOrderUpwind_rung0'),\n    General(convectionScheme='firstOrderUpwind',\n            fixedBurnedVal=False,\n            unburnedLeft=False),\n    Chemistry(mechanismFile='h2o2.yaml'),\n    Grid(dvtol=0.4,\n         gridMax=0.0004,\n         vtol=0.24),\n    InitialCondition(equivalenceRatio=0.3,\n                     fuel='H2:1.0',\n                     oxidizer='O2:1.0, AR:4.0'),\n    StrainParameters(final=800,\n                     initial=800),\n    Times(regridStepInterval=10),\n    TerminationCondition(measurement='dTdt',\n                         tEnd=2.0))\n",
+  "grid_tolerances": {
+    "vtol": 0.24,
+    "dvtol": 0.4,
+    "gridMax": 0.0004,
+    "gridMin": 5e-07,
+    "dampConst": 7
+  },
+  "N": 52,
+  "scalars": {
+    "consumption_speed": 0.32537963844187584,
+    "peak_T": 1530.0700347058876
+  },
+  "scalar_notes": {},
+  "total_convection_steps": 14647,
+  "runtime_seconds": 0.8995974063873291,
+  "final_time": 0.004800000000000011,
+  "attempts": 1
+}
