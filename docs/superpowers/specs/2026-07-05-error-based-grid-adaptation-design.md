@@ -7,6 +7,18 @@ adaptation criteria as the robustness/Phase-3-precondition design pass
 called for in the convection spec addendum §P2.7 and the SDD ledger
 scoping note.
 
+**Amended 2026-07-05 (pre-plan):** (1) error-estimate exponent corrected
+from `h^p` to `h^(p+1)` — the approved `h^p` form has units of v/length
+and cannot be compared to `errTol·range(v)`; the corrected form is the
+standard degree-p interpolation-error bound and strengthens the
+fixed-point argument. (2) A minimal fix for a pre-existing bug is in
+scope: `adapt()`'s damping criterion reads `dampVal` after
+`updateValues()` resizes it (Eigen resize does not preserve contents),
+i.e. uninitialized values once a point has been inserted. (3) The
+regression criterion is restated in accuracy-envelope terms (the ~1e-6
+reproducibility floor only applies to identical configurations, which a
+default-tolerance change is not).
+
 ## 1. Problem and goals
 
 Two problems, one root cause:
@@ -31,8 +43,9 @@ Two problems, one root cause:
   scheme using fewer points. This makes the new scheme's benefit directly
   visible and prevents old-tolerance carry-forward.
 - Structurally remove the §P2.4 runaway: an error-budget criterion has a
-  grid fixed point by construction (per-cell error shrinks as h^p while
-  the derivative estimate converges to the true profile's finite value).
+  grid fixed point by construction (per-cell error shrinks as h^(p+1)
+  while the derivative estimate converges to the true profile's finite
+  value).
 
 **Owner decisions incorporated:**
 
@@ -52,7 +65,7 @@ Two problems, one root cause:
 For each adapted variable `v_k` and grid interval `j`:
 
 ```
-E[k][j] = C_p · h_j^p · W[k][j]
+E[k][j] = C_p · h_j^(p+1) · W[k][j]
 ```
 
 - `p` = convection scheme spatial order: 1 (`firstOrderUpwind`),
@@ -82,25 +95,39 @@ measures what it stood in for.
 **Removal** (same hysteresis structure as today): remove point `j` only
 if the merged interval's error `E_merged[k][j]` (evaluated with
 `h = hh[j]+hh[j-1]`) is below `rmTol · errTol · range(v_k)` for all `k`.
-Merging ≈doubles `h`, so `E_merged ≈ 2^p ×` the sub-interval errors —
-hysteresis is inherently stronger than the old criterion; `rmTol` keeps
-its current role and default.
+Merging ≈doubles `h`, so `E_merged ≈ 2^(p+1) ×` the sub-interval
+errors — hysteresis is inherently stronger than the old criterion;
+`rmTol` keeps its current role and default.
 
-**Calibration.** `C_p` start at theoretical interpolation-error values
-and receive one empirical calibration pass on the three study cases
-(strained/twin/cylindrical), chosen so matched `errTol` yields matched
-measured QoI error (consumption speed, peak T) across schemes. This
-calibration is what makes the parity property hold quantitatively.
+**Calibration.** `C_p` start at the classical interpolation-error
+bounds — `C_1 = 1/8` (piecewise-linear), `C_2 = 1/15` (≈ piecewise-
+quadratic) — and receive one empirical calibration pass on the three
+study cases (strained/twin/cylindrical), chosen so matched `errTol`
+yields matched measured QoI error (consumption speed, peak T) across
+schemes at the practical operating point. Exact parity at *every*
+tolerance is not achievable with schemes of different order: with this
+monitor, QoI error scales ≈ `errTol^(p/(p+1))`, so the cross-scheme
+error ratio drifts slowly (≈ `errTol^(1/6)`) away from the calibration
+point. The measured `errTol` → QoI-error table (§4) documents the
+actual mapping; the ~2× parity band in §4 covers the drift over the
+practical tolerance range.
 
-**Stated assumption.** For `p = 2` the monitor uses `h²·|v‴|`
-(convection LTE) as a proxy for total local error even though the
-2nd-order diffusion LTE is `h²·|v⁗|`; fourth-derivative estimation from
-grid data is too noisy to be worth it and `C_2` absorbs the difference.
-`p` stays scheme-based regardless of any Phase-3 diffusion-order change.
+**Stated assumption.** For `p = 2` the monitor uses `h³·|v‴|` (the
+quadratic-representation error associated with the convection scheme)
+as a proxy for total local error; no separate fourth-derivative term is
+included for the 2nd-order diffusion operator's error, since
+fourth-derivative estimation from grid data is too noisy to be worth it
+and `C_2` absorbs the difference. `p` stays scheme-based regardless of
+any Phase-3 diffusion-order change.
 
 **Untouched machinery:** damping (`dampVal`/`dampConst`), uniformity
 tests, `gridMin`/`gridMax`, center/boundary special cases, boundary
 add/remove logic, and the overall insert-then-remove pass structure.
+One exception (pre-existing bug, minimal in-scope fix): `adapt()` must
+maintain a working copy of `dampVal` that is kept consistent as points
+are inserted/removed, because `updateValues()` resizes `dampVal`
+without preserving its contents, leaving the damping criterion reading
+uninitialized values mid-pass once the grid has changed.
 
 ## 3. Config surface and plumbing
 
@@ -143,9 +170,12 @@ both schemes; `errTol` ladder):**
 - **Parity:** at matched `errTol`, fou and sol QoI errors agree within
   ~2×; sol/fou point-count ratio reported.
 - **Docs artifact:** measured `errTol` → QoI-error table.
-- **Regression:** default-settings example runs match current baselines
-  within the established comparison machinery (~1e-6 reproducibility
-  floor); N same or fewer.
+- **Regression:** default-settings example runs reproduce the phase-1
+  baseline QoI scalars within the owner's accuracy envelope (consumption
+  speed and peak T within 0.5%); N same or fewer. (The ~1e-6
+  reproducibility floor applies only to identical configurations and is
+  not the standard here, since the default tolerance necessarily
+  changes.)
 
 ## 5. Contingencies (pre-scoped, not pre-built)
 
