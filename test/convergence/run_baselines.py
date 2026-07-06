@@ -183,7 +183,10 @@ def case_laminar_flame_speed(work_dir):
                           xRight=0.01),
         StrainParameters(initial=0, final=0),
         General(fixedLeftLocation=True, fixedBurnedVal=False, nThreads=4),
-        Grid(vtol=0.1, dvtol=0.15, gridMin=5e-6, gridMax=0.001),
+        # vtol/dvtol removed (inert/deprecated); baselines intentionally run
+        # at the library-default errTol=1e-4 (the stock example itself sets
+        # errTol=5e-4).
+        Grid(gridMin=5e-6, gridMax=0.001),
         PositionControl(proportionalGain=2000, xInitial=0.005, xFinal=0.005),
         TerminationCondition(tolerance=1e-5),
         Times(profileStepInterval=50))

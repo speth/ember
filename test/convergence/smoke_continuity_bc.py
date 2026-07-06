@@ -66,7 +66,7 @@ def build_config(continuity_bc, scheme):
                           oxidizer='O2:1.0, AR:4.0',
                           equivalenceRatio=0.3),
         StrainParameters(initial=800, final=800),
-        Grid(vtol=0.2, dvtol=0.3),
+        Grid(errTol=1.2e-3),
         Times(regridStepInterval=10),
         TerminationCondition(tEnd=0.006, measurement=None))
     return conf

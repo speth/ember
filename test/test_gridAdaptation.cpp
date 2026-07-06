@@ -1,5 +1,6 @@
 #include "../src/grid.h"
 #include "../src/mathUtils.h"
+#include "../src/readConfig.h"
 #include "gtest/gtest.h"
 
 #include <algorithm>
@@ -244,4 +245,33 @@ TEST(GridAdaptation, DampValRespectedWhileGridChanges)
                 << "damping limit violated at j = " << j;
         }
     }
+}
+
+//! Pins the scheme -> (errorOrder, errCoeff) mapping that setOptions()
+//! establishes (grid.cpp), so a future refactor or recalibration accidentally
+//! changing these literals is caught here rather than only surfacing as a
+//! convergence-study regression.
+TEST(GridAdaptation, SetOptionsMapsConvectionSchemeToErrorModel)
+{
+    ConfigOptions opts;
+    opts.errTol = 1e-4;
+    opts.rmTol = 0.6;
+    opts.dampConst = 7;
+    opts.gridMin = 5e-7;
+    opts.gridMax = 2e-4;
+    opts.uniformityTol = 2.5;
+    opts.absvtol = 1e-8;
+    opts.centerGridMin = 1e-7;
+
+    opts.convectionScheme = "firstOrderUpwind";
+    OneDimGrid gridFOU;
+    gridFOU.setOptions(opts);
+    EXPECT_EQ(gridFOU.errorOrder, 1);
+    EXPECT_DOUBLE_EQ(gridFOU.errCoeff, 0.125);
+
+    opts.convectionScheme = "secondOrderLimited";
+    OneDimGrid gridSOL;
+    gridSOL.setOptions(opts);
+    EXPECT_EQ(gridSOL.errorOrder, 2);
+    EXPECT_DOUBLE_EQ(gridSOL.errCoeff, 0.0139);
 }

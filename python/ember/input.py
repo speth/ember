@@ -399,12 +399,14 @@ class Grid(Options):
     #: kept below ``errTol`` times that component's range, using an error
     #: estimate that accounts for the order of the selected
     #: ``general.convectionScheme``. The same value yields similar solution
-    #: accuracy under either scheme; the higher-order scheme needs fewer
-    #: grid points. On the calibration study cases the default gives
-    #: consumption-speed errors of a few parts in 10^4 with grids of
+    #: accuracy under either scheme for the validation cases (highly strained
+    #: flames may need a few-times tighter ``errTol`` under
+    #: ``firstOrderUpwind`` for matched accuracy); the higher-order scheme
+    #: needs fewer grid points. On the calibration study cases the default
+    #: gives consumption-speed errors of a few parts in 10^4 with grids of
     #: roughly 100-170 points. For high accuracy, ``errTol = 2e-5``; for
     #: minimal accuracy, ``errTol = 5e-4``.
-    errTol = FloatOption(1e-4, min=0)
+    errTol = FloatOption(1e-4, min=1e-12)
 
     #: Deprecated and ignored. Grid resolution is controlled by
     #: :attr:`errTol`.
@@ -927,9 +929,6 @@ class Config(object):
         self.terminationCondition = get(TerminationCondition)
         self.extinction = get(Extinction)
 
-    def evaluate(self):
-        return ConcreteConfig(self)
-
     def __iter__(self):
         for item in self.__dict__.values():
             if isinstance(item, Options):
@@ -945,16 +944,25 @@ class Config(object):
         return 'conf = Config(\n' + ',\n'.join(ans) + ')\n'
 
     def _warnDeprecated(self):
+        if getattr(self, '_deprecationWarned', False):
+            return
+        self._deprecationWarned = True
         if self.grid.vtol.isSet or self.grid.dvtol.isSet:
             print("WARNING: 'grid.vtol' and 'grid.dvtol' are deprecated and have"
                   " no effect.\n"
                   "         Grid resolution is now controlled by the local-error"
                   " tolerance 'grid.errTol';\n"
                   "         the same errTol gives similar accuracy for either"
-                  " convection scheme.")
+                  " convection scheme (for strongly strained flames the"
+                  " first-order scheme may need a tighter errTol for matched"
+                  " accuracy).")
         if self.grid.errTol.value is not None and self.grid.errTol.value > 0.5:
             print("WARNING: 'grid.errTol' > 0.5 effectively disables grid"
                   " refinement.")
+
+    def evaluate(self):
+        self._warnDeprecated()
+        return ConcreteConfig(self)
 
     def validate(self):
         self._warnDeprecated()

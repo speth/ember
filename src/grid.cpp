@@ -130,12 +130,16 @@ void OneDimGrid::adapt(vector<dvector>& y)
     nVars = y.size();
     assert(nAdapt <= nVars);
     assert((dampVal > 0).all());
+    assert(dampVal.rows() == (dvec::Index) nPoints);
     setSize(y[0].size());
 
-    // Working copy of dampVal kept consistent with the changing grid.
-    // updateValues() resizes dampVal without preserving its contents, so
-    // the member cannot be read safely once a point has been added or
-    // removed within this pass.
+    // Defensive localization: addPoint()/removePoint() already keep the
+    // dampVal member consistent with the grid (spline-interpolated insert /
+    // erase), so this working copy is not fixing a bug. It exists to make
+    // the dampVal-grid consistency invariant explicit and self-contained
+    // within this pass, rather than relying on addPoint/removePoint to
+    // maintain the member array correctly as a side effect. Written back to
+    // dampVal at the end of the pass.
     dvector dampLocal(dampVal.data(), dampVal.data() + nPoints);
 
     // Used for informational purposes only
@@ -313,7 +317,7 @@ void OneDimGrid::adapt(vector<dvector>& y)
                 logFile.write(format(
                     "Adapt: no removal - damping criterion. j = %i;"
                     " hh(j)+hh(j-1) = %g > %g") %
-                    j % (hh[j]+hh[j-1]) % (dampConst*dampLocal[j]));
+                    j % (hh[j]+hh[j-1]) % (rmTol*dampConst*dampLocal[j]));
             }
             remove = false;
         }

@@ -14,7 +14,15 @@ standard degree-p interpolation-error bound and strengthens the
 fixed-point argument. (2) A minimal fix for a pre-existing bug is in
 scope: `adapt()`'s damping criterion reads `dampVal` after
 `updateValues()` resizes it (Eigen resize does not preserve contents),
-i.e. uninitialized values once a point has been inserted. (3) The
+i.e. uninitialized values once a point has been inserted.
+**RETRACTED 2026-07-06 (final whole-branch review):** this diagnosis
+was wrong — `addPoint()`/`removePoint()` already maintained the
+`dampVal` member in lockstep with the grid (spline-interpolated insert
+/ erase respectively; see `git show 5d4febe:src/grid.cpp`), so
+`updateValues()`'s resize was always same-size (a documented Eigen
+no-op) and no uninitialized read ever occurred. The shipped
+`dampLocal` working copy (§2) is defensive hardening, not a bug fix;
+see the retraction note in §2 for what it actually changes. (3) The
 regression criterion is restated in accuracy-envelope terms (the ~1e-6
 reproducibility floor only applies to identical configurations, which a
 default-tolerance change is not).
@@ -128,6 +136,25 @@ maintain a working copy of `dampVal` that is kept consistent as points
 are inserted/removed, because `updateValues()` resizes `dampVal`
 without preserving its contents, leaving the damping criterion reading
 uninitialized values mid-pass once the grid has changed.
+
+**RETRACTED 2026-07-06 (final whole-branch review):** the
+"pre-existing bug" diagnosis above is incorrect and is retracted.
+Base-revision `addPoint()`/`removePoint()` already kept the `dampVal`
+member consistent with the grid (spline-interpolated insert on add,
+matching erase on remove — confirmed against `git show
+5d4febe:src/grid.cpp`), so `updateValues()`'s resize inside `adapt()`
+was always a same-size, contents-preserving no-op; no uninitialized
+read ever existed. The shipped `dampLocal` working copy is instead
+defensive hardening: it makes the dampVal-grid consistency invariant
+explicit and self-contained within the adapt pass, rather than
+relying on `addPoint`/`removePoint` to maintain the member correctly
+as a side effect, and it is written back to `dampVal` at the end of
+the pass. It is behaviorally near-identical to relying on the member
+directly — the only difference is that a point inserted mid-pass gets
+its `dampLocal` value as the mean of its neighbors, versus the
+spline-interpolated value the member array would have received — and
+`dampVal` is recomputed from the physics before every `adapt()` call
+regardless.
 
 ## 3. Config surface and plumbing
 
