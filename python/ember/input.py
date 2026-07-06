@@ -400,9 +400,11 @@ class Grid(Options):
     #: estimate that accounts for the order of the selected
     #: ``general.convectionScheme``. The same value yields similar solution
     #: accuracy under either scheme; the higher-order scheme needs fewer
-    #: grid points. For high accuracy, ``errTol = 5e-4``; for minimal
-    #: accuracy, ``errTol = 0.01``.
-    errTol = FloatOption(2e-3, min=0)
+    #: grid points. On the calibration study cases the default gives
+    #: consumption-speed errors of a few parts in 10^4 with grids of
+    #: roughly 100-170 points. For high accuracy, ``errTol = 2e-5``; for
+    #: minimal accuracy, ``errTol = 5e-4``.
+    errTol = FloatOption(1e-4, min=0)
 
     #: Deprecated and ignored. Grid resolution is controlled by
     #: :attr:`errTol`.

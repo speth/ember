@@ -22,7 +22,15 @@ void OneDimGrid::setOptions(const ConfigOptions& options)
         errCoeff = 0.125;     // 1/8: piecewise-linear representation error
     } else {
         errorOrder = 2;
-        errCoeff = 1.0/15.0;  // ~quadratic representation error; calibrated in [G5]
+        // Calibrated in [G5] for QoI-error parity with firstOrderUpwind at
+        // matched errTol: starting from the analytic estimate 1/15, the
+        // measured error ratio err_fou/err_sol on the convergence study
+        // cases was R = 2.85 (geometric mean over 3 cases x rungs 1-3,
+        // consumption speed). Since err_sol ~ (errTol/errCoeff)^(2/3),
+        // scaling errCoeff by R^(-3/2) = 1/4.81 multiplies err_sol by R,
+        // bringing the ratio to ~1: errCoeff = (1/15)/4.81 = 0.0139.
+        // See test/convergence/results/calibration-notes.md.
+        errCoeff = 0.0139;
     }
     absvtol = options.absvtol;
     rmTol = options.rmTol;
