@@ -288,20 +288,33 @@ Ratio `err_fou / err_sol` for `consumption_speed`, own-scheme finest-rung
 | twin | 0.71 | 1.55 | 3.03 | 2.21 |
 | cylindrical | 0.38 | 0.86 | 0.94 | 1.07 |
 
-**Geometric mean over all 12 (case, rung) points: R = 1.70** — inside the
-~2× parity acceptance band, and much closer to 1 than the pre-calibration
-R = 2.85 (calibration-notes.md §2), confirming the G5 recalibration moved
-in the intended direction.
+**Parity verdict: PARTIAL.** In *aggregate* the criterion is met:
+geometric mean over all 12 (case, rung) points is **R = 1.70**, inside
+the ~2× band and much closer to 1 than the pre-calibration R = 2.85
+(calibration-notes.md §2) — the G5 recalibration moved in the intended
+direction. twin and cylindrical are also individually within the band
+(per-case geomeans 1.65 and 0.76). But **strained exceeds the band at
+every rung 1–4** (2.67–5.40×, per-case geomean 3.95), which the spec §2
+"drift toward the extremes" (≈errTol^(1/6)) language does not license —
+that model predicts band violation only at the tolerance extremes, not
+across the whole practical range. This is not a clean PASS.
 
-**Anomaly:** strained's per-rung ratios (2.7–5.4×) sit above the 2×
-band at *every* rung, not just "drift at the extremes" as the ≈errTol^(1/6)
-model predicts. This tracks strained's already-elevated pre-calibration
-ratios (6.25/4.38/8.42 at rungs 1–3, calibration-notes.md §2) scaled down
-by roughly the intended R^(-1) factor — i.e. the calibration, tuned to a
-3-case geometric mean, undershoots parity specifically for the
-highest-strain case. Not a regression from G5 (expected and disclosed
-there); flagged here for visibility since it persists across the whole
-ladder rather than only at the tolerance extremes.
+The residual is structural, not a calibration mistake: the
+pre-calibration per-case geomeans spanned ~5× (strained 6.13, twin 3.16,
+cylindrical 1.19), so **no single global `C_2` can bring all three cases
+inside the 2× band simultaneously** — shifting `C_2` to fix strained
+would push cylindrical (already at/below parity) out the other side. The
+G5 calibration, tuned to the 3-case geometric mean per protocol,
+necessarily lands strained high and cylindrical low. **Owner decision
+required** — options: (a) accept the aggregate-parity interpretation of
+the §4 criterion as satisfied; (b) keep the global `C_2` and add
+per-case/per-regime guidance to user docs (e.g. "for highly strained
+flames, expect the first-order scheme to need a few× tighter errTol for
+matched accuracy"); or (c) revisit the calibration weighting (e.g.
+minimax over cases instead of geometric mean, or a strain-dependent
+`C_2`). Not a regression from G5 (the spread was disclosed there);
+flagged here because the acceptance criterion as written is not met for
+strained individually.
 
 `peak_T` ratios (5–220×) are not meaningful, per the same caveat noted in
 calibration-notes.md §2: sol's `peak_T` sits at the noise floor
@@ -358,7 +371,14 @@ independently re-derived by the G5 code reviewer. This sign correction
 and the errTol=1e-4 default (which does not jointly attain the owner's
 informal envelope of err~1e-4 @ N~100 — measured N=115–192, err=2.2e-4–
 1.0e-2 across cases at default `errTol`) are both **pending explicit
-owner sign-off**, per the G5 ledger entry.
+owner sign-off**, per the G5 ledger entry. (Envelope-range
+reconciliation: the N=115–192 / 2.2e-4–1.0e-2 span quoted here covers
+all three cases, both schemes, and both QoIs from this ladder's runs
+bracketing the default; the tighter N=115–165 / err_cs=3.1–6.5e-4 span
+in calibration-notes.md §4 covers `secondOrderLimited` consumption
+speed only, measured directly at errTol=1e-4 with default gridMax. The
+two describe the same operating point at different scope, not a
+discrepancy.)
 
 ### A.5 Anomalies and open items
 
