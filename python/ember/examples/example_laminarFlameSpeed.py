@@ -23,7 +23,7 @@ conf = Config(
     General(fixedLeftLocation=True,
             fixedBurnedVal=False,
             nThreads=4),
-    Grid(errTol=1.5e-3, gridMin=5e-6, gridMax=0.001),
+    Grid(errTol=5e-4, gridMin=5e-6, gridMax=0.001),
     PositionControl(proportionalGain=2000, xInitial=0.005, xFinal=0.005),
     TerminationCondition(tolerance=1e-5),
     Times(profileStepInterval=50))

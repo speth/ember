@@ -414,7 +414,7 @@ class Grid(Options):
     #: :attr:`errTol`.
     dvtol = FloatOption(None, level=3)
 
-    #: Relative tolerance (compared to vtol and dvtol) for grid point removal.
+    #: Relative tolerance (compared to errTol) for grid point removal.
     rmTol = FloatOption(0.6, level=1)
 
     #: Parameter to limit numerical diffusion in regions with high
