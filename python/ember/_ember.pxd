@@ -57,6 +57,7 @@ cdef extern from "readConfig.h":
         double globalTimestep, diffusionTimestepMultiplier
 
         string splittingMethod, chemistryIntegrator, rateMultiplierFunctionType
+        string convectionScheme
         double integratorRelTol, integratorMomentumAbsTol, integratorEnergyAbsTol
         double integratorSpeciesAbsTol, integratorMinTimestep
 
@@ -87,7 +88,7 @@ cdef extern from "readConfig.h":
         double ignition_center, ignition_stddev
         cbool alwaysUpdateHeatFlux
 
-        double vtol, dvtol, rmTol, dampConst, gridMin, gridMax
+        double errTol, rmTol, dampConst, gridMin, gridMax
         double uniformityTol, absvtol
         double boundaryTol, boundaryTolRm, unstrainedDownstreamWidth
         int addPointCount

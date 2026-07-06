@@ -6,6 +6,7 @@
 #include "perfTimer.h"
 #include "quasi2d.h"
 #include "scalarFunction.h"
+#include "convectionDifferencer.h"
 
 #include <boost/ptr_container/ptr_vector.hpp>
 
@@ -92,11 +93,26 @@ public:
     double rhou; //!< density of the unburned gas
     void setRhou(double _rhou) { rhou = _rhou; }
 
+    //! Select the discretization used for the advective derivatives and the
+    //! continuity (`rV`) march. #ConvectionDifferencer::Scheme::SecondOrderLimited
+    //! enables the trapezoidal continuity march;
+    //! #ConvectionDifferencer::Scheme::FirstOrderUpwind keeps the legacy
+    //! rectangle rule (bit-identical).
+    void setScheme(ConvectionDifferencer::Scheme newScheme);
+
 private:
     void V2rV(); //!< compute #rV from #V
     void rV2V(); //!< compute #V from #rV
 
     size_t nVars; //!< Number of state variables at each grid point (`== 3`)
+
+    //! Kernel computing the upwind-biased advective derivatives. Owned per
+    //! system instance so that parallel species solvers never share scratch.
+    ConvectionDifferencer differencer;
+
+    //! Active discretization scheme, also used to gate the trapezoidal
+    //! continuity march.
+    ConvectionDifferencer::Scheme scheme;
 };
 
 typedef std::map<double, dvec> vecInterpolator;
@@ -117,6 +133,9 @@ public:
     //! Set the term representing contributions from diffusion or production
     //! terms to zero.
     void resetSplitConstants();
+
+    //! Select the discretization used for the advective derivatives.
+    void setScheme(ConvectionDifferencer::Scheme newScheme);
 
      //! Mass fraction to the left of the domain. Used only in conjuction with
      //! BoundaryCondition::ControlVolume.
@@ -146,6 +165,23 @@ private:
 
     //! The velocity normal to the flame [m/s].
     dvec v;
+
+    //! Kernel computing the upwind-biased advective derivatives. Owned per
+    //! system instance so that parallel species solvers (run under TBB) never
+    //! share scratch.
+    ConvectionDifferencer differencer;
+
+    //! Advective derivative dY/dx at nodes 0..jj-1, written by #differencer.
+    dvec dYdx;
+
+    //! Dense copy of the current mass-fraction state, needed because the kernel
+    //! consumes a #dvec while `f()` receives an #sdVector.
+    dvec yIn;
+
+    //! Node-wise advecting velocity used for upwind branch selection in the
+    //! quasi-2d case (built from #vrInterp). Kept separate from #v so the
+    //! boundary rows are unaffected.
+    dvec vAdv;
 };
 
 
@@ -268,6 +304,12 @@ private:
 
     size_t nSpec; //!< Number of species
     size_t nVars; //!< Number of state variables in the UTW system (`==3`)
+
+    //! Convection discretization scheme parsed from
+    //! ConfigOptions::convectionScheme in setTolerances(). Stored so it can be
+    //! propagated to the UTW system and to each species system (the latter in
+    //! configureSolver()).
+    ConvectionDifferencer::Scheme convectionScheme;
 
     CanteraGas* gas; //!< Cantera object used for computing #Wmx
 

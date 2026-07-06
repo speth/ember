@@ -8,7 +8,15 @@ ConvectionSystemUTW::ConvectionSystemUTW()
     , continuityBC(ContinuityBoundaryCondition::Left)
     , jContBC(0)
     , nVars(3)
+    , scheme(ConvectionDifferencer::Scheme::SecondOrderLimited)
 {
+    differencer.setScheme(scheme);
+}
+
+void ConvectionSystemUTW::setScheme(ConvectionDifferencer::Scheme newScheme)
+{
+    scheme = newScheme;
+    differencer.setScheme(newScheme);
 }
 
 int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
@@ -18,10 +26,27 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
     rho = gas->pressure * Wmx / (Cantera::GasConstant * T);
 
     // *** Calculate V ***
+    // The continuity (rV) march uses the trapezoidal rule (spec 3.3) for the
+    // SecondOrderLimited scheme and the legacy rectangle rule for
+    // FirstOrderUpwind (kept bit-identical). trapFwd(j) is the trapezoidal
+    // mass-flux integral between nodes j and j+1 using node radii; it serves
+    // both the forward march (rV[j+1] = rV[j] - trapFwd(j)) and the backward
+    // march (rV[j-1] = rV[j] + trapFwd(j-1)).
+    const bool trapezoidal =
+        (scheme == ConvectionDifferencer::Scheme::SecondOrderLimited);
+    auto trapFwd = [&](size_t j) {
+        return 0.5 * hh[j] * (r[j] * (drhodt[j] + rho[j] * beta * U[j])
+                            + r[j+1] * (drhodt[j+1] + rho[j+1] * beta * U[j+1]));
+    };
+
     if (continuityBC == ContinuityBoundaryCondition::Left) {
         rV[0] = rVzero;
         for (size_t j=0; j<nPoints-1; j++) {
-            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * grid.beta* U[j]);
+            if (trapezoidal) {
+                rV[j+1] = rV[j] - trapFwd(j);
+            } else {
+                rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * grid.beta* U[j]);
+            }
         }
     } else if (continuityBC == ContinuityBoundaryCondition::Zero) {
         // jContBC is the point just to the right of the stagnation point
@@ -33,7 +58,11 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
 
         rV[j] = (x[j] - xVzero) * dVdx0;
         for (j=jContBC; j<jj; j++) {
-            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            if (trapezoidal) {
+                rV[j+1] = rV[j] - trapFwd(j);
+            } else {
+                rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            }
         }
 
         if (jContBC != 0) {
@@ -41,14 +70,24 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
 //            dVdx0 = - drhodt[j] - rho[j] * U[j] * rphalf[j];
             rV[j] = (x[j] - xVzero) * dVdx0;
             for (j=jContBC-1; j>0; j--) {
-                rV[j-1] = rV[j] + hh[j-1] * rphalf[j-1] * (drhodt[j-1] + rho[j-1] * beta * U[j-1]);
+                if (trapezoidal) {
+                    rV[j-1] = rV[j] + trapFwd(j-1);
+                } else {
+                    rV[j-1] = rV[j] + hh[j-1] * rphalf[j-1] * (drhodt[j-1] + rho[j-1] * beta * U[j-1]);
+                }
             }
         }
     } else {
         if (continuityBC == ContinuityBoundaryCondition::Temp) {
             size_t j = jContBC;
             // Find value of rV[jContBC] such that dTdt[jContBC] == 0, per later
-            // calculation of dTdt
+            // calculation of dTdt. This inversion is always derived from the
+            // first-order upwind dTdx relation (rV*dTdx == splitConstT), even
+            // when `scheme` is SecondOrderLimited, which uses the limited
+            // 2nd-order dTdx below to actually advance dTdt. That means the
+            // dT/dt(jContBC) == 0 anchor holds exactly under FirstOrderUpwind
+            // but only approximately under SecondOrderLimited -- an accepted
+            // discrepancy (spec Sec 3.2), not a bug.
             if (j == 0 || splitConstT[j] / (T[j+1] - T[j]) < 0) {
                 rV[j] = rphalf[j] * rho[j] * splitConstT[j] * hh[j] / (T[j+1] - T[j]);
             } else {
@@ -56,27 +95,32 @@ int ConvectionSystemUTW::f(const realtype t, const sdVector& y, sdVector& ydot)
             }
         }
         for (size_t j=jContBC; j<nPoints-1; j++) {
-            rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            if (trapezoidal) {
+                rV[j+1] = rV[j] - trapFwd(j);
+            } else {
+                rV[j+1] = rV[j] - hh[j] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            }
         }
         for (size_t j=jContBC; j>0; j--) {
-            rV[j-1] = rV[j] + hh[j-1] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            if (trapezoidal) {
+                rV[j-1] = rV[j] + trapFwd(j-1);
+            } else {
+                rV[j-1] = rV[j] + hh[j-1] * rphalf[j] * (drhodt[j] + rho[j] * beta * U[j]);
+            }
         }
     }
 
     rV2V();
 
-    // *** Calculate upwinded convective derivatives
-    for (size_t j=0; j<nPoints-1; j++) {
-        if (rV[j] < 0 || j == 0) {
-            dTdx[j] = (T[j+1] - T[j]) / hh[j];
-            dUdx[j] = (U[j+1] - U[j]) / hh[j];
-            dWdx[j] = (Wmx[j+1] - Wmx[j]) / hh[j];
-        } else {
-            dTdx[j] = (T[j] - T[j-1]) / hh[j-1];
-            dUdx[j] = (U[j] - U[j-1]) / hh[j-1];
-            dWdx[j] = (Wmx[j] - Wmx[j-1]) / hh[j-1];
-        }
-    }
+    // *** Calculate upwinded convective derivatives ***
+    // Branch selection uses the (radial) mass flux rV, preserving the legacy
+    // sign convention. The kernel writes dTdx/dUdx/dWdx at nodes 0..jj-1; the
+    // right-boundary node jj is handled below, and the j=0 rows are set
+    // directly from the boundary conditions (these derivatives are unused
+    // there).
+    differencer.computeDerivatives(T, rV, grid, dTdx);
+    differencer.computeDerivatives(U, rV, grid, dUdx);
+    differencer.computeDerivatives(Wmx, rV, grid, dWdx);
 
     // *** Calculate dW/dt, dU/dt, dT/dt
     double a = strainFunction->a(t);
@@ -184,6 +228,8 @@ void ConvectionSystemUTW::resize(const size_t new_nPoints)
     Wmx.setZero(nPoints);
     dWdt.setZero(nPoints);
     dWdx.setZero(nPoints);
+
+    differencer.resize(nPoints);
 }
 
 void ConvectionSystemUTW::resetSplitConstants()
@@ -311,6 +357,23 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
         update_v(t);
     }
 
+    // *** Calculate the upwinded convective derivative dY/dx ***
+    // The kernel writes dYdx at nodes 0..jj-1 (dYdx[0] is discarded by the j=0
+    // boundary row below). The upwind branch is selected per node from the sign
+    // of the advecting velocity. In the standard case this is the interpolated
+    // normal velocity v; in the quasi-2d case it is the node-wise radial
+    // velocity from vrInterp (fixing the legacy uninitialized-v upwind bug,
+    // spec 3.4). Copy the state into a dvec since the kernel consumes a dvec.
+    yIn = Eigen::Map<const dvec>(&y[0], nPoints);
+    if (quasi2d) {
+        for (size_t j=0; j<nPoints; j++) {
+            vAdv[j] = vrInterp->get(x[j], t);
+        }
+        differencer.computeDerivatives(yIn, vAdv, grid, dYdx);
+    } else {
+        differencer.computeDerivatives(yIn, v, grid, dYdx);
+    }
+
     // *** Calculate dY/dt
 
     // Left boundary conditions.
@@ -327,17 +390,11 @@ int ConvectionSystemY::f(const realtype t, const sdVector& y, sdVector& ydot)
     }
 
     // Intermediate points
-    double dYdx;
     for (size_t j=1; j<jj; j++) {
-        if (v[j] < 0) {
-            dYdx = (y[j+1] - y[j]) / hh[j];
-        } else {
-            dYdx = (y[j] - y[j-1]) / hh[j-1];
-        }
         if (quasi2d) {
-            ydot[j] = -vrInterp->get(x[j], t) * dYdx / vzInterp->get(x[j], t) + splitConst[j];
+            ydot[j] = -vrInterp->get(x[j], t) * dYdx[j] / vzInterp->get(x[j], t) + splitConst[j];
         } else {
-            ydot[j] = -v[j] * dYdx  + splitConst[j];
+            ydot[j] = -v[j] * dYdx[j]  + splitConst[j];
         }
     }
 
@@ -362,6 +419,15 @@ void ConvectionSystemY::resize(const size_t new_nPoints)
 {
     grid.setSize(new_nPoints);
     v.resize(nPoints);
+    dYdx.resize(nPoints);
+    yIn.resize(nPoints);
+    vAdv.resize(nPoints);
+    differencer.resize(nPoints);
+}
+
+void ConvectionSystemY::setScheme(ConvectionDifferencer::Scheme newScheme)
+{
+    differencer.setScheme(newScheme);
 }
 
 void ConvectionSystemY::resetSplitConstants()
@@ -405,6 +471,7 @@ ConvectionSystemSplit::ConvectionSystemSplit()
     , vInterp(new vecInterpolator())
     , nSpec(0)
     , nVars(3)
+    , convectionScheme(ConvectionDifferencer::Scheme::SecondOrderLimited)
     , gas(NULL)
     , quasi2d(false)
 {
@@ -426,6 +493,20 @@ void ConvectionSystemSplit::setTolerances(const ConfigOptions& options)
     abstolT = options.integratorEnergyAbsTol;
     abstolW = options.integratorSpeciesAbsTol * 20;
     abstolY = options.integratorSpeciesAbsTol;
+
+    // Parse the convection discretization scheme once. The parsed value is
+    // stored so it can be propagated to each species system as it is
+    // configured (see configureSolver()); here it is applied to the UTW
+    // system.
+    if (options.convectionScheme == "secondOrderLimited") {
+        convectionScheme = ConvectionDifferencer::Scheme::SecondOrderLimited;
+    } else if (options.convectionScheme == "firstOrderUpwind") {
+        convectionScheme = ConvectionDifferencer::Scheme::FirstOrderUpwind;
+    } else {
+        throw DebugException("Unknown convectionScheme: '" +
+                             options.convectionScheme + "'");
+    }
+    utwSystem.setScheme(convectionScheme);
 }
 
 void ConvectionSystemSplit::setGas(CanteraGas& gas_)
@@ -671,6 +752,7 @@ void ConvectionSystemSplit::configureSolver(SundialsCvode& solver, const size_t 
     solver.linearMultistepMethod = CV_ADAMS;
 
     speciesSystems[k].resize(nPoints);
+    speciesSystems[k].setScheme(convectionScheme);
     speciesSystems[k].Yleft = Yleft[k];
     speciesSystems[k].k = k;
 }

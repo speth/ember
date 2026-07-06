@@ -1,0 +1,26 @@
+{
+  "case": "twin",
+  "scheme": "secondOrderLimited",
+  "rung": 5,
+  "damp_const": null,
+  "commit": "f38cfc31cef9a036d2fed8bbe28f47ce6be7e9e8",
+  "generated_at_utc": "2026-07-05T03:03:21.980027+00:00",
+  "config_summary": "conf = Config(\n    Paths(logFile='build/test/convergence-work/twin_secondOrderLimited_rung5.log',\n          outputDir='build/test/convergence-work/twin_secondOrderLimited_rung5'),\n    General(twinFlame=True,\n            unburnedLeft=False),\n    Grid(dvtol=0.055,\n         gridMax=4e-05,\n         vtol=0.033),\n    InitialCondition(equivalenceRatio=0.7,\n                     xLeft=0.0,\n                     xRight=0.01),\n    StrainParameters(final=100,\n                     initial=100),\n    Times(regridStepInterval=10),\n    TerminationCondition(tEnd=10))\n",
+  "grid_tolerances": {
+    "vtol": 0.033,
+    "dvtol": 0.055,
+    "gridMax": 4e-05,
+    "gridMin": 5e-07,
+    "dampConst": 7
+  },
+  "N": 525,
+  "scalars": {
+    "consumption_speed": 0.17072136868729768,
+    "peak_T": 1842.7960362243891
+  },
+  "scalar_notes": {},
+  "total_convection_steps": 461546,
+  "runtime_seconds": 98.6031699180603,
+  "final_time": 0.007800000000000019,
+  "attempts": 1
+}

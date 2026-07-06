@@ -1,0 +1,14 @@
+{
+  "tag": "diag_strained_sol_rung5_frozengrid",
+  "status": "ok",
+  "error": null,
+  "N": 100,
+  "peak_T": 1901.6639539426367,
+  "consumption_speed": 0.8163280572478853,
+  "final_time": 0.0018000000000000034,
+  "total_convection_steps": 7826,
+  "runtime_seconds": 0.5329959392547607,
+  "commit": "e8dcdcda9abb1a8525fca49c869f0628474537ee",
+  "generated_at_utc": "2026-07-05T03:31:32.115829+00:00",
+  "note": "regridStepInterval=1e9, regridTimeInterval=1e30 -> grid frozen after initial adaptation"
+}

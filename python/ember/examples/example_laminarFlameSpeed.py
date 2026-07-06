@@ -23,7 +23,10 @@ conf = Config(
     General(fixedLeftLocation=True,
             fixedBurnedVal=False,
             nThreads=4),
-    Grid(vtol=0.1, dvtol=0.15, gridMin=5e-6, gridMax=0.001),
+    # errTol=5e-4 is the docstring's "minimal accuracy" tier, chosen to
+    # preserve this example's historical resolution/runtime (the library
+    # default errTol=1e-4 is finer).
+    Grid(errTol=5e-4, gridMin=5e-6, gridMax=0.001),
     PositionControl(proportionalGain=2000, xInitial=0.005, xFinal=0.005),
     TerminationCondition(tolerance=1e-5),
     Times(profileStepInterval=50))

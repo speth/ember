@@ -1,0 +1,26 @@
+{
+  "case": "strained",
+  "scheme": "secondOrderLimited",
+  "rung": 1,
+  "damp_const": 15.0,
+  "commit": "f38cfc31cef9a036d2fed8bbe28f47ce6be7e9e8",
+  "generated_at_utc": "2026-07-05T03:21:36.207519+00:00",
+  "config_summary": "conf = Config(\n    Paths(logFile='build/test/convergence-work-damp/strained_secondOrderLimited_rung1.log',\n          outputDir='build/test/convergence-work-damp/strained_secondOrderLimited_rung1'),\n    General(fixedBurnedVal=False,\n            unburnedLeft=False),\n    Chemistry(mechanismFile='h2o2.yaml'),\n    Grid(dampConst=15.0,\n         dvtol=0.27,\n         gridMax=0.00025,\n         vtol=0.16),\n    InitialCondition(equivalenceRatio=0.3,\n                     fuel='H2:1.0',\n                     oxidizer='O2:1.0, AR:4.0'),\n    StrainParameters(final=800,\n                     initial=800),\n    Times(regridStepInterval=10),\n    TerminationCondition(measurement='dTdt',\n                         tEnd=2.0))\n",
+  "grid_tolerances": {
+    "vtol": 0.16,
+    "dvtol": 0.27,
+    "gridMax": 0.00025,
+    "gridMin": 5e-07,
+    "dampConst": 15.0
+  },
+  "N": 75,
+  "scalars": {
+    "consumption_speed": 0.35827138925077856,
+    "peak_T": 1558.9929932903265
+  },
+  "scalar_notes": {},
+  "total_convection_steps": 16625,
+  "runtime_seconds": 1.1117136478424072,
+  "final_time": 0.00460000000000001,
+  "attempts": 1
+}

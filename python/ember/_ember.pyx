@@ -201,6 +201,7 @@ cdef class ConfigOptions:
         opts.twinFlame = G.twinFlame
         opts.chemistryIntegrator = stringify(G.chemistryIntegrator)
         opts.splittingMethod = stringify(G.splittingMethod)
+        opts.convectionScheme = stringify(G.convectionScheme)
         opts.setContinuityBC(stringify(G.continuityBC))
         opts.errorStopCount = G.errorStopCount
         opts.stopIfError = G.errorStopCount > 0
@@ -291,8 +292,7 @@ cdef class ConfigOptions:
 
         # Grid
         opts.centerGridMin = self.grid.centerGridMin
-        opts.vtol = self.grid.vtol
-        opts.dvtol = self.grid.dvtol
+        opts.errTol = self.grid.errTol
         opts.rmTol = self.grid.rmTol
         opts.dampConst = self.grid.dampConst
         opts.gridMax = self.grid.gridMax

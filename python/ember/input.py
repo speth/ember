@@ -335,6 +335,13 @@ class General(Options):
     #: terms. Options are ``strang`` and ``balanced``.
     splittingMethod = StringOption("balanced", ("strang",), level=2)
 
+    #: Discretization scheme to use for the convection term. The default,
+    #: ``secondOrderLimited``, is 2nd-order accurate in smooth regions and
+    #: falls back locally to a 1st-order limiter at extrema. ``firstOrderUpwind``
+    #: is the legacy scheme used prior to version 1.7.
+    convectionScheme = StringOption("secondOrderLimited",
+                                    ("firstOrderUpwind",), level=2)
+
     #: Number of integration failures to tolerate in the chemistry
     #: integrator before aborting.
     errorStopCount = IntegerOption(100, level=2)
@@ -387,17 +394,29 @@ class Chemistry(Options):
 
 class Grid(Options):
     """ Parameters controlling the adaptive grid """
-    #: Maximum relative scalar variation of each state vector
-    #: component between consecutive grid points. For high accuracy,
-    #: ``vtol = 0.08``; For minimal accuracy, ``vtol = 0.20``.
-    vtol = FloatOption(0.12)
+    #: Target relative accuracy of the solution on the adapted grid. The
+    #: estimated local truncation error of each state-vector component is
+    #: kept below ``errTol`` times that component's range, using an error
+    #: estimate that accounts for the order of the selected
+    #: ``general.convectionScheme``. The same value yields similar solution
+    #: accuracy under either scheme for the validation cases (highly strained
+    #: flames may need a few-times tighter ``errTol`` under
+    #: ``firstOrderUpwind`` for matched accuracy); the higher-order scheme
+    #: needs fewer grid points. On the calibration study cases the default
+    #: gives consumption-speed errors of a few parts in 10^4 with grids of
+    #: roughly 100-170 points. For high accuracy, ``errTol = 2e-5``; for
+    #: minimal accuracy, ``errTol = 5e-4``.
+    errTol = FloatOption(1e-4, min=1e-12)
 
-    #: Maximum relative variation of the gradient of each state vector
-    #: component between consecutive grid points. For high accuracy,
-    #: ``dvtol = 0.12``; For minimal accuracy, ``dvtol = 0.4``.
-    dvtol = FloatOption(0.2)
+    #: Deprecated and ignored. Grid resolution is controlled by
+    #: :attr:`errTol`.
+    vtol = FloatOption(None, level=3)
 
-    #: Relative tolerance (compared to vtol and dvtol) for grid point removal.
+    #: Deprecated and ignored. Grid resolution is controlled by
+    #: :attr:`errTol`.
+    dvtol = FloatOption(None, level=3)
+
+    #: Relative tolerance (compared to errTol) for grid point removal.
     rmTol = FloatOption(0.6, level=1)
 
     #: Parameter to limit numerical diffusion in regions with high
@@ -910,9 +929,6 @@ class Config(object):
         self.terminationCondition = get(TerminationCondition)
         self.extinction = get(Extinction)
 
-    def evaluate(self):
-        return ConcreteConfig(self)
-
     def __iter__(self):
         for item in self.__dict__.values():
             if isinstance(item, Options):
@@ -927,7 +943,29 @@ class Config(object):
 
         return 'conf = Config(\n' + ',\n'.join(ans) + ')\n'
 
+    def _warnDeprecated(self):
+        if getattr(self, '_deprecationWarned', False):
+            return
+        self._deprecationWarned = True
+        if self.grid.vtol.isSet or self.grid.dvtol.isSet:
+            print("WARNING: 'grid.vtol' and 'grid.dvtol' are deprecated and have"
+                  " no effect.\n"
+                  "         Grid resolution is now controlled by the local-error"
+                  " tolerance 'grid.errTol';\n"
+                  "         the same errTol gives similar accuracy for either"
+                  " convection scheme (for strongly strained flames the"
+                  " first-order scheme may need a tighter errTol for matched"
+                  " accuracy).")
+        if self.grid.errTol.value is not None and self.grid.errTol.value > 0.5:
+            print("WARNING: 'grid.errTol' > 0.5 effectively disables grid"
+                  " refinement.")
+
+    def evaluate(self):
+        self._warnDeprecated()
+        return ConcreteConfig(self)
+
     def validate(self):
+        self._warnDeprecated()
         error = False
         cylindricalFlame = True if self.general.flameGeometry == 'cylindrical' else False
         discFlame = True if self.general.flameGeometry == 'disc' else False

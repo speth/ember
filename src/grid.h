@@ -43,25 +43,27 @@ public:
 
     // **** Parameters for controlling internal grid points ****
 
-    //! Default relative solution variable tolerance for point insertion.
-    //! Set from ConfigOptions in setOptions().
-    double vtol_in;
-
-    //! Default derivative tolerance for point insertion.
-    //! Set from ConfigOptions in setOptions().
-    double dvtol_in;
-
-    //! Relative solution variable tolerance for point insertion for each
-    //! solution component. Length #nVars.
-    dvec vtol;
-
-    //! solution variable derivative tolerance for point insertion for each
-    //! solution component. Length #nVars.
-    dvec dvtol;
-
     //! Absolute tolerance for point insertion. Components with ranges smaller
     //! than this value are not considered during grid adaptation.
     double absvtol;
+
+    //! Local-error tolerance for grid adaptation. The estimated local
+    //! representation error of each adapted component must be smaller than
+    //! errTol times the component's range. Set from ConfigOptions in
+    //! setOptions().
+    double errTol;
+
+    //! Spatial order p of the active convection scheme (1: firstOrderUpwind,
+    //! 2: secondOrderLimited). The adaptation error estimate scales as
+    //! h^(p+1) * |d^(p+1)v/dx^(p+1)|. Set in setOptions().
+    int errorOrder;
+
+    //! Leading coefficient C_p of the local error estimate
+    //! E = C_p * h^(p+1) * |d^(p+1)v|. Initial values are the classical
+    //! interpolation-error bounds (1/8 for p=1, 1/15 for p=2); the p=2
+    //! value is calibrated so matched errTol gives matched accuracy across
+    //! convection schemes. Set in setOptions().
+    double errCoeff;
 
     //! Relative grid point removal tolerance. Grid points can be removed if
     //! all criteria are satisfied to this multiplier on the insertion
@@ -149,26 +151,24 @@ public:
     //!
     //! *Adaptation algorithm*
     //!
-    //! The insertion of the grid points is performed first. For each
-    //! component of the solution vector:
+    //! Insertion is performed first. For each adapted component f with
+    //! range(f) >= #absvtol, the local representation error of interval j
+    //! is estimated as
+    //!     E = C_p * hh[j]^(p+1) * max|d^(p+1) f|
+    //! where p (#errorOrder) is the spatial order of the convection scheme,
+    //! C_p is #errCoeff, and the derivative magnitude is taken as the
+    //! maximum of the estimates (computeErrorWeights()) at the nodes within
+    //! one interval of j. A point is inserted in interval j if
+    //!     E > errTol * range(f)
+    //! or if the damping, maximum-spacing, or uniformity criteria require
+    //! one.
     //!
-    //! 1. Find its range and the range of its derivative.
-    //! 2. Apply four criteria and and find where insertions are
-    //!    needed. the criteria for a component f(j) are:
-    //!      - `|f[j+1]-f[j]| < vtol*range(f)`
-    //!      - `|dfdy[j+1]-dfdy[j]| < dvtol*range(dfdy)`
-    //!      - `1/uniformityTol < hh[j]/hh[j-1] < uniformityTol`
-    //! 3. If any of these criteria is not satisfied, a grid point j
-    //!    is inserted.
-    //!
-    //! Next, the unnecessary grid points are removed, and the algorithm is
-    //! applied in reverse. If the criteria:
-    //!   - `|f[j]-f[j-1]| > rmTol*vtol*range(f)`
-    //!   - `|dfdy[j]-dfdy[j-1]| > rmTol*dvtol*range(dfdy)`
-    //!   - `hh[j]+hh[j-1] < uniformityTol*hh[j-2]`
-    //!   - `hh[j]+hh[j-1] < uniformityTol*hh[j+1]`
-    //!
-    //! are satisfied for all components at a point, it is removed.
+    //! Removal is considered next: point j is removed only if, for every
+    //! component, the estimate E evaluated for the merged interval
+    //! (hh[j]+hh[j-1], derivative maximum over nodes within two of j) stays
+    //! below rmTol * errTol * range(f), and the damping, maximum-spacing,
+    //! and uniformity criteria all permit it. Since merging roughly doubles
+    //! h and E scales as h^(p+1), removal has strong built-in hysteresis.
     void adapt(vector<dvector>& y);
 
     //! Add and remove points at the boundaries of the domain to satisfy
@@ -183,6 +183,13 @@ public:
     //! Set adaptation and regridding tolerances specified in a ConfigOptions
     //! object.
     void setOptions(const ConfigOptions& options);
+
+    //! Estimate the nodal magnitude of the (#errorOrder + 1)-th derivative
+    //! of v, the weight in the local error estimate used by adapt().
+    //! Repeated application of the nonuniform first-derivative stencils;
+    //! end nodes copy the nearest interior estimate. updateValues() must
+    //! have been called first.
+    void computeErrorWeights(const dvector& v, dvector& W) const;
 
     //! Recompute derived mesh parameters after the grid has changed.
     void updateValues(void);
