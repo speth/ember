@@ -254,6 +254,19 @@ TEST(GridAdaptation, DampValRespectedWhileGridChanges)
 TEST(GridAdaptation, SetOptionsMapsConvectionSchemeToErrorModel)
 {
     ConfigOptions opts;
+    // Set every field setOptions() reads: ConfigOptions' default constructor
+    // leaves POD members indeterminate, and copying them (even into members
+    // this test never checks) is UB a sanitizer build would flag.
+    opts.fixedBurnedVal = false;
+    opts.unburnedLeft = false;
+    opts.fixedLeftLoc = false;
+    opts.twinFlame = false;
+    opts.cylindricalFlame = false;
+    opts.discFlame = false;
+    opts.boundaryTol = 5e-5;
+    opts.boundaryTolRm = 1e-5;
+    opts.unstrainedDownstreamWidth = 5;
+    opts.addPointCount = 3;
     opts.errTol = 1e-4;
     opts.rmTol = 0.6;
     opts.dampConst = 7;

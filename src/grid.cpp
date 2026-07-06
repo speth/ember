@@ -130,8 +130,8 @@ void OneDimGrid::adapt(vector<dvector>& y)
     nVars = y.size();
     assert(nAdapt <= nVars);
     assert((dampVal > 0).all());
-    assert(dampVal.rows() == (dvec::Index) nPoints);
     setSize(y[0].size());
+    assert(dampVal.rows() == (dvec::Index) nPoints);
 
     // Defensive localization: addPoint()/removePoint() already keep the
     // dampVal member consistent with the grid (spline-interpolated insert /
