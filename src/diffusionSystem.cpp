@@ -16,6 +16,10 @@ void DiffusionSystem::get_A(dvec& a, dvec& b, dvec& c)
         c1[j] = 0.5*B[j]/(dlj[j]*r[j]);
         c2[j] = rphalf[j]*(D[j]+D[j+1])/hh[j];
     }
+    // Coefficient for the face between points 0 and 1. It is used by the row
+    // j = 1 below whenever jStart = 1 (FixedValue, ControlVolume and WallFlux left
+    // boundaries); without it, point 1 does not see point 0.
+    c2[0] = rphalf[0]*(D[0]+D[1])/hh[0];
 
     assert(mathUtils::notnan(c1));
     assert(mathUtils::notnan(c2));
